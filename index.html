@@ -25,19 +25,21 @@
             border-radius: 4px; 
         }
 
+        .pdf-card { break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 0.75rem; background: white; padding: 1.5rem; }
+
         @media print {
             .no-print { display: none !important; }
-            .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; border: 1px solid #e2e8f0; margin-bottom: 20px; padding: 20px; page-break-inside: avoid; }
+            .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; border: none !important; margin-bottom: 2rem; }
             body { background: white !important; }
             main { overflow: visible !important; }
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex text-gray-800" onload="initInterface()">
+<body class="bg-slate-50 min-h-screen flex text-gray-800" onload="switchTab('client')">
 
     <aside class="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col no-print">
         <div class="p-8 border-b border-slate-800 text-center">
-            <h1 class="text-xl font-extrabold tracking-tighter leading-none">
+            <h1 class="text-xl font-extrabold tracking-tighter">
                 <span class="block text-slate-400 text-[10px] tracking-[0.3em] mb-2 uppercase">Training Interface</span>
                 <span class="block">LEGAL</span>
                 <span class="block text-orange-500">SUPPORT</span>
@@ -46,32 +48,32 @@
         </div>
         <nav class="mt-10 px-6 space-y-4">
             <button onclick="generatePDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg transition-all active:scale-95">Download PDF</button>
-            <button onclick="resetInterface()" class="w-full border border-slate-700 hover:bg-slate-800 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase transition-all">Clear All</button>
+            <button onclick="location.reload()" class="w-full border border-slate-700 hover:bg-slate-800 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase transition-all">Clear All</button>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
         <header class="h-12 bg-white border-b border-gray-200 no-print flex items-center justify-end px-8">
-            <div id="save-status" class="text-[9px] text-slate-400 uppercase font-bold tracking-widest opacity-0 transition-opacity">Interface Synced</div>
+            <div id="save-status" class="text-[9px] text-slate-400 uppercase font-bold tracking-widest opacity-0 transition-opacity">Data Synced</div>
         </header>
 
         <div class="p-8 overflow-y-auto flex-1" id="capture-area" oninput="triggerAutoSave()">
             
-            <div class="mb-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="mb-8 pdf-card shadow-sm">
                 <div class="flex justify-between items-start">
                     <div>
-                        <h1 class="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        <h1 class="text-4xl font-black text-slate-900 tracking-tight">
                             <span contenteditable="true" class="hover:bg-slate-50 px-1 rounded">Client Name</span>
                             <span class="text-slate-300 font-thin">/</span>
                             <span contenteditable="true" class="text-slate-600 hover:bg-slate-50 px-1 rounded">Trainee Name</span>
                         </h1>
                         <div class="mt-4 flex items-center gap-3">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Interface ID:</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Interface ID:</span>
                             <span contenteditable="true" class="text-xs font-mono font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100">BATCH-2026</span>
                         </div>
                     </div>
                     <div class="text-right">
-                        <select onchange="document.getElementById('currentStatus').innerText = this.value" class="no-print bg-slate-100 border-none rounded px-3 py-1.5 text-[10px] font-bold uppercase text-slate-600 mb-2">
+                        <select onchange="document.getElementById('currentStatus').innerText = this.value" class="no-print bg-slate-100 rounded px-3 py-1.5 text-[10px] font-bold uppercase text-slate-600 mb-2 border-none outline-none">
                             <option value="Intake">Intake</option>
                             <option value="Investigation">Investigation</option>
                             <option value="Demand">Demand</option>
@@ -83,14 +85,14 @@
             </div>
 
             <div class="flex gap-1 mb-8 no-print border-b border-slate-200">
-                <button onclick="switchTab('client')" id="btn-client" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all tab-active">Profile</button>
-                <button onclick="switchTab('facts')" id="btn-facts" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Facts</button>
-                <button onclick="switchTab('medical')" id="btn-medical" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Medical</button>
-                <button onclick="switchTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Insurance</button>
+                <button onclick="switchTab('client')" id="btn-client" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 transition-all">Profile</button>
+                <button onclick="switchTab('facts')" id="btn-facts" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 transition-all">Facts</button>
+                <button onclick="switchTab('medical')" id="btn-medical" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 transition-all">Medical</button>
+                <button onclick="switchTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 transition-all">Insurance</button>
             </div>
 
             <div id="tab-client" class="tab-pane grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div class="pdf-card">
                     <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Client Identity</h3>
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
@@ -98,70 +100,67 @@
                             <div><label class="text-[9px] font-bold text-slate-400 uppercase">SSN</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                         </div>
                         <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
-                        <div class="no-print mt-4">
+                        <div class="no-print pt-2">
                             <label class="text-[9px] font-bold text-slate-400 uppercase block mb-1">ID Upload</label>
-                            <input type="file" id="id-file" class="hidden" onchange="updateFileLabel(this, 'id-name')">
-                            <button onclick="document.getElementById('id-file').click()" class="text-[10px] bg-slate-100 px-3 py-1 rounded font-bold">Choose File</button>
-                            <span id="id-name" class="text-[10px] ml-2 italic text-slate-500">None</span>
+                            <input type="file" id="id-input" class="hidden" onchange="handleFileUpload(this, 'id-label')">
+                            <button onclick="document.getElementById('id-input').click()" class="text-[10px] bg-slate-800 text-white px-3 py-1 rounded font-bold">Upload ID</button>
+                            <span id="id-label" class="text-[10px] ml-2 italic text-slate-500">No file</span>
                         </div>
                     </div>
                 </div>
-
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div class="pdf-card">
                     <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 mb-6 border-b pb-2">Alternate Contact</h3>
                     <div class="space-y-4">
-                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Alt Name</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Full Name</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                         <div><label class="text-[9px] font-bold text-slate-400 uppercase">Relationship</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
-                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Alt Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                     </div>
                 </div>
             </div>
 
             <div id="tab-facts" class="tab-pane hidden space-y-8">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm col-span-1">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Police Report Status</h3>
+                    <div class="pdf-card col-span-1">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Police Report</h3>
                         <div class="space-y-4">
                             <div>
-                                <label class="text-[9px] font-bold text-slate-400 uppercase">Report Availability</label>
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">Status</label>
                                 <select class="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-semibold p-1 rounded outline-none">
                                     <option>Available</option>
                                     <option>Pending</option>
-                                    <option>Not Filed</option>
                                     <option>Requested</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="text-[9px] font-bold text-slate-400 uppercase">Report Number</label>
-                                <div contenteditable="true" class="text-sm font-semibold border-b py-1">...</div>
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">Report #</label>
+                                <div contenteditable="true" class="text-sm font-semibold border-b">...</div>
                             </div>
                             <div class="no-print pt-2">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase block mb-1">Upload Report</label>
-                                <input type="file" id="police-file" class="hidden" onchange="updateFileLabel(this, 'police-name')">
-                                <button onclick="document.getElementById('police-file').click()" class="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded font-bold hover:bg-blue-100 transition-all">Attach PDF</button>
-                                <div id="police-name" class="text-[9px] mt-1 italic text-slate-400 truncate">No document attached</div>
+                                <input type="file" id="police-input" class="hidden" onchange="handleFileUpload(this, 'police-label')">
+                                <button onclick="document.getElementById('police-input').click()" class="text-[10px] bg-blue-600 text-white px-3 py-1 rounded font-bold">Attach PDF</button>
+                                <div id="police-label" class="text-[9px] mt-1 italic text-slate-400">No document</div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm md:col-span-2">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 border-b pb-2">Incident Narrative</h3>
-                        <div contenteditable="true" class="text-sm min-h-[150px] italic text-slate-600 outline-none leading-relaxed">Describe the accident mechanics, point of impact, and scene details...</div>
+                    <div class="pdf-card md:col-span-2">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 border-b pb-2">Narrative</h3>
+                        <div contenteditable="true" class="text-sm min-h-[150px] italic text-slate-600 outline-none leading-relaxed">Enter case details here...</div>
                     </div>
                 </div>
             </div>
 
             <div id="tab-medical" class="tab-pane hidden">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Treatment Log</h3>
-                    <div contenteditable="true" class="text-sm min-h-[200px] outline-none">Enter medical details...</div>
+                <div class="pdf-card">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Treatment History</h3>
+                    <div contenteditable="true" class="text-sm min-h-[200px] outline-none">...</div>
                 </div>
             </div>
 
             <div id="tab-insurance" class="tab-pane hidden">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Coverage</h3>
-                    <div contenteditable="true" class="text-sm min-h-[100px] outline-none">Enter insurance info...</div>
+                <div class="pdf-card">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Coverage Details</h3>
+                    <div contenteditable="true" class="text-sm min-h-[100px] outline-none">...</div>
                 </div>
             </div>
 
@@ -169,37 +168,30 @@
     </main>
 
     <script>
-        let currentTab = 'client';
-
-        function initInterface() {
-            switchTab('client');
-        }
+        let currentActiveTab = 'client';
 
         function switchTab(tabId) {
-            currentTab = tabId;
-            document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.classList.add('hidden');
-                if (pane.id === 'tab-client') pane.classList.remove('md:grid');
+            currentActiveTab = tabId;
+            // Hide all
+            document.querySelectorAll('.tab-pane').forEach(p => {
+                p.classList.add('hidden');
+                p.classList.remove('grid'); // Reset grid
             });
-            
-            const targetPane = document.getElementById('tab-' + tabId);
-            if(targetPane) {
-                targetPane.classList.remove('hidden');
-                if (tabId === 'client') targetPane.classList.add('md:grid');
-            }
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
 
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('tab-active');
-            });
-            const targetBtn = document.getElementById('btn-' + tabId);
-            if(targetBtn) targetBtn.classList.add('tab-active');
+            // Show target
+            const target = document.getElementById('tab-' + tabId);
+            if (tabId === 'client') target.classList.add('md:grid');
+            target.classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
         }
 
-        function updateFileLabel(input, labelId) {
+        function handleFileUpload(input, labelId) {
             const label = document.getElementById(labelId);
-            if(input.files && input.files[0]) {
+            if (input.files && input.files[0]) {
                 label.innerText = "📎 " + input.files[0].name;
-                label.classList.add('text-orange-600', 'not-italic', 'font-bold');
+                label.classList.replace('text-slate-500', 'text-orange-600');
+                label.classList.add('font-bold', 'not-italic');
             }
         }
 
@@ -210,35 +202,30 @@
         }
 
         async function generatePDF() {
-            const element = document.getElementById('capture-area');
+            const area = document.getElementById('capture-area');
             const panes = document.querySelectorAll('.tab-pane');
-            const originalTab = currentTab;
-
+            
+            // Show all for capture
             panes.forEach(p => {
                 p.style.display = 'block';
                 p.classList.remove('hidden');
             });
 
             const opt = {
-                margin: [0.5, 0.5],
-                filename: 'LSH_Training_Report.pdf',
+                margin: 0.5,
+                filename: 'LSH_Case_Report.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
+                html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             try {
-                await html2pdf().set(opt).from(element).save();
-            } catch (error) {
-                console.error("PDF generation failed:", error);
+                await html2pdf().set(opt).from(area).save();
             } finally {
+                // Restore UI state
                 panes.forEach(p => p.style.display = '');
-                switchTab(originalTab);
+                switchTab(currentActiveTab);
             }
-        }
-
-        function resetInterface() {
-            if(confirm("Permanently clear all data?")) location.reload();
         }
     </script>
 </body>
