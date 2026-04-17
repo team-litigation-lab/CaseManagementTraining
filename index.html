@@ -175,7 +175,6 @@
     </main>
 
     <script>
-        // TAB LOGIC
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.add('hidden');
@@ -190,7 +189,6 @@
             document.getElementById('btn-' + tabId).classList.add('tab-active');
         }
 
-        // DYNAMIC CONTENT LOGIC
         function addListRow(containerId) {
             const container = document.getElementById(containerId);
             const count = container.children.length + 1;
@@ -213,13 +211,11 @@
             container.appendChild(div);
         }
 
-        // FILE UPLOAD SIMULATION
         function updateFileName(input) {
             const display = document.getElementById('file-name-display');
             display.innerText = input.files[0] ? input.files[0].name : "No file chosen";
         }
 
-        // UTILITIES
         function updatePhase(val) {
             document.getElementById('currentStatus').innerText = val;
         }
@@ -231,8 +227,8 @@
         }
 
         function loadWork() {
-            addFacilityBox(); // Add one default facility box
-            showTab('client'); // Set default tab
+            addFacilityBox();
+            showTab('client');
         }
 
         function resetForm() {
@@ -241,12 +237,10 @@
             }
         }
 
-        // PDF GENERATION
         function saveCase() {
             const area = document.getElementById('capture-area');
             const allTabs = document.querySelectorAll('.tab-content');
             
-            // Force show all tabs for capture
             allTabs.forEach(t => { 
                 t.classList.remove('hidden'); 
                 t.style.display = 'block'; 
@@ -261,7 +255,6 @@
             };
 
             html2pdf().from(area).set(opt).save().then(() => {
-                // Revert to tabbed view
                 showTab('client');
             });
         }
