@@ -118,7 +118,35 @@
                             <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
                         </div>
                     </div>
+                    
+                    <div class="pdf-card">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Employment Status</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label>Current Status</label>
+                                <select class="prof-input w-full border-slate-100">
+                                    <option>Employed</option>
+                                    <option>Self-Employed</option>
+                                    <option>Unemployed</option>
+                                    <option>Retired</option>
+                                    <option>Student</option>
+                                </select>
+                            </div>
+                            <div><label>Company Name</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Lost Days</label><div contenteditable="true" class="text-base font-semibold w-full">0</div></div>
+                                <div>
+                                    <label>Wage Claim Filed?</label>
+                                    <select class="prof-input w-full border-slate-100">
+                                        <option>N</option>
+                                        <option>Y</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="space-y-6">
                     <div class="pdf-card">
                         <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Legal Team</h3>
@@ -129,6 +157,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="pdf-card">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Accident Narrative</h3>
                     <div contenteditable="true" class="text-sm w-full min-h-[440px]"></div>
@@ -195,13 +224,23 @@
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
                         <div class="flex justify-between items-center mb-2 px-1 no-print">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">4. UM/UIM</h4>
-                            <button onclick="addUM()" class="bg-slate-900 text-white text-[10px] px-3 py-1 rounded font-bold uppercase">+ Add UM</button>
+                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">4. UM/UIM Policies</h4>
+                            <button onclick="addUM()" class="bg-slate-900 text-white text-[10px] px-3 py-1 rounded font-bold uppercase">+ Add UM Policy</button>
                         </div>
-                        <div id="um-container" class="space-y-0">
+                        <div id="um-container" class="space-y-4">
                             <div class="um-entry">
                                 <div class="ins-tab-header"><span class="text-[10px] font-bold text-orange-800">UM POLICY #1</span></div>
-                                <div class="ins-tab-content"><div class="ins-grid"><div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div><div><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div></div></div>
+                                <div class="ins-tab-content">
+                                    <div class="grid grid-cols-2 gap-4 mb-4">
+                                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label>Policy Holder</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                                        <div><label>Adjuster</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                                    </div>
+                                    <div class="mt-4"><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -332,7 +371,22 @@
             const container = document.getElementById('um-container');
             const div = document.createElement('div');
             div.className = "um-entry mt-4";
-            div.innerHTML = `<div class="ins-tab-header"><span class="text-[10px] font-bold text-orange-800">UM POLICY #${umCount}</span><button onclick="this.parentElement.parentElement.remove(); umCount--;" class="no-print text-red-500 text-[10px]">Remove</button></div><div class="ins-tab-content"><div class="ins-grid"><div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div><div><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div></div></div>`;
+            div.innerHTML = `
+                <div class="ins-tab-header">
+                    <span class="text-[10px] font-bold text-orange-800">UM POLICY #${umCount}</span>
+                    <button onclick="this.parentElement.parentElement.remove(); umCount--;" class="no-print text-red-500 text-[10px]">Remove</button>
+                </div>
+                <div class="ins-tab-content">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label>Policy Holder</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Adjuster</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                    </div>
+                    <div class="mt-4"><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                </div>`;
             container.appendChild(div);
         }
 
