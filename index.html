@@ -12,15 +12,13 @@
         body { font-family: 'Inter', sans-serif; }
         .bg-custom-orange { background-color: #F97316; }
         .tab-active { border-bottom: 3px solid #F97316; color: #F97316; font-weight: 700; background-color: #fff; }
-        .ins-subtab-active { background-color: #F97316 !important; color: white !important; }
+        .subtab-active { background-color: #F97316 !important; color: white !important; }
         .workspace-bg { background-color: #F3F4F6; }
         [contenteditable="true"]:focus { outline: 2px solid #F97316; background-color: #FFF7ED; padding: 4px; border-radius: 4px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         #save-status { transition: opacity 0.5s ease; }
-        @media print { 
-            .no-print { display: none !important; } 
-            .tab-content, .ins-section { display: block !important; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1.5rem; page-break-inside: avoid; } 
-        }
+        @media print { .no-print { display: none !important; } .tab-content, .ins-section { display: block !important; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1rem; } }
+        .upload-area { border: 2px dashed #CBD5E1; transition: all 0.3s ease; }
     </style>
 </head>
 <body class="bg-white min-h-screen flex text-gray-800" onload="loadWork()">
@@ -43,8 +41,8 @@
 
     <main class="flex-1 flex flex-col overflow-hidden workspace-bg" id="capture-area">
         <header class="h-32 bg-cover bg-center border-b border-gray-200 relative no-print" style="background-image: url('https://i.ibb.co/3sX8M8H/image-0.png');">
-            <div class="absolute top-4 right-8">
-                <div id="save-status" class="text-[8px] text-white/50 uppercase font-bold tracking-widest opacity-0 text-right">Progress Autosaved</div>
+            <div class="absolute top-4 right-8 flex flex-col items-end space-y-2">
+                <div id="save-status" class="text-[8px] text-white/50 uppercase font-bold tracking-widest opacity-0">Progress Autosaved</div>
             </div>
         </header>
 
@@ -52,10 +50,15 @@
             <div class="mb-6 border-b pb-4 flex justify-between items-center">
                 <div>
                     <h1 id="case-title" class="text-2xl font-bold text-slate-800" contenteditable="true">Untitled Assessment</h1>
-                    <p class="text-sm text-gray-500 italic">Insurance Discovery & Verification</p>
+                    <p class="text-sm text-gray-500 italic">Insurance Discovery Phase</p>
                 </div>
                 <div class="text-right">
-                    <span id="currentStatus" class="text-orange-600 font-black text-lg uppercase tracking-tight">Intake</span>
+                    <select id="phase-select" onchange="updatePhase(this.value); autoSave();" class="bg-slate-800 text-white text-[10px] font-bold uppercase p-2 rounded no-print">
+                        <option value="Intake">Intake</option>
+                        <option value="Investigation">Investigation</option>
+                        <option value="Litigation">Litigation</option>
+                    </select>
+                    <div id="currentStatus" class="text-orange-600 font-black text-lg uppercase tracking-tight mt-1">Intake</div>
                 </div>
             </div>
 
@@ -64,118 +67,127 @@
                 <button onclick="showTab('details')" id="btn-details" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Case Facts</button>
                 <button onclick="showTab('medical')" id="btn-medical" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Medical</button>
                 <button onclick="showTab('damage')" id="btn-damage" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Property Damage</button>
-                <button onclick="showTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-x">Insurance Matrix</button>
+                <button onclick="showTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Insurance Matrix</button>
             </div>
 
-            <div id="tab-insurance" class="tab-content hidden space-y-6">
+            <div id="tab-client" class="tab-content grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">DOB</label><div id="field-dob" contenteditable="true" class="text-slate-700">MM/DD/YYYY</div></div>
+                 <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">SSN</label><div id="field-ssn" contenteditable="true" class="text-slate-700">XXX-XX-XXXX</div></div>
+                 <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">Email</label><div id="field-email" contenteditable="true" class="text-slate-700">...</div></div>
+            </div>
+            
+            <div id="tab-details" class="tab-content hidden"><div class="bg-white p-6 rounded border">Case Facts Content...</div></div>
+            <div id="tab-medical" class="tab-content hidden"><div class="bg-white p-6 rounded border">Medical Log Content...</div></div>
+            <div id="tab-damage" class="tab-content hidden"><div class="bg-white p-6 rounded border">Property Damage Content...</div></div>
+
+            <div id="tab-insurance" class="tab-content hidden">
                 <div class="flex space-x-2 mb-4 no-print">
-                    <button onclick="showIns('bi')" id="sub-bi" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded ins-subtab-active transition">Bodily Injury</button>
-                    <button onclick="showIns('um')" id="sub-um" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded transition">UM / UIM</button>
-                    <button onclick="showIns('pip')" id="sub-pip" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded transition">PIP / MedPay</button>
-                    <button onclick="showIns('health')" id="sub-health" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded transition">Health Insurance</button>
+                    <button onclick="showIns('bi')" id="sub-bi" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-100 rounded subtab-active">Bodily Injury</button>
+                    <button onclick="showIns('um')" id="sub-um" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-100 rounded">UM / UIM</button>
+                    <button onclick="showIns('pip')" id="sub-pip" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-100 rounded">PIP / MedPay</button>
+                    <button onclick="showIns('health')" id="sub-health" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-100 rounded">Health Insurance</button>
                 </div>
 
-                <div id="sec-bi" class="ins-section bg-white p-6 rounded-lg border-l-4 border-orange-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-orange-600 uppercase mb-4 tracking-widest">Carrier 1: Bodily Injury (BI)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-bi-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-bi-p" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Limits</label><div id="f-bi-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                <div id="sec-bi" class="ins-section space-y-4">
+                    <div class="bg-white p-6 rounded-lg border-l-4 border-orange-500 shadow-sm">
+                        <h3 class="text-[10px] font-black text-orange-600 uppercase mb-4 tracking-widest">Bodily Injury (BI) Coverage</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-bi-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-bi-p" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Limits</label><div id="f-bi-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                        </div>
                     </div>
                 </div>
 
-                <div id="sec-um" class="ins-section hidden bg-white p-6 rounded-lg border-l-4 border-blue-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-widest">Uninsured/Underinsured Motorist (UM/UIM)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-um-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-um-p" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">UM Limits</label><div id="f-um-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                <div id="sec-um" class="ins-section hidden space-y-4">
+                    <div class="bg-white p-6 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                        <h3 class="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-widest">Uninsured/Underinsured Motorist (UM/UIM)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-um-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-um-p" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">UM Limits</label><div id="f-um-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                        </div>
                     </div>
                 </div>
 
-                <div id="sec-pip" class="ins-section hidden bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-green-600 uppercase mb-4 tracking-widest">PIP / Medical Payments</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-pip-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">PIP Limit</label><div id="f-pip-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Status</label><div id="f-pip-s" contenteditable="true" class="text-xs font-bold border-b pb-1 italic">Active / Exhausted?</div></div>
+                <div id="sec-pip" class="ins-section hidden space-y-4">
+                    <div class="bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
+                        <h3 class="text-[10px] font-black text-green-600 uppercase mb-4 tracking-widest">PIP / Medical Payments</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-pip-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">PIP Limit</label><div id="f-pip-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Exhausted?</label><div id="f-pip-e" contenteditable="true" class="text-xs font-bold border-b pb-1">No</div></div>
+                        </div>
                     </div>
                 </div>
 
-                <div id="sec-health" class="ins-section hidden bg-white p-6 rounded-lg border-l-4 border-purple-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-purple-600 uppercase mb-4 tracking-widest">Health Insurance / Private Pay</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Health Plan Name</label><div id="f-hi-n" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Member ID</label><div id="f-hi-i" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Group #</label><div id="f-hi-g" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                <div id="sec-health" class="ins-section hidden space-y-4">
+                    <div class="bg-white p-6 rounded-lg border-l-4 border-purple-500 shadow-sm">
+                        <h3 class="text-[10px] font-black text-purple-600 uppercase mb-4 tracking-widest">Health Insurance (Lien Management)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Provider Name</label><div id="f-hi-n" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Member ID</label><div id="f-hi-i" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                            <div><label class="text-[9px] text-gray-400 uppercase font-bold">Plan Type (PPO/HMO)</label><div id="f-hi-t" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <div id="tab-client" class="tab-content"><div class="bg-white p-6 rounded border">Client Profile Fields...</div></div>
-            <div id="tab-details" class="tab-content hidden"><div class="bg-white p-6 rounded border">Case Facts Fields...</div></div>
-            <div id="tab-medical" class="tab-content hidden"><div class="bg-white p-6 rounded border">Medical Log Fields...</div></div>
-            <div id="tab-damage" class="tab-content hidden"><div class="bg-white p-6 rounded border">Property Damage Fields...</div></div>
-
         </div>
     </main>
 
     <script>
         function showTab(id) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-            document.getElementById('tab-' + id).classList.remove('hidden');
+            document.getElementById('tab-'+id).classList.remove('hidden');
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
-            document.getElementById('btn-' + id).classList.add('tab-active');
+            document.getElementById('btn-'+id).classList.add('tab-active');
         }
 
         function showIns(id) {
             document.querySelectorAll('.ins-section').forEach(s => s.classList.add('hidden'));
-            document.getElementById('sec-' + id).classList.remove('hidden');
-            document.querySelectorAll('.ins-subtab').forEach(b => b.classList.remove('ins-subtab-active'));
-            document.getElementById('sub-' + id).classList.add('ins-subtab-active');
+            document.getElementById('sec-'+id).classList.remove('hidden');
+            document.querySelectorAll('.ins-subtab').forEach(b => b.classList.remove('subtab-active'));
+            document.getElementById('sub-'+id).classList.add('subtab-active');
         }
 
         function autoSave() {
             const data = {
-                title: document.getElementById('case-title').innerText,
-                bi: document.getElementById('f-bi-c').innerText,
-                um: document.getElementById('f-um-c').innerText,
-                pip: document.getElementById('f-pip-c').innerText,
-                hi: document.getElementById('f-hi-n').innerText
+                bi_c: document.getElementById('f-bi-c').innerText,
+                bi_p: document.getElementById('f-bi-p').innerText,
+                bi_l: document.getElementById('f-bi-l').innerText,
+                um_c: document.getElementById('f-um-c').innerText,
+                um_p: document.getElementById('f-um-p').innerText,
+                um_l: document.getElementById('f-um-l').innerText,
+                pip_c: document.getElementById('f-pip-c').innerText,
+                pip_l: document.getElementById('f-pip-l').innerText,
+                hi_n: document.getElementById('f-hi-n').innerText,
+                hi_i: document.getElementById('f-hi-i').innerText
             };
-            localStorage.setItem('lsh_insurance_data', JSON.stringify(data));
+            localStorage.setItem('lsh_ins_data', JSON.stringify(data));
             document.getElementById('save-status').style.opacity = '1';
-            setTimeout(() => document.getElementById('save-status').style.opacity = '0', 1000);
+            setTimeout(() => document.getElementById('save-status').style.opacity = '0', 800);
         }
 
         function loadWork() {
-            const saved = JSON.parse(localStorage.getItem('lsh_insurance_data'));
+            const saved = JSON.parse(localStorage.getItem('lsh_ins_data'));
             if(saved) {
-                document.getElementById('case-title').innerText = saved.title;
-                document.getElementById('f-bi-c').innerText = saved.bi;
-                document.getElementById('f-um-c').innerText = saved.um;
-                document.getElementById('f-pip-c').innerText = saved.pip;
-                document.getElementById('f-hi-n').innerText = saved.hi;
+                document.getElementById('f-bi-c').innerText = saved.bi_c;
+                document.getElementById('f-um-c').innerText = saved.um_c;
+                document.getElementById('f-pip-c').innerText = saved.pip_c;
+                document.getElementById('f-hi-n').innerText = saved.hi_n;
             }
         }
 
+        function updatePhase(val) { document.getElementById('currentStatus').innerText = val; }
+
         function saveCase() {
             const element = document.getElementById('capture-area');
-            // Show all sections for PDF
+            // Show all sections for PDF capture
             document.querySelectorAll('.tab-content, .ins-section').forEach(c => {
                 c.classList.remove('hidden');
                 c.style.display = 'block';
             });
             html2pdf().from(element).save().then(() => location.reload());
-        }
-    </script>
-</body>
-</html>
-                c.style.display = 'block';
-            });
-            html2pdf().set(opt).from(element).save().then(() => {
-                location.reload();
-            });
         }
     </script>
 </body>
