@@ -25,13 +25,14 @@
             border-radius: 4px; 
         }
 
-        .pdf-card { break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 0.75rem; background: white; padding: 1.5rem; }
+        .pdf-card { break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 0.75rem; background: white; padding: 1.5rem; height: 100%; }
 
         @media print {
             .no-print { display: none !important; }
             .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; border: none !important; margin-bottom: 2rem; }
             body { background: white !important; }
             main { overflow: visible !important; }
+            .pdf-grid-force { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 2rem !important; }
         }
     </style>
 </head>
@@ -93,13 +94,29 @@
 
             <div id="tab-client" class="tab-pane grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="pdf-card">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Client Identity</h3>
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Client Identity & Employment</h3>
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                             <div><label class="text-[9px] font-bold text-slate-400 uppercase">SSN</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                         </div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Home Address</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                         <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        
+                        <div class="pt-2 border-t border-slate-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">Employed?</label>
+                                <select class="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded outline-none border-none">
+                                    <option>NO</option>
+                                    <option>YES</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Company Name</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Days Lost</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                            </div>
+                        </div>
+
                         <div class="no-print pt-2">
                             <label class="text-[9px] font-bold text-slate-400 uppercase block mb-1">ID Upload</label>
                             <input type="file" id="id-input" class="hidden" onchange="handleFileUpload(this, 'id-label')">
@@ -108,6 +125,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="pdf-card">
                     <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 mb-6 border-b pb-2">Alternate Contact</h3>
                     <div class="space-y-4">
@@ -172,14 +190,12 @@
 
         function switchTab(tabId) {
             currentActiveTab = tabId;
-            // Hide all
             document.querySelectorAll('.tab-pane').forEach(p => {
                 p.classList.add('hidden');
-                p.classList.remove('grid'); // Reset grid
+                p.classList.remove('md:grid'); 
             });
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
 
-            // Show target
             const target = document.getElementById('tab-' + tabId);
             if (tabId === 'client') target.classList.add('md:grid');
             target.classList.remove('hidden');
@@ -205,10 +221,12 @@
             const area = document.getElementById('capture-area');
             const panes = document.querySelectorAll('.tab-pane');
             
-            // Show all for capture
+            // Prepare for PDF
             panes.forEach(p => {
                 p.style.display = 'block';
                 p.classList.remove('hidden');
+                // Force grid layout for the profile/alt contact section in PDF
+                if(p.id === 'tab-client') p.classList.add('pdf-grid-force');
             });
 
             const opt = {
@@ -223,7 +241,10 @@
                 await html2pdf().set(opt).from(area).save();
             } finally {
                 // Restore UI state
-                panes.forEach(p => p.style.display = '');
+                panes.forEach(p => {
+                    p.style.display = '';
+                    p.classList.remove('pdf-grid-force');
+                });
                 switchTab(currentActiveTab);
             }
         }
