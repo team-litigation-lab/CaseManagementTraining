@@ -14,7 +14,6 @@
         .workspace-bg { background-color: #F3F4F6; }
         [contenteditable="true"]:focus { outline: 2px solid #F97316; background-color: #FFF7ED; padding: 4px; border-radius: 4px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        
         @media print { 
             .no-print { display: none !important; } 
             .tab-content { display: block !important; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1.5rem; page-break-inside: avoid; } 
@@ -240,12 +239,10 @@
         function saveCase() {
             const area = document.getElementById('capture-area');
             const allTabs = document.querySelectorAll('.tab-content');
-            
             allTabs.forEach(t => { 
                 t.classList.remove('hidden'); 
                 t.style.display = 'block'; 
             });
-
             const opt = {
                 margin: 0.3,
                 filename: 'LSH_Assessment_Portal.pdf',
@@ -253,7 +250,6 @@
                 html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
-
             html2pdf().from(area).set(opt).save().then(() => {
                 showTab('client');
             });
