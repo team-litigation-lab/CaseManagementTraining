@@ -8,11 +8,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        /* Increased base font size for better readability */
         body { font-family: 'Inter', sans-serif; font-size: 16px; } 
         .tab-btn { border-bottom: 3px solid transparent; cursor: pointer; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 13px; padding-bottom: 8px; }
         .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
-        .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; }
+        .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
         [contenteditable="true"] { outline: none; border-bottom: 1px solid transparent; min-width: 20px; display: inline-block; }
         [contenteditable="true"]:focus { background: #fff7ed; border-bottom: 1px solid #f97316; }
         .ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1.25rem; }
@@ -21,13 +20,15 @@
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-950 text-white flex flex-col no-print">
-        <div class="p-8 border-b border-slate-900 text-center">
-            <h1 class="text-lg font-black text-orange-500 leading-tight uppercase">Legal Support Help<br>Training Interface</h1>
+    <aside class="w-72 bg-slate-950 text-white flex flex-col no-print">
+        <div class="p-8 border-b border-slate-900">
+            <h1 class="text-lg font-black text-orange-500 leading-tight uppercase tracking-tight">
+                Legal Support Help<br>Training Interface
+            </h1>
         </div>
         <div class="p-6 space-y-4">
-            <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg">Download PDF</button>
-            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase">Reset Data</button>
+            <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
+            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Reset Data</button>
         </div>
     </aside>
 
@@ -38,11 +39,11 @@
 
         <div class="flex-1 overflow-y-auto p-8" id="capture-area">
             
-            <div class="pdf-card border-l-8 border-orange-500 mb-6">
+            <div class="pdf-card border-l-8 border-orange-500">
                 <div class="flex justify-between items-start">
                     <div>
                         <h1 class="text-4xl font-black text-slate-900 uppercase"><span contenteditable="true">Client Name</span></h1>
-                        <div class="mt-2 flex items-center gap-4">
+                        <div class="mt-3 flex items-center gap-4">
                             <p class="text-sm font-bold text-orange-600 uppercase">Case ID: <span contenteditable="true">BATCH-2026-X</span></p>
                             <select class="bg-orange-50 text-orange-700 text-[11px] font-bold uppercase px-2 py-1 rounded border border-orange-200 outline-none">
                                 <option>Intake</option>
@@ -59,7 +60,7 @@
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="text-orange-600 font-black text-2xl uppercase italic">Case File</div>
+                        <div class="text-orange-600 font-black text-2xl uppercase italic tracking-tighter">Case File</div>
                         <div class="mt-2 space-y-1">
                             <p class="text-[11px] font-bold text-slate-400 uppercase">Date of Loss: <span contenteditable="true" class="text-slate-900 ml-1 border-b border-slate-200">MM/DD/YYYY</span></p>
                             <p class="text-[11px] font-bold text-slate-400 uppercase">SOL: <span contenteditable="true" class="text-red-600 ml-1 border-b border-slate-200">MM/DD/YYYY</span></p>
@@ -74,7 +75,7 @@
                 <div id="btn-medical" onclick="showTab('medical')" class="tab-btn">Medical</div>
             </div>
 
-            <div id="pane-profile" style="display: grid;" class="grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="pane-profile" class="tab-content grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="pdf-card">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
                     <div class="space-y-4">
@@ -112,7 +113,7 @@
                 </div>
             </div>
 
-            <div id="pane-facts" style="display: none;" class="grid-cols-1 md:grid-cols-3 gap-6">
+            <div id="pane-facts" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="pdf-card col-span-1">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
                     <div class="space-y-4">
@@ -126,15 +127,9 @@
                             <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
                             <div contenteditable="true" class="text-base font-semibold border-b pt-1">...</div>
                         </div>
-                        <div>
-                            <label class="font-bold text-slate-400 uppercase">Police Report Status</label>
-                            <select class="w-full mt-1 bg-slate-50 border text-sm font-bold p-2 rounded">
-                                <option>Available</option><option>Pending</option><option>N/A</option>
-                            </select>
-                        </div>
                         <div class="no-print pt-2">
                             <label class="font-bold text-slate-400 uppercase">Upload Police Report</label>
-                            <input type="file" class="block w-full text-xs text-slate-500 mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                            <input type="file" class="block w-full text-xs text-slate-500 mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700">
                         </div>
                     </div>
                 </div>
@@ -148,8 +143,6 @@
                             <div class="ins-grid">
                                 <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                             </div>
                         </div>
@@ -157,24 +150,10 @@
                         <div class="mb-6" id="um-section">
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM Insurance</h4>
-                                <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-slate-100 px-2 py-1 rounded font-bold hover:bg-slate-200">+ ADD ADDITIONAL UM</button>
+                                <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-slate-100 px-2 py-1 rounded font-bold">+ ADD ADDITIONAL UM</button>
                             </div>
                             <div class="ins-grid mb-2">
                                 <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase mb-2">PIP Insurance</h4>
-                            <div class="ins-grid">
-                                <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                             </div>
                         </div>
@@ -182,21 +161,20 @@
                         <div id="health-section">
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4>
-                                <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-slate-100 px-2 py-1 rounded font-bold hover:bg-slate-200">+ ADD ADDITIONAL HEALTH</button>
+                                <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-slate-100 px-2 py-1 rounded font-bold">+ ADD ADDITIONAL HEALTH</button>
                             </div>
                             <div class="ins-grid mb-2">
                                 <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Individual Membership ID</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Group Number</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="pane-medical" style="display: none;" class="pdf-card min-h-[450px]">
+            <div id="pane-medical" class="tab-content hidden pdf-card min-h-[450px]">
                 <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Treatment Log</h3>
-                <div contenteditable="true" class="text-base">Enter all medical providers and dates...</div>
+                <div contenteditable="true" class="text-base w-full">Enter all medical providers and dates...</div>
             </div>
 
         </div>
@@ -204,13 +182,26 @@
 
     <script>
         function showTab(id) {
-            const panes = ['profile', 'facts', 'medical'];
-            panes.forEach(p => {
-                document.getElementById('pane-' + p).style.display = 'none';
-                document.getElementById('btn-' + p).classList.remove('active-tab');
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(pane => {
+                pane.classList.add('hidden');
             });
-            const targetPane = document.getElementById('pane-' + id);
-            targetPane.style.display = (id === 'medical') ? 'block' : 'grid';
+            // Remove active style from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active-tab');
+            });
+            
+            // Show target pane
+            const target = document.getElementById('pane-' + id);
+            target.classList.remove('hidden');
+            
+            // Re-apply display grid if it's not the medical tab
+            if(id !== 'medical') {
+                target.style.display = 'grid';
+            } else {
+                target.style.display = 'block';
+            }
+
             document.getElementById('btn-' + id).classList.add('active-tab');
         }
 
@@ -223,14 +214,11 @@
                 newRow.innerHTML = `
                     <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                     <div><label class="font-bold text-slate-400 uppercase">Individual Membership ID</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                    <div><label class="font-bold text-slate-400 uppercase">Group Number</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                 `;
             } else {
                 newRow.innerHTML = `
                     <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                     <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                    <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
-                    <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                     <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm border-b">...</div></div>
                 `;
             }
@@ -239,17 +227,26 @@
 
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
-            const allPanes = document.querySelectorAll('#pane-profile, #pane-facts, #pane-medical');
-            allPanes.forEach(p => p.style.display = 'block');
+            // Force show all panes for PDF capture
+            document.querySelectorAll('.tab-content').forEach(p => {
+                p.classList.remove('hidden');
+                p.style.display = 'block';
+            });
 
-            await html2pdf().from(area).set({
-                margin: 0.5,
+            const opt = {
+                margin: 0.3,
                 filename: 'LSH_Case_Report.pdf',
-                html2canvas: { scale: 2 },
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).save();
+            };
 
-            location.reload();
+            try {
+                await html2pdf().set(opt).from(area).save();
+            } finally {
+                // Restore UI state
+                location.reload();
+            }
         }
     </script>
 </body>
