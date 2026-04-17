@@ -144,41 +144,76 @@
                             </div>
                         </div>
                     </div>
+                    
                     <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Injury History</h3>
+                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Emergency Contact</h3>
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label>Prev. Injury?</label><select class="prof-input w-full"><option>NO</option><option>YES</option></select></div>
-                                <div><label>Notes</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
+                                <div><label>Name</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
+                                <div><label>Relationship</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
                             </div>
-                            <div class="pt-4 border-t"><label>Primary Injury</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
-                            <div><label>Symptoms</label><div contenteditable="true" class="text-sm w-full min-h-[60px]">...</div></div>
+                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
+                            <div><label>Email Address</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="pdf-card">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Emergency & Narrative</h3>
-                    <div class="space-y-4 mb-4 pb-4 border-b">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label>Emergency Contact</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
-                            <div><label>Relationship</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
-                        </div>
-                    </div>
-                    <div contenteditable="true" class="text-sm w-full min-h-[300px]">Describe the accident narrative here...</div>
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Accident Narrative</h3>
+                    <div contenteditable="true" class="text-sm w-full min-h-[440px]">Describe the accident narrative here...</div>
                 </div>
             </div>
 
             <div id="pane-matrix" class="tab-pane space-y-6">
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance</h4></div>
-                <div class="ins-tab-content"><div class="ins-grid"><div><label>Policy Holder</label><div contenteditable="true" class="text-sm w-full">...</div></div><div><label>Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div><div><label>Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div><div><label>Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div><div><label>Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div><div><label>Liability Accepted?</label><select class="prof-input w-full"><option>PENDING</option><option>YES</option><option>NO</option></select></div></div></div>
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance (Adverse)</h4></div>
+                <div class="ins-tab-content">
+                    <div class="ins-grid">
+                        <div><label>Policy Holder</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Liability Accepted?</label>
+                            <select class="prof-input w-full"><option>PENDING</option><option>YES</option><option>NO</option></select>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">PIP / MedPay</h4></div>
+                <div class="ins-tab-content">
+                    <div class="ins-grid">
+                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>PIP Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                    </div>
+                </div>
+
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">UM / UIM Coverage</h4></div>
+                <div class="ins-tab-content">
+                    <div class="ins-grid">
+                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>UM Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                    </div>
+                </div>
+
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4></div>
+                <div class="ins-tab-content">
+                    <div class="ins-grid">
+                        <div><label>Provider Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Member ID</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Group #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                    </div>
+                </div>
+            </div>
 
             <div id="pane-treatment" class="tab-pane space-y-6">
                 <div class="flex justify-between items-center px-2 no-print">
                     <h2 class="text-sm font-black uppercase text-slate-400 italic">Facility Summaries</h2>
-                    <button onclick="addFacility()" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded font-bold uppercase hover:bg-orange-700">+ Add Facility</button>
+                    <button onclick="addFacility()" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded font-bold uppercase hover:bg-orange-700 transition-all">+ Add Facility</button>
                 </div>
+
                 <div id="facility-container" class="space-y-4">
                     <div class="pdf-card border-t-4 border-orange-500">
                         <div class="grid md:grid-cols-3 gap-6">
@@ -187,6 +222,26 @@
                             <div><label>Current Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div>
                         </div>
                     </div>
+                </div>
+
+                <div class="pdf-card">
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500">Treatment Schedule</h3>
+                        <button onclick="addRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase hover:bg-orange-600">+ Add Visit</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead>
+                            <tr><th>Date</th><th>Provider</th><th>Services</th><th class="no-print w-10"></th></tr>
+                        </thead>
+                        <tbody id="treatment-body">
+                            <tr>
+                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                                <td><div contenteditable="true" class="font-semibold">...</div></td>
+                                <td><div contenteditable="true">...</div></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -202,31 +257,16 @@
                 </div>
 
                 <div class="pdf-card">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Coverage & Liability</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div>
-                            <label>PD Coverage Available (3P)?</label>
-                            <select id="pd-3p-available" onchange="toggleComp(this.value)" class="prof-input w-full">
-                                <option value="YES">YES</option>
-                                <option value="NO">NO</option>
-                            </select>
-                        </div>
-                        <div id="comp-coverage-tab" style="display: none;">
-                            <label class="text-red-600">Comp Coverage Available?</label>
-                            <select class="prof-input w-full border-red-200">
-                                <option value="NO">NO</option>
-                                <option value="YES">YES</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Liability Accepted?</label>
-                            <select class="prof-input w-full">
-                                <option value="PENDING">PENDING</option>
-                                <option value="YES">YES</option>
-                                <option value="NO">NO</option>
-                            </select>
+                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">3P Vehicle Information (Adverse Party)</h3>
+                    <div class="grid md:grid-cols-2 gap-6 mb-4">
+                        <div><label>Vehicle Title Owner</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">...</div></div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div><label>Year</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">...</div></div>
+                            <div><label>Make</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">...</div></div>
+                            <div><label>Model</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">...</div></div>
                         </div>
                     </div>
+                    <div><label>Vehicle Damage Description</label><div contenteditable="true" class="text-sm w-full min-h-[60px] border border-slate-100 rounded p-2">...</div></div>
                 </div>
 
                 <div class="pdf-card">
@@ -246,6 +286,10 @@
                                 <option value="SURRENDER">SURRENDER VEHICLE</option>
                             </select>
                         </div>
+                        <div id="repair-notes" class="col-span-2 mt-4">
+                            <label class="text-green-700">Repair & Damage Notes</label>
+                            <div contenteditable="true" class="text-sm w-full min-h-[100px] border border-green-100 bg-green-50/30 rounded p-2">List specific damages here...</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -263,8 +307,38 @@
             if(btn) btn.classList.add('active-tab');
         }
 
-        function toggleComp(val) { document.getElementById('comp-coverage-tab').style.display = (val === 'NO') ? 'block' : 'none'; }
-        function toggleTotalled(val) { document.getElementById('totalled-options').style.display = (val === 'TOTALLED') ? 'block' : 'none'; }
+        function addFacility() {
+            const container = document.getElementById('facility-container');
+            const div = document.createElement('div');
+            div.className = "pdf-card relative border-t-4 border-orange-500";
+            div.innerHTML = `
+                <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div><label>Facility Name</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">...</div></div>
+                    <div><label>Type of Treatment</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">...</div></div>
+                    <div><label>Current Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div>
+                </div>`;
+            container.appendChild(div);
+        }
+
+        function addRow() {
+            const body = document.getElementById('treatment-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                <td><div contenteditable="true" class="font-semibold">...</div></td>
+                <td><div contenteditable="true">...</div></td>
+                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>`;
+            body.appendChild(row);
+        }
+
+        function toggleTotalled(val) { 
+            const totalledDiv = document.getElementById('totalled-options');
+            const repairDiv = document.getElementById('repair-notes');
+            if (val === 'TOTALLED') { totalledDiv.style.display = 'block'; repairDiv.style.display = 'none'; } 
+            else { totalledDiv.style.display = 'none'; repairDiv.style.display = 'block'; }
+        }
+
         function togglePolice(val) { document.getElementById('police-info').style.display = (val === 'YES') ? 'block' : 'none'; }
         function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
 
