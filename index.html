@@ -97,6 +97,7 @@
                 <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
                 <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
                 <div id="btn-nocontact" onclick="showTab('nocontact')" class="tab-btn">No Contact Protocol</div>
+                <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
             </div>
 
             <div id="pane-profile" class="tab-pane active xl:grid-cols-3 gap-6">
@@ -315,25 +316,65 @@
                         <div class="space-y-4">
                             <div><label>Target Email Address</label><div contenteditable="true" class="text-sm font-semibold w-full"></div></div>
                             <div class="flex items-center justify-between bg-slate-50 p-4 rounded-lg">
-                                <div>
-                                    <label>Email Frequency</label>
-                                    <span id="email-freq-count" class="text-2xl font-black text-orange-600">0</span>
-                                </div>
+                                <div><label>Email Frequency</label><span id="email-freq-count" class="text-2xl font-black text-orange-600">0</span></div>
                                 <button onclick="updateFreq('email-freq-count', 1)" class="no-print bg-orange-100 text-orange-600 h-10 w-10 rounded-full font-bold text-xl hover:bg-orange-200">+</button>
                             </div>
                         </div>
                     </div>
-
                     <div class="pdf-card">
                         <h3 class="text-[11px] font-black uppercase text-slate-500 mb-4 border-b pb-2">Snail Mail Tracker</h3>
                         <div class="space-y-4">
-                            <div>
-                                <label>Mailing Address Used</label>
-                                <div contenteditable="true" class="text-sm w-full min-h-[40px]"></div>
+                            <div><label>Mailing Address Used</label><div contenteditable="true" class="text-sm w-full min-h-[40px]"></div></div>
+                            <div><label>Mail History / Tracking Numbers</label><div contenteditable="true" class="text-sm w-full min-h-[60px] border border-slate-100 bg-slate-50/30 rounded p-2"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-doc-hub" class="tab-pane space-y-6">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Medical Documents</h3>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <label>Medical Records</label>
+                            <select class="prof-input w-full mb-2"><option>PENDING</option><option>RECEIVED</option><option>N/A</option></select>
+                            <div contenteditable="true" class="text-[10px] text-slate-500 w-full italic">Notes...</div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <label>Medical Billing</label>
+                            <select class="prof-input w-full mb-2"><option>PENDING</option><option>RECEIVED</option><option>N/A</option></select>
+                            <div contenteditable="true" class="text-[10px] text-slate-500 w-full italic">Notes...</div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <label>Radiology / Imaging</label>
+                            <select class="prof-input w-full mb-2"><option>PENDING</option><option>RECEIVED</option><option>N/A</option></select>
+                            <div contenteditable="true" class="text-[10px] text-slate-500 w-full italic">Notes...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pdf-card">
+                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Case Files (Legal Documents)</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                            <span class="text-sm font-bold text-slate-700">Retainer Agreement</span>
+                            <div class="flex gap-4 items-center">
+                                <div contenteditable="true" class="text-[10px] border-none bg-transparent">Date Signed</div>
+                                <select class="prof-input text-xs"><option>PENDING</option><option>EXECUTED</option><option>N/A</option></select>
                             </div>
-                            <div>
-                                <label>Mail History / Tracking Numbers</label>
-                                <div contenteditable="true" class="text-sm w-full min-h-[60px] border border-slate-100 bg-slate-50/30 rounded p-2"></div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                            <span class="text-sm font-bold text-slate-700">HIPAA Authorization</span>
+                            <div class="flex gap-4 items-center">
+                                <div contenteditable="true" class="text-[10px] border-none bg-transparent">Date Signed</div>
+                                <select class="prof-input text-xs"><option>PENDING</option><option>EXECUTED</option><option>N/A</option></select>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                            <span class="text-sm font-bold text-slate-700">Release Forms</span>
+                            <div class="flex gap-4 items-center">
+                                <div contenteditable="true" class="text-[10px] border-none bg-transparent">Date Signed</div>
+                                <select class="prof-input text-xs"><option>PENDING</option><option>EXECUTED</option><option>N/A</option></select>
                             </div>
                         </div>
                     </div>
