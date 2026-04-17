@@ -3,257 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSH | Case Management Dashboard</title>
+    <title>LSH | Training Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; overflow: hidden; }
-        
-        /* Navigation & Tabs */
-        .tab-btn { transition: all 0.2s ease; border-bottom: 3px solid transparent; }
-        .tab-btn.active { border-bottom-color: #f97316; color: #f97316; font-weight: 800; }
-
-        .sub-tab { 
-            padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700; border-radius: 8px; 
-            cursor: pointer; background: #f8fafc; color: #64748b; transition: 0.2s;
-        }
-        .sub-tab.active { background: #f97316; color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2); }
-
-        /* UI Cards */
-        .pdf-card { 
-            background: white; border: 1px solid #e2e8f0; border-radius: 16px; 
-            padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Editing States */
-        [contenteditable="true"] { transition: 0.2s; padding: 2px 4px; border-radius: 4px; }
-        [contenteditable="true"]:focus { outline: 2px solid #fdba74; background: #fff7ed; }
-
-        /* PDF Printing Logic */
-        @media print {
-            .no-print { display: none !important; }
-            .tab-pane { display: block !important; margin-bottom: 2rem; page-break-inside: avoid; }
-            body { background: white !important; overflow: visible !important; }
-            main { height: auto !important; overflow: visible !important; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .tab-btn { border-bottom: 3px solid transparent; cursor: pointer; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 11px; padding-bottom: 8px; }
+        .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
+        .sub-btn { cursor: pointer; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #64748b; }
+        .active-sub { background: #f97316 !important; color: white !important; }
+        .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+        [contenteditable="true"] { outline: none; border-bottom: 1px solid transparent; }
+        [contenteditable="true"]:focus { background: #fff7ed; border-bottom: 1px solid #f97316; }
     </style>
 </head>
-<body class="flex h-screen">
+<body class="bg-slate-50 flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-950 text-white flex flex-col no-print shrink-0">
-        <div class="p-8 border-b border-slate-900">
-            <div class="flex items-center gap-2">
-                <div class="w-7 h-7 bg-orange-600 rounded flex items-center justify-center font-bold">L</div>
-                <h1 class="font-extrabold text-lg tracking-tight">LSH Dashboard</h1>
-            </div>
-            <p class="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">Professional v6.0</p>
+    <aside class="w-64 bg-slate-950 text-white flex flex-col no-print">
+        <div class="p-8 border-b border-slate-900 text-center">
+            <h1 class="text-xl font-black text-orange-500">LSH SYSTEM</h1>
         </div>
-
-        <div class="p-6 flex-1 space-y-8">
-            <div class="space-y-2">
-                <p class="text-[10px] font-black text-slate-600 uppercase px-2">File Operations</p>
-                <button onclick="generatePDF()" class="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg">
-                    <span>Export Case File</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="p-6 border-t border-slate-900">
-            <button onclick="window.location.reload()" class="text-[10px] text-slate-500 hover:text-white uppercase font-bold tracking-widest">Reset Interface</button>
+        <div class="p-6 space-y-4">
+            <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg">Download PDF</button>
+            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase">Reset Data</button>
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0">
-        <header class="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between no-print shrink-0">
-            <div class="flex items-center gap-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Online</span>
-            </div>
-            <div class="text-[10px] font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-full">WORKSPACE / CASE INTAKE</div>
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-12 bg-white border-b flex items-center justify-end px-8 no-print">
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Workspace Active</span>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8 space-y-6" id="case-report">
+        <div class="flex-1 overflow-y-auto p-8" id="capture-area">
             
-            <div class="pdf-card border-l-4 border-l-orange-500">
+            <div class="pdf-card border-l-8 border-orange-500 mb-6">
                 <div class="flex justify-between items-start">
-                    <div class="space-y-1">
-                        <p class="text-[10px] font-black text-orange-600 uppercase tracking-widest">Active File</p>
-                        <h2 class="text-3xl font-black text-slate-900 tracking-tighter" contenteditable="true">FULL CLIENT NAME</h2>
-                        <div class="flex items-center gap-4 text-[11px] font-bold text-slate-400">
-                            <span>ID: <span contenteditable="true" class="text-slate-900">LSH-2026-X</span></span>
-                            <span>•</span>
-                            <span>DATE: <span class="text-slate-900">April 17, 2026</span></span>
-                        </div>
+                    <div>
+                        <h1 class="text-3xl font-black text-slate-900 uppercase"><span contenteditable="true">Client Name</span></h1>
+                        <p class="text-xs font-bold text-orange-600 uppercase mt-1">Case ID: <span contenteditable="true">BATCH-2026-X</span></p>
                     </div>
-                    <div class="text-right">
-                        <div class="text-2xl font-black text-orange-600 italic uppercase leading-none">Intake</div>
-                        <p class="text-[9px] text-slate-400 font-bold mt-1">LITIGATION STATUS</p>
-                    </div>
+                    <div class="text-orange-600 font-black text-2xl uppercase italic">Intake</div>
                 </div>
             </div>
 
-            <nav class="flex gap-8 no-print border-b border-slate-200">
-                <button onclick="switchMainTab('profile')" id="m-profile" class="tab-btn pb-3 text-xs font-bold uppercase tracking-wider active">Profile</button>
-                <button onclick="switchMainTab('facts')" id="m-facts" class="tab-btn pb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Case Facts</button>
-                <button onclick="switchMainTab('medical')" id="m-medical" class="tab-btn pb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Medical History</button>
-            </nav>
+            <div class="flex gap-8 border-b mb-6 no-print">
+                <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Profile</div>
+                <div id="btn-facts" onclick="showTab('facts')" class="tab-btn">Case Facts</div>
+                <div id="btn-medical" onclick="showTab('medical')" class="tab-btn">Medical</div>
+            </div>
 
-            <div id="pane-profile" class="tab-pane grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div id="pane-profile" style="display: grid;" class="grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="pdf-card">
-                    <h3 class="text-[11px] font-black text-slate-400 uppercase mb-6 border-b pb-2">Client Demographics</h3>
-                    <div class="space-y-6">
-                        <div class="grid grid-cols-2 gap-6">
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-slate-400 uppercase">Birth Date</label>
-                                <div contenteditable="true" class="text-sm font-bold border-b pt-1">00/00/0000</div>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-slate-400 uppercase">Social Security (Last 4)</label>
-                                <div contenteditable="true" class="text-sm font-bold border-b pt-1">XXXX</div>
-                            </div>
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-semibold border-b pt-1">...</div></div>
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">SSN</label><div contenteditable="true" class="text-sm font-semibold border-b pt-1">...</div></div>
                         </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase">Primary Address</label>
-                            <div contenteditable="true" class="text-sm font-bold border-b pt-1">Enter address...</div>
-                        </div>
-                        <div class="pt-4 mt-2 border-t border-slate-50">
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Home Address</label><div contenteditable="true" class="text-sm font-semibold border-b pt-1">...</div></div>
+                        
+                        <div class="pt-4 border-t border-slate-100">
                             <div class="flex justify-between items-center mb-4">
-                                <label class="text-[10px] font-black text-slate-500 uppercase">Employment Status</label>
-                                <select class="text-[10px] font-bold bg-slate-100 rounded px-2 py-1 outline-none"><option>UNEMPLOYED</option><option>EMPLOYED</option><option>RETIRED</option></select>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase">Employed?</label>
+                                <select class="text-[10px] font-bold bg-slate-100 rounded px-2"><option>NO</option><option>YES</option></select>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-1">
-                                    <label class="text-[9px] font-black text-slate-400 uppercase">Employer</label>
-                                    <div contenteditable="true" class="text-sm font-bold border-b pt-1">...</div>
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[9px] font-black text-slate-400 uppercase">Days Missed</label>
-                                    <div contenteditable="true" class="text-sm font-bold border-b pt-1">0</div>
-                                </div>
+                                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Employer</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Days Lost</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="pdf-card border-t-4 border-t-orange-100">
-                    <h3 class="text-[11px] font-black text-orange-600 uppercase mb-6 border-b pb-2">Next of Kin / Contact</h3>
-                    <div class="space-y-5">
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase">Full Legal Name</label>
-                            <div contenteditable="true" class="text-sm font-bold border-b pt-1">...</div>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase">Phone Number</label>
-                            <div contenteditable="true" class="text-sm font-bold border-b pt-1">+1 (000) 000-0000</div>
-                        </div>
+                <div class="pdf-card">
+                    <h3 class="text-[10px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Emergency Contact</h3>
+                    <div class="space-y-4">
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Full Name</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Relationship</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                     </div>
                 </div>
             </div>
 
-            <div id="pane-facts" class="tab-pane hidden space-y-6">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="pdf-card lg:col-span-1">
-                        <h3 class="text-[11px] font-black text-slate-400 uppercase mb-6 border-b pb-2">Claim Parameters</h3>
-                        <div class="space-y-5">
-                            <div class="space-y-2">
-                                <label class="text-[9px] font-black text-slate-400 uppercase">Claim Classification</label>
-                                <select class="w-full bg-slate-50 border border-slate-200 text-xs font-bold p-2.5 rounded-xl outline-none">
-                                    <option>MVA - Motor Vehicle Accident</option>
-                                    <option>SF - Slip and Fall</option>
-                                    <option>MT - Mass Tort</option>
-                                    <option>DB - Dog Bite</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-[9px] font-black text-slate-400 uppercase">Police Report Status</label>
-                                <select class="w-full bg-slate-50 border border-slate-200 text-xs font-bold p-2.5 rounded-xl outline-none">
-                                    <option>Report Available</option><option>Pending Request</option><option>No Report Filed</option>
-                                </select>
-                            </div>
+            <div id="pane-facts" style="display: none;" class="grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="pdf-card col-span-1">
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Basics</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[9px] font-bold text-slate-400 uppercase">Type of Claim</label>
+                            <select class="w-full mt-1 bg-slate-50 border text-xs font-bold p-2 rounded">
+                                <option>MVA</option><option>Mass Tort</option><option>Slip and Fall</option><option>Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-bold text-slate-400 uppercase">Police Report</label>
+                            <select class="w-full mt-1 bg-slate-50 border text-xs font-bold p-2 rounded">
+                                <option>Available</option><option>Pending</option><option>N/A</option>
+                            </select>
                         </div>
                     </div>
-
-                    <div class="lg:col-span-2 space-y-4">
-                        <div class="flex gap-2 no-print">
-                            <button onclick="switchSubTab('narrative')" id="s-narrative" class="sub-tab active">Narrative</button>
-                            <button onclick="switchSubTab('injuries')" id="s-injuries" class="sub-tab">Clinical Injuries</button>
-                            <button onclick="switchSubTab('internal')" id="s-internal" class="sub-tab">Internal Notes</button>
-                        </div>
-                        <div id="sub-narrative" class="sub-content pdf-card min-h-[300px]">
-                            <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Detailed Narrative</p>
-                            <div contenteditable="true" class="text-sm leading-relaxed text-slate-600 italic">Enter the mechanics of the incident...</div>
-                        </div>
-                        <div id="sub-injuries" class="sub-content hidden pdf-card min-h-[300px]">
-                            <p class="text-[9px] font-black text-red-500 uppercase mb-2">Sustained Injuries</p>
-                            <div contenteditable="true" class="text-sm font-bold text-slate-900 uppercase">List physical complaints...</div>
-                        </div>
-                        <div id="sub-internal" class="sub-content hidden pdf-card min-h-[300px]">
-                            <p class="text-[9px] font-black text-blue-500 uppercase mb-2">Team Observations</p>
-                            <div contenteditable="true" class="text-sm font-mono text-slate-500">Internal confidential notes...</div>
-                        </div>
+                </div>
+                <div class="md:col-span-2 space-y-4">
+                    <div class="flex gap-2 no-print">
+                        <div id="sbtn-narrative" onclick="showSub('narrative')" class="sub-btn active-sub">Narrative</div>
+                        <div id="sbtn-injuries" onclick="showSub('injuries')" class="sub-btn">Injuries</div>
+                        <div id="sbtn-notes" onclick="showSub('notes')" class="sub-btn">Notes</div>
                     </div>
+                    <div id="spane-narrative" style="display: block;" class="pdf-card min-h-[250px]"><div contenteditable="true" class="text-sm italic">Accident details...</div></div>
+                    <div id="spane-injuries" style="display: none;" class="pdf-card min-h-[250px]"><div contenteditable="true" class="text-sm font-bold text-red-600">List injuries...</div></div>
+                    <div id="spane-notes" style="display: none;" class="pdf-card min-h-[250px]"><div contenteditable="true" class="text-sm text-slate-500">Internal notes...</div></div>
                 </div>
             </div>
 
-            <div id="pane-medical" class="tab-pane hidden">
-                <div class="pdf-card min-h-[500px]">
-                    <h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Treatment Chronology</h3>
-                    <div contenteditable="true" class="text-sm leading-loose">Enter medical providers, treatment dates, and facilities in chronological order...</div>
-                </div>
+            <div id="pane-medical" style="display: none;" class="pdf-card min-h-[450px]">
+                <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Treatment Log</h3>
+                <div contenteditable="true" class="text-sm">Enter all medical providers and dates...</div>
             </div>
 
         </div>
     </main>
 
     <script>
-        function switchMainTab(tabId) {
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('active');
-                b.classList.add('text-slate-400');
+        // MAIN TABS
+        function showTab(id) {
+            const panes = ['profile', 'facts', 'medical'];
+            panes.forEach(p => {
+                document.getElementById('pane-' + p).style.display = 'none';
+                document.getElementById('btn-' + p).classList.remove('active-tab');
             });
-
-            const activePane = document.getElementById('pane-' + tabId);
-            activePane.classList.remove('hidden');
-            if(tabId !== 'medical') activePane.style.display = 'grid';
             
-            document.getElementById('m-' + tabId).classList.add('active');
-            document.getElementById('m-' + tabId).classList.remove('text-slate-400');
+            const targetPane = document.getElementById('pane-' + id);
+            targetPane.style.display = (id === 'medical') ? 'block' : 'grid';
+            document.getElementById('btn-' + id).classList.add('active-tab');
         }
 
-        function switchSubTab(subId) {
-            document.querySelectorAll('.sub-content').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+        // SUB TABS
+        function showSub(id) {
+            const subPanes = ['narrative', 'injuries', 'notes'];
+            subPanes.forEach(s => {
+                document.getElementById('spane-' + s).style.display = 'none';
+                document.getElementById('sbtn-' + s).classList.remove('active-sub');
+            });
             
-            document.getElementById('sub-' + subId).classList.remove('hidden');
-            document.getElementById('s-' + subId).classList.add('active');
+            document.getElementById('spane-' + id).style.display = 'block';
+            document.getElementById('sbtn-' + id).classList.add('active-sub');
         }
 
-        async function generatePDF() {
-            const element = document.getElementById('case-report');
-            
-            // Expand all content for export
-            const panes = document.querySelectorAll('.tab-pane, .sub-content');
-            panes.forEach(el => {
-                el.classList.remove('hidden');
-                el.style.display = 'block';
-            });
+        // PDF EXPORT
+        async function downloadPDF() {
+            const area = document.getElementById('capture-area');
+            // Temporarily reveal everything
+            const allPanes = document.querySelectorAll('#pane-profile, #pane-facts, #pane-medical, #spane-narrative, #spane-injuries, #spane-notes');
+            allPanes.forEach(p => p.style.display = 'block');
 
-            const opt = {
+            await html2pdf().from(area).set({
                 margin: 0.5,
                 filename: 'LSH_Case_Report.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 3, letterRendering: true, useCORS: true },
+                html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
+            }).save();
 
-            try {
-                await html2pdf().set(opt).from(element).save();
-            } finally {
-                // Restore UI State
-                window.location.reload();
-            }
+            location.reload();
         }
     </script>
 </body>
