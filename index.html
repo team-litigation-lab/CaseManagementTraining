@@ -1,234 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSH | Training Interface</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; font-size: 16px; } 
-        .tab-btn { border-bottom: 3px solid transparent; cursor: pointer; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 11px; padding-bottom: 8px; transition: all 0.3s; white-space: nowrap; }
-        .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
-        .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
-        
-        [contenteditable="true"] { outline: none; border: 1px solid #f1f5f9; background: #f8fafc; border-radius: 4px; padding: 4px 8px; min-width: 40px; display: inline-block; }
-        [contenteditable="true"]:focus { background: #ffffff; border-color: #f97316; }
-        
-        label { font-size: 11px !important; margin-bottom: 4px; display: block; font-weight: bold; color: #94a3b8; text-transform: uppercase; }
-        
-        .ins-tab-header { background: #fff7ed; border-left: 4px solid #f97316; padding: 8px 12px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; align-items: center; }
-        .ins-tab-content { border: 1px solid #fed7aa; border-top: none; padding: 16px; border-radius: 0 0 8px 8px; background: #ffffff; margin-bottom: 1.5rem; }
-        
-        select.prof-input { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 4px; padding: 4px 8px; font-size: 14px; font-weight: 600; outline: none; }
-        
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; }
-
-        .treat-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
-        .treat-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-        
-        @media print { .no-print { display: none !important; } }
-    </style>
-</head>
-<body class="bg-slate-50 flex h-screen overflow-hidden">
-
-    <aside class="w-72 bg-slate-950 text-white flex flex-col no-print">
-        <div class="p-8 border-b border-slate-900">
-            <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">
-                Legal Support Help<br><span class="text-orange-500">Training Interface</span>
-            </h1>
+<div id="pane-tasks" class="tab-pane">
+     <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center border-b pb-2 mb-4">
+            <h3 class="text-[11px] font-black uppercase text-orange-500">Action Items</h3>
+            <button onclick="addTaskRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
         </div>
-        <div class="p-6 space-y-4">
-            <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
-            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
-        </div>
-    </aside>
+        <table class="treat-table">
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Task Description</th>
+                    <th style="width: 20%;">Assigned To</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th class="no-print"></th>
+                </tr>
+            </thead>
+            <tbody id="tasks-body">
+                <tr>
+                    <td><div contenteditable="true" class="w-full">Order initial medical records</div></td>
+                    <td><div contenteditable="true" class="w-full font-semibold text-slate-700">Case Manager</div></td>
+                    <td><select class="prof-input text-[11px]"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></td>
+                    <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                    <td><select class="prof-input text-[11px]"><option>Pending</option><option>In Progress</option><option>Completed</option></select></td>
+                    <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-12 bg-white border-b flex items-center justify-end px-8 no-print">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspace Active</span>
-        </header>
-
-        <div class="flex-1 overflow-y-auto p-8" id="capture-area">
-            
-            <div class="pdf-card border-l-8 border-orange-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h1 class="text-4xl font-black text-slate-900 uppercase">
-                            <span contenteditable="true">Client Name</span> 
-                            <span class="text-slate-300 mx-2">|</span> 
-                            <span contenteditable="true" class="text-2xl text-slate-500">(000) 000-0000</span>
-                        </h1>
-                        <div class="mt-3 flex items-center gap-4">
-                            <p class="text-sm font-bold text-orange-600 uppercase">Case ID: <span contenteditable="true">BATCH-2026-X</span></p>
-                            <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[11px] font-bold uppercase px-2 py-1 rounded border border-orange-200 outline-none">
-                                <option value="Intake">Intake</option>
-                                <option value="Investigation">Investigation</option>
-                                <option value="Treating">Treating</option>
-                                <option value="Demand Review">Demand Review</option>
-                                <option value="BI Demand">BI Demand</option>
-                                <option value="BI Settlement">BI Settlement</option>
-                                <option value="UM Demand">UM Demand</option>
-                                <option value="UM Settlement">UM Settlement</option>
-                                <option value="Lien Negotiation">Lien Negotiation</option>
-                                <option value="Mediation">Mediation</option>
-                                <option value="Arbitration">Arbitration</option>
-                                <option value="Litigation">Litigation</option>
-                                <option value="Disbursement">Disbursement</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="display-phase" class="text-orange-600 font-black text-2xl uppercase italic tracking-tighter">Intake</div>
-                </div>
-            </div>
-
-            <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
-                <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
-                <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
-                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
-                <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
-                <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
-                <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
-                <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
-                <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
-                <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
-                <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
-            </div>
-
-            <div id="pane-profile" class="tab-pane active space-y-6">
-                <div class="grid xl:grid-cols-3 gap-6">
-                    <div class="space-y-6">
-                        <div class="pdf-card">
-                            <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
-                            <div class="space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label>DOB</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                                    <div><label>SSN</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                                </div>
-                                <div><label>Email</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                                <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="space-y-6">
-                        <div class="pdf-card">
-                            <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Legal Team</h3>
-                            <div class="space-y-4">
-                                <div><label>Lead Attorney</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                                <div><label>Case Manager</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Accident Narrative</h3>
-                        <div contenteditable="true" class="text-sm w-full min-h-[350px]"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-tasks" class="tab-pane">
-                 <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-4">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500">Action Items</h3>
-                        <button onclick="addTaskRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
-                    </div>
-                    <table class="treat-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 50%;">Task Description</th>
-                                <th>Priority</th>
-                                <th>Due Date</th>
-                                <th>Status</th>
-                                <th class="no-print"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tasks-body">
-                            <tr>
-                                <td><div contenteditable="true" class="w-full">Order initial medical records</div></td>
-                                <td><select class="prof-input text-[11px]"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></td>
-                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                                <td><select class="prof-input text-[11px]"><option>Pending</option><option>In Progress</option><option>Completed</option></select></td>
-                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="pane-notes" class="tab-pane">
-                 <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-6">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500">Case Notes & Logs</h3>
-                        <button onclick="addNoteEntry()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Entry</button>
-                    </div>
-                    <div id="notes-container" class="space-y-4">
-                        <div class="p-4 bg-slate-50 border border-slate-100 rounded-lg relative">
-                            <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-2 text-slate-300">×</button>
-                            <label class="text-[9px] text-slate-400">Timestamp: <span contenteditable="true">2026-04-18 05:00 AM</span></label>
-                            <div contenteditable="true" class="text-sm mt-2 w-full min-h-[60px]">Initial file review completed. Waiting on police report.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-litigation" class="tab-pane space-y-6">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Information</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div><label>Court Jurisdiction</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Case Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Presiding Judge</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    </div>
-                </div>
-            </div>
-
-            </div>
-    </main>
-
-    <script>
-        function showTab(id) {
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            const pane = document.getElementById('pane-' + id);
-            const btn = document.getElementById('btn-' + id);
-            if(pane) pane.classList.add('active');
-            if(btn) btn.classList.add('active-tab');
-        }
-
-        function addTaskRow() {
-            const body = document.getElementById('tasks-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><div contenteditable="true" class="w-full">New task...</div></td>
-                <td><select class="prof-input text-[11px]"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></td>
-                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                <td><select class="prof-input text-[11px]"><option>Pending</option><option>In Progress</option><option>Completed</option></select></td>
-                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function addNoteEntry() {
-            const container = document.getElementById('notes-container');
-            const now = new Date().toLocaleString();
-            const div = document.createElement('div');
-            div.className = "p-4 bg-slate-50 border border-slate-100 rounded-lg relative";
-            div.innerHTML = `
-                <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-2 text-slate-300">×</button>
-                <label class="text-[9px] text-slate-400">Timestamp: <span contenteditable="true">${now}</span></label>
-                <div contenteditable="true" class="text-sm mt-2 w-full min-h-[60px]">Type note here...</div>`;
-            container.prepend(div);
-        }
-
-        function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
-
-        async function downloadPDF() {
-            const element = document.getElementById('capture-area');
-            const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
-            html2pdf().set(opt).from(element).save();
-        }
-    </script>
-</body>
-</html>
+<script>
+    // Updated JavaScript Function
+    function addTaskRow() {
+        const body = document.getElementById('tasks-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><div contenteditable="true" class="w-full">New task...</div></td>
+            <td><div contenteditable="true" class="w-full font-semibold text-slate-700">Name/Role</div></td>
+            <td><select class="prof-input text-[11px]"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></td>
+            <td><div contenteditable="true">MM/DD/YYYY</div></td>
+            <td><select class="prof-input text-[11px]"><option>Pending</option><option>In Progress</option><option>Completed</option></select></td>
+            <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+        body.appendChild(row);
+    }
+</script>
