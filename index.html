@@ -141,8 +141,60 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xs font-black uppercase tracking-widest text-red-600">Injuries Sustained</h3>
                         <button onclick="addRow('injury')" class="no-print text-[9px] bg-red-100 text-red-600 font-bold px-3 py-1 rounded">Add Injury +</button>
-                    </div>
-                    <div id="injury-container" class="space-y-2"></div>
+                    <div id="tab-insurance" class="tab-content hidden space-y-6">
+    <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-slate-800">
+        <h3 class="text-xs font-black uppercase tracking-widest text-slate-800 mb-4">Bodily Injury (BI) Insurance</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Insurance Company</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Number</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Limit</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-custom-orange">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-black uppercase tracking-widest text-custom-orange">Uninsured/Underinsured (UM/UIM) Insurance</h3>
+            <button onclick="addInsurancePolicy('um-container')" class="no-print text-[9px] bg-orange-100 text-orange-600 font-bold px-3 py-1 rounded">Add UM Policy +</button>
+        </div>
+        <div id="um-container" class="space-y-4">
+            </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-green-500">
+        <h3 class="text-xs font-black uppercase tracking-widest text-green-600 mb-4">PIP / Health Insurance</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Insurance Company</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Number</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+            <div class="border-b">
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Limit</label>
+                <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+            </div>
+        </div>
+    </div>
+</div>
                 </div>
 
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-blue-500">
