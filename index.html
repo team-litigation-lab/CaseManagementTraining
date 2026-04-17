@@ -10,51 +10,63 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .tab-active { border-bottom: 3px solid #F97316; color: #F97316 !important; font-weight: 800; background-color: #fff; }
-        .workspace-bg { background-color: #F8FAFC; }
-        [contenteditable="true"]:focus { outline: 2px solid #F97316; background-color: #FFF7ED; padding: 4px; border-radius: 4px; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
         
-        @media print { 
-            .no-print { display: none !important; } 
-            .tab-content { display: block !important; opacity: 1 !important; visibility: visible !important; margin-bottom: 2rem; page-break-inside: avoid; }
-            .workspace-bg { background-color: white !important; }
-            #capture-area { padding: 0 !important; }
-            .content-card { border: 1px solid #E2E8F0 !important; box-shadow: none !important; }
+        /* Tab Active State */
+        .tab-active { 
+            border-bottom: 3px solid #F97316; 
+            color: #F97316 !important; 
+            font-weight: 800; 
+            background-color: #fff; 
+        }
+
+        /* Focus State for Editable Fields */
+        [contenteditable="true"]:focus { 
+            outline: 2px solid #F97316; 
+            background-color: #FFF7ED; 
+            padding: 2px 4px; 
+            border-radius: 4px; 
+        }
+
+        /* Print/PDF Specific Overrides */
+        @media print {
+            .no-print { display: none !important; }
+            .tab-content { display: block !important; opacity: 1 !important; visibility: visible !important; border: 1px solid #e2e8f0; margin-bottom: 20px; padding: 20px; page-break-inside: avoid; }
+            body { background: white !important; }
+            main { overflow: visible !important; }
         }
     </style>
 </head>
-<body class="bg-white min-h-screen flex text-gray-800" onload="loadWork()">
+<body class="bg-slate-50 min-h-screen flex text-gray-800" onload="initInterface()">
 
     <aside class="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col no-print">
-        <div class="p-8 border-b border-slate-800 flex flex-col items-center justify-center">
-            <h1 class="text-xl font-extrabold tracking-tighter leading-none text-center">
+        <div class="p-8 border-b border-slate-800 text-center">
+            <h1 class="text-xl font-extrabold tracking-tighter leading-none">
                 <span class="block text-slate-400 text-[10px] tracking-[0.3em] mb-2 uppercase">Training Interface</span>
-                <span class="block text-white">LEGAL</span>
+                <span class="block">LEGAL</span>
                 <span class="block text-orange-500">SUPPORT</span>
-                <span class="block text-white">HELP</span>
+                <span class="block">HELP</span>
             </h1>
         </div>
-        <nav class="mt-10 px-6 space-y-4 flex-1">
-            <button onclick="saveCase()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg transition-all active:scale-95">Download PDF</button>
-            <button onclick="resetForm()" class="w-full border border-slate-700 hover:bg-slate-800 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase transition-all">Clear Interface</button>
+        <nav class="mt-10 px-6 space-y-4">
+            <button onclick="generatePDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg transition-all active:scale-95">Download PDF</button>
+            <button onclick="resetInterface()" class="w-full border border-slate-700 hover:bg-slate-800 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase transition-all">Clear All</button>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden workspace-bg">
-        <header class="h-12 bg-white border-b border-gray-200 relative no-print flex items-center px-8">
-            <div id="save-status" class="ml-auto text-[9px] text-slate-400 uppercase font-bold tracking-widest opacity-0 transition-opacity">Interface Synced</div>
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-12 bg-white border-b border-gray-200 no-print flex items-center justify-end px-8">
+            <div id="save-status" class="text-[9px] text-slate-400 uppercase font-bold tracking-widest opacity-0 transition-opacity">Interface Synced</div>
         </header>
 
-        <div class="p-8 overflow-y-auto flex-1" id="capture-area" oninput="autoSave()">
+        <div class="p-8 overflow-y-auto flex-1" id="capture-area" oninput="triggerAutoSave()">
             
             <div class="mb-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-start">
                     <div>
                         <h1 class="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            <span contenteditable="true" class="hover:bg-slate-50 px-1 rounded transition-colors">Client Name</span>
+                            <span contenteditable="true" class="hover:bg-slate-50 px-1 rounded">Client Name</span>
                             <span class="text-slate-300 font-thin">/</span>
-                            <span contenteditable="true" class="text-slate-600 hover:bg-slate-50 px-1 rounded transition-colors">Trainee Name</span>
+                            <span contenteditable="true" class="text-slate-600 hover:bg-slate-50 px-1 rounded">Trainee Name</span>
                         </h1>
                         <div class="mt-4 flex items-center gap-3">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Interface ID:</span>
@@ -62,11 +74,10 @@
                         </div>
                     </div>
                     <div class="text-right">
-                        <select onchange="updatePhase(this.value)" class="no-print bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-[10px] font-bold uppercase outline-none mb-2">
-                            <option value="Intake">Intake Phase</option>
+                        <select onchange="document.getElementById('currentStatus').innerText = this.value" class="no-print bg-slate-100 border-none rounded px-3 py-1.5 text-[10px] font-bold uppercase text-slate-600 mb-2">
+                            <option value="Intake">Intake</option>
                             <option value="Investigation">Investigation</option>
                             <option value="Demand">Demand</option>
-                            <option value="Settlement">Settlement</option>
                             <option value="Closed">Closed</option>
                         </select>
                         <div id="currentStatus" class="text-orange-600 font-black text-2xl uppercase italic tracking-tighter">Intake</div>
@@ -74,77 +85,50 @@
                 </div>
             </div>
 
-            <div class="flex justify-center md:justify-start gap-1 mb-8 no-print border-b border-slate-200">
-                <button onclick="showTab('client')" id="btn-client" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all tab-active">Client Profile</button>
-                <button onclick="showTab('facts')" id="btn-facts" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Case Facts</button>
-                <button onclick="showTab('medical')" id="btn-medical" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Medical</button>
-                <button onclick="showTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Insurance</button>
+            <div class="flex gap-1 mb-8 no-print border-b border-slate-200">
+                <button onclick="switchTab('client')" id="btn-client" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all tab-active">Profile</button>
+                <button onclick="switchTab('facts')" id="btn-facts" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Facts</button>
+                <button onclick="switchTab('medical')" id="btn-medical" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Medical</button>
+                <button onclick="switchTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all">Insurance</button>
             </div>
 
-            <div id="tab-client" class="tab-content grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm content-card">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Client Contact</h3>
-                    <div class="space-y-5">
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm py-1 font-semibold text-slate-700">...</div></div>
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Email</label><div contenteditable="true" class="text-sm py-1 font-semibold text-blue-600 underline">...</div></div>
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Address</label><div contenteditable="true" class="text-sm py-1 font-semibold text-slate-700">...</div></div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm content-card">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Personal Identification</h3>
-                    <div class="space-y-5">
+            <div id="tab-client" class="tab-pane grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Client Identity</h3>
+                    <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Date of Birth</label><div contenteditable="true" class="text-sm py-1 font-semibold text-slate-700">MM/DD/YYYY</div></div>
-                            <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">SSN</label><div contenteditable="true" class="text-sm py-1 font-semibold text-slate-700">XXX-XX-XXXX</div></div>
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">SSN</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                         </div>
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">DL / ID State</label><div contenteditable="true" class="text-sm py-1 font-semibold text-slate-700">...</div></div>
-                        
-                        <div class="mt-4 pt-4 border-t border-dashed border-slate-200">
-                            <label class="text-[9px] font-extrabold text-slate-400 uppercase block mb-2">Identification Document</label>
-                            <div class="flex items-center gap-3">
-                                <input type="file" id="id-upload" class="hidden" onchange="handleFileUpload(this)">
-                                <button onclick="document.getElementById('id-upload').click()" class="no-print bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold py-2 px-4 rounded transition-all">Upload ID</button>
-                                <span id="file-ready" class="text-[10px] font-medium text-slate-500 italic">No file selected</span>
-                            </div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        <div class="no-print mt-4">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase block mb-1">ID Upload</label>
+                            <input type="file" id="id-file" class="hidden" onchange="updateFileLabel(this)">
+                            <button onclick="document.getElementById('id-file').click()" class="text-[10px] bg-slate-100 px-3 py-1 rounded font-bold">Choose File</button>
+                            <span id="file-name" class="text-[10px] ml-2 italic text-slate-500">None</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="tab-facts" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm content-card">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Incident Details</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Date of Loss</label><div contenteditable="true" class="text-sm py-1 font-semibold">...</div></div>
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Location</label><div contenteditable="true" class="text-sm py-1 font-semibold">...</div></div>
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Police Dept</label><div contenteditable="true" class="text-sm py-1 font-semibold">...</div></div>
-                    </div>
-                    <label class="text-[9px] font-extrabold text-slate-400 uppercase">Accident Narrative</label>
-                    <div contenteditable="true" class="text-sm leading-relaxed text-slate-700 min-h-[250px] outline-none bg-slate-50 p-4 mt-2 rounded-lg italic">Provide detailed description...</div>
+            <div id="tab-facts" class="tab-pane hidden">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Case Narrative</h3>
+                    <div contenteditable="true" class="text-sm min-h-[300px] italic text-slate-600 outline-none">Start typing case facts...</div>
                 </div>
             </div>
 
-            <div id="tab-medical" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm content-card">
-                    <div class="flex justify-between items-center mb-6 border-b pb-2">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Injuries Sustained</h3>
-                        <button onclick="addListRow('injury-list')" class="no-print text-[9px] bg-orange-100 text-orange-600 font-bold px-3 py-1 rounded hover:bg-orange-200">Add +</button>
-                    </div>
-                    <div id="injury-list" class="space-y-3">
-                        <div class="flex items-center space-x-3"><span class="text-[10px] text-slate-300 font-bold">1.</span><div contenteditable="true" class="flex-1 text-sm border-b border-slate-100 py-1 italic">...</div></div>
-                    </div>
+            <div id="tab-medical" class="tab-pane hidden">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Treatment Log</h3>
+                    <div contenteditable="true" class="text-sm min-h-[200px] outline-none">Enter medical details...</div>
                 </div>
             </div>
 
-            <div id="tab-insurance" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm content-card">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Coverage Details</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm py-1 font-semibold">...</div></div>
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm py-1 font-semibold">...</div></div>
-                        <div class="group"><label class="text-[9px] font-extrabold text-slate-400 uppercase">Limits</label><div contenteditable="true" class="text-sm py-1 font-semibold">...</div></div>
-                    </div>
+            <div id="tab-insurance" class="tab-pane hidden">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Coverage</h3>
+                    <div contenteditable="true" class="text-sm min-h-[100px] outline-none">Enter insurance info...</div>
                 </div>
             </div>
 
@@ -152,70 +136,74 @@
     </main>
 
     <script>
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            const target = document.getElementById('tab-' + tabId);
-            if(target) target.classList.remove('hidden');
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
-            document.getElementById('btn-' + tabId).classList.add('tab-active');
+        let currentTab = 'client';
+
+        function initInterface() {
+            switchTab('client');
         }
 
-        function handleFileUpload(input) {
-            const display = document.getElementById('file-ready');
-            if (input.files && input.files[0]) {
-                display.innerText = "Attached: " + input.files[0].name;
-                display.classList.remove('text-slate-500', 'italic');
-                display.classList.add('text-green-600', 'font-bold');
-                autoSave();
+        function switchTab(tabId) {
+            currentTab = tabId;
+            // Handle Panels
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.add('hidden');
+            });
+            const targetPane = document.getElementById('tab-' + tabId);
+            if(targetPane) targetPane.classList.remove('hidden');
+
+            // Handle Buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('tab-active');
+            });
+            const targetBtn = document.getElementById('btn-' + tabId);
+            if(targetBtn) targetBtn.classList.add('tab-active');
+        }
+
+        function updateFileLabel(input) {
+            const label = document.getElementById('file-name');
+            if(input.files && input.files[0]) {
+                label.innerText = "📎 " + input.files[0].name;
+                label.classList.add('text-orange-600', 'not-italic', 'font-bold');
             }
         }
 
-        function addListRow(containerId) {
-            const container = document.getElementById(containerId);
-            const count = container.children.length + 1;
-            const div = document.createElement('div');
-            div.className = "flex items-center space-x-3";
-            div.innerHTML = `<span class="text-[10px] text-slate-300 font-bold">${count}.</span><div contenteditable="true" class="flex-1 text-sm border-b border-slate-100 py-1 italic">...</div>`;
-            container.appendChild(div);
-        }
-
-        function updatePhase(val) {
-            document.getElementById('currentStatus').innerText = val;
-        }
-
-        function autoSave() {
+        function triggerAutoSave() {
             const status = document.getElementById('save-status');
             status.style.opacity = '1';
             setTimeout(() => status.style.opacity = '0', 800);
         }
 
-        async function saveCase() {
-            const area = document.getElementById('capture-area');
-            const tabs = document.querySelectorAll('.tab-content');
-            tabs.forEach(t => t.classList.remove('hidden'));
+        async function generatePDF() {
+            const element = document.getElementById('capture-area');
+            const panes = document.querySelectorAll('.tab-pane');
+            const originalTab = currentTab;
+
+            // 1. Force all panes to be visible for the PDF engine
+            panes.forEach(p => p.style.display = 'block');
+            panes.forEach(p => p.classList.remove('hidden'));
 
             const opt = {
-                margin: 0.5,
+                margin: [0.5, 0.5],
                 filename: 'LSH_Training_Report.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             try {
-                await html2pdf().from(area).set(opt).save();
+                await html2pdf().set(opt).from(element).save();
+            } catch (error) {
+                console.error("PDF generation failed:", error);
+                alert("Error generating PDF. Check console.");
             } finally {
-                const currentTabId = document.querySelector('.tab-active').id.replace('btn-', '');
-                showTab(currentTabId);
+                // 2. Cleanup: Reset visibility and return to the tab the user was on
+                panes.forEach(p => p.style.display = '');
+                switchTab(originalTab);
             }
         }
 
-        function resetForm() {
-            if(confirm("Clear current training session?")) location.reload();
-        }
-
-        function loadWork() {
-            showTab('client');
+        function resetInterface() {
+            if(confirm("Permanently clear all data?")) location.reload();
         }
     </script>
 </body>
