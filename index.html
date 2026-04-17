@@ -127,10 +127,22 @@
             </div>
 
             <div id="pane-facts" class="tab-pane hidden">
-                <div class="pdf-card">
+                <div class="pdf-card max-w-lg">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
-                    <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
-                    <div contenteditable="true" class="text-base font-semibold w-full">...</div>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="font-bold text-slate-400 uppercase">Police Arrived at the scene?</label>
+                            <select id="police-arrived" onchange="togglePoliceReport(this.value)" class="prof-input w-full">
+                                <option value="NO">NO</option>
+                                <option value="YES">YES</option>
+                            </select>
+                        </div>
+                        
+                        <div id="police-report-container" class="hidden">
+                            <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
+                            <div contenteditable="true" class="text-base font-semibold w-full border-orange-200">...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -192,6 +204,15 @@
     <script>
         function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
 
+        function togglePoliceReport(val) {
+            const container = document.getElementById('police-report-container');
+            if (val === 'YES') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
         function showTab(id) {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
@@ -232,10 +253,22 @@
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
             const panes = document.querySelectorAll('.tab-pane');
-            panes.forEach(p => { p.classList.remove('hidden'); p.style.display = 'block'; });
+            
+            // Show all panes for the PDF capture
+            panes.forEach(p => { 
+                p.classList.remove('hidden'); 
+                p.style.display = 'block'; 
+            });
+
+            // Ensure police report is only shown if YES was selected during capture
+            const policeVal = document.getElementById('police-arrived').value;
+            const reportContainer = document.getElementById('police-report-container');
+            if(policeVal === 'NO') {
+                reportContainer.style.display = 'none';
+            }
 
             const opt = {
-                margin: 0.3, filename: 'Report.pdf',
+                margin: 0.3, filename: 'LSH_Case_Report.pdf',
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
