@@ -88,6 +88,7 @@
                 <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
                 <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
                 <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
+                <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
                 <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
                 <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
             </div>
@@ -256,6 +257,44 @@
                 </div>
             </div>
 
+            <div id="pane-litigation" class="tab-pane space-y-6">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Information</h3>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div><label>Court Jurisdiction</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Case Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Presiding Judge</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    </div>
+                </div>
+                <div class="pdf-card">
+                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Key Deadlines</h3>
+                    <div class="grid md:grid-cols-4 gap-6">
+                        <div><label>Statute of Limitations</label><div contenteditable="true" class="text-sm font-bold text-red-600 w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                        <div><label>Complaint Filed</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                        <div><label>Discovery Cut-off</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                        <div><label>Trial Date</label><div contenteditable="true" class="text-sm font-bold text-orange-600 w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                    </div>
+                </div>
+                <div class="pdf-card">
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-[11px] font-black uppercase text-slate-400">Discovery Tracker</h3>
+                        <button onclick="addDiscoveryRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead><tr><th>Discovery Type</th><th>Propounding Party</th><th>Due Date</th><th>Status</th><th class="no-print"></th></tr></thead>
+                        <tbody id="discovery-body">
+                            <tr>
+                                <td><div contenteditable="true">Interrogatories</div></td>
+                                <td><div contenteditable="true">Defendant</div></td>
+                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                                <td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="pane-treatment" class="tab-pane space-y-6">
                 <div class="flex justify-between items-center px-2 no-print"><h2 class="text-sm font-black uppercase text-slate-400 italic">Facility Summaries</h2><button onclick="addFacility()" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded font-bold uppercase">+ Add Facility</button></div>
                 <div id="facility-container" class="space-y-4">
@@ -366,6 +405,13 @@
             const body = document.getElementById('doc-body');
             const row = document.createElement('tr');
             row.innerHTML = `<td><select class="prof-input w-full text-[11px] uppercase font-bold"><option>Medical Records</option><option>Insurance</option><option>Litigation Docs</option><option>Invoices</option><option>Others</option></select></td><td><div contenteditable="true" class="w-full">New record...</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+            body.appendChild(row);
+        }
+
+        function addDiscoveryRow() {
+            const body = document.getElementById('discovery-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `<td><div contenteditable="true">New Request</div></td><td><div contenteditable="true">Plaintiff</div></td><td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
             body.appendChild(row);
         }
 
