@@ -131,14 +131,17 @@
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
                     <div class="space-y-6">
                         <div>
+                            <label class="font-bold text-slate-400 uppercase">Type of Injury</label>
+                            <div contenteditable="true" class="text-base font-semibold w-full">...</div>
+                        </div>
+                        <div>
                             <label class="font-bold text-slate-400 uppercase">Police Arrived at the scene?</label>
                             <select id="police-arrived" onchange="togglePoliceReport(this.value)" class="prof-input w-full">
                                 <option value="NO">NO</option>
                                 <option value="YES">YES</option>
                             </select>
                         </div>
-                        
-                        <div id="police-report-container" class="hidden">
+                        <div id="police-report-container" style="display: none;">
                             <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
                             <div contenteditable="true" class="text-base font-semibold w-full border-orange-200">...</div>
                         </div>
@@ -147,47 +150,43 @@
             </div>
 
             <div id="pane-matrix" class="tab-pane hidden space-y-6">
-                <div class="pdf-card">
-                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Insurance Matrix</h3>
-                    
-                    <div class="mb-6">
-                        <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance</h4></div>
-                        <div class="ins-tab-content">
-                            <div class="ins-grid">
-                                <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                            </div>
+                <div class="mb-6">
+                    <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance</h4></div>
+                    <div class="ins-tab-content">
+                        <div class="ins-grid">
+                            <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="mb-6" id="um-section">
-                        <div class="ins-tab-header flex justify-between items-center">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM Insurance</h4>
-                            <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD UM</button>
-                        </div>
-                        <div class="ins-tab-content">
-                            <div class="ins-grid">
-                                <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                            </div>
+                <div class="mb-6" id="um-section">
+                    <div class="ins-tab-header flex justify-between items-center">
+                        <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM Insurance</h4>
+                        <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD UM</button>
+                    </div>
+                    <div class="ins-tab-content">
+                        <div class="ins-grid">
+                            <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         </div>
                     </div>
+                </div>
 
-                    <div id="health-section">
-                        <div class="ins-tab-header flex justify-between items-center">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4>
-                            <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD HEALTH</button>
-                        </div>
-                        <div class="ins-tab-content">
-                            <div class="ins-grid">
-                                <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Primary Member</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">ID #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Group #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                            </div>
+                <div id="health-section">
+                    <div class="ins-tab-header flex justify-between items-center">
+                        <h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4>
+                        <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD HEALTH</button>
+                    </div>
+                    <div class="ins-tab-content">
+                        <div class="ins-grid">
+                            <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">Primary Member</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">ID #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                            <div><label class="font-bold text-slate-400 uppercase">Group #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         </div>
                     </div>
                 </div>
@@ -206,11 +205,7 @@
 
         function togglePoliceReport(val) {
             const container = document.getElementById('police-report-container');
-            if (val === 'YES') {
-                container.classList.remove('hidden');
-            } else {
-                container.classList.add('hidden');
-            }
+            container.style.display = (val === 'YES') ? 'block' : 'none';
         }
 
         function showTab(id) {
@@ -220,7 +215,8 @@
             const target = document.getElementById('pane-' + id);
             target.classList.remove('hidden');
             
-            if(id === 'profile' || id === 'matrix') { target.style.display = 'grid'; } 
+            if(id === 'profile') { target.style.display = 'grid'; } 
+            else if(id === 'matrix') { target.style.display = 'block'; }
             else { target.style.display = 'block'; }
             
             document.getElementById('btn-' + id).classList.add('active-tab');
@@ -253,19 +249,11 @@
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
             const panes = document.querySelectorAll('.tab-pane');
-            
-            // Show all panes for the PDF capture
-            panes.forEach(p => { 
-                p.classList.remove('hidden'); 
-                p.style.display = 'block'; 
-            });
+            panes.forEach(p => { p.classList.remove('hidden'); p.style.display = 'block'; });
 
-            // Ensure police report is only shown if YES was selected during capture
             const policeVal = document.getElementById('police-arrived').value;
             const reportContainer = document.getElementById('police-report-container');
-            if(policeVal === 'NO') {
-                reportContainer.style.display = 'none';
-            }
+            if(policeVal === 'NO') { reportContainer.style.display = 'none'; }
 
             const opt = {
                 margin: 0.3, filename: 'LSH_Case_Report.pdf',
