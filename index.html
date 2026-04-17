@@ -105,7 +105,7 @@
                 <div id="btn-medical" onclick="showTab('medical')" class="tab-btn">Medical</div>
             </div>
 
-            <div id="pane-profile" class="tab-content grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="pane-profile" class="tab-pane grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="pdf-card">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
                     <div class="space-y-4">
@@ -137,13 +137,13 @@
                 </div>
             </div>
 
-            <div id="pane-facts" class="tab-content hidden">
+            <div id="pane-facts" class="tab-pane hidden">
                 <div class="pdf-card max-w-2xl">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="font-bold text-slate-400 uppercase">Type of Claim</label>
-                            <select class="w-full mt-1 bg-slate-50 border text-sm font-bold p-2 rounded">
+                            <select class="prof-input w-full">
                                 <option>MVA</option><option>Mass Tort</option><option>Slip and Fall</option><option>Other</option>
                             </select>
                         </div>
@@ -155,7 +155,7 @@
                 </div>
             </div>
 
-            <div id="pane-matrix" class="tab-content hidden space-y-6">
+            <div id="pane-matrix" class="tab-pane hidden space-y-6">
                 <div class="pdf-card">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Insurance Matrix</h3>
                     
@@ -208,7 +208,7 @@
                 </div>
             </div>
 
-            <div id="pane-medical" class="tab-content hidden pdf-card min-h-[450px]">
+            <div id="pane-medical" class="tab-pane hidden pdf-card min-h-[450px]">
                 <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Treatment Log</h3>
                 <div contenteditable="true" class="text-base w-full min-h-[300px]">...</div>
             </div>
@@ -222,15 +222,27 @@
         }
 
         function showTab(id) {
-            document.querySelectorAll('.tab-content').forEach(pane => {
+            // Hide all panes
+            document.querySelectorAll('.tab-pane').forEach(pane => {
                 pane.classList.add('hidden');
+                pane.style.display = 'none';
             });
+            // Remove active button style
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active-tab');
             });
             
+            // Show selected pane
             const target = document.getElementById('pane-' + id);
             target.classList.remove('hidden');
+            
+            // Adjust display based on section type
+            if(id === 'profile' || id === 'matrix') {
+                target.style.display = 'grid';
+            } else {
+                target.style.display = 'block';
+            }
+
             document.getElementById('btn-' + id).classList.add('active-tab');
         }
 
@@ -260,10 +272,13 @@
 
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
-            const allPanes = document.querySelectorAll('.tab-content');
+            const allPanes = document.querySelectorAll('.tab-pane');
             
-            // Temporary styles for PDF export
-            allPanes.forEach(p => { p.classList.remove('hidden'); });
+            // Temporary reveal for PDF export
+            allPanes.forEach(p => { 
+                p.classList.remove('hidden'); 
+                p.style.display = 'block';
+            });
 
             const opt = {
                 margin: 0.3, filename: 'LSH_Case_Report.pdf',
