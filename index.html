@@ -24,7 +24,7 @@
         }
         [contenteditable="true"]:focus { background: #ffffff; border-color: #f97316; }
         
-        .ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
+        .ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; }
         label { font-size: 11px !important; margin-bottom: 4px; display: block; font-weight: bold; color: #94a3b8; text-transform: uppercase; }
         
         .ins-tab-header { background: #fff7ed; border-left: 4px solid #f97316; padding: 8px 12px; border-radius: 4px 4px 0 0; }
@@ -35,6 +35,11 @@
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
         #pane-profile.active { display: grid; }
+
+        /* Treatment Table Styles */
+        .treat-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
+        .treat-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
         @media print { .no-print { display: none !important; } }
     </style>
@@ -93,7 +98,7 @@
             <div id="tab-navigation" class="flex flex-wrap gap-8 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
-                <div id="btn-medical" onclick="showTab('medical')" class="tab-btn">Medical</div>
+                <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
             </div>
 
             <div id="pane-profile" class="tab-pane active xl:grid-cols-3 gap-6">
@@ -155,8 +160,7 @@
                                 <div>
                                     <label>Prev. Injury/Treatment?</label>
                                     <select class="prof-input w-full">
-                                        <option value="NO">NO</option>
-                                        <option value="YES">YES</option>
+                                        <option value="NO">NO</option><option value="YES">YES</option>
                                     </select>
                                 </div>
                                 <div>
@@ -227,10 +231,55 @@
                 </div>
             </div>
 
-            <div id="pane-medical" class="tab-pane">
-                <div class="pdf-card min-h-[500px]">
-                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Medical Treatment Log</h3>
-                    <div contenteditable="true" class="text-sm w-full min-h-[400px]">Facility names, providers, and dates...</div>
+            <div id="pane-treatment" class="tab-pane space-y-6">
+                <div class="pdf-card">
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Provider & Treatment Overview</h3>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div>
+                            <label>Facility Name</label>
+                            <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">...</div>
+                        </div>
+                        <div>
+                            <label>Type of Treatment</label>
+                            <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">...</div>
+                        </div>
+                        <div>
+                            <label>Current Charges</label>
+                            <div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pdf-card">
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500">Treatment Schedule & Gap Monitoring</h3>
+                        <button onclick="addRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase hover:bg-orange-600 transition-all">+ Add Entry</button>
+                    </div>
+                    <table class="treat-table" id="treatment-table">
+                        <thead>
+                            <tr>
+                                <th>Date of Visit</th>
+                                <th>Facility/Provider</th>
+                                <th>Services Rendered</th>
+                                <th class="w-32">Gap Warning?</th>
+                                <th class="w-10 no-print"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="treatment-body">
+                            <tr>
+                                <td><div contenteditable="true" class="w-full">MM/DD/YYYY</div></td>
+                                <td><div contenteditable="true" class="w-full font-semibold italic">Initial Provider...</div></td>
+                                <td><div contenteditable="true" class="w-full">Consultation / MRI / PT...</div></td>
+                                <td>
+                                    <select class="text-[10px] font-bold uppercase border-none bg-slate-50 rounded px-1">
+                                        <option value="NO">NO GAP</option>
+                                        <option value="YES" class="text-red-600">YES (GAP)</option>
+                                    </select>
+                                </td>
+                                <td class="no-print text-center"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -240,12 +289,32 @@
         function showTab(id) {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            document.getElementById('pane-' + id).classList.add('active');
-            document.getElementById('btn-' + id).classList.add('active-tab');
+            const activePane = document.getElementById('pane-' + id);
+            if (activePane) activePane.classList.add('active');
+            const activeBtn = document.getElementById('btn-' + id);
+            if (activeBtn) activeBtn.classList.add('active-tab');
         }
 
         function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
         function togglePolice(val) { document.getElementById('police-info').style.display = (val === 'YES') ? 'block' : 'none'; }
+
+        function addRow() {
+            const body = document.getElementById('treatment-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><div contenteditable="true" class="w-full">MM/DD/YYYY</div></td>
+                <td><div contenteditable="true" class="w-full font-semibold italic">...</div></td>
+                <td><div contenteditable="true" class="w-full">...</div></td>
+                <td>
+                    <select class="text-[10px] font-bold uppercase border-none bg-slate-50 rounded px-1">
+                        <option value="NO">NO GAP</option>
+                        <option value="YES" class="text-red-600">YES (GAP)</option>
+                    </select>
+                </td>
+                <td class="no-print text-center"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>
+            `;
+            body.appendChild(row);
+        }
 
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
