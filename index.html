@@ -3,154 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSH | Training Interface</title>
+    <title>LSH | Case Management Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; overflow: hidden; }
-        .tab-btn { border-bottom: 3px solid transparent; transition: all 0.2s; cursor: pointer; }
-        .active-tab { border-bottom: 3px solid #F97316 !important; color: #F97316 !important; font-weight: 800; }
-        .sub-tab-btn { transition: all 0.2s; border: 1px solid #e2e8f0; cursor: pointer; }
-        .sub-active { background-color: #F97316 !important; color: white !important; border-color: #F97316 !important; }
-        [contenteditable="true"]:focus { outline: 2px solid #F97316; background-color: #FFF7ED; padding: 0 4px; border-radius: 2px; }
-        .pdf-card { border: 1px solid #e2e8f0; border-radius: 0.75rem; background: white; padding: 1.5rem; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; overflow: hidden; }
+        
+        /* Navigation & Tabs */
+        .tab-btn { transition: all 0.2s ease; border-bottom: 3px solid transparent; }
+        .tab-btn.active { border-bottom-color: #f97316; color: #f97316; font-weight: 800; }
+
+        .sub-tab { 
+            padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700; border-radius: 8px; 
+            cursor: pointer; background: #f8fafc; color: #64748b; transition: 0.2s;
+        }
+        .sub-tab.active { background: #f97316; color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2); }
+
+        /* UI Cards */
+        .pdf-card { 
+            background: white; border: 1px solid #e2e8f0; border-radius: 16px; 
+            padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Editing States */
+        [contenteditable="true"] { transition: 0.2s; padding: 2px 4px; border-radius: 4px; }
+        [contenteditable="true"]:focus { outline: 2px solid #fdba74; background: #fff7ed; }
+
+        /* PDF Printing Logic */
+        @media print {
+            .no-print { display: none !important; }
+            .tab-pane { display: block !important; margin-bottom: 2rem; page-break-inside: avoid; }
+            body { background: white !important; overflow: visible !important; }
+            main { height: auto !important; overflow: visible !important; }
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex text-gray-800">
+<body class="flex h-screen">
 
-    <aside class="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col no-print">
-        <div class="p-8 border-b border-slate-800 text-center">
-            <h1 class="text-xl font-extrabold tracking-tighter uppercase">Legal Support Help</h1>
+    <aside class="w-64 bg-slate-950 text-white flex flex-col no-print shrink-0">
+        <div class="p-8 border-b border-slate-900">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-orange-600 rounded flex items-center justify-center font-bold">L</div>
+                <h1 class="font-extrabold text-lg tracking-tight">LSH Dashboard</h1>
+            </div>
+            <p class="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">Professional v6.0</p>
         </div>
-        <nav class="mt-10 px-6 space-y-4">
-            <button onclick="generatePDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg">Download PDF</button>
-            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase">Reset</button>
-        </nav>
+
+        <div class="p-6 flex-1 space-y-8">
+            <div class="space-y-2">
+                <p class="text-[10px] font-black text-slate-600 uppercase px-2">File Operations</p>
+                <button onclick="generatePDF()" class="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg">
+                    <span>Export Case File</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-slate-900">
+            <button onclick="window.location.reload()" class="text-[10px] text-slate-500 hover:text-white uppercase font-bold tracking-widest">Reset Interface</button>
+        </div>
     </aside>
 
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        <header class="h-12 bg-white border-b border-gray-200 no-print flex items-center justify-end px-8">
-            <div id="save-status" class="text-[9px] text-slate-400 uppercase font-bold opacity-0 transition-opacity">Saved</div>
+    <main class="flex-1 flex flex-col min-w-0">
+        <header class="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between no-print shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Online</span>
+            </div>
+            <div class="text-[10px] font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-full">WORKSPACE / CASE INTAKE</div>
         </header>
 
-        <div class="p-8 overflow-y-auto flex-1" id="capture-area">
+        <div class="flex-1 overflow-y-auto p-8 space-y-6" id="case-report">
             
-            <div class="mb-8 pdf-card border-l-4 border-l-orange-500">
+            <div class="pdf-card border-l-4 border-l-orange-500">
                 <div class="flex justify-between items-start">
-                    <div>
-                        <h1 class="text-3xl font-black text-slate-900"><span contenteditable="true">Client Name</span></h1>
-                        <div class="mt-2 text-xs font-mono font-bold text-orange-600 uppercase">Case: <span contenteditable="true">BATCH-2026-X</span></div>
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-black text-orange-600 uppercase tracking-widest">Active File</p>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tighter" contenteditable="true">FULL CLIENT NAME</h2>
+                        <div class="flex items-center gap-4 text-[11px] font-bold text-slate-400">
+                            <span>ID: <span contenteditable="true" class="text-slate-900">LSH-2026-X</span></span>
+                            <span>•</span>
+                            <span>DATE: <span class="text-slate-900">April 17, 2026</span></span>
+                        </div>
                     </div>
-                    <div id="currentStatus" class="text-orange-600 font-black text-2xl uppercase italic">Intake</div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black text-orange-600 italic uppercase leading-none">Intake</div>
+                        <p class="text-[9px] text-slate-400 font-bold mt-1">LITIGATION STATUS</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex gap-6 mb-8 no-print border-b">
-                <button onclick="showMainTab('client')" id="btn-client" class="tab-btn pb-3 text-[11px] font-bold uppercase active-tab">Profile</button>
-                <button onclick="showMainTab('facts')" id="btn-facts" class="tab-btn pb-3 text-[11px] font-bold uppercase text-slate-400">Case Facts</button>
-                <button onclick="showMainTab('medical')" id="btn-medical" class="tab-btn pb-3 text-[11px] font-bold uppercase text-slate-400">Medical</button>
-            </div>
+            <nav class="flex gap-8 no-print border-b border-slate-200">
+                <button onclick="switchMainTab('profile')" id="m-profile" class="tab-btn pb-3 text-xs font-bold uppercase tracking-wider active">Profile</button>
+                <button onclick="switchMainTab('facts')" id="m-facts" class="tab-btn pb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Case Facts</button>
+                <button onclick="switchMainTab('medical')" id="m-medical" class="tab-btn pb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Medical History</button>
+            </nav>
 
-            <div id="tab-client" class="main-tab grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="pane-profile" class="tab-pane grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="pdf-card">
-                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
-                    <div class="space-y-4">
-                        <label class="block text-[9px] font-bold text-slate-400 uppercase">Home Address</label>
-                        <div contenteditable="true" class="text-sm font-semibold border-b">...</div>
-                        <div class="pt-4 border-t">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase">Employed?</label>
-                            <select class="ml-2 text-[10px] font-bold bg-slate-100 rounded">
-                                <option>NO</option>
-                                <option>YES</option>
-                            </select>
+                    <h3 class="text-[11px] font-black text-slate-400 uppercase mb-6 border-b pb-2">Client Demographics</h3>
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Birth Date</label>
+                                <div contenteditable="true" class="text-sm font-bold border-b pt-1">00/00/0000</div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Social Security (Last 4)</label>
+                                <div contenteditable="true" class="text-sm font-bold border-b pt-1">XXXX</div>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Primary Address</label>
+                            <div contenteditable="true" class="text-sm font-bold border-b pt-1">Enter address...</div>
+                        </div>
+                        <div class="pt-4 mt-2 border-t border-slate-50">
+                            <div class="flex justify-between items-center mb-4">
+                                <label class="text-[10px] font-black text-slate-500 uppercase">Employment Status</label>
+                                <select class="text-[10px] font-bold bg-slate-100 rounded px-2 py-1 outline-none"><option>UNEMPLOYED</option><option>EMPLOYED</option><option>RETIRED</option></select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase">Employer</label>
+                                    <div contenteditable="true" class="text-sm font-bold border-b pt-1">...</div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase">Days Missed</label>
+                                    <div contenteditable="true" class="text-sm font-bold border-b pt-1">0</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="pdf-card">
-                    <h3 class="text-[10px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Emergency Contact</h3>
-                    <div contenteditable="true" class="text-sm font-semibold min-h-[100px]">...</div>
-                </div>
-            </div>
-
-            <div id="tab-facts" class="main-tab hidden grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="pdf-card col-span-1">
-                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Basics</h3>
-                    <label class="text-[9px] font-bold text-slate-400 uppercase">Type of Claim</label>
-                    <select class="w-full mt-1 bg-slate-50 border text-[11px] font-bold p-2 rounded">
-                        <option>MVA</option>
-                        <option>Mass Tort</option>
-                        <option>Slip and Fall</option>
-                        <option>Dog Bite</option>
-                        <option>Others</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2 flex flex-col gap-4">
-                    <div class="flex gap-2 no-print bg-slate-100 p-1 rounded-lg w-fit">
-                        <button onclick="showSubTab('narrative')" id="sub-btn-narrative" class="sub-tab-btn px-4 py-1.5 rounded-md text-[10px] font-bold sub-active">Narrative</button>
-                        <button onclick="showSubTab('injuries')" id="sub-btn-injuries" class="sub-tab-btn px-4 py-1.5 rounded-md text-[10px] font-bold bg-white">Injuries</button>
-                        <button onclick="showSubTab('notes')" id="sub-btn-notes" class="sub-tab-btn px-4 py-1.5 rounded-md text-[10px] font-bold bg-white">Notes</button>
+                <div class="pdf-card border-t-4 border-t-orange-100">
+                    <h3 class="text-[11px] font-black text-orange-600 uppercase mb-6 border-b pb-2">Next of Kin / Contact</h3>
+                    <div class="space-y-5">
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Full Legal Name</label>
+                            <div contenteditable="true" class="text-sm font-bold border-b pt-1">...</div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Phone Number</label>
+                            <div contenteditable="true" class="text-sm font-bold border-b pt-1">+1 (000) 000-0000</div>
+                        </div>
                     </div>
-                    <div id="sub-narrative" class="sub-pane pdf-card min-h-[250px]"><div contenteditable="true" class="text-sm italic">Mechanics of incident...</div></div>
-                    <div id="sub-injuries" class="sub-pane pdf-card hidden min-h-[250px]"><div contenteditable="true" class="text-sm font-semibold">List injuries...</div></div>
-                    <div id="sub-notes" class="sub-pane pdf-card hidden min-h-[250px]"><div contenteditable="true" class="text-sm">Team notes...</div></div>
                 </div>
             </div>
 
-            <div id="tab-medical" class="main-tab hidden pdf-card min-h-[400px]">
-                <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Treatment Log</h3>
-                <div contenteditable="true" class="text-sm italic">Provider details...</div>
+            <div id="pane-facts" class="tab-pane hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="pdf-card lg:col-span-1">
+                        <h3 class="text-[11px] font-black text-slate-400 uppercase mb-6 border-b pb-2">Claim Parameters</h3>
+                        <div class="space-y-5">
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Claim Classification</label>
+                                <select class="w-full bg-slate-50 border border-slate-200 text-xs font-bold p-2.5 rounded-xl outline-none">
+                                    <option>MVA - Motor Vehicle Accident</option>
+                                    <option>SF - Slip and Fall</option>
+                                    <option>MT - Mass Tort</option>
+                                    <option>DB - Dog Bite</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black text-slate-400 uppercase">Police Report Status</label>
+                                <select class="w-full bg-slate-50 border border-slate-200 text-xs font-bold p-2.5 rounded-xl outline-none">
+                                    <option>Report Available</option><option>Pending Request</option><option>No Report Filed</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2 space-y-4">
+                        <div class="flex gap-2 no-print">
+                            <button onclick="switchSubTab('narrative')" id="s-narrative" class="sub-tab active">Narrative</button>
+                            <button onclick="switchSubTab('injuries')" id="s-injuries" class="sub-tab">Clinical Injuries</button>
+                            <button onclick="switchSubTab('internal')" id="s-internal" class="sub-tab">Internal Notes</button>
+                        </div>
+                        <div id="sub-narrative" class="sub-content pdf-card min-h-[300px]">
+                            <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Detailed Narrative</p>
+                            <div contenteditable="true" class="text-sm leading-relaxed text-slate-600 italic">Enter the mechanics of the incident...</div>
+                        </div>
+                        <div id="sub-injuries" class="sub-content hidden pdf-card min-h-[300px]">
+                            <p class="text-[9px] font-black text-red-500 uppercase mb-2">Sustained Injuries</p>
+                            <div contenteditable="true" class="text-sm font-bold text-slate-900 uppercase">List physical complaints...</div>
+                        </div>
+                        <div id="sub-internal" class="sub-content hidden pdf-card min-h-[300px]">
+                            <p class="text-[9px] font-black text-blue-500 uppercase mb-2">Team Observations</p>
+                            <div contenteditable="true" class="text-sm font-mono text-slate-500">Internal confidential notes...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-medical" class="tab-pane hidden">
+                <div class="pdf-card min-h-[500px]">
+                    <h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Treatment Chronology</h3>
+                    <div contenteditable="true" class="text-sm leading-loose">Enter medical providers, treatment dates, and facilities in chronological order...</div>
+                </div>
             </div>
 
         </div>
     </main>
 
     <script>
-        // MAIN TAB LOGIC
-        function showMainTab(id) {
-            document.querySelectorAll('.main-tab').forEach(t => t.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            
-            const target = document.getElementById('tab-' + id);
-            target.classList.remove('hidden');
-            document.getElementById('btn-' + id).classList.add('active-tab');
-        }
-
-        // SUB TAB LOGIC
-        function showSubTab(id) {
-            document.querySelectorAll('.sub-pane').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.sub-tab-btn').forEach(b => {
-                b.classList.remove('sub-active');
-                b.classList.add('bg-white');
+        function switchMainTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('text-slate-400');
             });
+
+            const activePane = document.getElementById('pane-' + tabId);
+            activePane.classList.remove('hidden');
+            if(tabId !== 'medical') activePane.style.display = 'grid';
             
-            document.getElementById('sub-' + id).classList.remove('hidden');
-            document.getElementById('sub-btn-' + id).classList.add('sub-active');
-            document.getElementById('sub-btn-' + id).classList.remove('bg-white');
+            document.getElementById('m-' + tabId).classList.add('active');
+            document.getElementById('m-' + tabId).classList.remove('text-slate-400');
         }
 
-        // PDF GENERATION
+        function switchSubTab(subId) {
+            document.querySelectorAll('.sub-content').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById('sub-' + subId).classList.remove('hidden');
+            document.getElementById('s-' + subId).classList.add('active');
+        }
+
         async function generatePDF() {
-            const area = document.getElementById('capture-area');
-            // Show all hidden elements for capture
-            document.querySelectorAll('.main-tab, .sub-pane').forEach(el => el.classList.remove('hidden'));
+            const element = document.getElementById('case-report');
             
-            await html2pdf().set({
-                margin: 0.5,
-                filename: 'LSH_Case.pdf',
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).from(area).save();
-            
-            location.reload(); // Refresh to restore UI
-        }
+            // Expand all content for export
+            const panes = document.querySelectorAll('.tab-pane, .sub-content');
+            panes.forEach(el => {
+                el.classList.remove('hidden');
+                el.style.display = 'block';
+            });
 
-        // Visual Feedback
-        document.addEventListener('input', () => {
-            const s = document.getElementById('save-status');
-            s.style.opacity = '1';
-            setTimeout(() => s.style.opacity = '0', 800);
-        });
+            const opt = {
+                margin: 0.5,
+                filename: 'LSH_Case_Report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 3, letterRendering: true, useCORS: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(element).save();
+            } finally {
+                // Restore UI State
+                window.location.reload();
+            }
+        }
     </script>
 </body>
 </html>
