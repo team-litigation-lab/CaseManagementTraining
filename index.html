@@ -95,8 +95,6 @@
                         <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Make</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
                         <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Model</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
                     </div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Damage Description</label>
-                    <div contenteditable="true" class="text-sm min-h-[60px] bg-slate-50 p-3 rounded italic border mt-1">...</div>
                 </div>
             </div>
 
@@ -110,14 +108,16 @@
                         <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Status</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
                     </div>
                 </div>
+                
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-blue-600">
                     <h3 class="text-xs font-black uppercase tracking-widest text-blue-600 mb-4">Personal Injury Protection (PIP)</h3>
                     <div class="grid grid-cols-3 gap-4">
                         <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
+                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Number</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
                         <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Limit</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
-                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Status</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
                     </div>
                 </div>
+
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-orange-500">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xs font-black uppercase tracking-widest text-orange-600">UM/UIM Policies</h3>
@@ -129,24 +129,19 @@
 
             <div id="tab-health-insurance" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-blue-800">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-blue-800">Primary Health Insurance</h3>
-                        <button onclick="addPolicy('health-container')" class="no-print text-[9px] bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded">Add Supplemental/Secondary +</button>
-                    </div>
-                    <div id="health-container" class="space-y-4">
-                        <div class="grid grid-cols-4 gap-4 p-3 bg-blue-50/30 rounded border border-blue-100">
-                            <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-xs p-1">...</div></div>
-                            <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Member ID</label><div contenteditable="true" class="text-xs p-1">...</div></div>
-                            <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Group #</label><div contenteditable="true" class="text-xs p-1">...</div></div>
-                            <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Type (PPO/HMO)</label><div contenteditable="true" class="text-xs p-1">...</div></div>
-                        </div>
+                    <h3 class="text-xs font-black uppercase tracking-widest text-blue-800 mb-4">Health Insurance Details</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
+                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Membership ID</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
+                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Group Number</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
+                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Subrogation Company</label><div contenteditable="true" class="text-xs font-bold p-1">...</div></div>
                     </div>
                 </div>
             </div>
 
-            <div id="tab-client" class="tab-content space-y-4"><div class="bg-white p-6 rounded border">Client basic info fields...</div></div>
-            <div id="tab-facts" class="tab-content hidden space-y-4"><div class="bg-white p-6 rounded border">Incident narrative fields...</div></div>
-            <div id="tab-medical" class="tab-content hidden space-y-4"><div class="bg-white p-6 rounded border">Medical tracking fields...</div></div>
+            <div id="tab-client" class="tab-content space-y-4"><div class="bg-white p-6 rounded border">Client profile details...</div></div>
+            <div id="tab-facts" class="tab-content hidden space-y-4"><div class="bg-white p-6 rounded border">Case facts details...</div></div>
+            <div id="tab-medical" class="tab-content hidden space-y-4"><div class="bg-white p-6 rounded border">Medical tracking details...</div></div>
 
         </div>
     </main>
@@ -168,9 +163,9 @@
             div.innerHTML = `
                 <button onclick="this.parentElement.remove()" class="no-print absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 text-[10px]">×</button>
                 <div class="border-b"><label class="text-[8px] font-bold uppercase">Carrier</label><div contenteditable="true" class="text-xs">...</div></div>
-                <div class="border-b"><label class="text-[8px] font-bold uppercase">Policy/ID</label><div contenteditable="true" class="text-xs">...</div></div>
-                <div class="border-b"><label class="text-[8px] font-bold uppercase">Name/Group</label><div contenteditable="true" class="text-xs">...</div></div>
-                <div class="border-b"><label class="text-[8px] font-bold uppercase">Limit/Type</label><div contenteditable="true" class="text-xs">...</div></div>`;
+                <div class="border-b"><label class="text-[8px] font-bold uppercase">Policy #</label><div contenteditable="true" class="text-xs">...</div></div>
+                <div class="border-b"><label class="text-[8px] font-bold uppercase">Name</label><div contenteditable="true" class="text-xs">...</div></div>
+                <div class="border-b"><label class="text-[8px] font-bold uppercase">Limit</label><div contenteditable="true" class="text-xs">...</div></div>`;
             container.appendChild(div);
         }
 
@@ -182,9 +177,7 @@
 
         function updatePhase(val) { document.getElementById('currentStatus').innerText = val; }
         
-        function loadWork() { 
-            addPolicy('um-container'); 
-        }
+        function loadWork() { addPolicy('um-container'); }
 
         function resetForm() { if(confirm("Clear progress?")) location.reload(); }
 
