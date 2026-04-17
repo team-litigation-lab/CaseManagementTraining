@@ -125,18 +125,38 @@
 
                 <div class="space-y-6">
                     <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Details</h3>
+                        <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim & Employment</h3>
                         <div class="space-y-6">
-                            <div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Currently Employed?</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
+                                <div><label>Company</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Lost Wages</label><div contenteditable="true" class="text-sm font-semibold w-full">...</div></div>
+                                <div>
+                                    <label>Existing LW Claim?</label>
+                                    <select class="prof-input w-full">
+                                        <option value="NO">NO</option>
+                                        <option value="YES">YES</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="border-t pt-4">
                                 <label>Police Arrived?</label>
                                 <select id="police-arrived" onchange="togglePolice(this.value)" class="prof-input w-full">
                                     <option value="NO">NO</option>
                                     <option value="YES">YES</option>
                                 </select>
                             </div>
-                            <div id="police-info" style="display: none;">
-                                <label>Police Report #</label>
-                                <div contenteditable="true" class="text-base font-semibold w-full border-orange-200">...</div>
+                            <div id="police-info" style="display: none;" class="space-y-4">
+                                <div>
+                                    <label>Police Report #</label>
+                                    <div contenteditable="true" class="text-base font-semibold w-full border-orange-200">...</div>
+                                </div>
+                                <div class="no-print">
+                                    <label>Upload Report</label>
+                                    <input type="file" class="text-[10px] file:py-1 file:px-2 file:rounded file:bg-orange-50 file:text-orange-700 border-none outline-none" />
+                                </div>
                             </div>
                         </div>
                     </div>
