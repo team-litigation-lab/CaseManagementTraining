@@ -94,7 +94,15 @@
                     </div>
                     <div class="bg-white p-5 rounded-lg border shadow-sm md:col-span-2 border-l-4 border-red-500">
                         <label class="text-[10px] font-bold text-slate-400 uppercase">Type of Injury</label>
-                        <div id="f-injury-type" contenteditable="true" class="text-sm font-bold text-slate-700">...</div>
+                        <select id="f-injury-type" class="w-full bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer mt-1">
+                            <option value="" disabled selected>Select Injury Type...</option>
+                            <option value="MVA">MVA (Motor Vehicle Accident)</option>
+                            <option value="Mass Tort">Mass Tort</option>
+                            <option value="Dog Bite">Dog Bite</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Premise Liability">Premise Liability</option>
+                            <option value="Others">Others</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -142,12 +150,79 @@
                         <h3 class="text-xs font-black uppercase tracking-widest text-blue-600">Medical Facilities Manager (Max 10)</h3>
                         <button onclick="addFacility()" class="no-print text-[9px] bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded">Add Facility +</button>
                     </div>
-                    <div id="facility-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        </div>
+                    <div id="facility-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
             </div>
 
-            <div id="tab-damage" class="tab-content hidden"><div class="bg-white p-6 rounded border shadow-sm italic text-slate-400">Property Damage section...</div></div>
+            <div id="tab-damage" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-orange-500">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-orange-600 mb-4">Client's Vehicle Information</h3>
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Year</label>
+                            <div id="v-year" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Make</label>
+                            <div id="v-make" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Model</label>
+                            <div id="v-model" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Type of Damage</label>
+                            <select id="damage-type-select" onchange="toggleDamageView(this.value)" class="w-full bg-slate-50 border rounded p-2 text-sm font-bold mt-1 outline-none">
+                                <option value="none">Select Damage Status...</option>
+                                <option value="repairable">Repairable</option>
+                                <option value="totaled">Total Loss</option>
+                            </select>
+                        </div>
+
+                        <div id="view-repairable" class="hidden">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-[10px] font-bold text-blue-500 uppercase">Repairs Needed</label>
+                                <button onclick="addRow('repair')" class="no-print text-[9px] bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded">Add Item +</button>
+                            </div>
+                            <div id="repair-container" class="space-y-2 bg-blue-50/50 p-4 rounded-lg border border-blue-100"></div>
+                        </div>
+
+                        <div id="view-totaled" class="hidden">
+                            <label class="text-[10px] font-bold text-red-500 uppercase">Total Loss Disposition</label>
+                            <select id="total-loss-option" class="w-full bg-red-50 border border-red-100 rounded p-2 text-sm font-bold mt-1 outline-none text-red-700">
+                                <option value="surrender">Surrender Vehicle (Insurance Payout)</option>
+                                <option value="retain">Retain Vehicle (Owner Keeps Salvage)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-slate-400">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 mb-4">Third Party Vehicle Information</h3>
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Year</label>
+                            <div id="tp-year" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Make</label>
+                            <div id="tp-make" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Model</label>
+                            <div id="tp-model" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Third Party Damage Description</label>
+                        <div id="tp-damage-desc" contenteditable="true" class="text-sm min-h-[80px] bg-slate-50 p-4 rounded italic border mt-1">Describe Third Party damages here...</div>
+                    </div>
+                </div>
+            </div>
+
             <div id="tab-insurance" class="tab-content hidden"><div class="bg-white p-6 rounded border shadow-sm italic text-slate-400">Insurance Matrix section...</div></div>
 
         </div>
@@ -159,6 +234,19 @@
             document.getElementById('tab-' + id).classList.remove('hidden');
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
             document.getElementById('btn-' + id).classList.add('tab-active');
+        }
+
+        function toggleDamageView(val) {
+            const repairView = document.getElementById('view-repairable');
+            const totalView = document.getElementById('view-totaled');
+            repairView.classList.add('hidden');
+            totalView.classList.add('hidden');
+            if (val === 'repairable') {
+                repairView.classList.remove('hidden');
+                if(document.getElementById('repair-container').children.length === 0) addRow('repair');
+            } else if (val === 'totaled') {
+                totalView.classList.remove('hidden');
+            }
         }
 
         function handleFile(input) {
@@ -174,20 +262,17 @@
             const div = document.createElement('div');
             div.className = "flex items-center space-x-2 group";
             div.innerHTML = `<span class="text-[10px] text-slate-300 font-bold">${container.children.length + 1}.</span>
-                             <div contenteditable="true" class="flex-1 text-sm border-b italic">${text || "Details..."}</div>
+                             <div contenteditable="true" class="flex-1 text-sm border-b italic border-gray-300">${text || "Specify detail here..."}</div>
                              <button onclick="this.parentElement.remove()" class="no-print opacity-0 group-hover:opacity-100 text-[9px] text-red-400 font-bold uppercase">Remove</button>`;
             container.appendChild(div);
         }
 
         function addFacility() {
             const container = document.getElementById('facility-container');
-            const count = container.children.length;
-            
-            if (count >= 10) {
+            if (container.children.length >= 10) {
                 alert("Maximum limit of 10 facilities reached.");
                 return;
             }
-
             const div = document.createElement('div');
             div.className = "facility-card p-4 border rounded-lg bg-slate-50 relative group border-blue-100 shadow-sm";
             div.innerHTML = `
@@ -231,13 +316,11 @@
 
         function saveCase() {
             const element = document.getElementById('capture-area');
-            // Show all tabs for PDF generation
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(c => {
                 c.classList.remove('hidden');
                 c.style.display = 'block';
             });
-
             const opt = {
                 margin: 0.5,
                 filename: 'LSH_Training_Assessment.pdf',
@@ -245,9 +328,7 @@
                 html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
-
             html2pdf().set(opt).from(element).save().then(() => {
-                // Restore UI state after save
                 location.reload();
             });
         }
