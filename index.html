@@ -11,7 +11,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
         
-        /* Tab Active State */
         .tab-active { 
             border-bottom: 3px solid #F97316; 
             color: #F97316 !important; 
@@ -19,7 +18,6 @@
             background-color: #fff; 
         }
 
-        /* Focus State for Editable Fields */
         [contenteditable="true"]:focus { 
             outline: 2px solid #F97316; 
             background-color: #FFF7ED; 
@@ -27,10 +25,9 @@
             border-radius: 4px; 
         }
 
-        /* Print/PDF Specific Overrides */
         @media print {
             .no-print { display: none !important; }
-            .tab-content { display: block !important; opacity: 1 !important; visibility: visible !important; border: 1px solid #e2e8f0; margin-bottom: 20px; padding: 20px; page-break-inside: avoid; }
+            .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; border: 1px solid #e2e8f0; margin-bottom: 20px; padding: 20px; page-break-inside: avoid; }
             body { background: white !important; }
             main { overflow: visible !important; }
         }
@@ -103,18 +100,54 @@
                         <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                         <div class="no-print mt-4">
                             <label class="text-[9px] font-bold text-slate-400 uppercase block mb-1">ID Upload</label>
-                            <input type="file" id="id-file" class="hidden" onchange="updateFileLabel(this)">
+                            <input type="file" id="id-file" class="hidden" onchange="updateFileLabel(this, 'id-name')">
                             <button onclick="document.getElementById('id-file').click()" class="text-[10px] bg-slate-100 px-3 py-1 rounded font-bold">Choose File</button>
-                            <span id="file-name" class="text-[10px] ml-2 italic text-slate-500">None</span>
+                            <span id="id-name" class="text-[10px] ml-2 italic text-slate-500">None</span>
                         </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 mb-6 border-b pb-2">Alternate Contact</h3>
+                    <div class="space-y-4">
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Alt Name</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Relationship</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Alt Phone</label><div contenteditable="true" class="text-sm font-semibold border-b">...</div></div>
                     </div>
                 </div>
             </div>
 
-            <div id="tab-facts" class="tab-pane hidden">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Case Narrative</h3>
-                    <div contenteditable="true" class="text-sm min-h-[300px] italic text-slate-600 outline-none">Start typing case facts...</div>
+            <div id="tab-facts" class="tab-pane hidden space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm col-span-1">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Police Report Status</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">Report Availability</label>
+                                <select class="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-semibold p-1 rounded outline-none">
+                                    <option>Available</option>
+                                    <option>Pending</option>
+                                    <option>Not Filed</option>
+                                    <option>Requested</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">Report Number</label>
+                                <div contenteditable="true" class="text-sm font-semibold border-b py-1">...</div>
+                            </div>
+                            <div class="no-print pt-2">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase block mb-1">Upload Report</label>
+                                <input type="file" id="police-file" class="hidden" onchange="updateFileLabel(this, 'police-name')">
+                                <button onclick="document.getElementById('police-file').click()" class="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded font-bold hover:bg-blue-100 transition-all">Attach PDF</button>
+                                <div id="police-name" class="text-[9px] mt-1 italic text-slate-400 truncate">No document attached</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm md:col-span-2">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 border-b pb-2">Incident Narrative</h3>
+                        <div contenteditable="true" class="text-sm min-h-[150px] italic text-slate-600 outline-none leading-relaxed">Describe the accident mechanics, point of impact, and scene details...</div>
+                    </div>
                 </div>
             </div>
 
@@ -144,14 +177,17 @@
 
         function switchTab(tabId) {
             currentTab = tabId;
-            // Handle Panels
             document.querySelectorAll('.tab-pane').forEach(pane => {
                 pane.classList.add('hidden');
+                if (pane.id === 'tab-client') pane.classList.remove('md:grid');
             });
+            
             const targetPane = document.getElementById('tab-' + tabId);
-            if(targetPane) targetPane.classList.remove('hidden');
+            if(targetPane) {
+                targetPane.classList.remove('hidden');
+                if (tabId === 'client') targetPane.classList.add('md:grid');
+            }
 
-            // Handle Buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('tab-active');
             });
@@ -159,8 +195,8 @@
             if(targetBtn) targetBtn.classList.add('tab-active');
         }
 
-        function updateFileLabel(input) {
-            const label = document.getElementById('file-name');
+        function updateFileLabel(input, labelId) {
+            const label = document.getElementById(labelId);
             if(input.files && input.files[0]) {
                 label.innerText = "📎 " + input.files[0].name;
                 label.classList.add('text-orange-600', 'not-italic', 'font-bold');
@@ -178,9 +214,10 @@
             const panes = document.querySelectorAll('.tab-pane');
             const originalTab = currentTab;
 
-            // 1. Force all panes to be visible for the PDF engine
-            panes.forEach(p => p.style.display = 'block');
-            panes.forEach(p => p.classList.remove('hidden'));
+            panes.forEach(p => {
+                p.style.display = 'block';
+                p.classList.remove('hidden');
+            });
 
             const opt = {
                 margin: [0.5, 0.5],
@@ -194,9 +231,7 @@
                 await html2pdf().set(opt).from(element).save();
             } catch (error) {
                 console.error("PDF generation failed:", error);
-                alert("Error generating PDF. Check console.");
             } finally {
-                // 2. Cleanup: Reset visibility and return to the tab the user was on
                 panes.forEach(p => p.style.display = '');
                 switchTab(originalTab);
             }
