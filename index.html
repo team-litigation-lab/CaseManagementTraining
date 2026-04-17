@@ -30,7 +30,7 @@
             box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
         }
         
-        .ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1.25rem; }
+        .ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; }
         label { font-size: 11px !important; margin-bottom: 4px; display: block; }
         
         .ins-tab-header { background: #fff7ed; border-left: 4px solid #f97316; padding: 8px 12px; border-radius: 4px 4px 0 0; }
@@ -168,6 +168,8 @@
                                 <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div>
                                     <label class="font-bold text-slate-400 uppercase">Liability Accepted</label>
                                     <select class="prof-input w-full text-sm">
@@ -189,6 +191,8 @@
                             <div class="ins-grid">
                                 <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                             </div>
                         </div>
                     </div>
@@ -222,21 +226,17 @@
         }
 
         function showTab(id) {
-            // Hide all panes
             document.querySelectorAll('.tab-pane').forEach(pane => {
                 pane.classList.add('hidden');
                 pane.style.display = 'none';
             });
-            // Remove active button style
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active-tab');
             });
             
-            // Show selected pane
             const target = document.getElementById('pane-' + id);
             target.classList.remove('hidden');
             
-            // Adjust display based on section type
             if(id === 'profile' || id === 'matrix') {
                 target.style.display = 'grid';
             } else {
@@ -258,6 +258,15 @@
                         <div><label class="font-bold text-slate-400 uppercase">Individual Membership ID</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                     </div>
                 `;
+            } else if (sectionId === 'um-section') {
+                newRow.innerHTML = `
+                    <div class="ins-grid">
+                        <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                    </div>
+                `;
             } else {
                 newRow.innerHTML = `
                     <div class="ins-grid">
@@ -274,7 +283,6 @@
             const area = document.getElementById('capture-area');
             const allPanes = document.querySelectorAll('.tab-pane');
             
-            // Temporary reveal for PDF export
             allPanes.forEach(p => { 
                 p.classList.remove('hidden'); 
                 p.style.display = 'block';
