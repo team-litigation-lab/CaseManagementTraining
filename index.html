@@ -97,7 +97,10 @@
             <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
-                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix (All Claims)</div>
+                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
+                <div id="btn-bi-claim" onclick="showTab('bi-claim')" class="tab-btn">BI Claim</div>
+                <div id="btn-pip-claim" onclick="showTab('pip-claim')" class="tab-btn">PIP Claim</div>
+                <div id="btn-um-claim" onclick="showTab('um-claim')" class="tab-btn">UM Claim</div>
                 <div id="btn-medpay" onclick="showTab('medpay')" class="tab-btn hidden">MedPay</div>
                 <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
                 <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
@@ -118,7 +121,6 @@
                             <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
                         </div>
                     </div>
-                    
                     <div class="pdf-card">
                         <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Employment Status</h3>
                         <div class="space-y-4">
@@ -135,13 +137,7 @@
                             <div><label>Company Name</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div><label>Lost Days</label><div contenteditable="true" class="text-base font-semibold w-full">0</div></div>
-                                <div>
-                                    <label>Wage Claim Filed?</label>
-                                    <select class="prof-input w-full border-slate-100">
-                                        <option>N</option>
-                                        <option>Y</option>
-                                    </select>
-                                </div>
+                                <div><label>Wage Claim Filed?</label><select class="prof-input w-full border-slate-100"><option>N</option><option>Y</option></select></div>
                             </div>
                         </div>
                     </div>
@@ -162,7 +158,6 @@
                             <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
                         </div>
                     </div>
-
                     <div class="pdf-card">
                         <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Legal Team</h3>
                         <div class="space-y-4">
@@ -183,17 +178,8 @@
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Accident Reporting Details</h3>
                     <div class="grid md:grid-cols-2 gap-6 mb-8">
-                        <div>
-                            <label>Police Arrived at Scene?</label>
-                            <select class="prof-input w-full border-orange-200 bg-orange-50">
-                                <option value="No">No</option>
-                                <option value="Yes">Yes</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Police Report Number</label>
-                            <div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div>
-                        </div>
+                        <div><label>Police Arrived at Scene?</label><select class="prof-input w-full border-orange-200 bg-orange-50"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+                        <div><label>Police Report Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                     </div>
                     <label class="text-orange-600">Upload Official Police Report</label>
                     <div class="upload-zone no-print mt-2" onclick="triggerUpload()"><p class="text-[10px] font-bold text-slate-400 uppercase">Click to upload Police Report PDF/Image</p></div>
@@ -201,73 +187,75 @@
             </div>
 
             <div id="pane-matrix" class="tab-pane space-y-6">
-                
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">1. Bodily Injury (BI) Claim & Liability</h4></div>
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">1. Carrier Overview</h4></div>
                 <div class="ins-tab-content space-y-6">
                     <div class="ins-grid">
-                        <div><label>Carrier / Claim #</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Policy Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Adjuster / Phone</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Liability Status</label><select class="prof-input w-full"><option>Accepted</option><option>Denied</option><option>Pending</option></select></div>
+                        <div><label>BI Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Health Ins.</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>PIP Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>UM Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                    </div>
+                </div>
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">2. Coverage Details</h4></div>
+                <div class="ins-tab-content">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div><label>Liability Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>MedPay Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-bi-claim" class="tab-pane space-y-6">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Bodily Injury (BI) Claim</h3>
+                    <div class="grid md:grid-cols-3 gap-6 mb-6">
+                        <div><label>Carrier Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Claim Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Adjuster</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                     </div>
                     <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                        <div><label>BI Demand Amount</label><div contenteditable="true" class="text-lg font-bold text-green-700 w-full">$ 0.00</div></div>
-                        <div><label>BI Settlement Amount</label><div contenteditable="true" class="text-lg font-bold text-green-800 w-full">$ 0.00</div></div>
+                        <div><label>Demand Amount</label><div contenteditable="true" class="text-lg font-bold text-green-700 w-full">$ 0.00</div></div>
+                        <div><label>Settlement Amount</label><div contenteditable="true" class="text-lg font-bold text-green-800 w-full">$ 0.00</div></div>
                     </div>
                 </div>
+            </div>
 
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">2. Health Insurance & Subrogation</h4></div>
-                <div class="ins-tab-content">
-                    <div class="ins-grid">
-                        <div><label>Primary Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Individual ID</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Subrogation Co.</label><div contenteditable="true" class="text-sm w-full"></div></div>
+            <div id="pane-pip-claim" class="tab-pane space-y-6">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">PIP / No-Fault Claim</h3>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div><label>Carrier Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Claim #</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Exhaustion Status</label><select class="prof-input w-full border-slate-100"><option>Active</option><option>Exhausted</option><option>Denied</option></select></div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6 mt-6 pt-4 border-t border-slate-100">
+                        <div><label>Total Benefits Paid</label><div contenteditable="true" class="text-lg font-bold text-green-700 w-full">$ 0.00</div></div>
+                        <div><label>Remaining Balance</label><div contenteditable="true" class="text-lg font-bold text-orange-600 w-full">$ 0.00</div></div>
                     </div>
                 </div>
+            </div>
 
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">3. PIP / No-Fault Claim Details</h4></div>
-                <div class="ins-tab-content space-y-4">
-                    <div class="ins-grid">
-                        <div><label>Carrier / Claim #</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>PIP Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>App Filed Date</label><div contenteditable="true" class="text-sm w-full">MM/DD/YYYY</div></div>
-                        <div><label>Exhaustion Status</label><select class="prof-input w-full"><option>Active</option><option>Exhausted</option><option>Denied</option></select></div>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-6 pt-2">
-                        <div><label>Total Benefits Paid</label><div contenteditable="true" class="text-md font-bold text-green-700 w-full">$ 0.00</div></div>
-                        <div><label>Remaining Balance</label><div contenteditable="true" class="text-md font-bold text-orange-600 w-full">$ 0.00</div></div>
-                    </div>
+            <div id="pane-um-claim" class="tab-pane space-y-6">
+                <div class="flex justify-between items-center px-2 no-print">
+                    <h2 class="text-sm font-black uppercase text-slate-400 italic">UM/UIM Claim Tracking</h2>
+                    <button onclick="addUM()" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded font-bold uppercase">+ Add UM Claim</button>
                 </div>
-
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <div class="flex justify-between items-center mb-2 px-1 no-print">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">4. UM/UIM Claims</h4>
-                            <button onclick="addUM()" class="bg-slate-900 text-white text-[10px] px-3 py-1 rounded font-bold uppercase">+ Add UM Policy</button>
+                <div id="um-container" class="space-y-4">
+                    <div class="pdf-card border-l-8 border-orange-500">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Uninsured / Underinsured (UM/UIM)</h3>
+                        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div><label>Carrier Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                            <div><label>Policy Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                            <div><label>Claim Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                            <div><label>Policy Limits</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>
                         </div>
-                        <div id="um-container" class="space-y-4">
-                            <div class="um-entry">
-                                <div class="ins-tab-header"><span class="text-[10px] font-bold text-orange-800">UM CLAIM #1</span></div>
-                                <div class="ins-tab-content">
-                                    <div class="grid grid-cols-2 gap-4 mb-4">
-                                        <div><label>Carrier / Policy</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                                        <div><label>Adjuster</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                                    </div>
-                                    <div><label>UM Demand Theory / Status</label><div contenteditable="true" class="text-xs w-full min-h-[60px] italic">Enter demand notes here...</div></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="text-[11px] font-bold text-orange-600 uppercase mb-2">5. MedPay Option</h4>
-                        <div class="ins-tab-content"><label>Does Client Have MedPay?</label><select onchange="toggleMedPay(this.value)" class="prof-input w-full border-orange-200 bg-orange-50"><option value="No">No</option><option value="Yes">Yes</option></select></div>
                     </div>
                 </div>
             </div>
 
             <div id="pane-medpay" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Medical Payments (MedPay) Details</h3>
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Medical Payments (MedPay)</h3>
                     <div class="grid md:grid-cols-3 gap-6">
                         <div><label>Carrier Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div><label>MedPay Limit</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
@@ -293,7 +281,7 @@
 
             <div id="pane-pd" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Client Vehicle Status</h3>
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Vehicle Status</h3>
                     <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div><label>Vehicle Owner</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div><label>Year / Make / Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
@@ -301,42 +289,23 @@
                         <div><label>Condition</label><select id="pd-status" onchange="togglePDUpload(this.value)" class="prof-input w-full"><option value="">-- Select --</option><option value="repairable">Repairable</option><option value="totalled">Total Loss</option></select></div>
                         <div><label>Estimated Amt</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
                     </div>
-                    <div id="pd-upload-container" class="space-y-4 no-print mt-4">
-                        <div id="upload-repair" class="hidden"><div class="upload-zone" onclick="triggerUpload()"><p class="text-[10px] font-bold text-slate-400 uppercase">Upload Repair Estimate</p></div></div>
-                        <div id="upload-total" class="hidden"><div class="upload-zone border-red-200 bg-red-50" onclick="triggerUpload()"><p class="text-[10px] font-bold text-red-400 uppercase">Upload Valuation Report</p></div></div>
-                    </div>
-                </div>
-                <div class="pdf-card border-l-8 border-slate-400">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Third Party Vehicle Info</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div><label>Year / Make / Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>PD Coverage?</label><select class="prof-input w-full border-slate-200"><option>No</option><option>Yes</option></select></div>
-                        <div><label>Damages Description</label><div contenteditable="true" class="text-sm w-full border border-slate-100 rounded p-2 min-h-[44px]"></div></div>
-                    </div>
                 </div>
             </div>
 
             <div id="pane-finance" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <div class="flex justify-between items-center border-b pb-2 mb-4">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500">Case Expenses & Billable Hours</h3>
+                        <h3 class="text-[11px] font-black uppercase text-orange-500">Case Expenses</h3>
                         <button onclick="addFinanceRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Entry</button>
                     </div>
                     <table class="treat-table">
                         <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Category</th>
-                                <th>Description / Task</th>
-                                <th>Amount / Time</th>
-                                <th class="no-print">Doc</th>
-                                <th class="no-print"></th>
-                            </tr>
+                            <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th class="no-print">Doc</th><th class="no-print"></th></tr>
                         </thead>
                         <tbody id="finance-body">
                             <tr>
                                 <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                                <td><select class="text-[10px] font-bold uppercase bg-slate-50 px-1 rounded"><option>Expense</option><option>Billable Hours</option></select></td>
+                                <td><select class="text-[10px] font-bold uppercase bg-slate-50 px-1 rounded"><option>Expense</option><option>Hours</option></select></td>
                                 <td><div contenteditable="true" class="w-full">Initial File Setup</div></td>
                                 <td><div contenteditable="true" class="font-bold">$ 0.00</div></td>
                                 <td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-2 py-1 rounded">Upload</button></td>
@@ -349,38 +318,14 @@
 
             <div id="pane-doc-hub" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-6">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500">Document Portal & Repository</h3>
-                        <button onclick="addDocRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Record</button>
-                    </div>
-                    
-                    <div class="no-print upload-zone mb-6" onclick="triggerUpload()">
-                        <p class="text-[11px] font-bold text-slate-400 uppercase mb-2">Drag and drop or click to batch upload</p>
-                        <button class="bg-orange-600 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase shadow-md">Upload Documents</button>
-                    </div>
-
+                    <div class="flex justify-between items-center border-b pb-2 mb-6"><h3 class="text-[11px] font-black uppercase text-orange-500">Document Portal</h3><button onclick="addDocRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Record</button></div>
+                    <div class="no-print upload-zone mb-6" onclick="triggerUpload()"><p class="text-[11px] font-bold text-slate-400 uppercase">Batch Upload Documents Here</p></div>
                     <table class="treat-table">
-                        <thead>
-                            <tr>
-                                <th>Document Label / Category</th>
-                                <th>File Name / Description</th>
-                                <th class="no-print">Action</th>
-                                <th class="no-print"></th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Category</th><th>File Description</th><th class="no-print">Action</th><th class="no-print"></th></tr></thead>
                         <tbody id="doc-body">
                             <tr>
-                                <td>
-                                    <select class="prof-input w-full border-slate-100 text-[11px] uppercase font-bold">
-                                        <option>Medical Records</option>
-                                        <option>Case Files</option>
-                                        <option>Employment/Wages</option>
-                                        <option>Insurance/Policy</option>
-                                        <option>Police Reports</option>
-                                        <option>Photos/Evidence</option>
-                                    </select>
-                                </td>
-                                <td><div contenteditable="true" class="w-full italic text-slate-400">Example: MRI Report_0418.pdf</div></td>
+                                <td><select class="prof-input w-full border-slate-100 text-[11px] uppercase font-bold"><option>Medical Records</option><option>Insurance/Policy</option><option>Police Reports</option></select></td>
+                                <td><div contenteditable="true" class="w-full italic text-slate-400">Example: MRI_Report.pdf</div></td>
                                 <td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-3 py-1 rounded font-bold uppercase">Update</button></td>
                                 <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>
                             </tr>
@@ -393,8 +338,6 @@
     </main>
 
     <script>
-        let umCount = 1;
-
         function showTab(id) {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
@@ -410,32 +353,20 @@
             else { btn.classList.add('hidden'); document.getElementById('pane-medpay').classList.remove('active'); }
         }
 
-        function togglePDUpload(val) {
-            document.getElementById('upload-repair').classList.add('hidden');
-            document.getElementById('upload-total').classList.add('hidden');
-            if(val === 'repairable') document.getElementById('upload-repair').classList.remove('hidden');
-            if(val === 'totalled') document.getElementById('upload-total').classList.remove('hidden');
-        }
-
         function triggerUpload() { alert("File selection active."); }
 
         function addUM() {
-            if(umCount >= 3) return;
-            umCount++;
             const container = document.getElementById('um-container');
             const div = document.createElement('div');
-            div.className = "um-entry mt-4";
+            div.className = "pdf-card border-l-8 border-orange-500 relative";
             div.innerHTML = `
-                <div class="ins-tab-header">
-                    <span class="text-[10px] font-bold text-orange-800">UM CLAIM #${umCount}</span>
-                    <button onclick="this.parentElement.parentElement.remove(); umCount--;" class="no-print text-red-500 text-[10px]">Remove</button>
-                </div>
-                <div class="ins-tab-content">
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div><label>Carrier / Policy</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Adjuster</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                    </div>
-                    <div><label>UM Demand Theory / Status</label><div contenteditable="true" class="text-xs w-full min-h-[60px] italic">Enter demand notes here...</div></div>
+                <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
+                <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Uninsured / Underinsured (UM/UIM)</h3>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div><label>Carrier Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Policy Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Claim Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Policy Limits</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>
                 </div>`;
             container.appendChild(div);
         }
@@ -443,27 +374,14 @@
         function addFinanceRow() {
             const body = document.getElementById('finance-body');
             const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="text-[10px] font-bold uppercase bg-slate-50 px-1 rounded"><option>Expense</option><option>Billable Hours</option></select></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold">$ 0.00</div></td><td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-2 py-1 rounded">Upload</button></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="text-[10px] font-bold uppercase bg-slate-50 px-1 rounded"><option>Expense</option><option>Hours</option></select></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold">$ 0.00</div></td><td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-2 py-1 rounded">Upload</button></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
             body.appendChild(row);
         }
 
         function addDocRow() {
             const body = document.getElementById('doc-body');
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <select class="prof-input w-full border-slate-100 text-[11px] uppercase font-bold">
-                        <option>Medical Records</option>
-                        <option>Case Files</option>
-                        <option>Employment/Wages</option>
-                        <option>Insurance/Policy</option>
-                        <option>Police Reports</option>
-                        <option>Photos/Evidence</option>
-                    </select>
-                </td>
-                <td><div contenteditable="true" class="w-full">New document entry...</div></td>
-                <td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-3 py-1 rounded font-bold uppercase">Update</button></td>
-                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>`;
+            row.innerHTML = `<td><select class="prof-input w-full border-slate-100 text-[11px] uppercase font-bold"><option>Medical Records</option><option>Insurance/Policy</option></select></td><td><div contenteditable="true" class="w-full">New record...</div></td><td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-3 py-1 rounded font-bold uppercase">Update</button></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>`;
             body.appendChild(row);
         }
 
