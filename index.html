@@ -96,6 +96,7 @@
                 <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
                 <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
                 <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
+                <div id="btn-nocontact" onclick="showTab('nocontact')" class="tab-btn">No Contact Protocol</div>
             </div>
 
             <div id="pane-profile" class="tab-pane active xl:grid-cols-3 gap-6">
@@ -288,6 +289,57 @@
                 </div>
             </div>
 
+            <div id="pane-nocontact" class="tab-pane space-y-6">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500">Contact Attempts Made</h3>
+                        <button onclick="addContactAttempt()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase hover:bg-orange-600">+ Add Attempt</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead>
+                            <tr><th>Date</th><th>Notes</th><th class="no-print w-10"></th></tr>
+                        </thead>
+                        <tbody id="contact-attempts-body">
+                            <tr>
+                                <td class="w-48"><div contenteditable="true">MM/DD/YYYY</div></td>
+                                <td><div contenteditable="true" class="w-full"></div></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="pdf-card">
+                        <h3 class="text-[11px] font-black uppercase text-slate-500 mb-4 border-b pb-2">Email Tracker</h3>
+                        <div class="space-y-4">
+                            <div><label>Target Email Address</label><div contenteditable="true" class="text-sm font-semibold w-full"></div></div>
+                            <div class="flex items-center justify-between bg-slate-50 p-4 rounded-lg">
+                                <div>
+                                    <label>Email Frequency</label>
+                                    <span id="email-freq-count" class="text-2xl font-black text-orange-600">0</span>
+                                </div>
+                                <button onclick="updateFreq('email-freq-count', 1)" class="no-print bg-orange-100 text-orange-600 h-10 w-10 rounded-full font-bold text-xl hover:bg-orange-200">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pdf-card">
+                        <h3 class="text-[11px] font-black uppercase text-slate-500 mb-4 border-b pb-2">Snail Mail Tracker</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label>Mailing Address Used</label>
+                                <div contenteditable="true" class="text-sm w-full min-h-[40px]"></div>
+                            </div>
+                            <div>
+                                <label>Mail History / Tracking Numbers</label>
+                                <div contenteditable="true" class="text-sm w-full min-h-[60px] border border-slate-100 bg-slate-50/30 rounded p-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -299,6 +351,20 @@
             const btn = document.getElementById('btn-' + id);
             if(pane) pane.classList.add('active');
             if(btn) btn.classList.add('active-tab');
+        }
+
+        function updateFreq(id, val) {
+            const el = document.getElementById(id);
+            el.innerText = parseInt(el.innerText) + val;
+        }
+
+        function addContactAttempt() {
+            const body = document.getElementById('contact-attempts-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `<td class="w-48"><div contenteditable="true">MM/DD/YYYY</div></td>
+                <td><div contenteditable="true" class="w-full"></div></td>
+                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>`;
+            body.appendChild(row);
         }
 
         function addUM() {
