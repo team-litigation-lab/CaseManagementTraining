@@ -12,14 +12,15 @@
         body { font-family: 'Inter', sans-serif; }
         .bg-custom-orange { background-color: #F97316; }
         .tab-active { border-bottom: 3px solid #F97316; color: #F97316; font-weight: 700; background-color: #fff; }
-        .ins-subtab-active { background-color: #F97316 !important; color: white !important; }
+        .subtab-active { background-color: #F97316 !important; color: white !important; }
+        .tp-tab-active { border-bottom: 2px solid #3B82F6; color: #3B82F6; font-weight: 700; }
         .workspace-bg { background-color: #F3F4F6; }
         [contenteditable="true"]:focus { outline: 2px solid #F97316; background-color: #FFF7ED; padding: 4px; border-radius: 4px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         #save-status { transition: opacity 0.5s ease; }
         @media print { 
             .no-print { display: none !important; } 
-            .tab-content, .ins-section { display: block !important; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1.5rem; page-break-inside: avoid; } 
+            .tab-content, .ins-section, .tp-section { display: block !important; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1.5rem; page-break-inside: avoid; } 
         }
     </style>
 </head>
@@ -35,7 +36,7 @@
             <div class="mt-2 h-1 w-12 bg-custom-orange rounded-full"></div>
         </div>
         <nav class="mt-6 px-4 space-y-1 flex-1">
-            <div class="py-2.5 px-4 rounded bg-slate-700 border-l-4 border-custom-orange text-sm font-semibold uppercase tracking-widest text-orange-400">Training Module</div>
+            <div class="py-2.5 px-4 rounded bg-slate-700 border-l-4 border-custom-orange text-sm font-semibold uppercase tracking-widest text-orange-400">Assessment Module</div>
             <button onclick="saveCase()" class="w-full mt-8 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-xs font-bold uppercase shadow-xl transition-all">Download PDF</button>
             <button onclick="resetForm()" class="w-full mt-4 border border-slate-600 hover:bg-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase transition-all">Clear Progress</button>
         </nav>
@@ -43,8 +44,19 @@
 
     <main class="flex-1 flex flex-col overflow-hidden workspace-bg" id="capture-area">
         <header class="h-32 bg-cover bg-center border-b border-gray-200 relative no-print" style="background-image: url('https://i.ibb.co/3sX8M8H/image-0.png');">
-            <div class="absolute top-4 right-8">
-                <div id="save-status" class="text-[8px] text-white/50 uppercase font-bold tracking-widest opacity-0 text-right">Progress Autosaved</div>
+            <div class="absolute top-4 right-8 flex flex-col items-end space-y-2">
+                <div class="flex items-center space-x-3">
+                    <button onclick="saveCase()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-widest shadow-lg transition-all border border-green-500">
+                        Save to PDF
+                    </button>
+                    <select id="phase-select" onchange="updatePhase(this.value); autoSave();" class="bg-slate-900/80 backdrop-blur-md text-white border border-white/30 rounded px-3 py-1.5 text-xs font-bold uppercase tracking-wider outline-none cursor-pointer">
+                        <option value="Intake">Intake</option>
+                        <option value="Investigation">Investigation</option>
+                        <option value="Settlement">Settlement</option>
+                        <option value="Litigation">Litigation</option>
+                    </select>
+                </div>
+                <div id="save-status" class="text-[8px] text-white/50 uppercase font-bold tracking-widest opacity-0">Progress Autosaved</div>
             </div>
         </header>
 
@@ -52,7 +64,7 @@
             <div class="mb-6 border-b pb-4 flex justify-between items-center">
                 <div>
                     <h1 id="case-title" class="text-2xl font-bold text-slate-800" contenteditable="true">Untitled Assessment</h1>
-                    <p class="text-sm text-gray-500 italic">Insurance Discovery & Verification</p>
+                    <p class="text-sm text-gray-500 italic">Branch: Las Vegas, NV</p>
                 </div>
                 <div class="text-right">
                     <span id="currentStatus" class="text-orange-600 font-black text-lg uppercase tracking-tight">Intake</span>
@@ -67,55 +79,95 @@
                 <button onclick="showTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-x">Insurance Matrix</button>
             </div>
 
-            <div id="tab-insurance" class="tab-content hidden space-y-6">
-                <div class="flex space-x-2 mb-4 no-print">
-                    <button onclick="showIns('bi')" id="sub-bi" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded ins-subtab-active transition">Bodily Injury</button>
-                    <button onclick="showIns('um')" id="sub-um" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded transition">UM / UIM</button>
-                    <button onclick="showIns('pip')" id="sub-pip" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded transition">PIP / MedPay</button>
-                    <button onclick="showIns('health')" id="sub-health" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded transition">Health Insurance</button>
-                </div>
+            <div id="tab-client" class="tab-content grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">DOB</label><div id="f-dob" contenteditable="true" class="text-sm">MM/DD/YYYY</div></div>
+                <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">SSN</label><div id="f-ssn" contenteditable="true" class="text-sm tracking-widest">XXX-XX-XXXX</div></div>
+                <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">Email</label><div id="f-email" contenteditable="true" class="text-sm">...</div></div>
+            </div>
 
-                <div id="sec-bi" class="ins-section bg-white p-6 rounded-lg border-l-4 border-orange-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-orange-600 uppercase mb-4 tracking-widest">Carrier 1: Bodily Injury (BI)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-bi-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-bi-p" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Limits</label><div id="f-bi-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+            <div id="tab-damage" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-blue-500">
+                    <h2 class="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-widest">Client's Asset Loss</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div class="border-b pb-1 col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase">Year</label><div id="f-c-year" contenteditable="true" class="text-xs font-bold">...</div></div>
+                        <div class="border-b pb-1 col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase">Make</label><div id="f-c-make" contenteditable="true" class="text-xs font-bold">...</div></div>
+                        <div class="border-b pb-1 col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase">Model</label><div id="f-c-model" contenteditable="true" class="text-xs font-bold">...</div></div>
+                        <div class="border-b pb-1 col-span-1">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase">Loss Type</label>
+                            <select id="f-c-loss" onchange="autoSave()" class="w-full bg-transparent text-xs font-bold outline-none">
+                                <option value="Repair">Repair</option>
+                                <option value="Totalled">Totalled</option>
+                            </select>
+                        </div>
+                        <div class="border-b pb-1 col-span-1"><label class="text-[9px] font-bold text-slate-400 uppercase">Estimate</label><div id="f-c-est" contenteditable="true" class="text-xs font-bold text-green-600">₱0.00</div></div>
                     </div>
                 </div>
 
-                <div id="sec-um" class="ins-section hidden bg-white p-6 rounded-lg border-l-4 border-blue-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-widest">Uninsured/Underinsured Motorist (UM/UIM)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-um-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-um-p" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">UM Limits</label><div id="f-um-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-red-500">
+                    <h2 class="text-[10px] font-black text-red-600 uppercase mb-4 tracking-widest italic">Third Party Vehicle Information</h2>
+                    <div class="flex border-b mb-4 no-print">
+                        <button onclick="showTP('info')" id="btn-tp-info" class="tp-tab-btn px-4 py-2 text-[9px] font-bold uppercase tracking-widest text-gray-400 tp-tab-active">Year/Make/Model</button>
+                        <button onclick="showTP('dmg')" id="btn-tp-dmg" class="tp-tab-btn px-4 py-2 text-[9px] font-bold uppercase tracking-widest text-gray-400">Type of Damages</button>
                     </div>
-                </div>
-
-                <div id="sec-pip" class="ins-section hidden bg-white p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-green-600 uppercase mb-4 tracking-widest">PIP / Medical Payments</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-pip-c" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">PIP Limit</label><div id="f-pip-l" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Status</label><div id="f-pip-s" contenteditable="true" class="text-xs font-bold border-b pb-1 italic">Active / Exhausted?</div></div>
+                    <div id="sec-tp-info" class="tp-section">
+                        <div class="grid grid-cols-3 gap-6">
+                            <div class="border-b pb-2"><label class="text-[9px] font-bold text-slate-400 uppercase">Year</label><div id="f-tp-year" contenteditable="true" class="text-xs">...</div></div>
+                            <div class="border-b pb-2"><label class="text-[9px] font-bold text-slate-400 uppercase">Make</label><div id="f-tp-make" contenteditable="true" class="text-xs">...</div></div>
+                            <div class="border-b pb-2"><label class="text-[9px] font-bold text-slate-400 uppercase">Model</label><div id="f-tp-model" contenteditable="true" class="text-xs">...</div></div>
+                        </div>
                     </div>
-                </div>
-
-                <div id="sec-health" class="ins-section hidden bg-white p-6 rounded-lg border-l-4 border-purple-500 shadow-sm">
-                    <h3 class="text-[10px] font-black text-purple-600 uppercase mb-4 tracking-widest">Health Insurance / Private Pay</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Health Plan Name</label><div id="f-hi-n" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Member ID</label><div id="f-hi-i" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
-                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Group #</label><div id="f-hi-g" contenteditable="true" class="text-xs font-bold border-b pb-1">...</div></div>
+                    <div id="sec-tp-dmg" class="tp-section hidden">
+                        <div id="f-tp-desc" contenteditable="true" class="text-xs border p-3 rounded bg-slate-50 italic">Describe TP vehicle damages...</div>
                     </div>
                 </div>
             </div>
 
-            <div id="tab-client" class="tab-content"><div class="bg-white p-6 rounded border">Client Profile Fields...</div></div>
-            <div id="tab-details" class="tab-content hidden"><div class="bg-white p-6 rounded border">Case Facts Fields...</div></div>
-            <div id="tab-medical" class="tab-content hidden"><div class="bg-white p-6 rounded border">Medical Log Fields...</div></div>
-            <div id="tab-damage" class="tab-content hidden"><div class="bg-white p-6 rounded border">Property Damage Fields...</div></div>
+            <div id="tab-insurance" class="tab-content hidden space-y-6">
+                <div class="flex space-x-2 mb-4 no-print">
+                    <button onclick="showIns('bi')" id="sub-bi" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded subtab-active">BI</button>
+                    <button onclick="showIns('um')" id="sub-um" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded">UM / UIM</button>
+                    <button onclick="showIns('pip')" id="sub-pip" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded">PIP / MedPay</button>
+                    <button onclick="showIns('health')" id="sub-health" class="ins-subtab px-4 py-2 text-[9px] font-bold uppercase bg-slate-200 rounded">Health Insurance</button>
+                </div>
+
+                <div id="sec-bi" class="ins-section bg-white p-6 rounded border-l-4 border-orange-500 shadow-sm">
+                    <h3 class="text-[10px] font-black text-orange-600 uppercase mb-4 tracking-widest italic">Bodily Injury Coverage</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-bi-c" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-bi-p" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Limits</label><div id="f-bi-l" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                    </div>
+                </div>
+
+                <div id="sec-um" class="ins-section hidden bg-white p-6 rounded border-l-4 border-blue-500 shadow-sm">
+                    <h3 class="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-widest italic">UM / UIM Coverage</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-um-c" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Policy #</label><div id="f-um-p" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Limits</label><div id="f-um-l" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                    </div>
+                </div>
+
+                <div id="sec-pip" class="ins-section hidden bg-white p-6 rounded border-l-4 border-green-500 shadow-sm">
+                    <h3 class="text-[10px] font-black text-green-600 uppercase mb-4 tracking-widest italic">PIP / MedPay</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Carrier</label><div id="f-pip-c" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">PIP Limit</label><div id="f-pip-l" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                    </div>
+                </div>
+
+                <div id="sec-health" class="ins-section hidden bg-white p-6 rounded border-l-4 border-purple-500 shadow-sm">
+                    <h3 class="text-[10px] font-black text-purple-600 uppercase mb-4 tracking-widest italic">Health Insurance</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Health Plan</label><div id="f-hi-n" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Member ID</label><div id="f-hi-i" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                        <div><label class="text-[9px] text-gray-400 uppercase font-bold">Group #</label><div id="f-hi-g" contenteditable="true" class="text-xs font-bold border-b">...</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-details" class="tab-content hidden"><div class="bg-white p-10 text-slate-300 italic text-center rounded border">Case Facts Section</div></div>
+            <div id="tab-medical" class="tab-content hidden"><div class="bg-white p-10 text-slate-300 italic text-center rounded border">Injury & Provider Log</div></div>
 
         </div>
     </main>
@@ -131,38 +183,52 @@
         function showIns(id) {
             document.querySelectorAll('.ins-section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + id).classList.remove('hidden');
-            document.querySelectorAll('.ins-subtab').forEach(b => b.classList.remove('ins-subtab-active'));
-            document.getElementById('sub-' + id).classList.add('ins-subtab-active');
+            document.querySelectorAll('.ins-subtab').forEach(b => b.classList.remove('subtab-active'));
+            document.getElementById('sub-' + id).classList.add('subtab-active');
+        }
+
+        function showTP(id) {
+            document.querySelectorAll('.tp-section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('sec-tp-' + id).classList.remove('hidden');
+            document.querySelectorAll('.tp-tab-btn').forEach(b => b.classList.remove('tp-tab-active'));
+            document.getElementById('btn-tp-' + id).classList.add('tp-tab-active');
         }
 
         function autoSave() {
             const data = {
                 title: document.getElementById('case-title').innerText,
-                bi: document.getElementById('f-bi-c').innerText,
-                um: document.getElementById('f-um-c').innerText,
-                pip: document.getElementById('f-pip-c').innerText,
-                hi: document.getElementById('f-hi-n').innerText
+                phase: document.getElementById('phase-select').value,
+                cYear: document.getElementById('f-c-year').innerText,
+                tpYear: document.getElementById('f-tp-year').innerText,
+                tpDesc: document.getElementById('f-tp-desc').innerText,
+                biC: document.getElementById('f-bi-c').innerText
             };
-            localStorage.setItem('lsh_insurance_data', JSON.stringify(data));
-            document.getElementById('save-status').style.opacity = '1';
-            setTimeout(() => document.getElementById('save-status').style.opacity = '0', 1000);
+            localStorage.setItem('lsh_final_save', JSON.stringify(data));
+            const status = document.getElementById('save-status');
+            status.style.opacity = '1';
+            setTimeout(() => status.style.opacity = '0', 1000);
         }
 
         function loadWork() {
-            const saved = JSON.parse(localStorage.getItem('lsh_insurance_data'));
+            const saved = JSON.parse(localStorage.getItem('lsh_final_save'));
             if(saved) {
                 document.getElementById('case-title').innerText = saved.title;
-                document.getElementById('f-bi-c').innerText = saved.bi;
-                document.getElementById('f-um-c').innerText = saved.um;
-                document.getElementById('f-pip-c').innerText = saved.pip;
-                document.getElementById('f-hi-n').innerText = saved.hi;
+                document.getElementById('phase-select').value = saved.phase;
+                document.getElementById('f-c-year').innerText = saved.cYear;
+                document.getElementById('f-tp-year').innerText = saved.tpYear;
+                document.getElementById('f-tp-desc').innerText = saved.tpDesc;
+                document.getElementById('f-bi-c').innerText = saved.biC;
+                updatePhase(saved.phase);
             }
         }
 
+        function updatePhase(val) { document.getElementById('currentStatus').innerText = val; }
+        function resetForm() { if(confirm("Clear current progress?")) { localStorage.clear(); location.reload(); } }
+
         function saveCase() {
             const element = document.getElementById('capture-area');
-            // Show all sections for PDF
-            document.querySelectorAll('.tab-content, .ins-section').forEach(c => {
+            // Unhide all logic for PDF export
+            document.querySelectorAll('.tab-content, .ins-section, .tp-section').forEach(c => {
                 c.classList.remove('hidden');
                 c.style.display = 'block';
             });
