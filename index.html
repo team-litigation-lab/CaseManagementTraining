@@ -144,9 +144,13 @@
             <div id="pane-police" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Accident Reporting</h3>
-                    <div class="grid md:grid-cols-2 gap-6">
+                    <div class="grid md:grid-cols-3 gap-6">
                         <div><label>Police Arrived?</label><select class="prof-input w-full"><option>No</option><option>Yes</option></select></div>
                         <div><label>Report Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div class="no-print">
+                            <label>Action</label>
+                            <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Police Report</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -207,11 +211,13 @@
             <div id="pane-pd" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Client Vehicle</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
                         <div><label>Vehicle Y/M/M</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div><label>Condition</label><select onchange="toggleVehicleUI(this.value)" class="prof-input w-full border-orange-200"><option value="select">-- Select --</option><option value="repairable">Repairable</option><option value="totalled">Total Loss</option></select></div>
-                        <div id="ui-repairable" class="hidden col-span-full grid md:grid-cols-2 gap-4 pt-4 border-t">
+                        <div id="ui-repairable" class="hidden col-span-full grid md:grid-cols-3 gap-4 pt-4 border-t">
                             <div><label>Estimate Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
+                            <div><label>Shop Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                             <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Estimate</button></div>
                         </div>
                         <div id="ui-totalled" class="hidden col-span-full grid md:grid-cols-2 gap-4 pt-4 border-t">
@@ -219,15 +225,31 @@
                             <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Total Loss Docs</button></div>
                         </div>
                     </div>
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Registered Owner Information</h4>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label>Address</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="pdf-card border-l-8 border-slate-400">
                     <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Third Party Vehicle</h3>
-                    <div class="grid md:grid-cols-3 gap-6 mb-4">
-                        <div><label>Year</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Make</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div><label>Year / Make / Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Damages</label><div contenteditable="true" class="text-sm italic w-full min-h-[40px] border border-slate-100 rounded p-2 bg-slate-50"></div></div>
                     </div>
-                    <div><label>Damages</label><div contenteditable="true" class="text-sm italic w-full min-h-[60px] border border-slate-100 rounded p-3 bg-slate-50"></div></div>
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Registered Owner Information</h4>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
