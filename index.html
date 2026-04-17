@@ -206,7 +206,6 @@
                     <div contenteditable="true" class="text-sm w-full min-h-[400px]">Facility names, providers, and dates...</div>
                 </div>
             </div>
-
         </div>
     </main>
 
@@ -214,7 +213,6 @@
         function showTab(id) {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            
             document.getElementById('pane-' + id).classList.add('active');
             document.getElementById('btn-' + id).classList.add('active-tab');
         }
