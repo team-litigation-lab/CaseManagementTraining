@@ -34,7 +34,7 @@
         label { font-size: 11px !important; margin-bottom: 4px; display: block; }
         
         .ins-tab-header { background: #fff7ed; border-left: 4px solid #f97316; padding: 8px 12px; border-radius: 4px 4px 0 0; }
-        .ins-tab-content { border: 1px solid #fed7aa; border-top: none; padding: 166px; border-radius: 0 0 8px 8px; background: #ffffff; }
+        .ins-tab-content { border: 1px solid #fed7aa; border-top: none; padding: 16px; border-radius: 0 0 8px 8px; background: #ffffff; }
         
         select.prof-input {
             background: #f8fafc;
@@ -45,6 +45,10 @@
             font-weight: 600;
             outline: none;
         }
+
+        /* Essential for PDF generation */
+        .no-print { display: block; }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden">
@@ -98,7 +102,7 @@
                 </div>
             </div>
 
-            <div class="flex flex-wrap gap-8 border-b mb-6 no-print">
+            <div id="tab-navigation" class="flex flex-wrap gap-8 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
                 <div id="btn-medical" onclick="showTab('medical')" class="tab-btn">Medical</div>
@@ -268,9 +272,13 @@
 
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
+            const nav = document.getElementById('tab-navigation');
             const panes = document.querySelectorAll('.tab-pane');
             const originalDisplays = [];
             
+            // Hide the tab nav for the PDF
+            nav.style.display = 'none';
+
             panes.forEach(p => {
                 originalDisplays.push(p.style.display);
                 p.classList.remove('hidden');
@@ -291,6 +299,9 @@
             try {
                 await html2pdf().set(opt).from(area).save();
             } finally {
+                // Restore Tab Navigation
+                nav.style.display = 'flex';
+                
                 panes.forEach((p, index) => {
                     p.style.display = originalDisplays[index];
                     if(p.id !== 'pane-' + document.querySelector('.active-tab').id.split('-')[1]) {
