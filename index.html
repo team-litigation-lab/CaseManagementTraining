@@ -98,9 +98,10 @@
                 </div>
             </div>
 
-            <div class="flex gap-8 border-b mb-6 no-print">
+            <div class="flex flex-wrap gap-8 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Profile</div>
                 <div id="btn-facts" onclick="showTab('facts')" class="tab-btn">Case Facts</div>
+                <div id="btn-injuries" onclick="showTab('injuries')" class="tab-btn">Injuries Sustained</div>
                 <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
                 <div id="btn-medical" onclick="showTab('medical')" class="tab-btn">Medical</div>
             </div>
@@ -127,23 +128,57 @@
             </div>
 
             <div id="pane-facts" class="tab-pane hidden">
-                <div class="pdf-card max-w-lg">
-                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="pdf-card">
+                        <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
+                        <div class="space-y-6">
+                            <div>
+                                <label class="font-bold text-slate-400 uppercase">Police Arrived at the scene?</label>
+                                <select id="police-arrived" onchange="togglePoliceReport(this.value)" class="prof-input w-full">
+                                    <option value="NO">NO</option>
+                                    <option value="YES">YES</option>
+                                </select>
+                            </div>
+                            <div id="police-report-container" style="display: none;" class="space-y-4">
+                                <div>
+                                    <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
+                                    <div contenteditable="true" class="text-base font-semibold w-full border-orange-200">...</div>
+                                </div>
+                                <div class="no-print">
+                                    <label class="font-bold text-slate-400 uppercase">Upload Police Report</label>
+                                    <input type="file" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" />
+                                </div>
+                            </div>
+                            <div class="pt-4 border-t border-slate-100">
+                                <label class="font-bold text-slate-400 uppercase">Client contacted any insurance involved?</label>
+                                <select class="prof-input w-full">
+                                    <option>NO</option>
+                                    <option>YES - BI Carrier Only</option>
+                                    <option>YES - UM Carrier Only</option>
+                                    <option>YES - Both BI & UM</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pdf-card">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Accident Narrative</h3>
+                        <div contenteditable="true" class="text-sm w-full min-h-[150px] leading-relaxed">Provide a detailed summary of how the accident occurred...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-injuries" class="tab-pane hidden">
+                <div class="pdf-card">
+                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Injury Summary</h3>
                     <div class="space-y-6">
                         <div>
-                            <label class="font-bold text-slate-400 uppercase">Type of Injury</label>
+                            <label class="font-bold text-slate-400 uppercase">Type of Primary Injury</label>
                             <div contenteditable="true" class="text-base font-semibold w-full">...</div>
                         </div>
                         <div>
-                            <label class="font-bold text-slate-400 uppercase">Police Arrived at the scene?</label>
-                            <select id="police-arrived" onchange="togglePoliceReport(this.value)" class="prof-input w-full">
-                                <option value="NO">NO</option>
-                                <option value="YES">YES</option>
-                            </select>
-                        </div>
-                        <div id="police-report-container" style="display: none;">
-                            <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
-                            <div contenteditable="true" class="text-base font-semibold w-full border-orange-200">...</div>
+                            <label class="font-bold text-slate-400 uppercase">Secondary Injuries & Symptoms</label>
+                            <div contenteditable="true" class="text-sm w-full min-h-[100px]">List all other physical complaints...</div>
                         </div>
                     </div>
                 </div>
@@ -193,8 +228,8 @@
             </div>
 
             <div id="pane-medical" class="tab-pane hidden pdf-card min-h-[400px]">
-                <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Medical Notes</h3>
-                <div contenteditable="true" class="text-sm w-full min-h-[300px]">...</div>
+                <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Medical Treatment Log</h3>
+                <div contenteditable="true" class="text-sm w-full min-h-[300px]">Record facilities, dates of service, and providers here...</div>
             </div>
 
         </div>
@@ -215,8 +250,7 @@
             const target = document.getElementById('pane-' + id);
             target.classList.remove('hidden');
             
-            if(id === 'profile') { target.style.display = 'grid'; } 
-            else if(id === 'matrix') { target.style.display = 'block'; }
+            if(id === 'profile' || id === 'facts') { target.style.display = 'grid'; } 
             else { target.style.display = 'block'; }
             
             document.getElementById('btn-' + id).classList.add('active-tab');
