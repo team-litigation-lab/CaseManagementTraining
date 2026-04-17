@@ -3,127 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSH | Legal Support Help Portal</title>
+    <title>LSH | Collaborative Case Portal</title>
     <link rel="icon" type="image/png" href="https://i.ibb.co/6ndzR13/image-54df40.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .bg-custom-orange { background-color: #F97316; }
-        .text-custom-orange { color: #F97316; }
         .tab-active { border-bottom: 3px solid #F97316; color: #F97316; font-weight: 700; }
-        .phase-btn { transition: all 0.2s; cursor: pointer; }
-        .phase-active { background-color: #F97316 !important; color: white !important; border-color: #F97316 !important; font-weight: bold; transform: scale(1.05); }
-        [contenteditable="true"]:focus { 
-            outline: 2px solid #F97316; 
-            background-color: #FFF7ED;
-            padding: 4px;
-            border-radius: 4px;
-        }
+        .phase-active { background-color: #F97316 !important; color: white !important; transform: scale(1.05); }
+        [contenteditable="true"]:focus { outline: 2px solid #F97316; background-color: #FFF7ED; padding: 4px; border-radius: 4px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-white min-h-screen flex text-gray-800">
 
     <aside class="w-64 bg-slate-800 text-white flex-shrink-0 hidden md:flex flex-col">
-        <div class="p-6 border-b border-slate-700 flex flex-col items-center justify-center">
-            <div class="w-full bg-slate-900 rounded-lg p-4 shadow-inner border border-slate-700">
-                 <img src="https://i.ibb.co/6ndzR13/image-54df40.png" alt="LSH Logo" class="w-full h-auto object-contain">
+        <div class="p-6 border-b border-slate-700 flex flex-col items-center">
+            <div class="w-full bg-slate-900 rounded-lg p-4 border border-slate-700">
+                 <img src="https://i.ibb.co/6ndzR13/image-54df40.png" alt="LSH Logo" class="w-full h-auto">
             </div>
         </div>
-        
-        <nav class="mt-6 px-4 space-y-1 flex-1">
-            <div class="py-2.5 px-4 rounded bg-slate-700 border-l-4 border-custom-orange text-sm cursor-pointer font-semibold">Active Workspace</div>
-            <div class="py-2.5 px-4 rounded hover:bg-slate-700 text-gray-400 text-sm cursor-pointer transition">Client Archive</div>
+        <nav class="mt-6 px-4 space-y-1 flex-1 text-center">
+            <div class="py-2.5 px-4 rounded bg-slate-700 border-l-4 border-custom-orange text-sm font-semibold uppercase tracking-widest">Global Portal</div>
+            <button onclick="saveCase()" class="w-full mt-8 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-xs font-bold uppercase shadow-xl transition-all">Download Case PDF</button>
         </nav>
-        <div class="p-4 border-t border-slate-700 text-[9px] text-slate-500 text-center uppercase tracking-[0.2em] font-bold">
-            Property of LSH
-        </div>
+        <div class="p-4 border-t border-slate-700 text-[9px] text-slate-500 text-center uppercase tracking-widest font-bold">LSH Secure Network</div>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-40 bg-cover bg-center border-b border-gray-200 shadow-sm relative" style="background-image: url('https://i.ibb.co/3sX8M8H/image-0.png');">
-            <div class="absolute top-4 right-8 flex items-center space-x-2 bg-slate-900/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
-                <span class="w-2 h-2 bg-custom-orange rounded-full animate-pulse"></span>
-                <span class="text-[10px] font-bold text-white uppercase tracking-widest">Training Active</span>
+    <main class="flex-1 flex flex-col overflow-hidden" id="capture-area">
+        <header class="h-32 bg-cover bg-center border-b border-gray-200 relative" style="background-image: url('https://i.ibb.co/3sX8M8H/image-0.png');">
+            <div class="absolute top-4 right-8 bg-slate-900/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                <span class="text-[10px] font-bold text-white uppercase tracking-widest">Live Multi-User Session</span>
             </div>
         </header>
 
         <div class="p-6 overflow-y-auto bg-gray-50 flex-1">
-            
-            <div class="mb-8">
-                <div class="flex flex-wrap justify-center gap-2">
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase phase-active">Intake</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Investigation</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Treatment</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Demand Review</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Demand</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Settlement Neg.</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Settlement</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Litigation</button>
-                    <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Closed</button>
-                </div>
-            </div>
-
-            <div class="mb-6 flex justify-between items-end border-b pb-4 border-gray-200">
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-800" contenteditable="true">Untitled Intake Case</h1>
-                    <p class="text-sm text-gray-500 font-medium italic">Branch: <span class="text-slate-700 not-italic">Silang, Cavite</span> | Status: <span id="currentStatus" class="text-orange-600 font-bold uppercase tracking-tighter">Intake</span></p>
-                </div>
-            </div>
-
-            <div class="flex border-b border-gray-200 mb-6 bg-white rounded-t-lg overflow-x-auto whitespace-nowrap scrollbar-hide shadow-sm">
-                <button onclick="showTab('client')" id="btn-client" class="px-6 py-3 text-sm font-bold text-gray-500 hover:text-orange-500 transition tab-active">Client Info</button>
-                <button onclick="showTab('details')" id="btn-details" class="px-6 py-3 text-sm font-bold text-gray-500 hover:text-orange-500 transition">Case & Injury</button>
-                <button onclick="showTab('damage')" id="btn-damage" class="px-6 py-3 text-sm font-bold text-gray-500 hover:text-orange-500 transition">Property Damage</button>
-                <button onclick="showTab('insurance')" id="btn-insurance" class="px-6 py-3 text-sm font-bold text-gray-500 hover:text-orange-500 transition">Insurance Policies</button>
-            </div>
-
-            <div id="tab-client" class="tab-content space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-white p-4 rounded border shadow-sm"><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">DOB</label><div contenteditable="true" class="text-slate-700 font-medium italic">MM/DD/YYYY</div></div>
-                    <div class="bg-white p-4 rounded border shadow-sm"><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">SSN</label><div contenteditable="true" class="text-slate-700 font-medium tracking-widest">XXX-XX-XXXX</div></div>
-                    <div class="bg-white p-4 rounded border shadow-sm md:col-span-2"><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Address</label><div contenteditable="true" class="text-slate-700 text-sm">Enter Residential Address...</div></div>
-                </div>
-            </div>
-
-            <div id="tab-details" class="tab-content hidden space-y-4">
-                <div class="bg-white p-6 rounded border shadow-sm space-y-4">
-                    <div><label class="block text-[10px] font-bold text-orange-600 uppercase mb-1">Incident Description</label><div contenteditable="true" class="text-sm text-slate-700 min-h-[100px]">Enter facts...</div></div>
-                    <div><label class="block text-[10px] font-bold text-orange-600 uppercase mb-1">Injury List</label><div contenteditable="true" class="text-sm text-slate-700 min-h-[60px]">List diagnoses...</div></div>
-                </div>
-            </div>
-
-            <div id="tab-damage" class="tab-content hidden space-y-4">
-                <div class="bg-white p-6 rounded border shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Vehicle Losses</label><div contenteditable="true" class="text-sm text-slate-700 border rounded p-2 italic">Year, Make, Model...</div></div>
-                    <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Repair Estimate</label><div contenteditable="true" class="text-lg font-bold text-green-700 border rounded p-2">₱0.00</div></div>
-                </div>
-            </div>
-
-            <div id="tab-insurance" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded border-l-4 border-orange-500 shadow-sm"><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">BI Coverage</label><div contenteditable="true" class="text-xs text-slate-700 italic">Enter info...</div></div>
-                <div class="bg-white p-4 rounded border-l-4 border-orange-500 shadow-sm"><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">UM/UIM Coverage</label><div contenteditable="true" class="text-xs text-slate-700 italic">Enter info...</div></div>
-                <div class="bg-white p-4 rounded border-l-4 border-orange-500 shadow-sm"><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">PIP Coverage</label><div contenteditable="true" class="text-xs text-slate-700 italic">Enter info...</div></div>
-                <div class="bg-white p-4 rounded border-l-4 border-orange-500 shadow-sm"><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Health Insurance</label><div contenteditable="true" class="text-xs text-slate-700 italic">Enter info...</div></div>
-            </div>
-
-        </div>
-    </main>
-
-    <script>
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-            document.getElementById('tab-' + tabName).classList.remove('hidden');
-            document.querySelectorAll('.tab-active').forEach(btn => btn.classList.remove('tab-active'));
-            document.getElementById('btn-' + tabName).classList.add('tab-active');
-        }
-
-        function setPhase(element) {
-            document.querySelectorAll('.phase-btn').forEach(btn => btn.classList.remove('phase-active'));
-            element.classList.add('phase-active');
-            document.getElementById('currentStatus').innerText = element.innerText;
-        }
-    </script>
-</body>
-</html>
+            <div class="mb-8 flex flex-wrap justify-center gap-2">
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase phase-active">Intake</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Investigation</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Treatment</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Demand Review</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Demand</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Settlement Neg.</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Settlement</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-gray-300 bg-white text-[9px] font-bold text-slate-500 uppercase">Litigation</button>
+                <button onclick="setPhase(this)" class="phase-btn px-4 py-1.5 rounded-full border border-
