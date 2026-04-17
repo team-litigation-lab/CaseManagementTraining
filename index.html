@@ -11,7 +11,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; overflow: hidden; }
         
-        /* Tab Interaction */
         .tab-btn { border-bottom: 3px solid transparent; transition: all 0.2s; }
         .active-tab-style { 
             border-bottom: 3px solid #F97316 !important; 
@@ -19,7 +18,13 @@
             font-weight: 800; 
         }
 
-        /* Editing Focus */
+        .sub-tab-btn { transition: all 0.2s; border: 1px solid #e2e8f0; }
+        .sub-tab-active { 
+            background-color: #F97316 !important; 
+            color: white !important; 
+            border-color: #F97316 !important;
+        }
+
         [contenteditable="true"]:focus { 
             outline: 2px solid #F97316; 
             background-color: #FFF7ED; 
@@ -31,12 +36,13 @@
 
         @media print {
             .no-print { display: none !important; }
-            .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; border: none !important; margin-bottom: 2rem; }
+            .tab-content { display: block !important; opacity: 1 !important; visibility: visible !important; border: none !important; margin-bottom: 2rem; }
+            .sub-tab-content { display: block !important; margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem; }
             body { background: white !important; overflow: visible !important; }
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex text-gray-800">
+<body class="bg-slate-50 min-h-screen flex text-gray-800" onload="switchTab('client')">
 
     <aside class="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col no-print">
         <div class="p-8 border-b border-slate-800 text-center">
@@ -84,12 +90,12 @@
             </div>
 
             <div class="flex gap-4 mb-8 no-print border-b border-slate-200">
-                <button onclick="switchTab('client')" id="btn-client" class="tab-btn pb-3 px-2 text-[11px] font-bold uppercase tracking-wider active-tab-style">Profile</button>
-                <button onclick="switchTab('facts')" id="btn-facts" class="tab-btn pb-3 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Facts</button>
-                <button onclick="switchTab('medical')" id="btn-medical" class="tab-btn pb-3 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Medical</button>
+                <button onclick="switchTab('client')" id="btn-client" class="tab-btn pb-3 px-2 text-[11px] font-bold uppercase tracking-wider">Profile</button>
+                <button onclick="switchTab('facts')" id="btn-facts" class="tab-btn pb-3 px-2 text-[11px] font-bold uppercase tracking-wider">Facts</button>
+                <button onclick="switchTab('medical')" id="btn-medical" class="tab-btn pb-3 px-2 text-[11px] font-bold uppercase tracking-wider">Medical</button>
             </div>
 
-            <div id="tab-client" class="tab-content grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="tab-client" class="tab-content hidden grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="pdf-card">
                     <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Client Details</h3>
                     <div class="space-y-4">
@@ -129,8 +135,18 @@
             <div id="tab-facts" class="tab-content hidden space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="pdf-card col-span-1">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Police Report</h3>
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 border-b pb-2">Claim Basics</h3>
                         <div class="space-y-5">
+                            <div>
+                                <label class="text-[9px] font-bold text-slate-400 uppercase">Type of Claim</label>
+                                <select class="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-bold p-2 rounded outline-none">
+                                    <option>MVA (Motor Vehicle Accident)</option>
+                                    <option>Mass Tort</option>
+                                    <option>Slip and Fall</option>
+                                    <option>Dog Bite</option>
+                                    <option>Others</option>
+                                </select>
+                            </div>
                             <div>
                                 <label class="text-[9px] font-bold text-slate-400 uppercase">Report Status</label>
                                 <select class="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-bold p-2 rounded outline-none">
@@ -138,10 +154,6 @@
                                     <option>Pending</option>
                                     <option>Requested</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="text-[9px] font-bold text-slate-400 uppercase">Report #</label>
-                                <div contenteditable="true" class="text-sm font-semibold border-b">...</div>
                             </div>
                             <div class="no-print">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase block mb-1">Upload Report</label>
@@ -151,9 +163,28 @@
                             </div>
                         </div>
                     </div>
-                    <div class="pdf-card md:col-span-2">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 border-b pb-2">Case Narrative</h3>
-                        <div contenteditable="true" class="text-sm italic text-slate-600 leading-relaxed min-h-[200px] outline-none">Provide accident details here...</div>
+
+                    <div class="md:col-span-2 flex flex-col gap-4">
+                        <div class="flex gap-2 no-print">
+                            <button onclick="switchSubTab('narrative')" id="sub-btn-narrative" class="sub-tab-btn px-4 py-1.5 rounded-full text-[10px] font-bold uppercase sub-tab-active">Narrative</button>
+                            <button onclick="switchSubTab('injuries')" id="sub-btn-injuries" class="sub-tab-btn px-4 py-1.5 rounded-full text-[10px] font-bold uppercase bg-white text-slate-400">Injuries</button>
+                            <button onclick="switchSubTab('notes')" id="sub-btn-notes" class="sub-tab-btn px-4 py-1.5 rounded-full text-[10px] font-bold uppercase bg-white text-slate-400">Notes</button>
+                        </div>
+
+                        <div id="sub-tab-narrative" class="sub-tab-content pdf-card flex-1">
+                            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 border-b pb-2">Accident Narrative</h3>
+                            <div contenteditable="true" class="text-sm italic text-slate-600 leading-relaxed min-h-[250px] outline-none">Detailed description of the event...</div>
+                        </div>
+
+                        <div id="sub-tab-injuries" class="sub-tab-content hidden pdf-card flex-1">
+                            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 mb-4 border-b pb-2">Injuries Sustained</h3>
+                            <div contenteditable="true" class="text-sm font-semibold text-slate-800 leading-relaxed min-h-[250px] outline-none">List all sustained injuries and physical complaints...</div>
+                        </div>
+
+                        <div id="sub-tab-notes" class="sub-tab-content hidden pdf-card flex-1">
+                            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mb-4 border-b pb-2">Internal Notes</h3>
+                            <div contenteditable="true" class="text-sm text-slate-600 leading-relaxed min-h-[250px] outline-none">Enter investigator notes or follow-up requirements...</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -169,39 +200,45 @@
     </main>
 
     <script>
-        // Simple, robust Tab Switcher
         function switchTab(tabId) {
-            // Hide all tab contents
             const contents = document.getElementsByClassName('tab-content');
             for (let i = 0; i < contents.length; i++) {
                 contents[i].style.display = 'none';
                 contents[i].classList.add('hidden');
                 contents[i].classList.remove('grid');
             }
-
-            // Remove active style from all buttons
             const btns = document.getElementsByClassName('tab-btn');
             for (let i = 0; i < btns.length; i++) {
                 btns[i].classList.remove('active-tab-style');
                 btns[i].classList.add('text-slate-400');
             }
-
-            // Show current tab
             const activePane = document.getElementById('tab-' + tabId);
             if (tabId === 'client') {
-                activePane.style.display = 'grid'; // Force grid for profile
+                activePane.style.display = 'grid';
             } else {
                 activePane.style.display = 'block';
             }
             activePane.classList.remove('hidden');
-
-            // Set button to active
             const activeBtn = document.getElementById('btn-' + tabId);
             activeBtn.classList.add('active-tab-style');
             activeBtn.classList.remove('text-slate-400');
         }
 
-        // File upload label update
+        function switchSubTab(subId) {
+            const contents = document.getElementsByClassName('sub-tab-content');
+            for (let i = 0; i < contents.length; i++) {
+                contents[i].classList.add('hidden');
+            }
+            const btns = document.getElementsByClassName('sub-tab-btn');
+            for (let i = 0; i < btns.length; i++) {
+                btns[i].classList.remove('sub-tab-active');
+                btns[i].classList.add('text-slate-400', 'bg-white');
+            }
+            document.getElementById('sub-tab-' + subId).classList.remove('hidden');
+            document.getElementById('sub-btn-' + subId).classList.add('sub-tab-active');
+            document.getElementById('sub-btn-' + subId).classList.remove('text-slate-400', 'bg-white');
+        }
+
         function fileDisplay(input, labelId) {
             if (input.files && input.files[0]) {
                 const label = document.getElementById(labelId);
@@ -210,35 +247,42 @@
             }
         }
 
-        // PDF Generation
         async function generatePDF() {
             const element = document.getElementById('capture-area');
             const contents = document.getElementsByClassName('tab-content');
+            const subContents = document.getElementsByClassName('sub-tab-content');
             const originalTab = document.querySelector('.active-tab-style').id.replace('btn-', '');
 
-            // Show everything for capture
+            // Temporarily show all tabs and sub-tabs for PDF export
             for (let i = 0; i < contents.length; i++) {
                 contents[i].style.display = 'block';
                 contents[i].classList.remove('hidden');
             }
+            for (let i = 0; i < subContents.length; i++) {
+                subContents[i].classList.remove('hidden');
+            }
 
             const options = {
-                margin: 0.5,
-                filename: 'LSH_Case_Report.pdf',
+                margin: 0.3,
+                filename: 'LSH_Training_Report.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
+                html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             try {
                 await html2pdf().set(options).from(element).save();
             } finally {
-                // Restore the specific tab view
+                // Restore UI state
+                for (let i = 0; i < subContents.length; i++) {
+                    if (!document.getElementById('sub-btn-' + subContents[i].id.replace('sub-tab-', '')).classList.contains('sub-tab-active')) {
+                        subContents[i].classList.add('hidden');
+                    }
+                }
                 switchTab(originalTab);
             }
         }
 
-        // Auto-save visual feedback
         document.getElementById('capture-area').addEventListener('input', () => {
             const status = document.getElementById('save-status');
             status.style.opacity = '1';
