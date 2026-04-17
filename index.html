@@ -3,120 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus PI | Case Management Simulation</title>
+    <title>Legal Support | Editable Case Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        .bg-custom-orange { background-color: #F97316; }
+        .text-custom-orange { color: #F97316; }
+        .hover-orange:hover { background-color: #EA580C; }
+        [contenteditable="true"]:focus { 
+            outline: 2px solid #F97316; 
+            background-color: #FFF7ED;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex">
+<body class="bg-white min-h-screen flex text-gray-800">
 
-    <aside class="w-64 bg-slate-900 text-white flex-shrink-0">
-        <div class="p-6 text-xl font-bold border-b border-slate-700 tracking-tight text-indigo-400">NEXUS LEGAL</div>
+    <aside class="w-64 bg-slate-800 text-white flex-shrink-0 hidden md:block">
+        <div class="p-6 text-xl font-bold border-b border-slate-700 text-orange-400">LEGAL SUPPORT</div>
         <nav class="mt-6 px-4 space-y-1">
-            <a href="#" class="block py-2.5 px-4 rounded bg-slate-800 border-l-4 border-indigo-500 text-sm">Active Litigation</a>
-            <a href="#" class="block py-2.5 px-4 rounded hover:bg-slate-800 text-gray-400 text-sm">Medical Records Queue</a>
-            <a href="#" class="block py-2.5 px-4 rounded hover:bg-slate-800 text-gray-400 text-sm">Intake Forms</a>
+            <div class="py-2.5 px-4 rounded bg-slate-700 border-l-4 border-custom-orange text-sm cursor-pointer">Active Intake</div>
+            <div class="py-2.5 px-4 rounded hover:bg-slate-700 text-gray-400 text-sm cursor-pointer">Archive</div>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center">
-            <h2 class="text-lg font-semibold text-gray-700">Personal Injury Portal</h2>
-            <div class="flex items-center space-x-3">
-                <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">TRAINING ENVIRONMENT</span>
+        <header class="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center shadow-sm">
+            <h2 class="text-sm font-bold text-slate-600 uppercase tracking-widest">Case Management System</h2>
+            <div class="flex items-center space-x-2">
+                <span class="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 border border-orange-200 rounded">EDIT MODE ENABLED</span>
             </div>
         </header>
 
-        <div class="p-8 overflow-y-auto">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+        <div class="p-6 overflow-y-auto space-y-6 bg-gray-50 flex-1">
+            
+            <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                <div class="p-4 border-b border-gray-100 bg-slate-800 rounded-t-lg font-bold text-white">Intake Entry</div>
+                <form id="intakeForm" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-800">Case #PI-2024-0982</h3>
-                        <p class="text-sm text-gray-500 italic">Type: Motor Vehicle Accident (MVA)</p>
+                        <label class="block text-xs font-bold text-slate-500 uppercase">Client Name</label>
+                        <input type="text" id="clientName" class="w-full mt-1 p-2 border rounded border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none" required>
                     </div>
-                    <span class="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase">Pre-Litigation</span>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-6">
-                    <div class="space-y-4">
-                        <h4 class="text-xs font-bold text-indigo-600 uppercase tracking-widest">Client Identification</h4>
-                        <div>
-                            <p class="text-xs text-gray-400 uppercase">Full Name / DOB</p>
-                            <p class="font-medium">Jane Doe | 05/12/1988</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-400 uppercase">Address</p>
-                            <p class="font-medium text-sm">123 Pine St, Silang, Cavite, 4118</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-400 uppercase">SSN (Partial)</p>
-                            <p class="font-medium">XXX-XX-6789</p>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase">DOL</label>
+                        <input type="date" id="dol" class="w-full mt-1 p-2 border rounded border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none">
                     </div>
-
-                    <div class="space-y-4 border-l md:pl-8 border-gray-100">
-                        <h4 class="text-xs font-bold text-red-600 uppercase tracking-widest">Critical Timelines</h4>
-                        <div>
-                            <p class="text-xs text-gray-400 uppercase">Date of Loss (DOL)</p>
-                            <p class="font-medium text-red-700">01/15/2024</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-400 uppercase">Statute of Limitations (SOL)</p>
-                            <p class="font-bold text-red-700">01/15/2026</p>
-                            <p class="text-[10px] text-gray-400 leading-tight mt-1">Countdown: 638 Days Remaining</p>
-                        </div>
+                    <div class="md:col-span-2">
+                        <button type="submit" class="bg-custom-orange text-white px-8 py-2 rounded font-bold hover-orange uppercase text-sm">Create Editable Case</button>
                     </div>
-
-                    <div class="space-y-4 border-l md:pl-8 border-gray-100">
-                        <h4 class="text-xs font-bold text-green-600 uppercase tracking-widest">Medical Overview</h4>
-                        <div>
-                            <p class="text-xs text-gray-400 uppercase">Primary Injuries</p>
-                            <ul class="text-sm list-disc list-inside text-gray-700">
-                                <li>Cervical Strain (Whiplash)</li>
-                                <li>Lumbar Disc Herniation (L4-L5)</li>
-                                <li>Right Wrist Contusion</li>
-                            </ul>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-400 uppercase">Medical Records Status</p>
-                            <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Requested (03/01)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-6 bg-indigo-50 border-t border-gray-100 rounded-b-xl">
-                    <h4 class="text-xs font-bold text-indigo-700 uppercase mb-3">Legal Document Repository</h4>
-                    <div class="flex flex-wrap gap-4">
-                        <a href="https://example.com/police-report.pdf" target="_blank" class="flex items-center space-x-2 bg-white border border-indigo-200 px-4 py-2 rounded text-sm hover:shadow-md transition">
-                            <span class="text-red-500">📄</span>
-                            <span class="text-indigo-600 font-medium">Police Accident Report</span>
-                        </a>
-                        <a href="https://example.com/mri-results.pdf" target="_blank" class="flex items-center space-x-2 bg-white border border-indigo-200 px-4 py-2 rounded text-sm hover:shadow-md transition">
-                            <span class="text-blue-500">📁</span>
-                            <span class="text-indigo-600 font-medium">MRI Imaging Report (L-Spine)</span>
-                        </a>
-                        <a href="#" class="flex items-center space-x-2 bg-white border border-dashed border-indigo-300 px-4 py-2 rounded text-sm text-gray-400">
-                            <span>+</span>
-                            <span>Add Link to Affidavit</span>
-                        </a>
-                    </div>
-                </div>
+                </form>
             </div>
 
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                <div class="flex">
-                    <div class="flex-shrink-0 text-yellow-400">⚠️</div>
-                    <div class="ml-3">
-                        <p class="text-sm text-yellow-700">
-                            <strong>Trainee Task:</strong> Cross-reference the <strong>DOL</strong> with the <strong>Police Report</strong>. If the dates do not match, flag the case for supervisor review using the "Add Note" button below.
-                        </p>
+            <div id="editableDashboard" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-custom-orange">
+                    <div class="flex justify-between items-start mb-6">
+                        <h3 class="text-xl font-bold text-slate-800">Case Profile: <span id="displayClient" class="text-orange-600"></span></h3>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">Click any text with the orange focus to edit data live</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="p-3 border rounded">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Verified Name</label>
+                            <div id="editName" contenteditable="true" class="font-semibold text-slate-700">Client Name</div>
+                        </div>
+                        <div class="p-3 border rounded">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Statute (SOL)</label>
+                            <div id="editSol" contenteditable="true" class="font-semibold text-red-600">MM/DD/YYYY</div>
+                        </div>
+                        <div class="p-3 border rounded">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Address (Cavite)</label>
+                            <div id="editAddr" contenteditable="true" class="font-semibold text-slate-700 text-sm">Add Address...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                    <div class="p-4 bg-slate-800 text-white font-bold flex justify-between">
+                        <span>Document Repository</span>
+                        <button onclick="addDocument()" class="text-orange-400 hover:text-orange-300 text-xs">+ Add Document</button>
+                    </div>
+                    <div class="p-0 overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 text-slate-500 border-b">
+                                <tr>
+                                    <th class="p-4 text-left font-bold uppercase text-[10px]">File Naming (Editable)</th>
+                                    <th class="p-4 text-left font-bold uppercase text-[10px]">Hyperlink Source</th>
+                                    <th class="p-4 text-center font-bold uppercase text-[10px]">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="docTableBody" class="divide-y divide-gray-100">
+                                </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </main>
 
+    <script>
+        document.getElementById('intakeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('clientName').value;
+            const dol = document.getElementById('dol').value;
+            
+            document.getElementById('displayClient').innerText = name;
+            document.getElementById('editName').innerText = name;
+            document.getElementById('editSol').innerText = dol ? "Update based on DOL" : "Enter SOL Date";
+            
+            document.getElementById('editableDashboard').classList.remove('hidden');
+            this.parentElement.classList.add('hidden'); // Hide the intake form
+        });
+
+        function addDocument() {
+            const table = document.getElementById('docTableBody');
+            const rowId = 'row-' + Date.now();
+            const row = `
+                <tr id="${rowId}" class="hover:bg-orange-50 transition">
+                    <td class="p-4 font-mono text-xs text-orange-700 font-bold" contenteditable="true">YYYYMMDD_SURNAME_TYPE</td>
+                    <td class="p-4 text-slate-500 text-xs" contenteditable="true">https://document-link.com</td>
+                    <td class="p-4 text-center">
+                        <button onclick="document.getElementById('${rowId}').remove()" class="text-red-400 hover:text-red-600 text-[10px] font-bold uppercase">Delete</button>
+                    </td>
+                </tr>
+            `;
+            table.insertAdjacentHTML('afterbegin', row);
+        }
+    </script>
 </body>
 </html>
