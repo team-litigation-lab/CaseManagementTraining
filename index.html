@@ -32,6 +32,9 @@
         .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
         .treat-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
+        .upload-zone { border: 2px dashed #e2e8f0; border-radius: 12px; padding: 40px; text-align: center; transition: all 0.3s; }
+        .upload-zone:hover { border-color: #f97316; background: #fff7ed; }
+
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
@@ -276,19 +279,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="pdf-card">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">3P Vehicle Information (Adverse Party)</h3>
-                    <div class="grid md:grid-cols-2 gap-6 mb-4">
-                        <div><label>Vehicle Title Owner</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div><label>Year</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div><label>Make</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div><label>Model</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        </div>
-                    </div>
-                    <div><label>Vehicle Damage Description</label><div contenteditable="true" class="text-sm w-full min-h-[60px] border border-slate-100 rounded p-2"></div></div>
-                </div>
             </div>
 
             <div id="pane-nocontact" class="tab-pane space-y-6">
@@ -310,50 +300,61 @@
                         </tbody>
                     </table>
                 </div>
-
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-slate-500 mb-4 border-b pb-2">Email Tracker</h3>
-                        <div class="space-y-4">
-                            <div><label>Target Email Address</label><div contenteditable="true" class="text-sm font-semibold w-full"></div></div>
-                            <div class="flex items-center justify-between bg-slate-50 p-4 rounded-lg">
-                                <div><label>Email Frequency</label><span id="email-freq-count" class="text-2xl font-black text-orange-600">0</span></div>
-                                <button onclick="updateFreq('email-freq-count', 1)" class="no-print bg-orange-100 text-orange-600 h-10 w-10 rounded-full font-bold text-xl hover:bg-orange-200">+</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-slate-500 mb-4 border-b pb-2">Snail Mail Tracker</h3>
-                        <div class="space-y-4">
-                            <div><label>Mailing Address Used</label><div contenteditable="true" class="text-sm w-full min-h-[40px]"></div></div>
-                            <div><label>Mail History / Tracking Numbers</label><div contenteditable="true" class="text-sm w-full min-h-[60px] border border-slate-100 bg-slate-50/30 rounded p-2"></div></div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div id="pane-doc-hub" class="tab-pane space-y-6">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-6">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500">Medical Documents</h3>
-                        <button onclick="addMockDoc()" class="no-print bg-orange-600 text-white text-[10px] px-3 py-1 rounded font-bold uppercase">+ Add Mock Document</button>
-                    </div>
-                    <div id="medical-docs-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="bg-slate-50 p-4 rounded-lg border">
-                            <label>Medical Records</label>
-                            <select class="prof-input w-full mb-2"><option>PENDING</option><option>RECEIVED</option><option>N/A</option></select>
-                            <div contenteditable="true" class="text-[10px] text-slate-500 w-full italic">Notes...</div>
+                <div class="pdf-card border-l-8 border-orange-500 no-print">
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Document Upload Portal</h3>
+                    <div class="upload-zone">
+                        <div class="mb-4">
+                            <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
                         </div>
-                        <div class="bg-slate-50 p-4 rounded-lg border">
-                            <label>Medical Billing</label>
-                            <select class="prof-input w-full mb-2"><option>PENDING</option><option>RECEIVED</option><option>N/A</option></select>
-                            <div contenteditable="true" class="text-[10px] text-slate-500 w-full italic">Notes...</div>
-                        </div>
+                        <button onclick="triggerUpload()" class="bg-orange-600 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase hover:bg-orange-700 transition-all shadow-md">Upload Documents</button>
+                        <p class="mt-2 text-[10px] text-slate-400 font-bold uppercase italic">Supports PDF, JPG, PNG, DOCX</p>
                     </div>
                 </div>
 
                 <div class="pdf-card">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Case Files (Legal Documents)</h3>
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-[11px] font-black uppercase text-slate-500">Uploaded Document Queue</h3>
+                        <button onclick="addUploadRow()" class="no-print bg-slate-900 text-white text-[9px] px-2 py-1 rounded uppercase font-bold">+ Manual Log Entry</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead>
+                            <tr><th>File Name</th><th>Category</th><th>Verification Status</th><th class="no-print w-10"></th></tr>
+                        </thead>
+                        <tbody id="upload-body">
+                            <tr>
+                                <td><div contenteditable="true" class="font-bold text-slate-700 italic">Select_File_Name.pdf</div></td>
+                                <td class="w-48">
+                                    <select class="prof-input text-[10px] w-full">
+                                        <option>MEDICAL RECORD</option>
+                                        <option>MEDICAL BILL</option>
+                                        <option>POLICE REPORT</option>
+                                        <option>INSURANCE POLICY</option>
+                                        <option>PHOTO EVIDENCE</option>
+                                        <option>RETAINER</option>
+                                        <option>OTHER</option>
+                                    </select>
+                                </td>
+                                <td class="w-48">
+                                    <select class="prof-input text-[10px] w-full">
+                                        <option>PENDING REVIEW</option>
+                                        <option>VERIFIED</option>
+                                        <option>REJECTED (BLURRY)</option>
+                                        <option>REJECTED (INCOMPLETE)</option>
+                                    </select>
+                                </td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pdf-card">
+                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Core Legal Files</h3>
                     <div class="space-y-2">
                         <div class="flex items-center justify-between p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
                             <span class="text-sm font-bold text-slate-700">Retainer Agreement</span>
@@ -364,13 +365,6 @@
                         </div>
                         <div class="flex items-center justify-between p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
                             <span class="text-sm font-bold text-slate-700">HIPAA Authorization</span>
-                            <div class="flex gap-4 items-center">
-                                <div contenteditable="true" class="text-[10px] border-none bg-transparent">Date Signed</div>
-                                <select class="prof-input text-xs"><option>PENDING</option><option>EXECUTED</option><option>N/A</option></select>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                            <span class="text-sm font-bold text-slate-700">Release Forms</span>
                             <div class="flex gap-4 items-center">
                                 <div contenteditable="true" class="text-[10px] border-none bg-transparent">Date Signed</div>
                                 <select class="prof-input text-xs"><option>PENDING</option><option>EXECUTED</option><option>N/A</option></select>
@@ -402,33 +396,6 @@
                         </tbody>
                     </table>
                 </div>
-
-                <div class="pdf-card">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Case Expenses (Direct Costs)</h3>
-                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                            <label class="text-orange-600">Mail / Postage</label>
-                            <div class="flex flex-col gap-2 mt-2">
-                                <div class="flex justify-between items-center text-xs"><span>USPS/FedEx</span><div contenteditable="true" class="font-bold">$ 0.00</div></div>
-                                <div class="flex justify-between items-center text-xs"><span>Certified Mail</span><div contenteditable="true" class="font-bold">$ 0.00</div></div>
-                            </div>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                            <label class="text-orange-600">Records Request</label>
-                            <div class="flex flex-col gap-2 mt-2">
-                                <div class="flex justify-between items-center text-xs"><span>Medical Records</span><div contenteditable="true" class="font-bold">$ 0.00</div></div>
-                                <div class="flex justify-between items-center text-xs"><span>Police Report Fee</span><div contenteditable="true" class="font-bold">$ 0.00</div></div>
-                            </div>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                            <label class="text-orange-600">Litigation Costs</label>
-                            <div class="flex flex-col gap-2 mt-2">
-                                <div class="flex justify-between items-center text-xs"><span>Process Server</span><div contenteditable="true" class="font-bold">$ 0.00</div></div>
-                                <div class="flex justify-between items-center text-xs"><span>Court Filing Fee</span><div contenteditable="true" class="font-bold">$ 0.00</div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
         </div>
@@ -444,17 +411,17 @@
             if(btn) btn.classList.add('active-tab');
         }
 
-        function addMockDoc() {
-            const grid = document.getElementById('medical-docs-grid');
-            const div = document.createElement('div');
-            div.className = "bg-slate-50 p-4 rounded-lg border relative group";
-            div.innerHTML = `
-                <button onclick="this.parentElement.remove()" class="no-print absolute top-1 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100">&times;</button>
-                <div contenteditable="true" class="text-[11px] font-bold text-slate-400 uppercase mb-1 border-b border-dashed">NEW MOCK DOCUMENT</div>
-                <select class="prof-input w-full mb-2"><option>PENDING</option><option>RECEIVED</option><option>N/A</option></select>
-                <div contenteditable="true" class="text-[10px] text-slate-500 w-full italic">Notes...</div>
-            `;
-            grid.appendChild(div);
+        function triggerUpload() { alert("Training Mode: Select a file from your device to simulate the upload process."); }
+
+        function addUploadRow() {
+            const body = document.getElementById('upload-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><div contenteditable="true" class="font-bold text-slate-700 italic">Manual_Entry.pdf</div></td>
+                <td class="w-48"><select class="prof-input text-[10px] w-full"><option>MEDICAL RECORD</option><option>MEDICAL BILL</option><option>POLICE REPORT</option><option>INSURANCE POLICY</option><option>PHOTO EVIDENCE</option><option>RETAINER</option><option>OTHER</option></select></td>
+                <td class="w-48"><select class="prof-input text-[10px] w-full"><option>PENDING REVIEW</option><option>VERIFIED</option><option>REJECTED (BLURRY)</option><option>REJECTED (INCOMPLETE)</option></select></td>
+                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button></td>`;
+            body.appendChild(row);
         }
 
         function updateFreq(id, val) {
