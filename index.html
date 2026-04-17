@@ -74,6 +74,9 @@
                                 <option value="UM Demand">UM Demand</option>
                                 <option value="UM Settlement">UM Settlement</option>
                                 <option value="Lien Negotiation">Lien Negotiation</option>
+                                <option value="Mediation">Mediation</option>
+                                <option value="Arbitration">Arbitration</option>
+                                <option value="Litigation">Litigation</option>
                                 <option value="Disbursement">Disbursement</option>
                             </select>
                         </div>
@@ -142,6 +145,44 @@
                 </div>
             </div>
 
+            <div id="pane-litigation" class="tab-pane space-y-6">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Information</h3>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div><label>Court Jurisdiction</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Case Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>Presiding Judge</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    </div>
+                </div>
+                <div class="pdf-card">
+                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Key Deadlines</h3>
+                    <div class="grid md:grid-cols-4 gap-6">
+                        <div><label>Statute of Limitations</label><div contenteditable="true" class="text-sm font-bold text-red-600 w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                        <div><label>Complaint Filed</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                        <div><label>Discovery Cut-off</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                        <div><label>Trial Date</label><div contenteditable="true" class="text-sm font-bold text-orange-600 w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
+                    </div>
+                </div>
+                <div class="pdf-card">
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-[11px] font-black uppercase text-slate-400">Discovery Tracker</h3>
+                        <button onclick="addDiscoveryRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead><tr><th>Discovery Type</th><th>Propounding Party</th><th>Due Date</th><th>Status</th><th class="no-print"></th></tr></thead>
+                        <tbody id="discovery-body">
+                            <tr>
+                                <td><div contenteditable="true">Interrogatories</div></td>
+                                <td><div contenteditable="true">Defendant</div></td>
+                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                                <td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="pane-police" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Accident Reporting</h3>
@@ -195,21 +236,6 @@
                         </div>
                     </div>
                 </div>
-                <div>
-                    <div class="ins-tab-header flex justify-between">
-                        <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM/UIM Claim</h4>
-                        <button onclick="addUM()" class="bg-orange-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase no-print">+ Add UM</button>
-                    </div>
-                    <div class="ins-tab-content" id="um-container">
-                        <div class="grid md:grid-cols-5 gap-4">
-                            <div><label>Policy Holder</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div><label>Claim #</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div><label>Limits</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div id="pane-pd" class="tab-pane space-y-6">
@@ -219,79 +245,7 @@
                         <div><label>Vehicle Y/M/M</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div><label>Condition</label><select onchange="toggleVehicleUI(this.value)" class="prof-input w-full border-orange-200"><option value="select">-- Select --</option><option value="repairable">Repairable</option><option value="totalled">Total Loss</option></select></div>
-                        <div id="ui-repairable" class="hidden col-span-full grid md:grid-cols-3 gap-4 pt-4 border-t">
-                            <div><label>Estimate Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
-                            <div><label>Shop Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Estimate</button></div>
-                        </div>
-                        <div id="ui-totalled" class="hidden col-span-full grid md:grid-cols-2 gap-4 pt-4 border-t">
-                            <div><label>Settlement Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
-                            <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Total Loss Docs</button></div>
-                        </div>
                     </div>
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Registered Owner Information</h4>
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Address</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pdf-card border-l-8 border-slate-400">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Third Party Vehicle</h3>
-                    <div class="grid md:grid-cols-3 gap-6 mb-8">
-                        <div><label>Year / Make / Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Damages</label><div contenteditable="true" class="text-sm italic w-full min-h-[40px] border border-slate-100 rounded p-2 bg-slate-50"></div></div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Registered Owner Information</h4>
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-litigation" class="tab-pane space-y-6">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Information</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div><label>Court Jurisdiction</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Case Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Presiding Judge</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    </div>
-                </div>
-                <div class="pdf-card">
-                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Key Deadlines</h3>
-                    <div class="grid md:grid-cols-4 gap-6">
-                        <div><label>Statute of Limitations</label><div contenteditable="true" class="text-sm font-bold text-red-600 w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
-                        <div><label>Complaint Filed</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
-                        <div><label>Discovery Cut-off</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
-                        <div><label>Trial Date</label><div contenteditable="true" class="text-sm font-bold text-orange-600 w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
-                    </div>
-                </div>
-                <div class="pdf-card">
-                    <div class="flex justify-between items-center border-b pb-2 mb-4">
-                        <h3 class="text-[11px] font-black uppercase text-slate-400">Discovery Tracker</h3>
-                        <button onclick="addDiscoveryRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
-                    </div>
-                    <table class="treat-table">
-                        <thead><tr><th>Discovery Type</th><th>Propounding Party</th><th>Due Date</th><th>Status</th><th class="no-print"></th></tr></thead>
-                        <tbody id="discovery-body">
-                            <tr>
-                                <td><div contenteditable="true">Interrogatories</div></td>
-                                <td><div contenteditable="true">Defendant</div></td>
-                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                                <td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td>
-                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
 
@@ -373,17 +327,17 @@
         function toggleVehicleUI(val) {
             const r = document.getElementById('ui-repairable');
             const t = document.getElementById('ui-totalled');
-            r.classList.add('hidden'); t.classList.add('hidden');
-            if(val === 'repairable') r.classList.remove('hidden');
-            if(val === 'totalled') t.classList.remove('hidden');
+            if(r) r.classList.add('hidden'); 
+            if(t) t.classList.add('hidden');
+            if(val === 'repairable' && r) r.classList.remove('hidden');
+            if(val === 'totalled' && t) t.classList.remove('hidden');
         }
 
-        function addUM() {
-            const container = document.getElementById('um-container');
-            const div = document.createElement('div');
-            div.className = "grid md:grid-cols-5 gap-4 mt-4 pt-4 border-t border-slate-100 relative";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-0 right-0 text-red-500">&times;</button><div><label>Policy Holder</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Claim #</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Limits</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>`;
-            container.appendChild(div);
+        function addDiscoveryRow() {
+            const body = document.getElementById('discovery-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `<td><div contenteditable="true">New Request</div></td><td><div contenteditable="true">Plaintiff</div></td><td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+            body.appendChild(row);
         }
 
         function addFacility() {
@@ -405,13 +359,6 @@
             const body = document.getElementById('doc-body');
             const row = document.createElement('tr');
             row.innerHTML = `<td><select class="prof-input w-full text-[11px] uppercase font-bold"><option>Medical Records</option><option>Insurance</option><option>Litigation Docs</option><option>Invoices</option><option>Others</option></select></td><td><div contenteditable="true" class="w-full">New record...</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function addDiscoveryRow() {
-            const body = document.getElementById('discovery-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">New Request</div></td><td><div contenteditable="true">Plaintiff</div></td><td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
             body.appendChild(row);
         }
 
