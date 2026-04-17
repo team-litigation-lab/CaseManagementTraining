@@ -84,7 +84,7 @@
                 <button onclick="showTab('health-insurance')" id="btn-health-insurance" class="tab-btn px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-blue-600">Health Insurance</button>
             </div>
 
-            <div id="tab-client" class="tab-content space-y-6">
+            <div id="tab-client" class="tab-content block space-y-6">
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-slate-600">
                     <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 mb-4">Contact Information</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -166,10 +166,18 @@
 
     <script>
         function showTab(id) {
-            document.querySelectorAll('.tab-content').forEach(c => { c.classList.add('hidden'); c.style.display = 'none'; });
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.add('hidden');
+                c.style.display = 'none';
+            });
+            // Show selected tab content
             const selected = document.getElementById('tab-' + id);
-            selected.classList.remove('hidden');
-            selected.style.display = 'block';
+            if (selected) {
+                selected.classList.remove('hidden');
+                selected.style.display = 'block';
+            }
+            // Update tab button UI
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
             document.getElementById('btn-' + id).classList.add('tab-active');
         }
@@ -203,21 +211,30 @@
 
         function updatePhase(val) { document.getElementById('currentStatus').innerText = val; }
         
-        function loadWork() { addFacility(); }
+        function loadWork() { 
+            // Initialize with one facility
+            addFacility(); 
+            // Default to Client tab
+            showTab('client');
+        }
 
         function saveCase() {
             const element = document.getElementById('capture-area');
             const contents = document.querySelectorAll('.tab-content');
+            // Temporarily show all tabs for PDF generation
             contents.forEach(c => { c.classList.remove('hidden'); c.style.display = 'block'; });
             html2pdf().from(element).set({
                 margin: 0.5,
                 filename: 'LSH_Assessment.pdf',
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).save().then(() => { location.reload(); });
+            }).save().then(() => { 
+                // Restore tab view after save
+                showTab('client'); 
+            });
         }
 
-        function resetForm() { if(confirm("Clear all data?")) location.reload(); }
+        function resetForm() { if(confirm("Clear all data and progress?")) location.reload(); }
     </script>
 </body>
 </html>
