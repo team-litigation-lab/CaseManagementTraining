@@ -97,10 +97,7 @@
             <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
-                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
-                <div id="btn-bi-claim" onclick="showTab('bi-claim')" class="tab-btn">BI Claim</div>
-                <div id="btn-pip-claim" onclick="showTab('pip-claim')" class="tab-btn">PIP Claim</div>
-                <div id="btn-um-claim" onclick="showTab('um-claim')" class="tab-btn">UM Claim</div>
+                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix (All Claims)</div>
                 <div id="btn-medpay" onclick="showTab('medpay')" class="tab-btn hidden">MedPay</div>
                 <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
                 <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
@@ -204,60 +201,59 @@
             </div>
 
             <div id="pane-matrix" class="tab-pane space-y-6">
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">1. BI Insurance & Liability</h4></div>
+                
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">1. Bodily Injury (BI) Claim & Liability</h4></div>
                 <div class="ins-tab-content space-y-6">
                     <div class="ins-grid">
-                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Adjuster Name</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Carrier / Claim #</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Policy Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Adjuster / Phone</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Liability Status</label><select class="prof-input w-full"><option>Accepted</option><option>Denied</option><option>Pending</option></select></div>
                     </div>
-                    <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
-                        <div><label>Liability Status</label><select class="prof-input w-full border-orange-200 bg-orange-50"><option>-- Select Status --</option><option>Accepted</option><option>Denied</option><option>Pending</option></select></div>
-                        <div><label>Fault %</label><div contenteditable="true" class="text-sm w-full">0%</div></div>
-                        <div><label>Liability Notes</label><div contenteditable="true" class="text-sm w-full min-h-[40px]"></div></div>
+                    <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                        <div><label>BI Demand Amount</label><div contenteditable="true" class="text-lg font-bold text-green-700 w-full">$ 0.00</div></div>
+                        <div><label>BI Settlement Amount</label><div contenteditable="true" class="text-lg font-bold text-green-800 w-full">$ 0.00</div></div>
                     </div>
                 </div>
 
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">2. Health Insurance Information</h4></div>
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">2. Health Insurance & Subrogation</h4></div>
                 <div class="ins-tab-content">
                     <div class="ins-grid">
                         <div><label>Primary Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
                         <div><label>Individual ID</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Group Number</label><div contenteditable="true" class="text-sm w-full"></div></div>
                         <div><label>Subrogation Co.</label><div contenteditable="true" class="text-sm w-full"></div></div>
                     </div>
                 </div>
 
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">3. PIP Insurance</h4></div>
-                <div class="ins-tab-content">
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">3. PIP / No-Fault Claim Details</h4></div>
+                <div class="ins-tab-content space-y-4">
                     <div class="ins-grid">
-                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Adjuster Name</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Carrier / Claim #</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>PIP Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>App Filed Date</label><div contenteditable="true" class="text-sm w-full">MM/DD/YYYY</div></div>
+                        <div><label>Exhaustion Status</label><select class="prof-input w-full"><option>Active</option><option>Exhausted</option><option>Denied</option></select></div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6 pt-2">
+                        <div><label>Total Benefits Paid</label><div contenteditable="true" class="text-md font-bold text-green-700 w-full">$ 0.00</div></div>
+                        <div><label>Remaining Balance</label><div contenteditable="true" class="text-md font-bold text-orange-600 w-full">$ 0.00</div></div>
                     </div>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
                         <div class="flex justify-between items-center mb-2 px-1 no-print">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">4. UM/UIM Policies</h4>
+                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">4. UM/UIM Claims</h4>
                             <button onclick="addUM()" class="bg-slate-900 text-white text-[10px] px-3 py-1 rounded font-bold uppercase">+ Add UM Policy</button>
                         </div>
                         <div id="um-container" class="space-y-4">
                             <div class="um-entry">
-                                <div class="ins-tab-header"><span class="text-[10px] font-bold text-orange-800">UM POLICY #1</span></div>
+                                <div class="ins-tab-header"><span class="text-[10px] font-bold text-orange-800">UM CLAIM #1</span></div>
                                 <div class="ins-tab-content">
                                     <div class="grid grid-cols-2 gap-4 mb-4">
-                                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div><label>Policy Holder</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                                        <div><label>Carrier / Policy</label><div contenteditable="true" class="text-sm w-full"></div></div>
                                         <div><label>Adjuster</label><div contenteditable="true" class="text-sm w-full"></div></div>
                                     </div>
-                                    <div class="mt-4"><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                                    <div><label>UM Demand Theory / Status</label><div contenteditable="true" class="text-xs w-full min-h-[60px] italic">Enter demand notes here...</div></div>
                                 </div>
                             </div>
                         </div>
@@ -265,55 +261,6 @@
                     <div>
                         <h4 class="text-[11px] font-bold text-orange-600 uppercase mb-2">5. MedPay Option</h4>
                         <div class="ins-tab-content"><label>Does Client Have MedPay?</label><select onchange="toggleMedPay(this.value)" class="prof-input w-full border-orange-200 bg-orange-50"><option value="No">No</option><option value="Yes">Yes</option></select></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-bi-claim" class="tab-pane space-y-6">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Bodily Injury (BI) Claim Details</h3>
-                    <div class="grid md:grid-cols-3 gap-6 mb-6">
-                        <div><label>Claim Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>BI Adjuster</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Adjuster Phone</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                        <div><label>Demand Amount</label><div contenteditable="true" class="text-lg font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
-                        <div><label>Settlement Amount</label><div contenteditable="true" class="text-lg font-bold text-green-800 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
-                    </div>
-                    <div class="mt-6">
-                        <label>Claim Status / Negotiation Notes</label>
-                        <div contenteditable="true" class="text-sm w-full min-h-[100px] border border-slate-100 rounded p-2"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-pip-claim" class="tab-pane space-y-6">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">PIP / No-Fault Claim Details</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div><label>PIP Claim #</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>App Filed Date</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
-                        <div><label>Exhaustion Status</label><select class="prof-input w-full border-slate-100"><option>Active</option><option>Exhausted</option><option>Denied</option></select></div>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-6 mt-6 pt-4 border-t border-slate-100">
-                        <div><label>Total Benefits Paid</label><div contenteditable="true" class="text-lg font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
-                        <div><label>Remaining Balance</label><div contenteditable="true" class="text-lg font-bold text-orange-600 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-um-claim" class="tab-pane space-y-6">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Uninsured / Underinsured (UM/UIM) Claim</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div><label>UM Claim #</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>UM Adjuster</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Policy Reference</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-slate-100">
-                        <label>UM Demand Details & Legal Theory</label>
-                        <div contenteditable="true" class="text-sm w-full min-h-[150px] border border-slate-100 rounded p-2"></div>
                     </div>
                 </div>
             </div>
@@ -480,19 +427,15 @@
             div.className = "um-entry mt-4";
             div.innerHTML = `
                 <div class="ins-tab-header">
-                    <span class="text-[10px] font-bold text-orange-800">UM POLICY #${umCount}</span>
+                    <span class="text-[10px] font-bold text-orange-800">UM CLAIM #${umCount}</span>
                     <button onclick="this.parentElement.parentElement.remove(); umCount--;" class="no-print text-red-500 text-[10px]">Remove</button>
                 </div>
                 <div class="ins-tab-content">
                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                        <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full"></div></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label>Policy Holder</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Carrier / Policy</label><div contenteditable="true" class="text-sm w-full"></div></div>
                         <div><label>Adjuster</label><div contenteditable="true" class="text-sm w-full"></div></div>
                     </div>
-                    <div class="mt-4"><label>Limits</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                    <div><label>UM Demand Theory / Status</label><div contenteditable="true" class="text-xs w-full min-h-[60px] italic">Enter demand notes here...</div></div>
                 </div>`;
             container.appendChild(div);
         }
