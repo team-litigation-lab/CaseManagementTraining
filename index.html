@@ -34,7 +34,7 @@
         
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
-        #pane-profile.active { display: grid; } /* Special case for 3-column layout */
+        #pane-profile.active { display: grid; }
 
         @media print { .no-print { display: none !important; } }
     </style>
@@ -112,8 +112,13 @@
                     <div class="pdf-card">
                         <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Emergency Contact</h3>
                         <div class="space-y-4">
-                            <div><label>Full Name</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
-                            <div><label>Relationship</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Full Name</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
+                                <div><label>Relationship</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
+                            </div>
+                            <div><label>Phone Number</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
+                            <div><label>Email Address</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
+                            <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
                         </div>
                     </div>
                 </div>
@@ -180,9 +185,17 @@
                     <div class="ins-grid">
                         <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         <div><label>Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                        <div><label>Liability Accepted?</label>
-                            <select class="prof-input w-full"><option>PENDING</option><option>YES</option><option>NO</option></select>
-                        </div>
+                        <div><label>Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                    </div>
+                </div>
+
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4></div>
+                <div class="ins-tab-content">
+                    <div class="ins-grid">
+                        <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Primary</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Individual ID Number</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                        <div><label>Group ID Number</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                     </div>
                 </div>
             </div>
@@ -199,11 +212,9 @@
 
     <script>
         function showTab(id) {
-            // Hide all
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
             
-            // Show target
             document.getElementById('pane-' + id).classList.add('active');
             document.getElementById('btn-' + id).classList.add('active-tab');
         }
@@ -216,9 +227,11 @@
             const nav = document.getElementById('tab-navigation');
             const panes = document.querySelectorAll('.tab-pane');
             
-            // Temporary UI Cleanup for PDF
             nav.style.display = 'none';
-            panes.forEach(p => { p.style.display = 'block'; if(p.id === 'pane-profile') p.style.display = 'grid'; });
+            panes.forEach(p => { 
+                p.style.display = 'block'; 
+                if(p.id === 'pane-profile') p.style.display = 'grid'; 
+            });
 
             const opt = {
                 margin: 0.3, 
@@ -230,9 +243,8 @@
             try {
                 await html2pdf().set(opt).from(area).save();
             } finally {
-                // Restore Tabs UI
                 nav.style.display = 'flex';
-                panes.forEach(p => p.style.display = ''); // Revert to CSS classes
+                panes.forEach(p => p.style.display = '');
             }
         }
     </script>
