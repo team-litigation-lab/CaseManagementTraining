@@ -226,24 +226,36 @@
         }
 
         function showTab(id) {
-            document.querySelectorAll('.tab-pane').forEach(pane => {
+            // Select all elements with class 'tab-pane'
+            const panes = document.querySelectorAll('.tab-pane');
+            panes.forEach(pane => {
                 pane.classList.add('hidden');
                 pane.style.display = 'none';
             });
+
+            // Remove active styles from all buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active-tab');
             });
             
+            // Show the specific pane
             const target = document.getElementById('pane-' + id);
-            target.classList.remove('hidden');
-            
-            if(id === 'profile' || id === 'matrix') {
-                target.style.display = 'grid';
-            } else {
-                target.style.display = 'block';
+            if (target) {
+                target.classList.remove('hidden');
+                
+                // Use grid for Profile and Matrix, block for others
+                if(id === 'profile' || id === 'matrix') {
+                    target.style.display = 'grid';
+                } else {
+                    target.style.display = 'block';
+                }
             }
 
-            document.getElementById('btn-' + id).classList.add('active-tab');
+            // Set the active button style
+            const activeBtn = document.getElementById('btn-' + id);
+            if (activeBtn) {
+                activeBtn.classList.add('active-tab');
+            }
         }
 
         function addInsuranceRow(sectionId) {
@@ -267,14 +279,6 @@
                         <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                     </div>
                 `;
-            } else {
-                newRow.innerHTML = `
-                    <div class="ins-grid">
-                        <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                        <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                        <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                    </div>
-                `;
             }
             section.appendChild(newRow);
         }
@@ -283,6 +287,7 @@
             const area = document.getElementById('capture-area');
             const allPanes = document.querySelectorAll('.tab-pane');
             
+            // Ensure everything is visible for the capture
             allPanes.forEach(p => { 
                 p.classList.remove('hidden'); 
                 p.style.display = 'block';
@@ -298,6 +303,7 @@
             try {
                 await html2pdf().set(opt).from(area).save();
             } finally {
+                // Re-sync UI state after PDF generation
                 location.reload();
             }
         }
