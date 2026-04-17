@@ -57,7 +57,7 @@
         </div>
         <div class="p-6 space-y-4">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
-            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Reset Data</button>
+            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
     </aside>
 
@@ -250,8 +250,14 @@
             const target = document.getElementById('pane-' + id);
             target.classList.remove('hidden');
             
-            if(id === 'profile' || id === 'facts') { target.style.display = 'grid'; } 
-            else { target.style.display = 'block'; }
+            // Layout handling for profile/facts grid
+            if(id === 'profile' || id === 'facts') { 
+                target.classList.remove('hidden');
+                target.style.display = 'grid'; 
+            } else { 
+                target.classList.remove('hidden');
+                target.style.display = 'block'; 
+            }
             
             document.getElementById('btn-' + id).classList.add('active-tab');
         }
@@ -283,10 +289,18 @@
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
             const panes = document.querySelectorAll('.tab-pane');
-            panes.forEach(p => { p.classList.remove('hidden'); p.style.display = 'block'; });
+            
+            // Store current visibility to restore later
+            const originalDisplays = [];
+            panes.forEach(p => {
+                originalDisplays.push(p.style.display);
+                p.classList.remove('hidden');
+                p.style.display = 'block'; 
+            });
 
             const policeVal = document.getElementById('police-arrived').value;
             const reportContainer = document.getElementById('police-report-container');
+            const originalPoliceDisplay = reportContainer.style.display;
             if(policeVal === 'NO') { reportContainer.style.display = 'none'; }
 
             const opt = {
@@ -295,8 +309,18 @@
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
-            await html2pdf().set(opt).from(area).save();
-            setTimeout(() => { location.reload(); }, 1000);
+            try {
+                await html2pdf().set(opt).from(area).save();
+            } finally {
+                // Restore the UI state instead of reloading
+                panes.forEach((p, index) => {
+                    p.style.display = originalDisplays[index];
+                    if(p.id !== 'pane-' + document.querySelector('.active-tab').id.split('-')[1]) {
+                        p.classList.add('hidden');
+                    }
+                });
+                reportContainer.style.display = originalPoliceDisplay;
+            }
         }
     </script>
 </body>
