@@ -69,4 +69,153 @@
                 <button onclick="showTab('client')" id="btn-client" class="px-8 py-4 text-xs font-bold uppercase tracking-widest text-gray-400 tab-active">Client Profile</button>
                 <button onclick="showTab('details')" id="btn-details" class="px-8 py-4 text-xs font-bold uppercase tracking-widest text-gray-400">Case Facts</button>
                 <button onclick="showTab('damage')" id="btn-damage" class="px-8 py-4 text-xs font-bold uppercase tracking-widest text-gray-400">Property</button>
-                <button onclick="showTab('insurance')" id="btn-insurance" class="px-8 py-
+                <button onclick="showTab('insurance')" id="btn-insurance" class="px-8 py-4 text-xs font-bold uppercase tracking-widest text-gray-400">Insurance Matrix</button>
+            </div>
+
+            <div id="tab-details" class="tab-content hidden space-y-4">
+                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-orange-500 space-y-6">
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="border-b pb-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">DOL (Date of Loss)</label>
+                            <div id="field-dol" contenteditable="true" class="text-sm font-semibold text-slate-700 italic">MM/DD/YYYY</div>
+                        </div>
+                        <div class="border-b pb-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">SOL (Statute)</label>
+                            <div id="field-sol" contenteditable="true" class="text-sm font-semibold text-red-600 italic">MM/DD/YYYY</div>
+                        </div>
+                        <div class="border-b pb-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Case Type</label>
+                            <div id="field-case-type" contenteditable="true" class="text-sm font-semibold text-slate-700">MVA / Slip & Fall</div>
+                        </div>
+                        <div class="border-b pb-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Police Report</label>
+                            <select id="field-police-exists" onchange="autoSave()" class="text-xs font-bold text-slate-700 bg-transparent outline-none cursor-pointer">
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Incident Description</label>
+                            <div id="field-desc" contenteditable="true" class="text-sm min-h-[80px] border rounded p-3 mt-1 bg-gray-50">Describe accident facts...</div>
+                        </div>
+                        <div class="w-full md:w-64">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Report Attachment</label>
+                            <div class="mt-1 border-2 border-dashed border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition">
+                                <input type="file" id="police-upload" class="hidden" onchange="handleUpload(this)">
+                                <button onclick="document.getElementById('police-upload').click()" class="text-[10px] font-bold text-orange-600 uppercase">Upload PDF/JPG</button>
+                                <span id="file-name" class="text-[9px] text-gray-400 mt-1 italic">No file selected</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Injury Log (Max 10)</label>
+                            <button onclick="addRow('injury')" class="text-[10px] bg-orange-100 text-orange-600 font-bold px-3 py-1 rounded">Add Injury +</button>
+                        </div>
+                        <div id="injury-container" class="space-y-2"></div>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Witnesses / Passengers</label>
+                            <button onclick="addRow('witness')" class="text-[10px] bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded">Add Witness +</button>
+                        </div>
+                        <div id="witness-container" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-client" class="tab-content grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">DOB</label><div id="field-dob" contenteditable="true" class="text-slate-700 font-medium">MM/DD/YYYY</div></div>
+                <div class="bg-white p-5 rounded-lg border shadow-sm"><label class="text-[10px] font-bold text-slate-400 uppercase">SSN</label><div id="field-ssn" contenteditable="true" class="text-slate-700 tracking-widest">XXX-XX-XXXX</div></div>
+                <div class="bg-white p-5 rounded-lg border shadow-sm md:col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Address</label><div id="field-address" contenteditable="true" class="text-slate-700">Enter full residential address...</div></div>
+            </div>
+            </div>
+    </main>
+
+    <script>
+        function addRow(type, text = "") {
+            const container = document.getElementById(`${type}-container`);
+            const count = container.children.length;
+            const placeholder = type === 'injury' ? "Injury details..." : "Witness Name & Phone...";
+            const color = type === 'injury' ? 'text-orange-600' : 'text-blue-600';
+            
+            if (count < 10) {
+                const div = document.createElement('div');
+                div.className = "flex items-center space-x-2 group";
+                div.innerHTML = `
+                    <span class="text-[10px] font-bold text-slate-300">${count + 1}.</span>
+                    <div contenteditable="true" oninput="autoSave()" class="flex-1 text-sm border-b pb-1 text-slate-700 focus:${color} italic">${text || placeholder}</div>
+                    <button onclick="this.parentElement.remove(); renumber('${type}'); autoSave();" class="opacity-0 group-hover:opacity-100 text-[9px] text-red-400 font-bold px-2 uppercase transition">Remove</button>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function renumber(type) {
+            const container = document.getElementById(`${type}-container`);
+            Array.from(container.children).forEach((child, i) => child.querySelector('span').innerText = (i + 1) + ".");
+        }
+
+        function handleUpload(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('file-name').innerText = input.files[0].name;
+                autoSave();
+            }
+        }
+
+        function autoSave() {
+            const data = {
+                title: document.getElementById('case-title').innerText,
+                phase: document.getElementById('phase-select').value,
+                dol: document.getElementById('field-dol').innerText,
+                sol: document.getElementById('field-sol').innerText,
+                type: document.getElementById('field-case-type').innerText,
+                police: document.getElementById('field-police-exists').value,
+                desc: document.getElementById('field-desc').innerText,
+                injuries: Array.from(document.querySelectorAll('#injury-container div[contenteditable]')).map(d => d.innerText),
+                witnesses: Array.from(document.querySelectorAll('#witness-container div[contenteditable]')).map(d => d.innerText)
+            };
+            localStorage.setItem('lsh_assessment_data', JSON.stringify(data));
+            const status = document.getElementById('save-status');
+            status.style.opacity = '1';
+            setTimeout(() => status.style.opacity = '0', 1000);
+        }
+
+        function loadWork() {
+            const saved = localStorage.getItem('lsh_assessment_data');
+            if (saved) {
+                const data = JSON.parse(saved);
+                document.getElementById('field-dol').innerText = data.dol || "MM/DD/YYYY";
+                document.getElementById('field-sol').innerText = data.sol || "MM/DD/YYYY";
+                document.getElementById('field-case-type').innerText = data.type || "MVA";
+                document.getElementById('field-police-exists').value = data.police || "No";
+                data.injuries?.forEach(t => addRow('injury', t));
+                data.witnesses?.forEach(t => addRow('witness', t));
+            } else {
+                addRow('injury');
+                addRow('witness');
+            }
+        }
+
+        function showTab(t) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('tab-' + t).classList.remove('hidden');
+            document.querySelectorAll('.flex button').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById('btn-' + t).classList.add('tab-active');
+        }
+
+        function updatePhase(val) { document.getElementById('currentStatus').innerText = val; }
+
+        function saveCase() {
+            const element = document.getElementById('capture-area');
+            html2pdf().set({ margin: 0.3, filename: 'LSH_Case_Report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter' } }).from(element).save();
+        }
+    </script>
+</body>
+</html>
