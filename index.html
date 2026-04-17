@@ -13,7 +13,6 @@
         .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
         .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
         
-        /* Professional Input Styling */
         [contenteditable="true"] { 
             outline: none; 
             border: 1px solid #f1f5f9; 
@@ -36,6 +35,16 @@
         
         .ins-tab-header { background: #fff7ed; border-left: 4px solid #f97316; padding: 8px 12px; border-radius: 4px 4px 0 0; }
         .ins-tab-content { border: 1px solid #fed7aa; border-top: none; padding: 16px; border-radius: 0 0 8px 8px; background: #ffffff; }
+        
+        select.prof-input {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+        }
     </style>
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden">
@@ -91,7 +100,8 @@
 
             <div class="flex gap-8 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Profile</div>
-                <div id="btn-facts" onclick="showTab('facts')" class="tab-btn">Insurance Matrix</div>
+                <div id="btn-facts" onclick="showTab('facts')" class="tab-btn">Case Facts</div>
+                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
                 <div id="btn-medical" onclick="showTab('medical')" class="tab-btn">Medical</div>
             </div>
 
@@ -127,8 +137,8 @@
                 </div>
             </div>
 
-            <div id="pane-facts" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="pdf-card col-span-1">
+            <div id="pane-facts" class="tab-content hidden">
+                <div class="pdf-card max-w-2xl">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
                     <div class="space-y-4">
                         <div>
@@ -143,47 +153,55 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="md:col-span-2 space-y-6">
-                    <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Insurance Matrix</h3>
-                        
-                        <div class="mb-6">
-                            <div class="ins-tab-header">
-                                <h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance</h4>
-                            </div>
-                            <div class="ins-tab-content">
-                                <div class="ins-grid">
-                                    <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                    <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                    <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+            <div id="pane-matrix" class="tab-content hidden space-y-6">
+                <div class="pdf-card">
+                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Insurance Matrix</h3>
+                    
+                    <div class="mb-6">
+                        <div class="ins-tab-header">
+                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance</h4>
+                        </div>
+                        <div class="ins-tab-content">
+                            <div class="ins-grid">
+                                <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div>
+                                    <label class="font-bold text-slate-400 uppercase">Liability Accepted</label>
+                                    <select class="prof-input w-full text-sm">
+                                        <option>PENDING</option>
+                                        <option>YES</option>
+                                        <option>NO</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-6" id="um-section">
-                            <div class="ins-tab-header flex justify-between items-center">
-                                <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM Insurance</h4>
-                                <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD ADDITIONAL UM</button>
-                            </div>
-                            <div class="ins-tab-content">
-                                <div class="ins-grid">
-                                    <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                    <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                </div>
+                    <div class="mb-6" id="um-section">
+                        <div class="ins-tab-header flex justify-between items-center">
+                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM Insurance</h4>
+                            <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD ADDITIONAL UM</button>
+                        </div>
+                        <div class="ins-tab-content">
+                            <div class="ins-grid">
+                                <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                             </div>
                         </div>
+                    </div>
 
-                        <div id="health-section">
-                            <div class="ins-tab-header flex justify-between items-center">
-                                <h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4>
-                                <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD ADDITIONAL HEALTH</button>
-                            </div>
-                            <div class="ins-tab-content">
-                                <div class="ins-grid">
-                                    <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                    <div><label class="font-bold text-slate-400 uppercase">Individual Membership ID</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                </div>
+                    <div id="health-section">
+                        <div class="ins-tab-header flex justify-between items-center">
+                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4>
+                            <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD ADDITIONAL HEALTH</button>
+                        </div>
+                        <div class="ins-tab-content">
+                            <div class="ins-grid">
+                                <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
+                                <div><label class="font-bold text-slate-400 uppercase">Individual Membership ID</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                             </div>
                         </div>
                     </div>
@@ -206,7 +224,6 @@
         function showTab(id) {
             document.querySelectorAll('.tab-content').forEach(pane => {
                 pane.classList.add('hidden');
-                pane.style.display = 'none';
             });
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active-tab');
@@ -214,13 +231,6 @@
             
             const target = document.getElementById('pane-' + id);
             target.classList.remove('hidden');
-            
-            if(id !== 'medical') {
-                target.style.display = 'grid';
-            } else {
-                target.style.display = 'block';
-            }
-
             document.getElementById('btn-' + id).classList.add('active-tab');
         }
 
@@ -250,10 +260,10 @@
 
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
-            document.querySelectorAll('.tab-content').forEach(p => {
-                p.classList.remove('hidden');
-                p.style.display = 'block';
-            });
+            const allPanes = document.querySelectorAll('.tab-content');
+            
+            // Temporary styles for PDF export
+            allPanes.forEach(p => { p.classList.remove('hidden'); });
 
             const opt = {
                 margin: 0.3, filename: 'LSH_Case_Report.pdf',
