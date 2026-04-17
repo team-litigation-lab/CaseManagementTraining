@@ -78,9 +78,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <div id="display-phase" class="text-orange-600 font-black text-2xl uppercase italic tracking-tighter">Intake</div>
-                    </div>
+                    <div id="display-phase" class="text-orange-600 font-black text-2xl uppercase italic tracking-tighter">Intake</div>
                 </div>
             </div>
 
@@ -94,18 +92,51 @@
                 <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
             </div>
 
-            <div id="pane-profile" class="tab-pane active">
+            <div id="pane-profile" class="tab-pane active space-y-6">
                 <div class="grid xl:grid-cols-3 gap-6">
-                    <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
-                        <div class="space-y-4">
-                            <div><label>DOB</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                            <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                    <div class="space-y-6">
+                        <div class="pdf-card">
+                            <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label>DOB</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                    <div><label>SSN</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                </div>
+                                <div><label>Email</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                            </div>
+                        </div>
+                        <div class="pdf-card">
+                            <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Emergency Contact</h3>
+                            <div class="space-y-4">
+                                <div><label>Full Name</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label>Phone</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                    <div><label>Relationship</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="pdf-card lg:col-span-2">
+                    <div class="space-y-6">
+                        <div class="pdf-card">
+                            <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Employment</h3>
+                            <div class="space-y-4">
+                                <div><label>Status</label><select class="prof-input w-full"><option>Employed</option><option>Unemployed</option><option>Self-Employed</option></select></div>
+                                <div><label>Employer/Company</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                <div><label>Job Title</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                            </div>
+                        </div>
+                        <div class="pdf-card">
+                            <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Legal Team</h3>
+                            <div class="space-y-4">
+                                <div><label>Lead Attorney</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                <div><label>Case Manager</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pdf-card">
                         <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Accident Narrative</h3>
-                        <div contenteditable="true" class="text-sm w-full min-h-[150px]"></div>
+                        <div contenteditable="true" class="text-sm w-full min-h-[350px]"></div>
                     </div>
                 </div>
             </div>
@@ -130,7 +161,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div>
                     <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">Bodily Injury (BI)</h4></div>
                     <div class="ins-tab-content">
@@ -143,18 +173,20 @@
                         </div>
                     </div>
                 </div>
-
                 <div>
                     <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">PIP / No-Fault</h4></div>
                     <div class="ins-tab-content">
-                        <div class="grid md:grid-cols-3 gap-6">
-                            <div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div><label>Policy Holder</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                            <div><label>Carrier Name</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                            <div><label>Policy Number</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                            <div><label>Claim Number</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                            <div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
                             <div><label>Benefits Paid</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
                             <div><label>Status</label><select class="prof-input w-full"><option>Active</option><option>Exhausted</option></select></div>
                         </div>
                     </div>
                 </div>
-
                 <div>
                     <div class="ins-tab-header flex justify-between">
                         <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM/UIM Claim</h4>
@@ -177,27 +209,17 @@
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Client Vehicle</h3>
                     <div class="grid md:grid-cols-3 gap-6">
                         <div><label>Vehicle Y/M/M</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div>
-                            <label>Condition</label>
-                            <select onchange="toggleVehicleUI(this.value)" class="prof-input w-full border-orange-200">
-                                <option value="select">-- Select --</option>
-                                <option value="repairable">Repairable</option>
-                                <option value="totalled">Total Loss</option>
-                            </select>
-                        </div>
-                        
+                        <div><label>Condition</label><select onchange="toggleVehicleUI(this.value)" class="prof-input w-full border-orange-200"><option value="select">-- Select --</option><option value="repairable">Repairable</option><option value="totalled">Total Loss</option></select></div>
                         <div id="ui-repairable" class="hidden col-span-full grid md:grid-cols-2 gap-4 pt-4 border-t">
                             <div><label>Estimate Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
                             <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Estimate</button></div>
                         </div>
-
                         <div id="ui-totalled" class="hidden col-span-full grid md:grid-cols-2 gap-4 pt-4 border-t">
                             <div><label>Settlement Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
                             <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Total Loss Docs</button></div>
                         </div>
                     </div>
                 </div>
-
                 <div class="pdf-card border-l-8 border-slate-400">
                     <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Third Party Vehicle</h3>
                     <div class="grid md:grid-cols-3 gap-6 mb-4">
