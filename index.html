@@ -101,9 +101,8 @@
                 <div id="btn-medpay" onclick="showTab('medpay')" class="tab-btn hidden">MedPay</div>
                 <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
                 <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
-                <div id="btn-case-expenses" onclick="showTab('case-expenses')" class="tab-btn">Case Expenses</div>
+                <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
                 <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
-                <div id="btn-billable" onclick="showTab('billable')" class="tab-btn">Billable Hours</div>
             </div>
 
             <div id="pane-profile" class="tab-pane active xl:grid-cols-3 gap-6">
@@ -152,11 +151,8 @@
                             <div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div>
                         </div>
                     </div>
-                    
                     <label class="text-orange-600">Upload Official Police Report</label>
-                    <div class="upload-zone no-print mt-2" onclick="triggerUpload()">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase">Click to upload Police Report PDF/Image</p>
-                    </div>
+                    <div class="upload-zone no-print mt-2" onclick="triggerUpload()"><p class="text-[10px] font-bold text-slate-400 uppercase">Click to upload Police Report PDF/Image</p></div>
                 </div>
             </div>
 
@@ -170,20 +166,23 @@
                         <div><label>Adjuster Name</label><div contenteditable="true" class="text-sm w-full"></div></div>
                     </div>
                     <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
-                        <div><label>Liability Status</label>
-                            <select class="prof-input w-full border-orange-200 bg-orange-50">
-                                <option value="">-- Select Status --</option>
-                                <option value="Accepted">Accepted</option>
-                                <option value="Denied">Denied</option>
-                                <option value="Pending">Pending</option>
-                            </select>
-                        </div>
+                        <div><label>Liability Status</label><select class="prof-input w-full border-orange-200 bg-orange-50"><option>-- Select Status --</option><option>Accepted</option><option>Denied</option><option>Pending</option></select></div>
                         <div><label>Fault %</label><div contenteditable="true" class="text-sm w-full">0%</div></div>
                         <div><label>Liability Notes</label><div contenteditable="true" class="text-sm w-full min-h-[40px]"></div></div>
                     </div>
                 </div>
 
-                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">2. PIP Insurance</h4></div>
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">2. Health Insurance Information</h4></div>
+                <div class="ins-tab-content">
+                    <div class="ins-grid">
+                        <div><label>Primary Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Individual ID</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Group Number</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                        <div><label>Subrogation Co.</label><div contenteditable="true" class="text-sm w-full"></div></div>
+                    </div>
+                </div>
+
+                <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">3. PIP Insurance</h4></div>
                 <div class="ins-tab-content">
                     <div class="ins-grid">
                         <div><label>Carrier</label><div contenteditable="true" class="text-sm w-full"></div></div>
@@ -196,7 +195,7 @@
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
                         <div class="flex justify-between items-center mb-2 px-1 no-print">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">3. UM/UIM</h4>
+                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">4. UM/UIM</h4>
                             <button onclick="addUM()" class="bg-slate-900 text-white text-[10px] px-3 py-1 rounded font-bold uppercase">+ Add UM</button>
                         </div>
                         <div id="um-container" class="space-y-0">
@@ -207,14 +206,8 @@
                         </div>
                     </div>
                     <div>
-                        <h4 class="text-[11px] font-bold text-orange-600 uppercase mb-2">4. MedPay Option</h4>
-                        <div class="ins-tab-content">
-                            <label>Does Client Have MedPay?</label>
-                            <select onchange="toggleMedPay(this.value)" class="prof-input w-full border-orange-200 bg-orange-50">
-                                <option value="No">No</option>
-                                <option value="Yes">Yes</option>
-                            </select>
-                        </div>
+                        <h4 class="text-[11px] font-bold text-orange-600 uppercase mb-2">5. MedPay Option</h4>
+                        <div class="ins-tab-content"><label>Does Client Have MedPay?</label><select onchange="toggleMedPay(this.value)" class="prof-input w-full border-orange-200 bg-orange-50"><option value="No">No</option><option value="Yes">Yes</option></select></div>
                     </div>
                 </div>
             </div>
@@ -270,17 +263,34 @@
                 </div>
             </div>
 
-            <div id="pane-case-expenses" class="tab-pane space-y-6">
+            <div id="pane-finance" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-4"><h3 class="text-[11px] font-black uppercase text-orange-500">Expenses</h3><button onclick="addExpenseRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Expense</button></div>
-                    <table class="treat-table"><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th class="no-print">Documentation</th><th class="no-print"></th></tr></thead><tbody id="expense-body"><tr><td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold text-red-600">$ 0.00</div></td><td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-2 py-1 rounded">Upload Receipt</button></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td></tr></tbody></table>
-                </div>
-            </div>
-
-            <div id="pane-billable" class="tab-pane space-y-6">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-4"><h3 class="text-[11px] font-black uppercase text-orange-500">Billable Hours</h3><button onclick="addBillableRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Entry</button></div>
-                    <table class="treat-table"><thead><tr><th>Date</th><th>Task</th><th>Total</th><th class="no-print"></th></tr></thead><tbody id="billable-body"><tr><td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold">$0.00</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td></tr></tbody></table>
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500">Case Expenses & Billable Hours</h3>
+                        <button onclick="addFinanceRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Entry</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Description / Task</th>
+                                <th>Amount / Time</th>
+                                <th class="no-print">Doc</th>
+                                <th class="no-print"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="finance-body">
+                            <tr>
+                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                                <td><select class="text-[10px] font-bold uppercase bg-slate-50 px-1 rounded"><option>Expense</option><option>Billable Hours</option></select></td>
+                                <td><div contenteditable="true" class="w-full">Initial File Setup</div></td>
+                                <td><div contenteditable="true" class="font-bold">$ 0.00</div></td>
+                                <td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-2 py-1 rounded">Upload</button></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -303,12 +313,8 @@
 
         function toggleMedPay(val) {
             const btn = document.getElementById('btn-medpay');
-            if(val === 'Yes') {
-                btn.classList.remove('hidden');
-            } else {
-                btn.classList.add('hidden');
-                document.getElementById('pane-medpay').classList.remove('active');
-            }
+            if(val === 'Yes') btn.classList.remove('hidden');
+            else { btn.classList.add('hidden'); document.getElementById('pane-medpay').classList.remove('active'); }
         }
 
         function togglePDUpload(val) {
@@ -330,17 +336,10 @@
             container.appendChild(div);
         }
 
-        function addBillableRow() {
-            const body = document.getElementById('billable-body');
+        function addFinanceRow() {
+            const body = document.getElementById('finance-body');
             const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold">$0.00</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function addExpenseRow() {
-            const body = document.getElementById('expense-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold text-red-600">$ 0.00</div></td><td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-2 py-1 rounded">Upload Receipt</button></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="text-[10px] font-bold uppercase bg-slate-50 px-1 rounded"><option>Expense</option><option>Billable Hours</option></select></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold">$ 0.00</div></td><td class="no-print"><button onclick="triggerUpload()" class="text-[10px] bg-slate-100 px-2 py-1 rounded">Upload</button></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
             body.appendChild(row);
         }
 
@@ -366,10 +365,7 @@
             });
             const opt = { margin: 0.3, filename: 'LSH_Case_Report.pdf', html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             try { await html2pdf().set(opt).from(area).save(); } 
-            finally { 
-                nav.style.display = 'flex'; 
-                panes.forEach(p => p.style.display = ''); 
-            }
+            finally { nav.style.display = 'flex'; panes.forEach(p => p.style.display = ''); }
         }
     </script>
 </body>
