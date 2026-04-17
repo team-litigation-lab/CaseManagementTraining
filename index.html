@@ -14,9 +14,13 @@
         .workspace-bg { background-color: #F3F4F6; }
         [contenteditable="true"]:focus { outline: 2px solid #F97316; background-color: #FFF7ED; padding: 4px; border-radius: 4px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* Ensures the PDF/Print looks clean */
         @media print { 
             .no-print { display: none !important; } 
-            .tab-content { display: block !important; margin-bottom: 2rem; border: 1px solid #e2e8f0; padding: 1.5rem; page-break-inside: avoid; } 
+            .tab-content { display: block !important; opacity: 1 !important; visibility: visible !important; }
+            .workspace-bg { background-color: white !important; }
+            main { overflow: visible !important; }
         }
     </style>
 </head>
@@ -36,12 +40,12 @@
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden workspace-bg" id="capture-area">
+    <main class="flex-1 flex flex-col overflow-hidden workspace-bg">
         <header class="h-16 bg-slate-900 border-b border-gray-200 relative no-print flex items-center px-8">
-            <div id="save-status" class="absolute bottom-2 right-8 text-[8px] text-white/50 uppercase font-bold tracking-widest opacity-0 transition-opacity">Progress Autosaved</div>
+            <div id="save-status" class="ml-auto text-[8px] text-white/50 uppercase font-bold tracking-widest opacity-0 transition-opacity">Progress Recorded</div>
         </header>
 
-        <div class="p-6 overflow-y-auto flex-1" oninput="autoSave()">
+        <div class="p-6 overflow-y-auto flex-1" id="capture-area" oninput="autoSave()">
             
             <div class="mb-6 border-b pb-6 bg-white p-4 rounded-lg shadow-sm">
                 <div class="flex justify-between items-start">
@@ -57,7 +61,7 @@
                         </div>
                     </div>
                     <div class="text-right">
-                        <select onchange="updatePhase(this.value)" class="bg-white border border-slate-300 rounded px-2 py-1 text-[10px] font-bold uppercase outline-none shadow-sm">
+                        <select onchange="updatePhase(this.value)" class="no-print bg-white border border-slate-300 rounded px-2 py-1 text-[10px] font-bold uppercase outline-none shadow-sm">
                             <option value="Intake">Intake Phase</option>
                             <option value="Investigation">Investigation</option>
                             <option value="No Contact">No Contact</option>
@@ -74,10 +78,10 @@
             </div>
 
             <div class="flex border-b mb-6 bg-white rounded-t-xl overflow-x-auto scrollbar-hide shadow-sm no-print">
-                <button onclick="showTab('client')" id="btn-client" class="tab-btn px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 tab-active">Client Profile</button>
-                <button onclick="showTab('facts')" id="btn-facts" class="tab-btn px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Case Facts</button>
-                <button onclick="showTab('medical')" id="btn-medical" class="tab-btn px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Medical</button>
-                <button onclick="showTab('insurance')" id="btn-insurance" class="tab-btn px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Insurance</button>
+                <button onclick="showTab('client')" id="btn-client" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 tab-active">Client Profile</button>
+                <button onclick="showTab('facts')" id="btn-facts" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Case Facts</button>
+                <button onclick="showTab('medical')" id="btn-medical" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Medical</button>
+                <button onclick="showTab('insurance')" id="btn-insurance" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Insurance</button>
             </div>
 
             <div id="tab-client" class="tab-content space-y-6">
@@ -98,37 +102,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-red-400">
-                    <h3 class="text-xs font-black uppercase tracking-widest text-red-600 mb-4">Emergency Contact</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Name</label><div contenteditable="true" class="text-sm p-1">...</div></div>
-                        <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-sm p-1">...</div></div>
-                        <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Relationship</label><div contenteditable="true" class="text-sm p-1">...</div></div>
-                    </div>
-                </div>
             </div>
 
             <div id="tab-facts" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-slate-600">
                     <div class="flex justify-between items-start mb-6">
                         <h3 class="text-xs font-black uppercase tracking-widest text-slate-600">Incident Details</h3>
-                        <div class="flex items-center gap-4 no-print bg-slate-50 p-2 rounded border">
-                            <div>
-                                <label class="text-[9px] font-bold text-slate-400 uppercase block">Police Report Status</label>
-                                <select class="text-[10px] border rounded px-2 py-1 font-bold">
-                                    <option>Not Requested</option>
-                                    <option>Requested</option>
-                                    <option>Received / Final</option>
-                                    <option>No Report Taken</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[9px] font-bold text-slate-400 uppercase block">Attach Report</label>
-                                <input type="file" id="police-file" class="hidden" onchange="updateFileName(this)">
-                                <button onclick="document.getElementById('police-file').click()" class="bg-white text-[10px] font-bold py-1 px-3 rounded border">Choose File</button>
-                                <span id="file-name-display" class="text-[9px] text-slate-400 ml-2 italic">No file...</span>
-                            </div>
-                        </div>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                         <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Date of Loss</label><div contenteditable="true" class="text-sm p-1 font-bold">...</div></div>
@@ -150,13 +129,6 @@
                         <div class="flex items-center space-x-2"><span class="text-[10px] text-slate-300 font-bold">1.</span><div contenteditable="true" class="flex-1 text-sm border-b italic border-gray-200">...</div></div>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-blue-500">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-blue-600">Medical Facilities</h3>
-                        <button onclick="addFacilityBox()" class="no-print text-[9px] bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded">Add Facility +</button>
-                    </div>
-                    <div id="facility-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                </div>
             </div>
 
             <div id="tab-insurance" class="tab-content hidden space-y-6">
@@ -175,15 +147,18 @@
 
     <script>
         function showTab(tabId) {
+            // Hide all tabs using Tailwind 'hidden' class
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.add('hidden');
-                el.style.display = 'none';
             });
+            
+            // Show the selected tab
             const activeTab = document.getElementById('tab-' + tabId);
             if(activeTab) {
                 activeTab.classList.remove('hidden');
-                activeTab.style.display = 'block';
             }
+            
+            // Update button styles
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
             document.getElementById('btn-' + tabId).classList.add('tab-active');
         }
@@ -197,24 +172,6 @@
             container.appendChild(div);
         }
 
-        function addFacilityBox() {
-            const container = document.getElementById('facility-container');
-            const div = document.createElement('div');
-            div.className = "p-4 border rounded bg-slate-50 relative group";
-            div.innerHTML = `
-                <button onclick="this.parentElement.remove()" class="no-print absolute top-1 right-1 text-red-400 text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">REMOVE</button>
-                <div class="grid grid-cols-2 gap-2">
-                    <div><label class="text-[8px] font-bold uppercase text-slate-400">Facility</label><div contenteditable="true" class="text-[10px] border-b">...</div></div>
-                    <div><label class="text-[8px] font-bold uppercase text-slate-400">Status</label><div contenteditable="true" class="text-[10px] border-b">Active</div></div>
-                </div>`;
-            container.appendChild(div);
-        }
-
-        function updateFileName(input) {
-            const display = document.getElementById('file-name-display');
-            display.innerText = input.files[0] ? input.files[0].name : "No file chosen";
-        }
-
         function updatePhase(val) {
             document.getElementById('currentStatus').innerText = val;
         }
@@ -226,7 +183,6 @@
         }
 
         function loadWork() {
-            addFacilityBox();
             showTab('client');
         }
 
@@ -236,23 +192,31 @@
             }
         }
 
-        function saveCase() {
+        async function saveCase() {
             const area = document.getElementById('capture-area');
-            const allTabs = document.querySelectorAll('.tab-content');
-            allTabs.forEach(t => { 
-                t.classList.remove('hidden'); 
-                t.style.display = 'block'; 
-            });
+            const tabs = document.querySelectorAll('.tab-content');
+            
+            // 1. Temporarily show all tabs for PDF capture
+            tabs.forEach(t => t.classList.remove('hidden'));
+
             const opt = {
-                margin: 0.3,
-                filename: 'LSH_Assessment_Portal.pdf',
+                margin: 0.5,
+                filename: 'LSH_Assessment_File.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
-            html2pdf().from(area).set(opt).save().then(() => {
-                showTab('client');
-            });
+
+            // 2. Generate PDF
+            try {
+                await html2pdf().from(area).set(opt).save();
+            } catch (err) {
+                console.error("PDF Export Error:", err);
+            } finally {
+                // 3. Reset UI back to tabbed view
+                const activeBtnId = document.querySelector('.tab-active').id.replace('btn-', '');
+                showTab(activeBtnId);
+            }
         }
     </script>
 </body>
