@@ -115,16 +115,6 @@
                         </div>
                         <div><label class="font-bold text-slate-400 uppercase">Email Address</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
                         <div><label class="font-bold text-slate-400 uppercase">Home Address</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
-                        <div class="pt-4 border-t border-slate-100">
-                            <div class="flex justify-between items-center mb-4">
-                                <label class="text-[11px] font-bold text-slate-500 uppercase">Employed?</label>
-                                <select class="text-xs font-bold bg-slate-100 rounded px-2 py-1"><option>NO</option><option>YES</option></select>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="font-bold text-slate-400 uppercase">Employer</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Days Lost</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 <div class="pdf-card">
@@ -132,26 +122,15 @@
                     <div class="space-y-4">
                         <div><label class="font-bold text-slate-400 uppercase">Full Name</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
                         <div><label class="font-bold text-slate-400 uppercase">Relationship</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
-                        <div><label class="font-bold text-slate-400 uppercase">Phone</label><div contenteditable="true" class="text-base font-semibold w-full">...</div></div>
                     </div>
                 </div>
             </div>
 
             <div id="pane-facts" class="tab-pane hidden">
-                <div class="pdf-card max-w-2xl">
+                <div class="pdf-card">
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Claim Parameters</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="font-bold text-slate-400 uppercase">Type of Claim</label>
-                            <select class="prof-input w-full">
-                                <option>MVA</option><option>Mass Tort</option><option>Slip and Fall</option><option>Other</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
-                            <div contenteditable="true" class="text-base font-semibold w-full">...</div>
-                        </div>
-                    </div>
+                    <label class="font-bold text-slate-400 uppercase">Police Report Number</label>
+                    <div contenteditable="true" class="text-base font-semibold w-full">...</div>
                 </div>
             </div>
 
@@ -160,24 +139,13 @@
                     <h3 class="text-[11px] font-black uppercase text-slate-400 mb-6 border-b pb-2">Insurance Matrix</h3>
                     
                     <div class="mb-6">
-                        <div class="ins-tab-header">
-                            <h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance</h4>
-                        </div>
+                        <div class="ins-tab-header"><h4 class="text-[11px] font-bold text-orange-600 uppercase">BI Insurance</h4></div>
                         <div class="ins-tab-content">
                             <div class="ins-grid">
                                 <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div>
-                                    <label class="font-bold text-slate-400 uppercase">Liability Accepted</label>
-                                    <select class="prof-input w-full text-sm">
-                                        <option>PENDING</option>
-                                        <option>YES</option>
-                                        <option>NO</option>
-                                    </select>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -185,15 +153,13 @@
                     <div class="mb-6" id="um-section">
                         <div class="ins-tab-header flex justify-between items-center">
                             <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM Insurance</h4>
-                            <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD ADDITIONAL UM</button>
+                            <button onclick="addInsuranceRow('um-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD UM</button>
                         </div>
                         <div class="ins-tab-content">
                             <div class="ins-grid">
                                 <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                                 <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                                <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                             </div>
                         </div>
                     </div>
@@ -201,7 +167,7 @@
                     <div id="health-section">
                         <div class="ins-tab-header flex justify-between items-center">
                             <h4 class="text-[11px] font-bold text-orange-600 uppercase">Health Insurance</h4>
-                            <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD ADDITIONAL HEALTH</button>
+                            <button onclick="addInsuranceRow('health-section')" class="no-print text-[9px] bg-white border border-orange-200 px-2 py-0.5 rounded font-bold text-orange-600 hover:bg-orange-50">+ ADD HEALTH</button>
                         </div>
                         <div class="ins-tab-content">
                             <div class="ins-grid">
@@ -215,44 +181,28 @@
                 </div>
             </div>
 
-            <div id="pane-medical" class="tab-pane hidden pdf-card min-h-[450px]">
-                <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Treatment Log</h3>
-                <div contenteditable="true" class="text-base w-full min-h-[300px]">...</div>
+            <div id="pane-medical" class="tab-pane hidden pdf-card min-h-[400px]">
+                <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Medical Notes</h3>
+                <div contenteditable="true" class="text-sm w-full min-h-[300px]">...</div>
             </div>
 
         </div>
     </main>
 
     <script>
-        function updatePhase(val) {
-            document.getElementById('display-phase').innerText = val;
-        }
+        function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
 
         function showTab(id) {
-            const panes = document.querySelectorAll('.tab-pane');
-            panes.forEach(pane => {
-                pane.classList.add('hidden');
-                pane.style.display = 'none';
-            });
-
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active-tab');
-            });
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
             
             const target = document.getElementById('pane-' + id);
-            if (target) {
-                target.classList.remove('hidden');
-                if(id === 'profile' || id === 'matrix') {
-                    target.style.display = 'grid';
-                } else {
-                    target.style.display = 'block';
-                }
-            }
-
-            const activeBtn = document.getElementById('btn-' + id);
-            if (activeBtn) {
-                activeBtn.classList.add('active-tab');
-            }
+            target.classList.remove('hidden');
+            
+            if(id === 'profile' || id === 'matrix') { target.style.display = 'grid'; } 
+            else { target.style.display = 'block'; }
+            
+            document.getElementById('btn-' + id).classList.add('active-tab');
         }
 
         function addInsuranceRow(sectionId) {
@@ -267,43 +217,31 @@
                         <div><label class="font-bold text-slate-400 uppercase">Primary Member</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         <div><label class="font-bold text-slate-400 uppercase">ID #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         <div><label class="font-bold text-slate-400 uppercase">Group #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                    </div>
-                `;
-            } else if (sectionId === 'um-section') {
+                    </div>`;
+            } else {
                 newRow.innerHTML = `
                     <div class="ins-grid">
                         <div><label class="font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         <div><label class="font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                        <div><label class="font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-sm w-full">...</div></div>
                         <div><label class="font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                        <div><label class="font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-sm w-full">...</div></div>
-                    </div>
-                `;
+                    </div>`;
             }
             section.appendChild(newRow);
         }
 
         async function downloadPDF() {
             const area = document.getElementById('capture-area');
-            const allPanes = document.querySelectorAll('.tab-pane');
-            
-            allPanes.forEach(p => { 
-                p.classList.remove('hidden'); 
-                p.style.display = 'block';
-            });
+            const panes = document.querySelectorAll('.tab-pane');
+            panes.forEach(p => { p.classList.remove('hidden'); p.style.display = 'block'; });
 
             const opt = {
-                margin: 0.3, filename: 'LSH_Case_Report.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                margin: 0.3, filename: 'Report.pdf',
+                html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
-            try {
-                await html2pdf().set(opt).from(area).save();
-            } finally {
-                location.reload();
-            }
+            await html2pdf().set(opt).from(area).save();
+            setTimeout(() => { location.reload(); }, 1000);
         }
     </script>
 </body>
