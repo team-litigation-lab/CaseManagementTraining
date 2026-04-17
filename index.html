@@ -113,7 +113,7 @@
                                 <option>Available</option><option>Pending</option><option>N/A</option>
                             </select>
                         </div>
-                        <div class="no-print">
+                        <div class="no-print pt-2">
                             <label class="text-[9px] font-bold text-slate-400 uppercase">Upload Police Report</label>
                             <input type="file" class="block w-full text-[10px] text-slate-500 mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
                         </div>
@@ -131,21 +131,21 @@
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
-                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
+                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                             </div>
                         </div>
 
                         <div class="mb-6" id="um-section">
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-[10px] font-bold text-orange-600 uppercase">UM Insurance</h4>
-                                <button onclick="addInsuranceRow('um-section')" class="no-print text-[8px] bg-slate-100 px-2 py-1 rounded font-bold hover:bg-slate-200">+ ADD UM</button>
+                                <button onclick="addInsuranceRow('um-section')" class="no-print text-[8px] bg-slate-100 px-2 py-1 rounded font-bold hover:bg-slate-200">+ ADD ADDITIONAL UM</button>
                             </div>
                             <div class="ins-grid mb-2">
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
-                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
+                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                             </div>
                         </div>
 
@@ -156,18 +156,18 @@
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
-                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
+                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                             </div>
                         </div>
 
                         <div id="health-section">
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-[10px] font-bold text-orange-600 uppercase">Health Insurance</h4>
-                                <button onclick="addInsuranceRow('health-section')" class="no-print text-[8px] bg-slate-100 px-2 py-1 rounded font-bold hover:bg-slate-200">+ ADD HEALTH</button>
+                                <button onclick="addInsuranceRow('health-section')" class="no-print text-[8px] bg-slate-100 px-2 py-1 rounded font-bold hover:bg-slate-200">+ ADD ADDITIONAL HEALTH</button>
                             </div>
                             <div class="ins-grid mb-2">
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-xs border-b">...</div></div>
-                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Member ID</label><div contenteditable="true" class="text-xs border-b">...</div></div>
+                                <div><label class="text-[8px] font-bold text-slate-400 uppercase">Individual Membership ID</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                                 <div><label class="text-[8px] font-bold text-slate-400 uppercase">Group Number</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                             </div>
                         </div>
@@ -198,12 +198,12 @@
         function addInsuranceRow(sectionId) {
             const section = document.getElementById(sectionId);
             const newRow = document.createElement('div');
-            newRow.className = 'ins-grid mb-2 pt-2 border-t border-slate-50';
+            newRow.className = 'ins-grid mb-2 pt-2 border-t border-slate-50 mt-2';
             
             if (sectionId === 'health-section') {
                 newRow.innerHTML = `
                     <div><label class="text-[8px] font-bold text-slate-400 uppercase">Carrier</label><div contenteditable="true" class="text-xs border-b">...</div></div>
-                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Member ID</label><div contenteditable="true" class="text-xs border-b">...</div></div>
+                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Individual Membership ID</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                     <div><label class="text-[8px] font-bold text-slate-400 uppercase">Group Number</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                 `;
             } else {
@@ -212,7 +212,7 @@
                     <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                     <div><label class="text-[8px] font-bold text-slate-400 uppercase">Claim #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                     <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-xs border-b">...</div></div>
-                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
+                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Limits</label><div contenteditable="true" class="text-xs border-b">...</div></div>
                 `;
             }
             section.appendChild(newRow);
