@@ -62,14 +62,21 @@
         <div class="p-6 overflow-y-auto flex-1" oninput="autoSave()">
             <div class="mb-6 border-b pb-4 flex justify-between items-center">
                 <div>
-                    <h1 id="case-title" class="text-2xl font-bold text-slate-800" contenteditable="true">Untitled Assessment</h1>
-                    <p class="text-sm text-gray-500 italic">Branch: Las Vegas, NV</p>
+                    <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <span id="client-name" contenteditable="true" class="border-b border-transparent hover:border-slate-300 transition-colors">Client's Name</span>
+                        <span class="text-slate-400 font-light">-</span>
+                        <span id="trainee-name" contenteditable="true" class="border-b border-transparent hover:border-slate-300 transition-colors">Trainee's Name</span>
+                    </h1>
+                    <div class="flex items-center mt-1 text-sm text-gray-500">
+                        <span class="font-bold mr-1">Case File ID:</span>
+                        <span id="batch-code" contenteditable="true" class="italic hover:bg-orange-50 px-1 rounded transition-colors">(Batch Code)</span>
+                    </div>
+                    <p class="text-xs text-gray-400 italic mt-1">Branch: Las Vegas, NV</p>
                 </div>
                 <div class="text-right">
                     <span id="currentStatus" class="text-orange-600 font-black text-lg uppercase tracking-tight">Intake</span>
                 </div>
             </div>
-
             <div class="flex border-b mb-6 bg-white rounded-t-xl overflow-x-auto scrollbar-hide shadow-sm no-print">
                 <button onclick="showTab('client')" id="btn-client" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 tab-active">Client Profile</button>
                 <button onclick="showTab('facts')" id="btn-facts" class="tab-btn px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Case Facts</button>
@@ -92,11 +99,45 @@
                         <label class="text-[10px] font-bold text-slate-400 uppercase">Address</label>
                         <div id="f-address" contenteditable="true" class="text-sm">...</div>
                     </div>
+                    <div class="bg-white p-5 rounded-lg border shadow-sm md:col-span-2 border-l-4 border-red-500">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Type of Injury</label>
+                        <select id="f-injury-type" class="w-full bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer mt-1">
+                            <option value="" disabled selected>Select Injury Type...</option>
+                            <option value="MVA">MVA (Motor Vehicle Accident)</option>
+                            <option value="Mass Tort">Mass Tort</option>
+                            <option value="Dog Bite">Dog Bite</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Premise Liability">Premise Liability</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
             <div id="tab-facts" class="tab-content hidden space-y-4">
                 <div class="bg-white p-6 rounded-lg border shadow-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="space-y-4">
+                            <div class="border-b">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Police Arrived?</label>
+                                <select id="f-police-arrived" class="w-full bg-transparent text-sm font-bold outline-none cursor-pointer py-1">
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </div>
+                            <div class="border-b">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Police Report Number</label>
+                                <div id="f-police-num" contenteditable="true" class="text-sm font-bold">...</div>
+                            </div>
+                        </div>
+                        <div class="no-print">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Upload Police Report</label>
+                            <div class="upload-area rounded-lg p-6 text-center cursor-pointer mt-1" onclick="document.getElementById('police-file').click()">
+                                <input type="file" id="police-file" class="hidden" onchange="handleFile(this)">
+                                <p id="file-label" class="text-[10px] font-bold text-slate-500">Click to Attach Document (PDF/JPG)</p>
+                            </div>
+                        </div>
+                    </div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase">Incident Narrative</label>
                     <div id="f-narrative" contenteditable="true" class="text-sm min-h-[150px] bg-slate-50 p-4 rounded italic border mt-1">Describe the incident details here...</div>
                 </div>
@@ -110,9 +151,10 @@
                     </div>
                     <div id="injury-container" class="space-y-2"></div>
                 </div>
+
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-blue-500">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-blue-600">Medical Facilities</h3>
+                        <h3 class="text-xs font-black uppercase tracking-widest text-blue-600">Medical Facilities Manager (Max 10)</h3>
                         <button onclick="addFacility()" class="no-print text-[9px] bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded">Add Facility +</button>
                     </div>
                     <div id="facility-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -123,25 +165,65 @@
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-orange-500">
                     <h3 class="text-xs font-black uppercase tracking-widest text-orange-600 mb-4">Client's Vehicle Information</h3>
                     <div class="grid grid-cols-3 gap-4 mb-6">
-                        <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Year</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
-                        <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Make</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
-                        <div class="border-b"><label class="text-[10px] font-bold text-slate-400 uppercase">Model</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Year</label>
+                            <div id="v-year" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Make</label>
+                            <div id="v-make" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Model</label>
+                            <div id="v-model" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
                     </div>
-                    <select id="damage-type-select" onchange="toggleDamageView(this.value)" class="w-full bg-slate-50 border rounded p-2 text-sm font-bold mt-1 outline-none">
-                        <option value="none">Select Damage Status...</option>
-                        <option value="repairable">Repairable</option>
-                        <option value="totaled">Total Loss</option>
-                    </select>
-                    <div id="view-repairable" class="hidden mt-4">
-                        <div class="flex justify-between items-center mb-2"><label class="text-[10px] font-bold text-blue-500 uppercase">Repairs Needed</label><button onclick="addRow('repair')" class="no-print text-[9px] bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded">Add Item +</button></div>
-                        <div id="repair-container" class="space-y-2 bg-blue-50/50 p-4 rounded-lg border border-blue-100"></div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Type of Damage</label>
+                            <select id="damage-type-select" onchange="toggleDamageView(this.value)" class="w-full bg-slate-50 border rounded p-2 text-sm font-bold mt-1 outline-none">
+                                <option value="none">Select Damage Status...</option>
+                                <option value="repairable">Repairable</option>
+                                <option value="totaled">Total Loss</option>
+                            </select>
+                        </div>
+                        <div id="view-repairable" class="hidden">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-[10px] font-bold text-blue-500 uppercase">Repairs Needed</label>
+                                <button onclick="addRow('repair')" class="no-print text-[9px] bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded">Add Item +</button>
+                            </div>
+                            <div id="repair-container" class="space-y-2 bg-blue-50/50 p-4 rounded-lg border border-blue-100"></div>
+                        </div>
+                        <div id="view-totaled" class="hidden">
+                            <label class="text-[10px] font-bold text-red-500 uppercase">Total Loss Disposition</label>
+                            <select id="total-loss-option" class="w-full bg-red-50 border border-red-100 rounded p-2 text-sm font-bold mt-1 outline-none text-red-700">
+                                <option value="surrender">Surrender Vehicle (Insurance Payout)</option>
+                                <option value="retain">Retain Vehicle (Owner Keeps Salvage)</option>
+                            </select>
+                        </div>
                     </div>
-                    <div id="view-totaled" class="hidden mt-4">
-                        <label class="text-[10px] font-bold text-red-500 uppercase">Total Loss Disposition</label>
-                        <select class="w-full bg-red-50 border border-red-100 rounded p-2 text-sm font-bold mt-1 outline-none text-red-700">
-                            <option value="surrender">Surrender Vehicle</option>
-                            <option value="retain">Retain Vehicle</option>
-                        </select>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-slate-400">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 mb-4">Third Party Vehicle Information</h3>
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Year</label>
+                            <div id="tp-year" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Make</label>
+                            <div id="tp-make" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Model</label>
+                            <div id="tp-model" contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Third Party Damage Description</label>
+                        <div id="tp-damage-desc" contenteditable="true" class="text-sm min-h-[80px] bg-slate-50 p-4 rounded italic border mt-1">Describe Third Party damages here...</div>
                     </div>
                 </div>
             </div>
@@ -149,22 +231,56 @@
             <div id="tab-insurance" class="tab-content hidden space-y-6">
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-slate-800">
                     <h3 class="text-xs font-black uppercase tracking-widest text-slate-800 mb-4">Bodily Injury (BI) Insurance</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Insurance Company</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
-                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Number</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
-                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
-                        <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Limit</label><div contenteditable="true" class="text-sm font-bold p-1">...</div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Insurance Company</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Number</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Limit</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
                     </div>
                 </div>
+
                 <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-custom-orange">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-custom-orange">UM/UIM Insurance</h3>
-                        <button onclick="addInsuranceRow()" class="no-print text-[9px] bg-orange-100 text-orange-600 font-bold px-3 py-1 rounded">Add UM Policy +</button>
+                        <h3 class="text-xs font-black uppercase tracking-widest text-custom-orange">Uninsured/Underinsured (UM/UIM)</h3>
+                        <button onclick="addInsurancePolicy('um-container')" class="no-print text-[9px] bg-orange-100 text-orange-600 font-bold px-3 py-1 rounded">Add UM Policy +</button>
                     </div>
                     <div id="um-container" class="space-y-4"></div>
                 </div>
-            </div>
 
+                <div class="bg-white p-6 rounded-lg border shadow-sm border-t-4 border-green-500">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-green-600 mb-4">PIP / Health Insurance</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Insurance Company</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Number</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Policy Name</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                        <div class="border-b">
+                            <label class="text-[8px] font-bold text-slate-400 uppercase">Limit</label>
+                            <div contenteditable="true" class="text-sm font-bold p-1">...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -177,42 +293,62 @@
         }
 
         function toggleDamageView(val) {
-            document.getElementById('view-repairable').classList.toggle('hidden', val !== 'repairable');
-            document.getElementById('view-totaled').classList.toggle('hidden', val !== 'totaled');
-            if (val === 'repairable' && !document.getElementById('repair-container').children.length) addRow('repair');
+            const repairView = document.getElementById('view-repairable');
+            const totalView = document.getElementById('view-totaled');
+            repairView.classList.add('hidden');
+            totalView.classList.add('hidden');
+            if (val === 'repairable') {
+                repairView.classList.remove('hidden');
+                if(document.getElementById('repair-container').children.length === 0) addRow('repair');
+            } else if (val === 'totaled') {
+                totalView.classList.remove('hidden');
+            }
         }
 
-        function addRow(type) {
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                const label = document.getElementById('file-label');
+                label.innerText = "✓ " + input.files[0].name;
+                label.classList.add('text-green-600');
+            }
+        }
+
+        function addRow(type, text = "") {
             const container = document.getElementById(`${type}-container`);
             const div = document.createElement('div');
             div.className = "flex items-center space-x-2 group";
             div.innerHTML = `<span class="text-[10px] text-slate-300 font-bold">${container.children.length + 1}.</span>
-                             <div contenteditable="true" class="flex-1 text-sm border-b italic border-gray-300">Specify detail here...</div>
-                             <button onclick="this.parentElement.remove()" class="no-print text-[9px] text-red-400 font-bold uppercase">Remove</button>`;
+                             <div contenteditable="true" class="flex-1 text-sm border-b italic border-gray-300">${text || "Specify detail here..."}</div>
+                             <button onclick="this.parentElement.remove()" class="no-print opacity-0 group-hover:opacity-100 text-[9px] text-red-400 font-bold uppercase">Remove</button>`;
             container.appendChild(div);
         }
 
         function addFacility() {
             const container = document.getElementById('facility-container');
+            if (container.children.length >= 10) { alert("Max limit reached."); return; }
             const div = document.createElement('div');
             div.className = "facility-card p-4 border rounded-lg bg-slate-50 relative group border-blue-100 shadow-sm";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-2 text-red-400 text-[8px] font-bold uppercase">Delete</button>
+            div.innerHTML = `
+                <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-400 text-[8px] font-bold uppercase">Delete</button>
                 <div class="space-y-3">
-                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Facility Name</label><div contenteditable="true" class="text-xs font-bold border-b">New Facility</div></div>
-                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Contact</label><div contenteditable="true" class="text-[10px] border-b">...</div></div>
+                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Facility Name</label><div contenteditable="true" class="text-xs font-bold text-blue-800 border-b border-blue-200">New Facility</div></div>
+                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Address</label><div contenteditable="true" class="text-[10px] border-b border-slate-200 italic">...</div></div>
+                    <div><label class="text-[8px] font-bold text-slate-400 uppercase">Contact</label><div contenteditable="true" class="text-[10px] border-b border-slate-200">...</div></div>
                 </div>`;
             container.appendChild(div);
         }
 
-        function addInsuranceRow() {
-            const container = document.getElementById('um-container');
+        function addInsurancePolicy(containerId) {
+            const container = document.getElementById(containerId);
             const div = document.createElement('div');
-            div.className = "grid grid-cols-4 gap-4 p-3 bg-orange-50 border border-orange-100 rounded relative group";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 text-[10px]">×</button>
-                <div class="border-b"><label class="text-[8px] font-bold uppercase">Company</label><div contenteditable="true" class="text-xs">...</div></div>
-                <div class="border-b"><label class="text-[8px] font-bold uppercase">Policy #</label><div contenteditable="true" class="text-xs">...</div></div>
-                <div class="border-b"><label class="text-[8px] font-bold uppercase">Name</label><div contenteditable="true" class="text-xs">...</div></div>
-                <div class="border-b"><label class="text-[8px] font-bold uppercase">Limit</label><div contenteditable="true" class="text-xs">...</div></div>`;
+            div.className = "grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-orange-50/50 rounded border border-orange-100 relative group";
+            div.innerHTML = `
+                <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Company</label><div contenteditable="true" class="text-xs p-1">...</div></div>
+                <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Policy #</label><div contenteditable="true" class="text-xs p-1">...</div></div>
+                <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Name</label><div contenteditable="true" class="text-xs p-1">...</div></div>
+                <div class="border-b"><label class="text-[8px] font-bold text-slate-400 uppercase">Limit</label><div contenteditable="true" class="text-xs p-1">...</div></div>
+            `;
             container.appendChild(div);
         }
 
@@ -225,22 +361,25 @@
         function loadWork() {
             addRow('injury');
             addFacility();
-            addInsuranceRow();
+            addInsurancePolicy('um-container');
         }
 
         function updatePhase(val) { document.getElementById('currentStatus').innerText = val; }
-        function resetForm() { if(confirm("Clear progress?")) location.reload(); }
+        
+        function resetForm() { if(confirm("Clear all progress?")) { localStorage.clear(); location.reload(); } }
 
         function saveCase() {
             const element = document.getElementById('capture-area');
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(c => { c.classList.remove('hidden'); c.style.display = 'block'; });
-            html2pdf().from(element).set({
+            const opt = {
                 margin: 0.5,
-                filename: 'LSH_Assessment.pdf',
-                html2canvas: { scale: 2 },
+                filename: 'LSH_Training_Assessment.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).save().then(() => location.reload());
+            };
+            html2pdf().set(opt).from(element).save().then(() => { location.reload(); });
         }
     </script>
 </body>
