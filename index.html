@@ -429,81 +429,137 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Case Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Manager UI</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; max-width: 500px; margin: 40px auto; line-height: 1.6; }
-        .box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; background: #f9f9f9; }
-        input, textarea { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
-        button { padding: 10px 15px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; }
-        button.secondary { background: #007bff; }
-        .result { margin-top: 20px; padding: 10px; border-left: 5px solid #007bff; background: #eef; display: none; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            height: 100vh;
+        }
+
+        /* Results Area (Top/Middle) */
+        #displayArea {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        /* Bottom Fixed Navigation Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        /* Individual Tool Items */
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            color: #555;
+            font-size: 12px;
+            transition: color 0.3s;
+            border: none;
+            background: none;
+        }
+
+        .nav-item:hover { color: #007bff; }
+        .nav-item .material-icons { font-size: 24px; margin-bottom: 2px; }
+
+        /* Hidden inputs that pop up or prompt */
+        .hidden-inputs { display: none; }
     </style>
 </head>
 <body>
 
-    <h2>Case Management</h2>
+    <h2 style="text-align: center;">Case Dashboard</h2>
+    <p style="text-align: center; color: #666;">Select an action from the bottom menu.</p>
 
-    <div class="box">
-        <h3>Add New Case</h3>
-        <input type="text" id="caseId" placeholder="Unique Case ID (e.g. 101)">
-        <input type="text" id="caseTitle" placeholder="Case Title">
-        <textarea id="caseDesc" placeholder="Case Description"></textarea>
-        <button onclick="saveCase()">Save Case</button>
+    <div id="displayArea">
+        <h3 id="resTitle" style="margin-top:0;"></h3>
+        <hr>
+        <p id="resDesc"></p>
+        <small id="resId" style="color: #999;"></small>
     </div>
 
-    <br>
+    <nav class="bottom-nav">
+        <button class="nav-item" onclick="promptAddCase()">
+            <span class="material-icons">add_circle_outline</span>
+            <span>Add Case</span>
+        </button>
 
-    <div class="box">
-        <h3>Retrieve Case</h3>
-        <input type="text" id="searchId" placeholder="Enter Case ID to search">
-        <button class="secondary" onclick="getCase()">Search</button>
-        
-        <div id="displayArea" class="result">
-            <strong id="resTitle"></strong><br>
-            <p id="resDesc"></p>
-        </div>
-    </div>
+        <button class="nav-item" onclick="saveCurrent()">
+            <span class="material-icons">save</span>
+            <span>Save Case</span>
+        </button>
+
+        <button class="nav-item" onclick="promptRetrieve()">
+            <span class="material-icons">search</span>
+            <span>Retrieve</span>
+        </button>
+    </nav>
 
     <script>
-        function saveCase() {
-            const id = document.getElementById('caseId').value.trim();
-            const title = document.getElementById('caseTitle').value;
-            const desc = document.getElementById('caseDesc').value;
+        // Temporary storage for "Current" case being drafted
+        let currentDraft = null;
 
-            if (!id || !title) {
-                alert("Please enter at least an ID and a Title.");
-                return;
-            }
-
-            // Create case object
-            const caseData = { title: title, description: desc };
-
-            // Save to LocalStorage (converts object to string)
-            localStorage.setItem("case_" + id, JSON.stringify(caseData));
-
-            alert("Case " + id + " saved successfully!");
+        function promptAddCase() {
+            const id = prompt("Enter Unique Case ID:");
+            if (!id) return;
             
-            // Clear inputs
-            document.getElementById('caseId').value = '';
-            document.getElementById('caseTitle').value = '';
-            document.getElementById('caseDesc').value = '';
+            const title = prompt("Enter Case Title:");
+            const desc = prompt("Enter Case Description:");
+
+            currentDraft = { id, title, desc };
+            
+            // Show preview immediately
+            updateDisplay(title, desc, id);
+            alert("Case drafted. Click 'Save Case' to finalize.");
         }
 
-        function getCase() {
-            const id = document.getElementById('searchId').value.trim();
-            const rawData = localStorage.getItem("case_" + id);
+        function saveCurrent() {
+            if (!currentDraft) {
+                alert("Nothing to save! Add a case first.");
+                return;
+            }
+            localStorage.setItem("case_" + currentDraft.id, JSON.stringify(currentDraft));
+            alert("Case " + currentDraft.id + " saved to database.");
+        }
 
-            const display = document.getElementById('displayArea');
-            
-            if (rawData) {
-                const data = JSON.parse(rawData);
-                document.getElementById('resTitle').innerText = "Title: " + data.title;
-                document.getElementById('resDesc').innerText = "Description: " + data.description;
-                display.style.display = "block";
+        function promptRetrieve() {
+            const id = prompt("Enter Case ID to search:");
+            const data = localStorage.getItem("case_" + id);
+
+            if (data) {
+                const parsed = JSON.parse(data);
+                updateDisplay(parsed.title, parsed.desc, id);
             } else {
                 alert("Case not found.");
-                display.style.display = "none";
             }
+        }
+
+        function updateDisplay(title, desc, id) {
+            document.getElementById('resTitle').innerText = title;
+            document.getElementById('resDesc').innerText = desc;
+            document.getElementById('resId').innerText = "ID: " + id;
+            document.getElementById('displayArea').style.display = "block";
         }
     </script>
 </body>
