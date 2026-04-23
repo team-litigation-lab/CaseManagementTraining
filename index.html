@@ -497,44 +497,37 @@
     </script>
 </body>
 </html>
-<div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
-    <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
-    <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
-    <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
-    <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
-    <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
-    <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
-    <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
-    <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
-    <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
-    <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
-</div>
+
+<div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
+<div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
+
 <div id="pane-tasks" class="tab-pane">
     <div class="pdf-card border-l-8 border-orange-500">
-        <div class="flex justify-between items-center border-b pb-2 mb-4">
+        <div class="flex justify-between items-center border-b pb-2 mb-6">
             <h3 class="text-[11px] font-black uppercase text-orange-500">Action Items</h3>
             <button onclick="addTaskRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
         </div>
         <table class="treat-table">
             <thead>
                 <tr>
-                    <th class="w-32">Due Date</th>
-                    <th>Task Description</th>
-                    <th class="w-48">Assigned To</th>
-                    <th class="w-32">Status</th>
-                    <th class="no-print w-10"></th>
+                    <th style="width: 15%">Date</th>
+                    <th style="width: 45%">Task Description</th>
+                    <th style="width: 20%">Assigned To</th>
+                    <th style="width: 15%">Status</th>
+                    <th class="no-print" style="width: 5%"></th>
                 </tr>
             </thead>
             <tbody id="tasks-body">
                 <tr>
                     <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                    <td><div contenteditable="true" class="w-full font-semibold">New task description</div></td>
+                    <td><div contenteditable="true" class="w-full">Initial case review...</div></td>
                     <td><div contenteditable="true">Name</div></td>
                     <td>
-                        <select class="prof-input w-full">
-                            <option>Pending</option>
+                        <select class="prof-input w-full text-[11px] font-bold">
+                            <option>To Do</option>
                             <option>In Progress</option>
                             <option>Completed</option>
+                            <option>On Hold</option>
                         </select>
                     </td>
                     <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
@@ -545,20 +538,60 @@
 </div>
 
 <div id="pane-notes" class="tab-pane">
-    <div class="flex justify-between items-center px-2 no-print mb-4">
-        <h2 class="text-sm font-black uppercase text-slate-400 italic">Communication Log</h2>
-        <button onclick="addNoteEntry()" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded font-bold uppercase">+ Add Note</button>
-    </div>
-    <div id="notes-container" class="space-y-4">
-        <div class="pdf-card border-t-4 border-slate-300">
-            <div class="flex justify-between mb-3 border-b pb-2">
-                <div class="flex gap-6">
-                    <div><label>Date</label><div contenteditable="true" class="text-sm font-bold">MM/DD/YYYY</div></div>
-                    <div><label>Author</label><div contenteditable="true" class="text-sm font-bold">Name</div></div>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" class="no-print text-slate-300">×</button>
-            </div>
-            <div contenteditable="true" class="text-sm text-slate-600 italic min-h-[50px]">Enter specific case notes or updates here...</div>
+    <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center border-b pb-2 mb-6">
+            <h3 class="text-[11px] font-black uppercase text-orange-500">Case Notes & Log</h3>
+            <button onclick="addNoteRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Note</button>
         </div>
+        <table class="treat-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%">Date</th>
+                    <th style="width: 20%">Author</th>
+                    <th style="width: 60%">Notes</th>
+                    <th class="no-print" style="width: 5%"></th>
+                </tr>
+            </thead>
+            <tbody id="notes-body">
+                <tr>
+                    <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                    <td><div contenteditable="true" class="font-bold">Name</div></td>
+                    <td><div contenteditable="true" class="w-full italic text-slate-600">Enter case updates here...</div></td>
+                    <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
+
+function addTaskRow() {
+    const body = document.getElementById('tasks-body');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><div contenteditable="true">MM/DD/YYYY</div></td>
+        <td><div contenteditable="true" class="w-full"></div></td>
+        <td><div contenteditable="true"></div></td>
+        <td>
+            <select class="prof-input w-full text-[11px] font-bold">
+                <option>To Do</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+                <option>On Hold</option>
+            </select>
+        </td>
+        <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+    `;
+    body.appendChild(row);
+}
+
+function addNoteRow() {
+    const body = document.getElementById('notes-body');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><div contenteditable="true">MM/DD/YYYY</div></td>
+        <td><div contenteditable="true" class="font-bold"></div></td>
+        <td><div contenteditable="true" class="w-full italic text-slate-600"></div></td>
+        <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+    `;
+    body.appendChild(row);
+}
