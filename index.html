@@ -43,6 +43,7 @@
         </div>
         <div class="p-6 space-y-4">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
+            <button onclick="StorageManager.save()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-lg font-bold text-xs uppercase transition-all">Save Current Case</button>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
     </aside>
@@ -636,9 +637,25 @@
             jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
         };
         html2pdf().set(opt).from(element).save();
+        <div id="btn-storage" onclick="showTab('storage')" class="tab-btn">Case Files</div>
     }
 
     // Load saved list when browser finishes loading
     window.addEventListener('DOMContentLoaded', () => StorageManager.render());
+        <div id="pane-storage" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Saved Case Files</h3>
+        
+        <div id="saved-cases-list" class="space-y-3">
+            <p class="text-slate-400 text-xs italic">No saved cases found in this browser.</p>
+        </div>
+
+        <div class="mt-8 p-4 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+            <p class="text-[10px] text-slate-400 uppercase font-bold text-center">
+                Note: Files are stored locally in your browser cache.
+            </p>
+        </div>
+    </div>
+</div>
 </script>
 </html>
