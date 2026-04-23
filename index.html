@@ -155,7 +155,8 @@
                         <div><label>Report Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div class="no-print">
                             <label>Action</label>
-                            <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Police Report</button>
+                            <input type="file" id="police-upload-main" class="hidden" onchange="handleQuickUpload(this, 'Police Report')">
+                            <button onclick="document.getElementById('police-upload-main').click()" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Police Report</button>
                         </div>
                     </div>
                 </div>
@@ -340,7 +341,27 @@
                 </div>
             </div>
 
-            <div id="pane-doc-hub" class="tab-pane">
+            <div id="pane-doc-hub" class="tab-pane space-y-6">
+                <div class="pdf-card border-l-8 border-slate-900 no-print">
+                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Quick Upload Portal</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                        <input type="file" id="up-police" class="hidden" onchange="handleQuickUpload(this, 'Police Report')">
+                        <button onclick="document.getElementById('up-police').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Upload Police Report</button>
+
+                        <input type="file" id="up-med" class="hidden" onchange="handleQuickUpload(this, 'Medical Records')">
+                        <button onclick="document.getElementById('up-med').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Medical Records</button>
+
+                        <input type="file" id="up-inv" class="hidden" onchange="handleQuickUpload(this, 'Invoices')">
+                        <button onclick="document.getElementById('up-inv').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Invoices</button>
+
+                        <input type="file" id="up-ins" class="hidden" onchange="handleQuickUpload(this, 'Insurance')">
+                        <button onclick="document.getElementById('up-ins').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Insurance Files</button>
+
+                        <input type="file" id="up-lit" class="hidden" onchange="handleQuickUpload(this, 'Litigation Docs')">
+                        <button onclick="document.getElementById('up-lit').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Litigation Docs</button>
+                    </div>
+                </div>
+
                  <div class="pdf-card border-l-8 border-orange-500">
                     <div class="flex justify-between items-center border-b pb-2 mb-6"><h3 class="text-[11px] font-black uppercase text-orange-500">Documents</h3><button onclick="addDocRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Record</button></div>
                     <table class="treat-table">
@@ -493,6 +514,28 @@
             const element = document.getElementById('capture-area');
             const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(opt).from(element).save();
+        }
+
+        // NEW HELPER FOR UPLOADS
+        function handleQuickUpload(input, category) {
+            if (input.files && input.files[0]) {
+                const fileName = input.files[0].name;
+                const body = document.getElementById('doc-body');
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><select class="prof-input w-full text-[11px] uppercase font-bold">
+                        <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
+                        <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
+                        <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
+                        <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
+                        <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
+                        <option>Others</option>
+                    </select></td>
+                    <td><div contenteditable="true" class="w-full font-bold text-orange-600">${fileName}</div></td>
+                    <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+                body.prepend(row);
+                input.value = ''; // Reset input
+            }
         }
     </script>
 </body>
