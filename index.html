@@ -420,19 +420,23 @@
                                 <th width="120">Status</th>
                                 <th class="no-print" width="50"></th>
                             </tr>
-                        </thead>
-                        <tbody id="tasks-body">
-                            <tr>
-                                <td><div contenteditable="true" class="w-full">Perform initial client intake</div></td>
-                                <td><div contenteditable="true" class="w-full">Case Manager</div></td>
-                                <td><div contenteditable="true">04/21/2026</div></td>
-                                <td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td>
-                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                       <tbody id="tasks-body">
+    <tr>
+        <td><div contenteditable="true" class="w-full">Perform initial client intake</div></td>
+        <td>
+            <select class="prof-input w-full">
+                <option>Attorney</option>
+                <option selected>Case Manager</option>
+                <option>Medical / Records Department</option>
+                <option>Litigation Department</option>
+                <option>Closing Department</option>
+            </select>
+        </td>
+        <td><div contenteditable="true">04/21/2026</div></td>
+        <td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td>
+        <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+    </tr>
+</tbody>
 
         </div>
     </main>
