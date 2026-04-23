@@ -43,6 +43,7 @@
         </div>
         <div class="p-6 space-y-4">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
+            <button onclick="StorageManager.save()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-lg font-bold text-xs uppercase transition-all mb-2">Save Case File</button>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
     </aside>
@@ -86,6 +87,7 @@
             </div>
 
             <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
+                <div id="btn-storage" onclick="showTab('storage')" class="tab-btn">Case Files</div>
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
                 <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
@@ -493,98 +495,88 @@
             const element = document.getElementById('capture-area');
             const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(opt).from(element).save();
-        }
-    </script>
-</body>
-</html>
-<div id="btn-storage" onclick="showTab('storage')" class="tab-btn">Storage Hub</div>
-<div id="pane-storage" class="tab-pane">
+            <div id="pane-storage" class="tab-pane">
     <div class="pdf-card border-l-8 border-orange-500">
-        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Storage (Local Browser)</h3>
-        
-        <div class="flex flex-col md:flex-row gap-4 mb-8 bg-slate-50 p-6 rounded-xl border border-slate-200">
-            <div class="flex-1">
-                <label class="text-slate-500">Case Identifier</label>
-                <input type="text" id="save-name" placeholder="e.g. Smith, John - 2026-001" class="w-full p-2.5 border border-slate-200 rounded font-bold text-sm outline-none focus:border-orange-500 bg-white">
-            </div>
-            <div class="flex items-end">
-                <button onclick="saveCaseFile()" class="w-full md:w-auto bg-orange-600 text-white px-8 py-2.5 rounded-lg font-bold uppercase text-xs hover:bg-orange-700 shadow-md transition-all">Save Case Record</button>
-            </div>
-        </div>
-
-        <h4 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest border-b pb-1">Saved Records in this Browser</h4>
+        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Stored Records</h3>
         <div id="saved-cases-list" class="space-y-3">
             <p class="text-slate-400 text-xs italic">No saved cases found.</p>
         </div>
     </div>
 </div>
-// Run this when page loads to show previous saves
-window.addEventListener('load', renderSavedList);
+        }
+    </script>
+    <script>
+    const StorageManager = {
+        // Saves the current state of the interface
+        save: function() {
+            // It looks for the Client Name and Case ID automatically to name the file
+            const client = document.querySelector('[contenteditable="true"]').innerText.trim() || "Unnamed";
+            const id = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
+            const fileName = `${client}_${id}_${new Date().toLocaleDateString().replace(/\//g, '-')}`;
+            
+            const data = document.getElementById('capture-area').innerHTML;
+            const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+            
+            store[fileName] = {
+                timestamp: new Date().toLocaleString(),
+                html: data
+            };
+            
+            localStorage.setItem('LSH_VAULT', JSON.stringify(store));
+            alert("Case successfully saved to browser storage.");
+            this.render();
+        },
 
-function saveCaseFile() {
-    const nameInput = document.getElementById('save-name');
-    const name = nameInput.value.trim();
-    
-    if (!name) {
-        alert("Please enter a Case Identifier to save.");
-        return;
-    }
+        // Shows the list of saved cases
+        render: function() {
+            const list = document.getElementById('saved-cases-list');
+            if (!list) return;
+            
+            const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+            const keys = Object.keys(store);
+            
+            if (keys.length === 0) {
+                list.innerHTML = '<p class="text-slate-400 text-xs italic">No records found.</p>';
+                return;
+            }
 
-    // This captures the current state of the entire workspace
-    const content = document.getElementById('capture-area').innerHTML;
-    const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
-    
-    savedCases[name] = {
-        timestamp: new Date().toLocaleString(),
-        html: content
+            list.innerHTML = keys.map(key => `
+                <div class="flex justify-between items-center bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                    <div>
+                        <div class="font-bold text-slate-800 text-sm">${key}</div>
+                        <div class="text-[10px] text-slate-400 uppercase">${store[key].timestamp}</div>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="StorageManager.load('${key}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
+                        <button onclick="StorageManager.delete('${key}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        },
+
+        // Loads a case back onto the screen
+        load: function(key) {
+            const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+            if (store[key]) {
+                document.getElementById('capture-area').innerHTML = store[key].html;
+                // Important: tell the original script to go to the profile tab
+                if (typeof showTab === "function") showTab('profile');
+            }
+        },
+
+        // Deletes a case
+        delete: function(key) {
+            if (confirm("Delete this case file permanently?")) {
+                const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+                delete store[key];
+                localStorage.setItem('LSH_VAULT', JSON.stringify(store));
+                this.render();
+            }
+        }
     };
 
-    localStorage.setItem('LSH_Cases', JSON.stringify(savedCases));
-    nameInput.value = '';
-    renderSavedList();
-    alert("Case '" + name + "' has been saved to your browser.");
-}
-
-function renderSavedList() {
-    const container = document.getElementById('saved-cases-list');
-    const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
-    const names = Object.keys(savedCases);
-
-    if (names.length === 0) {
-        container.innerHTML = '<p class="text-slate-400 text-xs italic">No saved records found in local storage.</p>';
-        return;
-    }
-
-    container.innerHTML = names.map(name => `
-        <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl hover:shadow-sm transition-all">
-            <div>
-                <div class="font-bold text-slate-800 text-sm">${name}</div>
-                <div class="text-[10px] text-slate-400 uppercase mt-1">Saved: ${savedCases[name].timestamp}</div>
-            </div>
-            <div class="flex gap-4">
-                <button onclick="loadCaseFile('${name}')" class="text-orange-600 font-bold text-[10px] uppercase tracking-wider hover:text-orange-800">Retrieve</button>
-                <button onclick="deleteCaseFile('${name}')" class="text-slate-300 font-bold text-[10px] uppercase tracking-wider hover:text-red-500">Delete</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function loadCaseFile(name) {
-    if (confirm("Load '" + name + "'? This will replace your current workspace data.")) {
-        const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
-        if (savedCases[name]) {
-            document.getElementById('capture-area').innerHTML = savedCases[name].html;
-            // Ensure we stay on the Storage tab or jump to Profile
-            showTab('profile'); 
-        }
-    }
-}
-
-function deleteCaseFile(name) {
-    if (confirm("Delete '" + name + "' permanently?")) {
-        const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
-        delete savedCases[name];
-        localStorage.setItem('LSH_Cases', JSON.stringify(savedCases));
-        renderSavedList();
-    }
-}
+    // Initialize the list when page opens
+    window.addEventListener('DOMContentLoaded', () => StorageManager.render());
+</script>
+</body>
+</html>
