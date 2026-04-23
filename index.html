@@ -39,8 +39,6 @@
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden">
 
-
-    
     <aside class="w-72 bg-slate-950 text-white flex flex-col no-print">
         <div class="p-8 border-b border-slate-900">
             <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">
@@ -54,65 +52,79 @@
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
-               <div class="flex-1 overflow-y-auto p-8" id="capture-area">   
-                  <div>
-            <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="h-12 bg-white border-b flex items-center justify-end px-8 no-print">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Welcome to Legal Support Help</span>
-    <div class="flex-1 overflow-y-auto p-8" id="capture-area">   
-        <div class="pdf-card border-l-8 border-orange-500 mb-8 bg-white shadow-sm p-6">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                    <div class="flex items-baseline gap-6">
-                        <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
-                        <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
+        <header class="h-12 bg-white border-b flex items-center justify-end px-8 no-print shrink-0">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Welcome to Legal Support Help</span>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8" id="capture-area">
+            
+            <div class="pdf-card border-l-8 border-orange-500 mb-8 bg-white shadow-sm p-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-baseline gap-2">
+                            <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
+                            <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
+                        </div>
+
+                        <span class="text-slate-200 h-6 border-l"></span>
+
+                        <div class="flex items-baseline gap-2">
+                            <label class="text-[9px] text-slate-400 font-black uppercase">Contact:</label>
+                            <div contenteditable="true" class="text-lg font-bold text-slate-900 leading-none tracking-tight">(000) 000-0000</div>
+                        </div>
+
+                        <span class="text-slate-200 h-6 border-l"></span>
+
+                        <div class="flex items-baseline gap-2">
+                            <label class="text-[9px] text-green-600 font-black uppercase">Target Settlement:</label>
+                            <div contenteditable="true" class="text-2xl font-black text-green-900 leading-none">$ 0.00</div>
+                        </div>
                     </div>
 
-                    <span class="text-slate-200 h-6 border-l"></span>
-
-                    <div class="flex items-baseline gap-4">
-                        <label class="text-[9px] text-slate-400 font-black uppercase">Contact:</label>
-                        <div contenteditable="true" class="text-lg font-bold text-slate-900 leading-none tracking-tight">(000) 000-0000</div>
-                    </div>
-
-                    <span class="text-slate-200 h-6 border-l"></span>
-
-                    <div class="flex items-baseline gap-4">
-                        <label class="text-[9px] text-green-600 font-black uppercase">Target Settlement Amount:</label>
-                        <div contenteditable="true" class="text-2xl font-black text-green-900 leading-none">$ 0.00</div>
+                    <div class="flex items-center gap-4 border-l pl-8 border-slate-100">
+                        <div class="flex flex-col items-end gap-2">
+                            <div class="flex items-center gap-3">
+                                <label class="text-[9px] text-orange-600 font-bold uppercase">Case ID:</label>
+                                <div contenteditable="true" class="text-[11px] font-bold text-slate-300">BATCH-2026-X</div>
+                            </div>
+                            <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-orange-100 outline-none cursor-pointer">
+                                <option value="Intake">Intake</option>
+                                <option value="Investigation">Investigation</option>
+                                <option value="Treating">Treating</option>
+                                <option value="Demand Review">Demand Review</option>
+                                <option value="BI Demand">BI Demand</option>
+                                <option value="BI Settlement">BI Settlement</option>
+                                <option value="UM Demand">UM Demand</option>
+                                <option value="UM Settlement">UM Settlement</option>
+                                <option value="Mediation">Mediation</option>
+                                <option value="Arbitration">Arbitration</option>
+                                <option value="Litigation">Litigation</option>
+                                <option value="Lien Negotiation">Lien Negotiation</option>
+                                <option value="Disbursement">Disbursement</option>
+                            </select>
+                        </div>
+                        <div class="text-right">
+                            <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic tracking-tighter leading-none">
+                                Intake
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-4 border-l pl-8 border-slate-100">
-                    <div class="flex flex-col items-end gap-2">
-                        <div class="flex items-center gap-3">
-                            <label class="text-[9px] text-orange-600 font-bold uppercase">Case ID:</label>
-                            <div contenteditable="true" class="text-[11px] font-bold text-slate-300">BATCH-2026-X</div>
-                        </div>
-                        <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-orange-100 outline-none cursor-pointer">
-                            <option value="Intake">Intake</option>
-                            <option value="Investigation">Investigation</option>
-                            <option value="Treating">Treating</option>
-                            <option value="Demand Review">Demand Review</option>
-                            <option value="BI Demand">BI Demand</option>
-                            <option value="BI Settlement">BI Settlement</option>
-                            <option value="UM Demand">UM Demand</option>
-                            <option value="UM Settlement">UM Settlement</option>
-                            <option value="Mediation">Mediation</option>
-                            <option value="Arbitration">Arbitration</option>
-                            <option value="Litigation">Litigation</option>
-                            <option value="Lien Negotiation">Lien Negotiation</option>
-                            <option value="Disbursement">Disbursement</option>
-                        </select>
-                    </div>
-                    <div class="text-right">
-                        <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic tracking-tighter leading-none">
-                            Intake
-                        </div>
-                    </div>
-                </div>                     
+                <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mt-6 no-print">
+                    <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
+                    <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
+                    <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
+                    <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
+                    <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
+                    <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
+                    <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
+                    <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
+                    <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
+                    <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
+                </div>
             </div>
-
+            <div id="pane-profile" class="tab-pane active space-y-6"> 
             <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
@@ -125,7 +137,6 @@
                 <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
                 <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
             </div>
-
             <div id="pane-profile" class="tab-pane active space-y-6">
                 <div class="grid xl:grid-cols-3 gap-6">
                     <div class="space-y-6">
