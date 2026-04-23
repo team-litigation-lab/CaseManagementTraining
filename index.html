@@ -585,67 +585,66 @@
     window.addEventListener('DOMContentLoaded', () => CaseVault.render());
 </script>
    <script>
+    // SEPARATE STORAGE FEATURE - DO NOT INTEGRATE INTO ORIGINAL SCRIPT
     const CaseVault = {
-        KEY: 'LSH_STORAGE_VAULT',
+        KEY: 'LSH_STORAGE_FINAL',
 
-        // 1. OPEN VAULT
-        open: function() {
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            
-            const pane = document.getElementById('pane-storage');
-            if (pane) {
-                pane.classList.add('active');
+        // Opens the vault screen
+        openVault: function() {
+            if (typeof showTab === 'function') {
+                showTab('storage');
+                this.render();
+            } else {
+                // Fallback if original showTab is not found
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                document.getElementById('pane-storage').classList.add('active');
                 this.render();
             }
         },
 
-        // 2. Save Case
+        // Saves current work
         save: function() {
             try {
-                // Ensure the current phase select is updated in the HTML before saving
-                const phaseSelect = document.querySelector('select[onchange="updatePhase(this.value)"]');
-                if(phaseSelect) phaseSelect.options[phaseSelect.selectedIndex].setAttribute('selected', 'selected');
-
-                const name = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Unknown";
-                const id = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
-                const fileLabel = `${name} | ${id}`;
+                // Use a generic name if IDs are missing to prevent script death
+                const clientName = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Unknown";
+                const caseID = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
+                const label = `${clientName} | ${caseID}`;
                 
                 const workspace = document.getElementById('capture-area');
-                const htmlSnapshot = workspace.innerHTML;
-                const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
+                const htmlData = workspace.innerHTML;
                 
-                store[fileLabel] = {
-                    html: htmlSnapshot,
+                const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
+                store[label] = {
+                    html: htmlData,
                     date: new Date().toLocaleString()
                 };
                 
                 localStorage.setItem(this.KEY, JSON.stringify(store));
-                alert("Case Saved Successfully!");
+                alert("Case Saved Successfully: " + label);
                 this.render();
             } catch (e) {
-                alert("Save failed. Workspace area not found.");
+                console.error("Save failed:", e);
+                alert("Error: Script could not find the workspace to save.");
             }
         },
 
-        // 3. RETRIEVE CASE (With Button Re-Binding)
+        // Retrieves work
         load: function(key) {
             const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
             if (store[key]) {
                 const workspace = document.getElementById('capture-area');
                 workspace.innerHTML = store[key].html;
                 
-                // IMPORTANT: After loading HTML, we must ensure the original script can find the new buttons
-                // We force a return to the Profile tab
+                // CRITICAL: Jump to Profile to "reset" the UI so buttons stay active
                 if (typeof showTab === 'function') {
                     showTab('profile');
                 }
             }
         },
 
-        // 4. DELETE CASE
+        // Deletes record
         delete: function(key) {
-            if (confirm("Permanently delete this case?")) {
+            if (confirm("Delete this case forever?")) {
                 const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
                 delete store[key];
                 localStorage.setItem(this.KEY, JSON.stringify(store));
@@ -653,33 +652,28 @@
             }
         },
 
-        // 5. RENDER LIST
+        // Renders the list
         render: function() {
             const list = document.getElementById('vault-list');
             if (!list) return;
-
             const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
             const keys = Object.keys(store);
 
-            if (keys.length === 0) {
-                list.innerHTML = '<p class="text-slate-400 text-xs italic text-center p-8 uppercase tracking-widest">Vault is Empty</p>';
-                return;
-            }
-
-            list.innerHTML = keys.map(k => `
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-2 hover:border-orange-400 transition-all">
+            list.innerHTML = keys.length ? keys.map(k => `
+                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-2 hover:border-orange-300 transition-all">
                     <div style="font-family: 'Inter', sans-serif;">
-                        <div class="font-extrabold text-slate-900 text-sm uppercase">${k}</div>
-                        <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase">Saved: ${store[k].date}</div>
+                        <div class="font-black text-slate-800 text-sm uppercase">${k}</div>
+                        <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Added: ${store[k].date}</div>
                     </div>
                     <div class="flex gap-4">
                         <button onclick="CaseVault.load('${k}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
                         <button onclick="CaseVault.delete('${k}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
                     </div>
-                </div>`).join('');
+                </div>`).join('') : '<p class="text-slate-400 text-xs italic text-center p-4">Vault Empty</p>';
         }
     };
 
+    // Auto-load on page start
     window.addEventListener('DOMContentLoaded', () => CaseVault.render());
 </script>
 </body>
