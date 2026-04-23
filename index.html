@@ -668,6 +668,14 @@
         };
     })();
 </script>
+    <script>
+    const updateColors = (el) => { if (el.tagName === 'SELECT') { el.style.color = el.value === 'Pending' ? '#2563eb' : el.value === 'Urgent' ? '#dc2626' : el.value === 'Finished' ? '#16a34a' : 'inherit'; } };
+    document.querySelectorAll('body, input, select, button, textarea, [contenteditable="true"]').forEach(el => { 
+        el.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"; 
+        if(el.tagName === 'SELECT' || el.hasAttribute('contenteditable')) { el.style.fontSize = '12px'; el.style.fontWeight = '700'; updateColors(el); }
+        el.addEventListener('change', () => updateColors(el));
+    });
+</script>
 </script>
 </body>
 </html>
