@@ -31,6 +31,10 @@
         .treat-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
         
         @media print { .no-print { display: none !important; } }
+
+        /* Added for Case Retrieval List */
+        .case-item { background: #0f172a; border: 1px solid #1e293b; padding: 10px; border-radius: 8px; margin-top: 8px; cursor: pointer; transition: all 0.2s; }
+        .case-item:hover { border-color: #f97316; }
     </style>
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden">
@@ -41,8 +45,20 @@
                 Legal Support Help<br><span class="text-orange-500">Training Interface</span>
             </h1>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-6 space-y-4 overflow-y-auto flex-1">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
+            
+            <div class="pt-4 border-t border-slate-800">
+                <label class="text-[10px] text-slate-500 mb-2">Case Manager</label>
+                <input type="text" id="save-name-input" placeholder="Case Name..." class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-sm mb-2 outline-none focus:border-orange-500">
+                <button onclick="saveCaseToLocal()" class="w-full border border-orange-500 text-orange-500 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-orange-500 hover:text-white transition-all">Save To Browser</button>
+                
+                <div class="mt-6">
+                    <label class="text-[10px] text-slate-500 mb-2">Retrieve Cases</label>
+                    <div id="case-list-container" class="space-y-2">
+                        </div>
+                </div>
+            </div>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
     </aside>
@@ -64,7 +80,7 @@
                         </h1>
                         <div class="mt-3 flex items-center gap-4">
                             <p class="text-sm font-bold text-orange-600 uppercase">Case ID: <span contenteditable="true">BATCH-2026-X</span></p>
-                            <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[11px] font-bold uppercase px-2 py-1 rounded border border-orange-200 outline-none">
+                            <select id="main-phase-select" onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[11px] font-bold uppercase px-2 py-1 rounded border border-orange-200 outline-none">
                                 <option value="Intake">Intake</option>
                                 <option value="Investigation">Investigation</option>
                                 <option value="Treating">Treating</option>
@@ -243,23 +259,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="pdf-card border-l-8 border-slate-400">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Third Party Vehicle</h3>
-                    <div class="grid md:grid-cols-3 gap-6 mb-8">
-                        <div><label>Year / Make / Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Damages</label><div contenteditable="true" class="text-sm italic w-full min-h-[40px] border border-slate-100 rounded p-2 bg-slate-50"></div></div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Registered Owner Information</h4>
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div id="pane-litigation" class="tab-pane space-y-6">
@@ -279,24 +278,6 @@
                         <div><label>Discovery Cut-off</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
                         <div><label>Trial Date</label><div contenteditable="true" class="text-sm font-bold text-orange-600 w-full border border-slate-100 rounded p-2">MM/DD/YYYY</div></div>
                     </div>
-                </div>
-                <div class="pdf-card">
-                    <div class="flex justify-between items-center border-b pb-2 mb-4">
-                        <h3 class="text-[11px] font-black uppercase text-slate-400">Discovery Tracker</h3>
-                        <button onclick="addDiscoveryRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
-                    </div>
-                    <table class="treat-table">
-                        <thead><tr><th>Discovery Type</th><th>Propounding Party</th><th>Due Date</th><th>Status</th><th class="no-print"></th></tr></thead>
-                        <tbody id="discovery-body">
-                            <tr>
-                                <td><div contenteditable="true">Interrogatories</div></td>
-                                <td><div contenteditable="true">Defendant</div></td>
-                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                                <td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td>
-                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
 
@@ -461,13 +442,6 @@
             body.appendChild(row);
         }
 
-        function addDiscoveryRow() {
-            const body = document.getElementById('discovery-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">New Request</div></td><td><div contenteditable="true">Plaintiff</div></td><td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
         function addNoteRow() {
             const body = document.getElementById('notes-body');
             const row = document.createElement('tr');
@@ -494,6 +468,67 @@
             const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(opt).from(element).save();
         }
+
+        // --- RETRIEVAL & SAVE LOGIC ---
+        function saveCaseToLocal() {
+            const name = document.getElementById('save-name-input').value.trim();
+            if(!name) { alert("Please enter a case name."); return; }
+            
+            const htmlData = document.getElementById('capture-area').innerHTML;
+            const phaseValue = document.getElementById('main-phase-select').value;
+            
+            const caseObj = { html: htmlData, phase: phaseValue, date: new Date().toLocaleDateString() };
+            
+            let cases = JSON.parse(localStorage.getItem('lsh_saved_cases') || '{}');
+            cases[name] = caseObj;
+            localStorage.setItem('lsh_saved_cases', JSON.stringify(cases));
+            
+            document.getElementById('save-name-input').value = '';
+            loadSavedCaseList();
+            alert("Case saved to browser memory.");
+        }
+
+        function loadSavedCaseList() {
+            const container = document.getElementById('case-list-container');
+            container.innerHTML = '';
+            let cases = JSON.parse(localStorage.getItem('lsh_saved_cases') || '{}');
+            
+            Object.keys(cases).forEach(key => {
+                const div = document.createElement('div');
+                div.className = 'case-item flex justify-between items-center';
+                div.innerHTML = `
+                    <div class="flex-1" onclick="retrieveCase('${key}')">
+                        <p class="text-xs font-bold truncate">${key}</p>
+                        <p class="text-[9px] text-slate-500 uppercase">${cases[key].date}</p>
+                    </div>
+                    <button onclick="deleteCase('${key}')" class="text-slate-600 hover:text-red-500 font-bold ml-2">&times;</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function retrieveCase(name) {
+            let cases = JSON.parse(localStorage.getItem('lsh_saved_cases') || '{}');
+            const caseData = cases[name];
+            if(caseData) {
+                document.getElementById('capture-area').innerHTML = caseData.html;
+                document.getElementById('main-phase-select').value = caseData.phase;
+                updatePhase(caseData.phase);
+                alert("Loaded: " + name);
+            }
+        }
+
+        function deleteCase(name) {
+            if(confirm("Delete this saved case?")) {
+                let cases = JSON.parse(localStorage.getItem('lsh_saved_cases') || '{}');
+                delete cases[name];
+                localStorage.setItem('lsh_saved_cases', JSON.stringify(cases));
+                loadSavedCaseList();
+            }
+        }
+
+        // Initialize the list on page load
+        window.onload = loadSavedCaseList;
     </script>
 </body>
 </html>
