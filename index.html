@@ -424,7 +424,41 @@
                     </table>
                 </div>
             </div>
-
+<div id="pane-doc-hub" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center border-b pb-2 mb-6">
+            <h3 class="text-[11px] font-black uppercase text-orange-500">Document Repository</h3>
+            <button onclick="addDocRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Record</button>
+        </div>
+        <table class="treat-table">
+            <thead>
+                <tr>
+                    <th style="width: 30%">Category</th>
+                    <th style="width: 60%">Description / File Name</th>
+                    <th class="no-print" style="width: 10%"></th>
+                </tr>
+            </thead>
+            <tbody id="doc-body">
+                <tr>
+                    <td>
+                        <select class="prof-input w-full text-[11px] uppercase font-bold">
+                            <option>Medical Records</option>
+                            <option>Insurance Policy</option>
+                            <option>Police Report</option>
+                            <option>Litigation Docs</option>
+                            <option>Photos/Evidence</option>
+                            <option>Invoices</option>
+                        </select>
+                    </td>
+                    <td><div contenteditable="true" class="w-full italic text-slate-400">File_Name.pdf</div></td>
+                    <td class="no-print">
+                        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
         </div>
     </main>
 
