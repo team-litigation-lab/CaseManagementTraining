@@ -64,7 +64,7 @@
                             <span contenteditable="true" class="text-2xl text-slate-500">(000) 000-0000</span>
                         </h1>
                         <div class="mt-3 flex items-center gap-4">
-                            <p class="text-sm font-bold text-orange-600 uppercase">Case ID: <span contenteditable="true">BATCH-2026-X</span></p>
+                            <p class="text-sm font-bold text-orange-600 uppercase">Case ID: <span contenteditable="true">B0000 </span></p>
                             <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[11px] font-bold uppercase px-2 py-1 rounded border border-orange-200 outline-none">
                                 <option value="Intake">Intake</option>
                                 <option value="Investigation">Investigation</option>
@@ -657,5 +657,92 @@
         </div>
     </div>
 </div>
+</script>
+    <script>
+    const StorageManager = {
+        // SAVES DATA
+        save: function() {
+            try {
+                // 1. Get Client Name (First contenteditable in the capture area)
+                const nameElem = document.querySelector('#capture-area [contenteditable="true"]');
+                const name = nameElem ? nameElem.innerText.trim() : "Unknown_Client";
+                
+                // 2. Get Case ID
+                const idElem = document.getElementById('case-id-val');
+                const id = idElem ? idElem.innerText.trim() : "NoID";
+                
+                const fileName = `${name} (${id})`;
+                
+                // 3. Capture the HTML
+                const workspace = document.getElementById('capture-area');
+                if (!workspace) throw new Error("Capture area not found");
+                
+                const content = workspace.innerHTML;
+                const vault = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+                
+                vault[fileName] = {
+                    timestamp: new Date().toLocaleString(),
+                    html: content
+                };
+                
+                localStorage.setItem('LSH_VAULT', JSON.stringify(vault));
+                alert("Case saved to local storage: " + fileName);
+                this.render();
+            } catch (err) {
+                console.error("Save Error:", err);
+                alert("Save failed. Check console for details.");
+            }
+        },
+
+        // DISPLAYS LIST
+        render: function() {
+            const list = document.getElementById('saved-cases-list');
+            if (!list) return;
+            
+            const vault = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+            const keys = Object.keys(vault);
+            
+            if (keys.length === 0) {
+                list.innerHTML = '<p class="text-slate-400 text-xs italic">No saved cases found.</p>';
+                return;
+            }
+
+            list.innerHTML = keys.map(key => `
+                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl mb-2">
+                    <div>
+                        <div class="font-bold text-slate-800 text-sm">${key}</div>
+                        <div class="text-[10px] text-slate-400 uppercase">Stored: ${vault[key].timestamp}</div>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="StorageManager.load('${key}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
+                        <button onclick="StorageManager.delete('${key}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        },
+
+        // RETRIEVES DATA
+        load: function(key) {
+            const vault = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+            if (vault[key]) {
+                document.getElementById('capture-area').innerHTML = vault[key].html;
+                // Force return to profile tab so the user sees the data
+                if (typeof showTab === 'function') showTab('profile');
+            }
+        },
+
+        // DELETES DATA
+        delete: function(key) {
+            if (confirm("Delete this case forever?")) {
+                const vault = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
+                delete vault[key];
+                localStorage.setItem('LSH_VAULT', JSON.stringify(vault));
+                this.render();
+            }
+        }
+    };
+
+    // Auto-load the list when the page opens
+    window.addEventListener('DOMContentLoaded', () => StorageManager.render());
 </script>
 </html>
