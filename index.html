@@ -43,6 +43,13 @@
         </div>
         <div class="p-6 space-y-4">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
+            
+            <div class="pt-4 border-t border-slate-800 space-y-2">
+                <label class="text-[10px] text-slate-500">Case Storage</label>
+                <button onclick="saveCaseData()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all">Save Current Case</button>
+                <button onclick="loadCaseData()" class="w-full border border-emerald-600 text-emerald-500 py-2 rounded-lg font-bold text-[10px] uppercase hover:bg-emerald-950 transition-all">Load Last Saved</button>
+            </div>
+
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
     </aside>
@@ -422,68 +429,35 @@
             const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(opt).from(element).save();
         }
+
+        // --- Save and Load logic ---
+        function saveCaseData() {
+            const data = {
+                htmlContent: document.getElementById('capture-area').innerHTML,
+                selectValues: Array.from(document.querySelectorAll('select')).map(s => s.value),
+                textValues: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(div => div.innerText)
+            };
+            localStorage.setItem('lsh_saved_case', JSON.stringify(data));
+            alert('Case data saved successfully to browser storage!');
+        }
+
+        function loadCaseData() {
+            const savedData = localStorage.getItem('lsh_saved_case');
+            if (!savedData) { alert('No saved case found.'); return; }
+
+            const data = JSON.parse(savedData);
+            document.getElementById('capture-area').innerHTML = data.htmlContent;
+
+            const selects = document.querySelectorAll('select');
+            data.selectValues.forEach((val, i) => { if (selects[i]) selects[i].value = val; });
+
+            const editables = document.querySelectorAll('[contenteditable="true"]');
+            data.textValues.forEach((val, i) => { if (editables[i]) editables[i].innerText = val; });
+
+            const phaseSelect = document.querySelector('select[onchange^="updatePhase"]');
+            if(phaseSelect) updatePhase(phaseSelect.value);
+            alert('Case data loaded.');
+        }
     </script>
 </body>
 </html>
-<aside class="w-72 bg-slate-950 text-white flex flex-col no-print">
-    <div class="p-8 border-b border-slate-900">
-        <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">
-            Legal Support Help<br><span class="text-orange-500">Training Interface</span>
-        </h1>
-    </div>
-    <div class="p-6 space-y-4">
-        <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
-        
-        <div class="pt-4 border-t border-slate-800 space-y-2">
-            <label class="text-[10px] text-slate-500">Case Storage</label>
-            <button onclick="saveCaseData()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all">Save Current Case</button>
-            <button onclick="loadCaseData()" class="w-full border border-emerald-600 text-emerald-500 py-2 rounded-lg font-bold text-[10px] uppercase hover:bg-emerald-950 transition-all">Load Last Saved</button>
-        </div>
-
-        <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
-    </div>
-</aside>
-
-<script>
-    // Logic to save all contenteditable and select values to LocalStorage
-    function saveCaseData() {
-        const data = {
-            htmlContent: document.getElementById('capture-area').innerHTML,
-            // We must also capture the values of selects and inputs as innerHTML doesn't preserve state
-            selectValues: Array.from(document.querySelectorAll('select')).map(s => s.value),
-            textValues: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(div => div.innerText)
-        };
-        localStorage.setItem('lsh_saved_case', JSON.stringify(data));
-        alert('Case data saved successfully to browser storage!');
-    }
-
-    function loadCaseData() {
-        const savedData = localStorage.getItem('lsh_saved_case');
-        if (!savedData) {
-            alert('No saved case found.');
-            return;
-        }
-
-        const data = JSON.parse(savedData);
-        
-        // Restore the structure (this brings back added rows/facilities)
-        document.getElementById('capture-area').innerHTML = data.htmlContent;
-
-        // Restore the dynamic values
-        const selects = document.querySelectorAll('select');
-        data.selectValues.forEach((val, i) => {
-            if (selects[i]) selects[i].value = val;
-        });
-
-        const editables = document.querySelectorAll('[contenteditable="true"]');
-        data.textValues.forEach((val, i) => {
-            if (editables[i]) editables[i].innerText = val;
-        });
-
-        // Refresh the header phase display
-        const phaseSelect = document.querySelector('select[onchange^="updatePhase"]');
-        if(phaseSelect) updatePhase(phaseSelect.value);
-        
-        alert('Case data loaded. You can now continue editing.');
-    }
-</script>
