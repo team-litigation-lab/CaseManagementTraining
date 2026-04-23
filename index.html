@@ -681,66 +681,84 @@
         el.addEventListener('change', () => updateColors(el));
     });
 </script>
-               <script>
+              <script>
     (function() {
-        // 1. Create and Add the Total Display UI
-        window.addEventListener('DOMContentLoaded', () => {
-            const treatmentPane = document.getElementById('pane-treatment');
-            if (treatmentPane) {
-                const totalCard = document.createElement('div');
-                totalCard.className = "pdf-card border-l-8 border-green-600 mt-6 bg-green-50";
-                totalCard.innerHTML = `
+        const injectMedTotalUI = () => {
+            const pane = document.getElementById('pane-treatment');
+            if (pane && !document.getElementById('med-total-box')) {
+                const card = document.createElement('div');
+                card.id = 'med-total-box';
+                card.className = "pdf-card border-l-8 border-green-600 mt-6 bg-green-50";
+                card.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <h3 class="text-[11px] font-black uppercase text-green-700">Total Case Medical Charges</h3>
-                        <div id="grand-total-display" class="text-xl font-black text-green-700">$ 0.00</div>
-                    </div>
-                `;
-                treatmentPane.appendChild(totalCard);
-                calculateGrandTotal(); // Initial run
+                        <h3 class="text-[11px] font-black uppercase text-green-700">Total Medical Charges</h3>
+                        <div id="display-med-total" class="text-xl font-black text-green-700">$ 0.00</div>
+                    </div>`;
+                pane.appendChild(card);
             }
-        });
+        };
 
-        // 2. The Calculation Logic
-        window.calculateGrandTotal = function() {
+        window.runMedCalculation = function() {
             let total = 0;
-            // Target the last column in your treatment cards (the Charges field)
-            const chargeFields = document.querySelectorAll('#facility-container [contenteditable="true"]');
-            
-            chargeFields.forEach((field, index) => {
-                // We only want every 3rd field if looking at the card grid, 
-                // but a safer way is checking the label above it.
-                const label = field.previousElementSibling;
-                if (label && (label.innerText.includes('CHARGES') || label.innerText.includes('TOTAL CHARGES'))) {
-                    let val = field.innerText.replace(/[$,\s]/g, ''); // Remove $, commas, and spaces
+            // Target all editables inside the facility container
+            document.querySelectorAll('#facility-container [contenteditable="true"]').forEach(el => {
+                const label = el.previousElementSibling;
+                if (label && (label.innerText.includes('CHARGES') || label.innerText.includes('TOTAL'))) {
+                    let val = el.innerText.replace(/[$,\s]/g, '');
                     let num = parseFloat(val);
-                    if (!isNaN(num)) {
-                        total += num;
-                    }
+                    if (!isNaN(num)) total += num;
                 }
             });
+            const display = document.getElementById('display-med-total');
+            if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
+        };
 
-            const display = document.getElementById('grand-total-display');
-            if (display) {
-                display.innerText = new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                }).format(total);
+        window.addEventListener('DOMContentLoaded', injectMedTotalUI);
+        document.addEventListener('input', (e) => { if (e.target.closest('#facility-container')) runMedCalculation(); });
+        
+        // Hook into your original addFacility function
+        const originalAddFac = window.addFacility;
+        window.addFacility = function() { originalAddFac(); runMedCalculation(); };
+    })();
+</script>
+                <script>
+    (function() {
+        const injectExpTotalUI = () => {
+            const pane = document.getElementById('pane-finance');
+            if (pane && !document.getElementById('exp-total-box')) {
+                const card = document.createElement('div');
+                card.id = 'exp-total-box';
+                card.className = "pdf-card border-l-8 border-blue-600 mt-6 bg-blue-50";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-[11px] font-black uppercase text-blue-700">Total File Expenses</h3>
+                        <div id="display-exp-total" class="text-xl font-black text-blue-700">$ 0.00</div>
+                    </div>`;
+                pane.appendChild(card);
             }
         };
 
-        // 3. Listen for changes in the Charges fields
-        document.addEventListener('input', (e) => {
-            if (e.target.hasAttribute('contenteditable')) {
-                calculateGrandTotal();
-            }
-        });
-
-        // Ensure calculation works when a new facility is added
-        const originalAddFacility = window.addFacility;
-        window.addFacility = function() {
-            originalAddFacility();
-            calculateGrandTotal();
+        window.runExpCalculation = function() {
+            let total = 0;
+            // Target only the 3rd column (Amount) editables in the finance body
+            document.querySelectorAll('#finance-body tr').forEach(row => {
+                const amountDiv = row.querySelectorAll('td')[2]?.querySelector('[contenteditable="true"]');
+                if (amountDiv) {
+                    let val = amountDiv.innerText.replace(/[$,\s]/g, '');
+                    let num = parseFloat(val);
+                    if (!isNaN(num)) total += num;
+                }
+            });
+            const display = document.getElementById('display-exp-total');
+            if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
         };
+
+        window.addEventListener('DOMContentLoaded', injectExpTotalUI);
+        document.addEventListener('input', (e) => { if (e.target.closest('#finance-body')) runExpCalculation(); });
+
+        // Hook into your original addFinanceRow function
+        const originalAddFin = window.addFinanceRow;
+        window.addFinanceRow = function() { originalAddFin(); runExpCalculation(); };
     })();
 </script>
 </script>
