@@ -430,135 +430,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Case Manager UI</title>
+    <title>Case Manager</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f4f7f6;
+            padding: 0;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
             height: 100vh;
         }
 
-        /* Results Area (Top/Middle) */
+        /* Result Display Area */
         #displayArea {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 40px;
+            padding: 25px;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             display: none;
+            height: fit-content;
         }
 
-        /* Bottom Fixed Navigation Bar */
+        /* Sliding Input Modal */
+        #inputModal {
+            position: fixed;
+            bottom: -100%; /* Hidden by default */
+            left: 0;
+            width: 100%;
+            background: white;
+            transition: bottom 0.4s ease;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-sizing: border-box;
+            z-index: 1001;
+        }
+
+        #inputModal.active { bottom: 70px; }
+
+        input, textarea {
+            width: 100%;
+            margin-bottom: 12px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        /* Bottom Nav bar */
         .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            background: #fff;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            height: 70px;
+            background: #ffffff;
             display: flex;
             justify-content: space-around;
             align-items: center;
-            padding: 10px 0;
-            z-index: 1000;
+            border-top: 1px solid #eee;
+            z-index: 1002;
         }
 
-        /* Individual Tool Items */
         .nav-item {
+            background: none;
+            border: none;
             display: flex;
             flex-direction: column;
             align-items: center;
+            color: #666;
             cursor: pointer;
-            color: #555;
-            font-size: 12px;
-            transition: color 0.3s;
-            border: none;
-            background: none;
+            transition: 0.2s;
         }
 
-        .nav-item:hover { color: #007bff; }
-        .nav-item .material-icons { font-size: 24px; margin-bottom: 2px; }
+        .nav-item:active { transform: scale(0.9); }
+        .nav-item .material-icons { font-size: 24px; color: #1a73e8; }
+        .nav-item span:not(.material-icons) { font-size: 11px; margin-top: 4px; font-weight: 500; }
 
-        /* Hidden inputs that pop up or prompt */
-        .hidden-inputs { display: none; }
+        .btn-save { background: #1a73e8; color: white; border: none; padding: 10px; width: 100%; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2 style="text-align: center;">Case Dashboard</h2>
-    <p style="text-align: center; color: #666;">Select an action from the bottom menu.</p>
-
     <div id="displayArea">
-        <h3 id="resTitle" style="margin-top:0;"></h3>
-        <hr>
-        <p id="resDesc"></p>
-        <small id="resId" style="color: #999;"></small>
+        <h2 id="resTitle" style="margin: 0 0 10px 0; color: #333;"></h2>
+        <div id="resId" style="font-size: 12px; color: #1a73e8; margin-bottom: 15px; font-weight: bold;"></div>
+        <p id="resDesc" style="color: #555; line-height: 1.5;"></p>
+    </div>
+
+    <div id="inputModal">
+        <h3 style="margin-top: 0;">New Case</h3>
+        <input type="text" id="caseId" placeholder="Case ID">
+        <input type="text" id="caseTitle" placeholder="Title">
+        <textarea id="caseDesc" placeholder="Description" rows="3"></textarea>
+        <button class="btn-save" onclick="saveCase()">Save Case Data</button>
     </div>
 
     <nav class="bottom-nav">
-        <button class="nav-item" onclick="promptAddCase()">
-            <span class="material-icons">add_circle_outline</span>
-            <span>Add Case</span>
-        </button>
-
-        <button class="nav-item" onclick="saveCurrent()">
-            <span class="material-icons">save</span>
-            <span>Save Case</span>
+        <button class="nav-item" onclick="toggleAdd()">
+            <span class="material-icons">add_circle</span>
+            <span>ADD</span>
         </button>
 
         <button class="nav-item" onclick="promptRetrieve()">
-            <span class="material-icons">search</span>
-            <span>Retrieve</span>
+            <span class="material-icons">manage_search</span>
+            <span>RETRIEVE</span>
+        </button>
+
+        <button class="nav-item" onclick="location.reload()">
+            <span class="material-icons">refresh</span>
+            <span>CLEAR</span>
         </button>
     </nav>
 
     <script>
-        // Temporary storage for "Current" case being drafted
-        let currentDraft = null;
-
-        function promptAddCase() {
-            const id = prompt("Enter Unique Case ID:");
-            if (!id) return;
-            
-            const title = prompt("Enter Case Title:");
-            const desc = prompt("Enter Case Description:");
-
-            currentDraft = { id, title, desc };
-            
-            // Show preview immediately
-            updateDisplay(title, desc, id);
-            alert("Case drafted. Click 'Save Case' to finalize.");
+        function toggleAdd() {
+            document.getElementById('inputModal').classList.toggle('active');
         }
 
-        function saveCurrent() {
-            if (!currentDraft) {
-                alert("Nothing to save! Add a case first.");
+        function saveCase() {
+            const id = document.getElementById('caseId').value.trim();
+            const title = document.getElementById('caseTitle').value;
+            const desc = document.getElementById('caseDesc').value;
+
+            if (!id || !title) {
+                alert("ID and Title are required.");
                 return;
             }
-            localStorage.setItem("case_" + currentDraft.id, JSON.stringify(currentDraft));
-            alert("Case " + currentDraft.id + " saved to database.");
+
+            const caseData = { title, desc };
+            localStorage.setItem("case_" + id, JSON.stringify(caseData));
+            
+            // Clean up and hide modal
+            alert("Case Saved!");
+            document.getElementById('caseId').value = '';
+            document.getElementById('caseTitle').value = '';
+            document.getElementById('caseDesc').value = '';
+            toggleAdd();
+            
+            // Show the case immediately
+            showResult(id, title, desc);
         }
 
         function promptRetrieve() {
-            const id = prompt("Enter Case ID to search:");
-            const data = localStorage.getItem("case_" + id);
+            const id = prompt("Enter Case ID:");
+            if (!id) return;
 
+            const data = localStorage.getItem("case_" + id);
             if (data) {
                 const parsed = JSON.parse(data);
-                updateDisplay(parsed.title, parsed.desc, id);
+                showResult(id, parsed.title, parsed.desc);
+                document.getElementById('inputModal').classList.remove('active');
             } else {
                 alert("Case not found.");
             }
         }
 
-        function updateDisplay(title, desc, id) {
+        function showResult(id, title, desc) {
             document.getElementById('resTitle').innerText = title;
+            document.getElementById('resId').innerText = "CASE ID: #" + id;
             document.getElementById('resDesc').innerText = desc;
-            document.getElementById('resId').innerText = "ID: " + id;
             document.getElementById('displayArea').style.display = "block";
         }
     </script>
