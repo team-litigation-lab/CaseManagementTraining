@@ -430,7 +430,6 @@
             html2pdf().set(opt).from(element).save();
         }
 
-        // --- Save and Load logic ---
         function saveCaseData() {
             const data = {
                 htmlContent: document.getElementById('capture-area').innerHTML,
@@ -443,20 +442,19 @@
 
         function loadCaseData() {
             const savedData = localStorage.getItem('lsh_saved_case');
-            if (!savedData) { alert('No saved case found.'); return; }
-
+            if (!savedData) {
+                alert('No saved case found.');
+                return;
+            }
             const data = JSON.parse(savedData);
             document.getElementById('capture-area').innerHTML = data.htmlContent;
-
             const selects = document.querySelectorAll('select');
             data.selectValues.forEach((val, i) => { if (selects[i]) selects[i].value = val; });
-
             const editables = document.querySelectorAll('[contenteditable="true"]');
             data.textValues.forEach((val, i) => { if (editables[i]) editables[i].innerText = val; });
-
             const phaseSelect = document.querySelector('select[onchange^="updatePhase"]');
             if(phaseSelect) updatePhase(phaseSelect.value);
-            alert('Case data loaded.');
+            alert('Case data loaded. You can now continue editing.');
         }
     </script>
 </body>
