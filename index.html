@@ -601,3 +601,60 @@
     </script>
 </body>
 </html>
+<div id="pane-tasks" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center border-b pb-2 mb-4">
+            <h3 class="text-[11px] font-black uppercase text-orange-500">Action Items</h3>
+            <button onclick="addTaskRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
+        </div>
+        <table class="treat-table">
+            <thead>
+                <tr>
+                    <th class="w-32">Due Date</th>
+                    <th>Task Description</th>
+                    <th class="w-48">Assigned To</th>
+                    <th class="w-32">Status</th>
+                    <th class="no-print w-10"></th>
+                </tr>
+            </thead>
+            <tbody id="tasks-body">
+                <tr>
+                    <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                    <td><div contenteditable="true" class="w-full font-semibold">Order police report</div></td>
+                    <td><div contenteditable="true">Case Manager</div></td>
+                    <td>
+                        <select class="prof-input w-full">
+                            <option>Pending</option>
+                            <option>In Progress</option>
+                            <option>Completed</option>
+                            <option>Overdue</option>
+                        </select>
+                    </td>
+                    <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="pane-notes" class="tab-pane">
+    <div class="flex justify-between items-center px-2 no-print mb-4">
+        <h2 class="text-sm font-black uppercase text-slate-400 italic">Case Journal</h2>
+        <button onclick="addNoteEntry()" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded font-bold uppercase">+ Add Note</button>
+    </div>
+    <div id="notes-container" class="space-y-4">
+        <div class="pdf-card border-t-4 border-slate-300">
+            <div class="flex justify-between mb-3 border-b pb-2">
+                <div class="flex gap-4">
+                    <div><label>Date</label><div contenteditable="true" class="text-[12px] font-bold">MM/DD/YYYY</div></div>
+                    <div><label>Author</label><div contenteditable="true" class="text-[12px] font-bold">Name</div></div>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="no-print text-slate-300">×</button>
+            </div>
+            <div contenteditable="true" class="text-sm text-slate-700 italic min-h-[60px]">Type case update or phone log details here...</div>
+        </div>
+    </div>
+</div>
+
+<div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
+<div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Case Notes</div>
