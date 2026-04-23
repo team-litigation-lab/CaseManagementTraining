@@ -607,5 +607,83 @@
             });
         })();
     </script>
+    <script>
+    (function() {
+        // 1. Wait for the DOM to load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Find the Quick Upload Portal container
+            const uploadPortal = document.querySelector('#pane-doc-hub .grid');
+            
+            if (uploadPortal) {
+                // Create the new General Case File buttons
+                const newButtons = document.createElement('div');
+                newButtons.className = "col-span-full grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 mt-3 border-t border-slate-200";
+                newButtons.innerHTML = `
+                    <div class="flex flex-col gap-1">
+                        <input type="file" id="up-photos" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Photo Evidence')">
+                        <button onclick="document.getElementById('up-photos').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Photo Evidence</button>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <input type="file" id="up-clientid" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Client ID')">
+                        <button onclick="document.getElementById('up-clientid').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Client ID</button>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <input type="file" id="up-firmfiles" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Firm Files')">
+                        <button onclick="document.getElementById('up-firmfiles').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Firm Files</button>
+                    </div>
+                `;
+                
+                // Append them to your existing portal
+                uploadPortal.appendChild(newButtons);
+            }
+
+            // 2. Expand the dropdown options in the Document Table to include the new categories
+            const originalAddDocRow = window.addDocRow;
+            window.addDocRow = function() {
+                const body = document.getElementById('doc-body');
+                const row = document.createElement('tr');
+                row.innerHTML = `<td><select class="prof-input w-full text-[11px] uppercase font-bold">
+                    <option>Medical Records</option>
+                    <option>Insurance</option>
+                    <option>Litigation Docs</option>
+                    <option>Invoices</option>
+                    <option>Photo Evidence</option>
+                    <option>Client ID</option>
+                    <option>Firm Files</option>
+                    <option>Others</option>
+                </select></td><td><div contenteditable="true" class="w-full italic text-slate-400">File_Name.pdf</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+                body.appendChild(row);
+            };
+        });
+
+        // 3. Patch the handleEnhancedUpload to support the new categories if they aren't in the original switch
+        const originalHandleEnhanced = window.handleEnhancedUpload;
+        window.handleEnhancedUpload = function(input, category) {
+            if (input.files) {
+                const files = Array.from(input.files).slice(0, 5);
+                const body = document.getElementById('doc-body');
+                files.forEach(file => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><select class="prof-input w-full text-[11px] uppercase font-bold">
+                            <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
+                            <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
+                            <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
+                            <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
+                            <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
+                            <option ${category === 'Photo Evidence' ? 'selected' : ''}>Photo Evidence</option>
+                            <option ${category === 'Client ID' ? 'selected' : ''}>Client ID</option>
+                            <option ${category === 'Firm Files' ? 'selected' : ''}>Firm Files</option>
+                            <option ${!['Medical Records','Insurance','Litigation Docs','Invoices','Police Report','Photo Evidence','Client ID','Firm Files'].includes(category) ? 'selected' : ''}>Others</option>
+                        </select></td>
+                        <td><div contenteditable="true" class="w-full font-bold text-orange-600">${file.name}</div></td>
+                        <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+                    body.prepend(row);
+                });
+                input.value = '';
+            }
+        };
+    })();
+</script>
 </body>
 </html>
