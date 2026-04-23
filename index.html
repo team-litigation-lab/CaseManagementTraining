@@ -13,7 +13,6 @@
         .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
         .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
         
-        /* UPGRADE: SIZE 12 AND BOLD ENTRIES */
         [contenteditable="true"] { 
             outline: none; border: 1px solid #f1f5f9; background: #f8fafc; border-radius: 4px; padding: 4px 8px; min-width: 40px; display: inline-block; 
             font-size: 12px !important; font-weight: 700 !important;
@@ -39,7 +38,7 @@
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden">
 
-    <aside class="w-72 bg-slate-950 text-white flex flex-col no-print">
+    <aside class="w-72 bg-slate-950 text-white flex flex-col no-print shrink-0">
         <div class="p-8 border-b border-slate-900">
             <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">
                 Legal Support Help<br><span class="text-orange-500">Training Interface</span>
@@ -56,27 +55,23 @@
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Welcome to Legal Support Help</span>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8" id="capture-area">
+        <div class="flex-1 overflow-y-auto p-8" id="capture-area">   
             
             <div class="pdf-card border-l-8 border-orange-500 mb-8 bg-white shadow-sm p-6">
                 <div class="flex justify-between items-center">
-                    <div class="flex items-center gap-6">
-                        <div class="flex items-baseline gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-baseline gap-6">
                             <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
                             <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
                         </div>
-
                         <span class="text-slate-200 h-6 border-l"></span>
-
-                        <div class="flex items-baseline gap-2">
+                        <div class="flex items-baseline gap-4">
                             <label class="text-[9px] text-slate-400 font-black uppercase">Contact:</label>
                             <div contenteditable="true" class="text-lg font-bold text-slate-900 leading-none tracking-tight">(000) 000-0000</div>
                         </div>
-
                         <span class="text-slate-200 h-6 border-l"></span>
-
-                        <div class="flex items-baseline gap-2">
-                            <label class="text-[9px] text-green-600 font-black uppercase">Target Settlement:</label>
+                        <div class="flex items-baseline gap-4">
+                            <label class="text-[9px] text-green-600 font-black uppercase">Target Settlement Amount:</label>
                             <div contenteditable="true" class="text-2xl font-black text-green-900 leading-none">$ 0.00</div>
                         </div>
                     </div>
@@ -104,25 +99,25 @@
                             </select>
                         </div>
                         <div class="text-right">
-                            <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic tracking-tighter leading-none">
-                                Intake
-                            </div>
+                            <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic tracking-tighter leading-none">Intake</div>
                         </div>
+                    </div>                      
+                </div>
+
+                <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mt-6 no-print">
+                    <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
+                    <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
+                    <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
+                    <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
+                    <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
+                    <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
+                    <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
+                    <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
+                    <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
+                    <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
                 </div>
             </div>
-            <div id="pane-profile" class="tab-pane active space-y-6"> 
-            <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
-                <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
-                <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
-                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
-                <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
-                <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
-                <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
-                <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
-                <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
-                <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
-                <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
-            </div>
+
             <div id="pane-profile" class="tab-pane active space-y-6">
                 <div class="grid xl:grid-cols-3 gap-6">
                     <div class="space-y-6">
@@ -228,7 +223,7 @@
                 <div>
                     <div class="ins-tab-header flex justify-between">
                         <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM/UIM Claim</h4>
-                        <button onclick="addUM()" class="no-print bg-orange-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase no-print">+ Add UM</button>
+                        <button onclick="addUM()" class="no-print bg-orange-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase">+ Add UM</button>
                     </div>
                     <div class="ins-tab-content" id="um-container">
                         <div class="grid md:grid-cols-5 gap-4">
@@ -265,23 +260,6 @@
                             <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                             <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                             <div><label>Address</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pdf-card border-l-8 border-slate-400">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Third Party Vehicle</h3>
-                    <div class="grid md:grid-cols-3 gap-6 mb-8">
-                        <div><label>Year / Make / Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Damages</label><div contenteditable="true" class="text-sm italic w-full min-h-[40px] border border-slate-100 rounded p-2 bg-slate-50"></div></div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Registered Owner Information</h4>
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                         </div>
                     </div>
                 </div>
@@ -371,21 +349,16 @@
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         <input type="file" id="up-police" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Police Report')">
                         <button onclick="document.getElementById('up-police').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Upload Police Report</button>
-
                         <input type="file" id="up-med" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Medical Records')">
                         <button onclick="document.getElementById('up-med').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Medical Records</button>
-
                         <input type="file" id="up-inv" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Invoices')">
                         <button onclick="document.getElementById('up-inv').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Invoices</button>
-
                         <input type="file" id="up-ins" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Insurance')">
                         <button onclick="document.getElementById('up-ins').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Insurance Files</button>
-
                         <input type="file" id="up-lit" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Litigation Docs')">
                         <button onclick="document.getElementById('up-lit').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Litigation Docs</button>
                     </div>
                 </div>
-
                  <div class="pdf-card border-l-8 border-orange-500">
                     <div class="flex justify-between items-center border-b pb-2 mb-6"><h3 class="text-[11px] font-black uppercase text-orange-500">Documents</h3><button onclick="addDocRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Record</button></div>
                     <table class="treat-table">
@@ -441,27 +414,30 @@
                                 <th width="120">Status</th>
                                 <th class="no-print" width="50"></th>
                             </tr>
-                       <tbody id="tasks-body">
-    <tr>
-        <td><div contenteditable="true" class="w-full">Perform initial client intake</div></td>
-        <td>
-            <select class="prof-input w-full">
-                <option>Attorney</option>
-                <option selected>Case Manager</option>
-                <option>Legal Assistant</option>
-                <option>Medical / Records Department</option>
-                <option>Litigation Department</option>
-                <option>Closing Department</option>
-            </select>
-        </td>
-        <td><div contenteditable="true">04/21/2026</div></td>
-        <td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td>
-        <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-    </tr>
-</tbody>
+                        </thead>
+                        <tbody id="tasks-body">
+                            <tr>
+                                <td><div contenteditable="true" class="w-full">Perform initial client intake</div></td>
+                                <td>
+                                    <select class="prof-input w-full">
+                                        <option>Attorney</option>
+                                        <option selected>Case Manager</option>
+                                        <option>Legal Assistant</option>
+                                        <option>Medical / Records Department</option>
+                                        <option>Litigation Department</option>
+                                        <option>Closing Department</option>
+                                    </select>
+                                </td>
+                                <td><div contenteditable="true">04/21/2026</div></td>
+                                <td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        </div>
-    </main>
+        </div> </main>
 
     <script>
         function showTab(id) {
@@ -545,33 +521,9 @@
             html2pdf().set(opt).from(element).save();
         }
     </script>
-<script>document.body.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";</script>
     <script>
         (function() {
             const STORAGE_KEY = 'LSH_CASE_DATA';
-
-            window.handleEnhancedUpload = function(input, category) {
-                if (input.files) {
-                    const files = Array.from(input.files).slice(0, 5);
-                    const body = document.getElementById('doc-body');
-                    files.forEach(file => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td><select class="prof-input w-full text-[11px] uppercase font-bold">
-                                <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
-                                <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
-                                <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
-                                <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
-                                <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
-                                <option>Others</option>
-                            </select></td>
-                            <td><div contenteditable="true" class="w-full font-bold text-orange-600">${file.name}</div></td>
-                            <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-                        body.prepend(row);
-                    });
-                    input.value = '';
-                }
-            };
 
             window.saveCurrentEntry = function() {
                 const data = {
@@ -633,156 +585,119 @@
             });
         })();
     </script>
-   <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            const uploadPortal = document.querySelector('#pane-doc-hub .grid');
-            if (uploadPortal) {
-                const newButtons = document.createElement('div');
-                newButtons.className = "col-span-full grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 mt-3 border-t border-slate-200";
-                newButtons.innerHTML = `
-                    <div class="flex flex-col gap-1">
-                        <input type="file" id="up-photos" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Photo Evidence')">
-                        <button onclick="document.getElementById('up-photos').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Photo Evidence</button>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <input type="file" id="up-clientid" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Client ID')">
-                        <button onclick="document.getElementById('up-clientid').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Client ID</button>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <input type="file" id="up-firmfiles" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Firm Files')">
-                        <button onclick="document.getElementById('up-firmfiles').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Firm Files</button>
-                    </div>
-                `;
-                uploadPortal.appendChild(newButtons);
-            }
-        });
-
-        // OVERRIDE: handleEnhancedUpload to add "Click to View" functionality
-        window.handleEnhancedUpload = function(input, category) {
-            if (input.files) {
-                const files = Array.from(input.files).slice(0, 5);
-                const body = document.getElementById('doc-body');
-                
-                files.forEach(file => {
-                    // Create a temporary URL for the file so it can be opened
-                    const fileURL = URL.createObjectURL(file);
-                    const row = document.createElement('tr');
-                    
-                    row.innerHTML = `
-                        <td><select class="prof-input w-full text-[11px] uppercase font-bold">
-                            <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
-                            <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
-                            <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
-                            <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
-                            <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
-                            <option ${category === 'Photo Evidence' ? 'selected' : ''}>Photo Evidence</option>
-                            <option ${category === 'Client ID' ? 'selected' : ''}>Client ID</option>
-                            <option ${category === 'Firm Files' ? 'selected' : ''}>Firm Files</option>
-                        </select></td>
-                        <td>
-                            <div contenteditable="true" class="hidden">${file.name}</div>
-                            <a href="${fileURL}" target="_blank" class="text-orange-600 font-bold text-[12px] underline decoration-orange-300 hover:text-orange-800 transition-all cursor-pointer">
-                                📄 ${file.name} (Click to View)
-                            </a>
-                        </td>
-                        <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-                    body.prepend(row);
-                });
-                input.value = '';
-            }
-        };
-    })();
-</script>
     <script>
-    const updateColors = (el) => { if (el.tagName === 'SELECT') { el.style.color = el.value === 'Pending' ? '#2563eb' : el.value === 'Urgent' ? '#dc2626' : el.value === 'Finished' ? '#16a34a' : 'inherit'; } };
-    document.querySelectorAll('body, input, select, button, textarea, [contenteditable="true"]').forEach(el => { 
-        el.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"; 
-        if(el.tagName === 'SELECT' || el.hasAttribute('contenteditable')) { el.style.fontSize = '12px'; el.style.fontWeight = '700'; updateColors(el); }
-        el.addEventListener('change', () => updateColors(el));
-    });
-</script>
-              <script>
-    (function() {
-        const injectMedTotalUI = () => {
-            const pane = document.getElementById('pane-treatment');
-            if (pane && !document.getElementById('med-total-box')) {
-                const card = document.createElement('div');
-                card.id = 'med-total-box';
-                card.className = "pdf-card border-l-8 border-green-600 mt-6 bg-green-50";
-                card.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-[11px] font-black uppercase text-green-700">Total Medical Charges</h3>
-                        <div id="display-med-total" class="text-xl font-black text-green-700">$ 0.00</div>
-                    </div>`;
-                pane.appendChild(card);
-            }
-        };
-
-        window.runMedCalculation = function() {
-            let total = 0;
-            // Target all editables inside the facility container
-            document.querySelectorAll('#facility-container [contenteditable="true"]').forEach(el => {
-                const label = el.previousElementSibling;
-                if (label && (label.innerText.includes('CHARGES') || label.innerText.includes('TOTAL'))) {
-                    let val = el.innerText.replace(/[$,\s]/g, '');
-                    let num = parseFloat(val);
-                    if (!isNaN(num)) total += num;
+        (function() {
+            window.addEventListener('DOMContentLoaded', () => {
+                const uploadPortal = document.querySelector('#pane-doc-hub .grid');
+                if (uploadPortal) {
+                    const newButtons = document.createElement('div');
+                    newButtons.className = "col-span-full grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 mt-3 border-t border-slate-200";
+                    newButtons.innerHTML = `
+                        <div class="flex flex-col gap-1">
+                            <input type="file" id="up-photos" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Photo Evidence')">
+                            <button onclick="document.getElementById('up-photos').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Photo Evidence</button>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <input type="file" id="up-clientid" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Client ID')">
+                            <button onclick="document.getElementById('up-clientid').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Client ID</button>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <input type="file" id="up-firmfiles" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Firm Files')">
+                            <button onclick="document.getElementById('up-firmfiles').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Firm Files</button>
+                        </div>
+                    `;
+                    uploadPortal.appendChild(newButtons);
                 }
             });
-            const display = document.getElementById('display-med-total');
-            if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
-        };
 
-        window.addEventListener('DOMContentLoaded', injectMedTotalUI);
-        document.addEventListener('input', (e) => { if (e.target.closest('#facility-container')) runMedCalculation(); });
-        
-        // Hook into your original addFacility function
-        const originalAddFac = window.addFacility;
-        window.addFacility = function() { originalAddFac(); runMedCalculation(); };
-    })();
-</script>
-                <script>
-    (function() {
-        const injectExpTotalUI = () => {
-            const pane = document.getElementById('pane-finance');
-            if (pane && !document.getElementById('exp-total-box')) {
-                const card = document.createElement('div');
-                card.id = 'exp-total-box';
-                card.className = "pdf-card border-l-8 border-blue-600 mt-6 bg-blue-50";
-                card.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-[11px] font-black uppercase text-blue-700">Total File Expenses</h3>
-                        <div id="display-exp-total" class="text-xl font-black text-blue-700">$ 0.00</div>
-                    </div>`;
-                pane.appendChild(card);
-            }
-        };
-
-        window.runExpCalculation = function() {
-            let total = 0;
-            // Target only the 3rd column (Amount) editables in the finance body
-            document.querySelectorAll('#finance-body tr').forEach(row => {
-                const amountDiv = row.querySelectorAll('td')[2]?.querySelector('[contenteditable="true"]');
-                if (amountDiv) {
-                    let val = amountDiv.innerText.replace(/[$,\s]/g, '');
-                    let num = parseFloat(val);
-                    if (!isNaN(num)) total += num;
+            window.handleEnhancedUpload = function(input, category) {
+                if (input.files) {
+                    const files = Array.from(input.files).slice(0, 5);
+                    const body = document.getElementById('doc-body');
+                    files.forEach(file => {
+                        const fileURL = URL.createObjectURL(file);
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><select class="prof-input w-full text-[11px] uppercase font-bold">
+                                <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
+                                <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
+                                <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
+                                <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
+                                <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
+                                <option ${category === 'Photo Evidence' ? 'selected' : ''}>Photo Evidence</option>
+                                <option ${category === 'Client ID' ? 'selected' : ''}>Client ID</option>
+                                <option ${category === 'Firm Files' ? 'selected' : ''}>Firm Files</option>
+                            </select></td>
+                            <td>
+                                <div contenteditable="true" class="hidden">${file.name}</div>
+                                <a href="${fileURL}" target="_blank" class="text-orange-600 font-bold text-[12px] underline decoration-orange-300 hover:text-orange-800 transition-all cursor-pointer">
+                                    📄 ${file.name} (Click to View)
+                                </a>
+                            </td>
+                            <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+                        body.prepend(row);
+                    });
+                    input.value = '';
                 }
-            });
-            const display = document.getElementById('display-exp-total');
-            if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
-        };
+            };
+        })();
+    </script>
+    <script>
+        // Med Calc
+        (function() {
+            const injectMedTotalUI = () => {
+                const pane = document.getElementById('pane-treatment');
+                if (pane && !document.getElementById('med-total-box')) {
+                    const card = document.createElement('div');
+                    card.id = 'med-total-box';
+                    card.className = "pdf-card border-l-8 border-green-600 mt-6 bg-green-50";
+                    card.innerHTML = `<div class="flex justify-between items-center"><h3 class="text-[11px] font-black uppercase text-green-700">Total Medical Charges</h3><div id="display-med-total" class="text-xl font-black text-green-700">$ 0.00</div></div>`;
+                    pane.appendChild(card);
+                }
+            };
+            window.runMedCalculation = function() {
+                let total = 0;
+                document.querySelectorAll('#facility-container [contenteditable="true"]').forEach(el => {
+                    const label = el.previousElementSibling;
+                    if (label && (label.innerText.includes('CHARGES') || label.innerText.includes('TOTAL'))) {
+                        let num = parseFloat(el.innerText.replace(/[$,\s]/g, ''));
+                        if (!isNaN(num)) total += num;
+                    }
+                });
+                const display = document.getElementById('display-med-total');
+                if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
+            };
+            window.addEventListener('DOMContentLoaded', injectMedTotalUI);
+            document.addEventListener('input', (e) => { if (e.target.closest('#facility-container')) runMedCalculation(); });
+        })();
 
-        window.addEventListener('DOMContentLoaded', injectExpTotalUI);
-        document.addEventListener('input', (e) => { if (e.target.closest('#finance-body')) runExpCalculation(); });
-
-        // Hook into your original addFinanceRow function
-        const originalAddFin = window.addFinanceRow;
-        window.addFinanceRow = function() { originalAddFin(); runExpCalculation(); };
-    })();
-</script>
-<hr class="border-t border-slate-200 my-8 no-print">
-</script>
+        // Exp Calc
+        (function() {
+            const injectExpTotalUI = () => {
+                const pane = document.getElementById('pane-finance');
+                if (pane && !document.getElementById('exp-total-box')) {
+                    const card = document.createElement('div');
+                    card.id = 'exp-total-box';
+                    card.className = "pdf-card border-l-8 border-blue-600 mt-6 bg-blue-50";
+                    card.innerHTML = `<div class="flex justify-between items-center"><h3 class="text-[11px] font-black uppercase text-blue-700">Total File Expenses</h3><div id="display-exp-total" class="text-xl font-black text-blue-700">$ 0.00</div></div>`;
+                    pane.appendChild(card);
+                }
+            };
+            window.runExpCalculation = function() {
+                let total = 0;
+                document.querySelectorAll('#finance-body tr').forEach(row => {
+                    const amountDiv = row.querySelectorAll('td')[2]?.querySelector('[contenteditable="true"]');
+                    if (amountDiv) {
+                        let num = parseFloat(amountDiv.innerText.replace(/[$,\s]/g, ''));
+                        if (!isNaN(num)) total += num;
+                    }
+                });
+                const display = document.getElementById('display-exp-total');
+                if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
+            };
+            window.addEventListener('DOMContentLoaded', injectExpTotalUI);
+            document.addEventListener('input', (e) => { if (e.target.closest('#finance-body')) runExpCalculation(); });
+        })();
+    </script>
 </body>
 </html>
