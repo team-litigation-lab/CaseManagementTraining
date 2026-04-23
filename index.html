@@ -43,8 +43,7 @@
         </div>
         <div class="p-6 space-y-4">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
-            <button onclick="CaseVault.save()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-lg font-bold text-xs uppercase transition-all mb-2">Save Case File</button>
-            <button onclick="showTab('storage'); CaseVault.render();" class="w-full border border-slate-700 text-slate-300 py-3 rounded-lg font-bold text-xs uppercase hover:bg-slate-900 transition-all">View Case Vault</button>
+            <button onclick="CaseVault.openVault()" class="w-full border border-slate-700 text-slate-300 py-3 rounded-lg font-bold text-xs uppercase hover:bg-slate-900 transition-all mb-2">View Case Vault</button>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
     </aside>
@@ -80,14 +79,21 @@
                                 <option value="Litigation">Litigation</option>
                                 <option value="Lien Negotiation">Lien Negotiation</option>
                                 <option value="Disbursement">Disbursement</option>
+                                <div id="pane-storage" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2 tracking-widest">Case Vault</h3>
+        <div id="vault-list" class="space-y-3">
+            <p class="text-slate-400 text-xs italic text-center p-4 uppercase">No records found.</p>
+        </div>
+    </div>
+</div>
                             </select>
                         </div>
                     </div>
                     <div id="display-phase" class="text-orange-600 font-black text-2xl uppercase italic tracking-tighter">Intake</div>
                 </div>
             </div>
-            <button onclick="showTab('storage'); CaseVault.render();" class="w-full border border-slate-700 text-slate-300 py-3 rounded-lg font-bold text-xs uppercase hover:bg-slate-900 transition-all">View Case Vault</button>
-</div>
+
             <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
@@ -99,7 +105,6 @@
                 <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
                 <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
                 <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
-                <div id="btn-storage" onclick="showTab('storage')" class="tab-btn">Case Files</div>
             </div>
 
             <div id="pane-profile" class="tab-pane active space-y-6">
@@ -501,119 +506,51 @@
     </script>
     <script>
     const CaseVault = {
-        KEY: 'LSH_STORAGE_DATA',
+        KEY: 'LSH_CASE_STORAGE_DATA',
+
+        // This function switches to the storage tab without breaking original logic
+        openVault: function() {
+            // Manually hide all panes
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+            
+            // Show storage pane
+            const pane = document.getElementById('pane-storage');
+            if(pane) pane.classList.add('active');
+            
+            this.render();
+        },
 
         save: function() {
             try {
-                // Extracts Client Name and Case ID for the filename
-                const name = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Unknown";
-                const id = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
-                const fileLabel = `${name} (${id})`;
+                const name = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Client";
+                const id = document.getElementById('case-id-val')?.innerText.trim() || "000";
+                const label = `${name} | ${id}`;
                 
-                // Snapshot the current HTML within the capture area
-                const htmlContent = document.getElementById('capture-area').innerHTML;
+                const content = document.getElementById('capture-area').innerHTML;
                 const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
                 
-                store[fileLabel] = {
-                    data: htmlContent,
-                    date: new Date().toLocaleString()
-                };
-                
+                store[label] = { html: content, date: new Date().toLocaleString() };
                 localStorage.setItem(this.KEY, JSON.stringify(store));
-                alert("Case saved to browser: " + fileLabel);
-                this.render();
-            } catch (e) {
-                alert("Save failed. Please ensure your capture area ID is correct.");
-            }
-        },
-
-        load: function(key) {
-            const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-            if (store[key]) {
-                document.getElementById('capture-area').innerHTML = store[key].data;
-                // Force return to profile tab so the user sees the loaded data immediately
-                if (typeof showTab === 'function') showTab('profile');
-            }
-        },
-
-        delete: function(key) {
-            if (confirm("Permanently delete this case record?")) {
-                const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-                delete store[key];
-                localStorage.setItem(this.KEY, JSON.stringify(store));
-                this.render();
-            }
-        },
-
-        render: function() {
-            const list = document.getElementById('vault-list');
-            if (!list) return;
-
-            const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-            const keys = Object.keys(store);
-
-            if (keys.length === 0) {
-                list.innerHTML = '<p class="text-slate-400 text-xs italic text-center p-4">No records found in this browser.</p>';
-                return;
-            }
-
-            list.innerHTML = keys.map(k => `
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-2">
-                    <div style="font-family: 'Inter', sans-serif;">
-                        <div class="font-bold text-slate-800 text-sm uppercase">${k}</div>
-                        <div class="text-[10px] text-slate-400 font-bold mt-1 tracking-wider uppercase">Saved: ${store[k].date}</div>
-                    </div>
-                    <div class="flex gap-4">
-                        <button onclick="CaseVault.load('${k}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline tracking-widest">Retrieve</button>
-                        <button onclick="CaseVault.delete('${k}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500 tracking-widest">Delete</button>
-                    </div>
-                </div>`).join('');
-        }
-    };
-
-    // Initialize list display
-    window.addEventListener('load', () => CaseVault.render());
-</script>
-    <script>
-    const CaseVault = {
-        KEY: 'LSH_STORAGE_DATA',
-
-        // Saves current workspace
-        save: function() {
-            try {
-                const name = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Unnamed";
-                const id = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
-                const fileLabel = `${name} | ${id}`;
                 
-                const htmlContent = document.getElementById('capture-area').innerHTML;
-                const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-                
-                store[fileLabel] = {
-                    data: htmlContent,
-                    date: new Date().toLocaleString()
-                };
-                
-                localStorage.setItem(this.KEY, JSON.stringify(store));
                 alert("Case Saved Successfully");
                 this.render();
             } catch (e) {
-                alert("Save failed. Workspace area not found.");
+                alert("Save failed. Check if 'capture-area' ID exists.");
             }
         },
 
-        // Loads data back into the workspace
         load: function(key) {
             const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
             if (store[key]) {
-                document.getElementById('capture-area').innerHTML = store[key].data;
-                // Use your original function to show the Profile tab
+                document.getElementById('capture-area').innerHTML = store[key].html;
+                // Force a reset to the Profile tab using the original function
                 if (typeof showTab === 'function') showTab('profile');
             }
         },
 
-        // Deletes record
         delete: function(key) {
-            if (confirm("Delete this record permanently?")) {
+            if (confirm("Delete this case?")) {
                 const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
                 delete store[key];
                 localStorage.setItem(this.KEY, JSON.stringify(store));
@@ -621,34 +558,27 @@
             }
         },
 
-        // Renders the list with Inter font and orange/slate colors
         render: function() {
             const list = document.getElementById('vault-list');
             if (!list) return;
-
             const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
             const keys = Object.keys(store);
 
-            if (keys.length === 0) {
-                list.innerHTML = '<p class="text-slate-400 text-xs italic text-center p-8">Vault is empty.</p>';
-                return;
-            }
-
-            list.innerHTML = keys.map(k => `
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:border-orange-300 transition-all">
+            list.innerHTML = keys.length ? keys.map(k => `
+                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-orange-200 transition-all">
                     <div style="font-family: 'Inter', sans-serif;">
-                        <div class="font-extrabold text-slate-900 text-sm tracking-tight uppercase">${k}</div>
-                        <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Added: ${store[k].date}</div>
+                        <div class="font-extrabold text-slate-800 text-sm uppercase tracking-tight">${k}</div>
+                        <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Saved: ${store[k].date}</div>
                     </div>
-                    <div class="flex gap-6">
-                        <button onclick="CaseVault.load('${k}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline tracking-widest">Retrieve</button>
-                        <button onclick="CaseVault.delete('${k}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500 tracking-widest">Delete</button>
+                    <div class="flex gap-4">
+                        <button onclick="CaseVault.load('${k}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
+                        <button onclick="CaseVault.delete('${k}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
                     </div>
-                </div>`).join('');
+                </div>`).join('') : '<p class="text-slate-400 text-xs italic text-center p-4 uppercase">Vault is empty.</p>';
         }
     };
-
-    // Initialize list on startup
+    
+    // Auto-init
     window.addEventListener('DOMContentLoaded', () => CaseVault.render());
 </script>
 </body>
