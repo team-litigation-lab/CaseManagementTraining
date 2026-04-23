@@ -43,9 +43,7 @@
         </div>
         <div class="p-6 space-y-4">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
-            <button onclick="CaseVault.openVault()" class="w-full border border-slate-700 text-slate-300 py-3 rounded-lg font-bold text-xs uppercase hover:bg-slate-900 transition-all mb-2">View Case Vault</button>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
-            <button onclick="CaseVault.save()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-black text-xs uppercase shadow-md transition-all mb-2">Save Case File</button>
         </div>
     </aside>
 
@@ -66,7 +64,6 @@
                         </h1>
                         <div class="mt-3 flex items-center gap-4">
                             <p class="text-sm font-bold text-orange-600 uppercase">Case ID: <span contenteditable="true">BATCH-2026-X</span></p>
-                            <div id="pane-storage" class="tab-pane"><div id="vault-list"></div></div>
                             <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[11px] font-bold uppercase px-2 py-1 rounded border border-orange-200 outline-none">
                                 <option value="Intake">Intake</option>
                                 <option value="Investigation">Investigation</option>
@@ -81,15 +78,6 @@
                                 <option value="Litigation">Litigation</option>
                                 <option value="Lien Negotiation">Lien Negotiation</option>
                                 <option value="Disbursement">Disbursement</option>
-                                <option value="Disbursement">Settled</option>
-                                <div id="pane-storage" class="tab-pane">
-    <div class="pdf-card border-l-8 border-orange-500">
-        <h3 class="text-[11px] font-orange uppercase text-orange-500 mb-6 border-b pb-2 tracking-widest">Case Vault</h3>
-        <div id="vault-list" class="space-y-3">
-            <p class="text-slate-400 text-xs italic text-center p-4 uppercase">No records found.</p>
-        </div>
-    </div>
-</div>
                             </select>
                         </div>
                     </div>
@@ -127,10 +115,10 @@
                         <div class="pdf-card">
                             <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Emergency Contact</h3>
                             <div class="space-y-4">
-                                <div><label>Full Name</label><div contenteditable="true" class="text-[11px] font-semibold w-full"></div></div>
+                                <div><label>Full Name</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
                                 <div class="grid grid-cols-2 gap-4">
-                                    <div><label>Phone</label><div contenteditable="true" class="text-[11px] font-semibold w-full"></div></div>
-                                    <div><label>Relationship</label><div contenteditable="true" class="text-[11px] font-semibold w-full"></div></div>
+                                    <div><label>Phone</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
+                                    <div><label>Relationship</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
                                 </div>
                             </div>
                         </div>
@@ -167,7 +155,7 @@
                         <div><label>Report Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div class="no-print">
                             <label>Action</label>
-                            <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full" onclick="yourUploadFunction()" class="...">Upload Police Report</button>
+                            <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Police Report</button>
                         </div>
                     </div>
                 </div>
@@ -195,7 +183,6 @@
                             <div><label>Liability Limits</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>
                             <div><label>Liability Accepted?</label><select class="prof-input w-full"><option>Pending</option><option>Yes</option><option>No</option></select></div>
                             <div><label>Liability %</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2">100%</div></div>
-                            <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full" onclick="yourUploadFunction()" class="...">Upload Insurance Files</button>
                         </div>
                     </div>
                 </div>
@@ -210,7 +197,6 @@
                             <div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
                             <div><label>Benefits Paid</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
                             <div><label>Status</label><select class="prof-input w-full"><option>Active</option><option>Exhausted</option></select></div>
-                            <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full" onclick="yourUploadFunction()" class="...">Upload Insurance Files</button>
                         </div>
                     </div>
                 </div>
@@ -218,7 +204,6 @@
                     <div class="ins-tab-header flex justify-between">
                         <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM/UIM Claim</h4>
                         <button onclick="addUM()" class="no-print bg-orange-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase no-print">+ Add UM</button>
-                         <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full" onclick="yourUploadFunction()" class="...">Upload Insurance Files</button>
                     </div>
                     <div class="ins-tab-content" id="um-container">
                         <div class="grid md:grid-cols-5 gap-4">
@@ -242,12 +227,12 @@
                         <div id="ui-repairable" class="hidden col-span-full grid md:grid-cols-3 gap-4 pt-4 border-t">
                             <div><label>Estimate Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
                             <div><label>Shop Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                            <div class="no-print"><label>Action</label> <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full" onclick="yourUploadFunction()" class="...">Upload Estimate </button>
+                            <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Estimate</button></div>
                         </div>
                         <div id="ui-totalled" class="hidden col-span-full grid md:grid-cols-2 gap-4 pt-4 border-t">
                             <div><label>Settlement Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
-                            <div class="no-print"><label>Action</label><<button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full" onclick="yourUploadFunction()" class="...">Upload Total Loss Valuation </button> class="...">Upload Total Loss Docs</button>
-                            </div>
+                            <div class="no-print"><label>Action</label><button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Total Loss Docs</button></div>
+                        </div>
                     </div>
                     <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
                         <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Registered Owner Information</h4>
@@ -424,41 +409,7 @@
                     </table>
                 </div>
             </div>
-<div id="pane-doc-hub" class="tab-pane">
-    <div class="pdf-card border-l-8 border-orange-500">
-        <div class="flex justify-between items-center border-b pb-2 mb-6">
-            <h3 class="text-[11px] font-black uppercase text-orange-500">Document Repository</h3>
-            <button onclick="addDocRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Record</button>
-        </div>
-        <table class="treat-table">
-            <thead>
-                <tr>
-                    <th style="width: 30%">Category</th>
-                    <th style="width: 60%">Description / File Name</th>
-                    <th class="no-print" style="width: 10%"></th>
-                </tr>
-            </thead>
-            <tbody id="doc-body">
-                <tr>
-                    <td>
-                        <select class="prof-input w-full text-[11px] uppercase font-bold">
-                            <option>Medical Records</option>
-                            <option>Insurance Policy</option>
-                            <option>Police Report</option>
-                            <option>Litigation Docs</option>
-                            <option>Photos/Evidence</option>
-                            <option>Invoices</option>
-                        </select>
-                    </td>
-                    <td><div contenteditable="true" class="w-full italic text-slate-400">File_Name.pdf</div></td>
-                    <td class="no-print">
-                        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-300 hover:text-red-500">×</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+
         </div>
     </main>
 
@@ -544,52 +495,48 @@
             html2pdf().set(opt).from(element).save();
         }
     </script>
-    <script>
+</body>
+</html>
+<script>
     const CaseVault = {
-        KEY: 'LSH_CASE_STORAGE_DATA',
+        KEY: 'LSH_CLEAN_STORAGE_V1',
 
-        // This function switches to the storage tab without breaking original logic
-        openVault: function() {
-            // Manually hide all panes
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            
-            // Show storage pane
-            const pane = document.getElementById('pane-storage');
-            if(pane) pane.classList.add('active');
-            
-            this.render();
-        },
-
+        // SAVE: Does not interfere with your tabs
         save: function() {
             try {
                 const name = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Client";
-                const id = document.getElementById('case-id-val')?.innerText.trim() || "000";
+                const id = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
                 const label = `${name} | ${id}`;
                 
-                const content = document.getElementById('capture-area').innerHTML;
+                // Save the snapshot
+                const workspace = document.getElementById('capture-area');
                 const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
+                store[label] = { html: workspace.innerHTML, date: new Date().toLocaleString() };
                 
-                store[label] = { html: content, date: new Date().toLocaleString() };
                 localStorage.setItem(this.KEY, JSON.stringify(store));
-                
-                alert("Case Saved Successfully");
+                alert("Case Saved: " + label);
                 this.render();
             } catch (e) {
-                alert("Save failed. Check if 'capture-area' ID exists.");
+                alert("Save error. Make sure the workspace area exists.");
             }
         },
 
-        load: function(key) {
+        // RETRIEVE: Restores HTML and then "Refreshes" the tab logic
+        retrieve: function(key) {
             const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
             if (store[key]) {
-                document.getElementById('capture-area').innerHTML = store[key].html;
-                // Force a reset to the Profile tab using the original function
-                if (typeof showTab === 'function') showTab('profile');
+                const workspace = document.getElementById('capture-area');
+                workspace.innerHTML = store[key].html;
+                
+                // CRITICAL: Jump back to Profile and re-show the tab
+                // This "re-activates" the buttons for the browser
+                if (typeof showTab === 'function') {
+                    showTab('profile');
+                }
             }
         },
 
-        delete: function(key) {
+        remove: function(key) {
             if (confirm("Delete this case?")) {
                 const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
                 delete store[key];
@@ -605,113 +552,19 @@
             const keys = Object.keys(store);
 
             list.innerHTML = keys.length ? keys.map(k => `
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-orange-200 transition-all">
-                    <div style="font-family: 'Inter', sans-serif;">
-                        <div class="font-extrabold text-slate-800 text-sm uppercase tracking-tight">${k}</div>
-                        <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Saved: ${store[k].date}</div>
-                    </div>
-                    <div class="flex gap-4">
-                        <button onclick="CaseVault.load('${k}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
-                        <button onclick="CaseVault.delete('${k}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
-                    </div>
-                </div>`).join('') : '<p class="text-slate-400 text-xs italic text-center p-4 uppercase">Vault is empty.</p>';
-        }
-    };
-    
-    // Auto-init
-    window.addEventListener('DOMContentLoaded', () => CaseVault.render());
-</script>
-   <script>
-    // SEPARATE STORAGE FEATURE - DO NOT INTEGRATE INTO ORIGINAL SCRIPT
-    const CaseVault = {
-        KEY: 'LSH_STORAGE_FINAL',
-
-        // Opens the vault screen
-        openVault: function() {
-            if (typeof showTab === 'function') {
-                showTab('storage');
-                this.render();
-            } else {
-                // Fallback if original showTab is not found
-                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                document.getElementById('pane-storage').classList.add('active');
-                this.render();
-            }
-        },
-
-        // Saves current work
-        save: function() {
-            try {
-                // Use a generic name if IDs are missing to prevent script death
-                const clientName = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Unknown";
-                const caseID = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
-                const label = `${clientName} | ${caseID}`;
-                
-                const workspace = document.getElementById('capture-area');
-                const htmlData = workspace.innerHTML;
-                
-                const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-                store[label] = {
-                    html: htmlData,
-                    date: new Date().toLocaleString()
-                };
-                
-                localStorage.setItem(this.KEY, JSON.stringify(store));
-                alert("Case Saved Successfully: " + label);
-                this.render();
-            } catch (e) {
-                console.error("Save failed:", e);
-                alert("Error: Script could not find the workspace to save.");
-            }
-        },
-
-        // Retrieves work
-        load: function(key) {
-            const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-            if (store[key]) {
-                const workspace = document.getElementById('capture-area');
-                workspace.innerHTML = store[key].html;
-                
-                // CRITICAL: Jump to Profile to "reset" the UI so buttons stay active
-                if (typeof showTab === 'function') {
-                    showTab('profile');
-                }
-            }
-        },
-
-        // Deletes record
-        delete: function(key) {
-            if (confirm("Delete this case forever?")) {
-                const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-                delete store[key];
-                localStorage.setItem(this.KEY, JSON.stringify(store));
-                this.render();
-            }
-        },
-
-        // Renders the list
-        render: function() {
-            const list = document.getElementById('vault-list');
-            if (!list) return;
-            const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-            const keys = Object.keys(store);
-
-            list.innerHTML = keys.length ? keys.map(k => `
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-2 hover:border-orange-300 transition-all">
+                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl mb-2 hover:border-orange-400">
                     <div style="font-family: 'Inter', sans-serif;">
                         <div class="font-black text-slate-800 text-sm uppercase">${k}</div>
-                        <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Added: ${store[k].date}</div>
+                        <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase">Saved: ${store[k].date}</div>
                     </div>
                     <div class="flex gap-4">
-                        <button onclick="CaseVault.load('${k}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
-                        <button onclick="CaseVault.delete('${k}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
+                        <button onclick="CaseVault.retrieve('${k}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
+                        <button onclick="CaseVault.remove('${k}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
                     </div>
                 </div>`).join('') : '<p class="text-slate-400 text-xs italic text-center p-4">Vault Empty</p>';
         }
     };
 
-    // Auto-load on page start
+    // Auto-init list on page load
     window.addEventListener('DOMContentLoaded', () => CaseVault.render());
 </script>
-</body>
-</html>
