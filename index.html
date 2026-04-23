@@ -12,243 +12,6 @@
         .tab-btn { border-bottom: 3px solid transparent; cursor: pointer; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 11px; padding-bottom: 8px; transition: all 0.3s; white-space: nowrap; }
         .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
         .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
-        [contenteditable="true"] { outline: none; border: 1px solid #f1f5f9; background: #f8fafc; border-radius: 4px; padding: 4px 8px; min-width: 40px; display: inline-block; }
-        [contenteditable="true"]:focus { background: #ffffff; border-color: #f97316; }
-        label { font-size: 11px !important; margin-bottom: 4px; display: block; font-weight: bold; color: #94a3b8; text-transform: uppercase; }
-        .ins-tab-header { background: #fff7ed; border-left: 4px solid #f97316; padding: 8px 12px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; align-items: center; }
-        .ins-tab-content { border: 1px solid #fed7aa; border-top: none; padding: 16px; border-radius: 0 0 8px 8px; background: #ffffff; margin-bottom: 1.5rem; }
-        select.prof-input { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 4px; padding: 4px 8px; font-size: 14px; font-weight: 600; outline: none; }
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; }
-        .treat-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
-        .treat-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-        @media print { .no-print { display: none !important; } }
-    </style>
-</head>
-<body class="bg-slate-50 flex h-screen overflow-hidden">
-
-    <aside class="w-72 bg-slate-950 text-white flex flex-col no-print">
-        <div class="p-8 border-b border-slate-900">
-            <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">
-                Legal Support Help<br><span class="text-orange-500">Training Interface</span>
-            </h1>
-        </div>
-        <div class="p-6 space-y-4">
-            <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
-            <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
-        </div>
-    </aside>
-
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-12 bg-white border-b flex items-center justify-end px-8 no-print">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspace Active</span>
-        </header>
-
-        <div class="flex-1 overflow-y-auto p-8" id="capture-area">
-            
-            <div class="pdf-card border-l-8 border-orange-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h1 class="text-4xl font-black text-slate-900 uppercase">
-                            <span contenteditable="true">Client Name</span> 
-                            <span class="text-slate-300 mx-2">|</span> 
-                            <span contenteditable="true" class="text-2xl text-slate-500">(000) 000-0000</span>
-                        </h1>
-                        <div class="mt-3 flex items-center gap-4">
-                            <p class="text-sm font-bold text-orange-600 uppercase">Case ID: <span contenteditable="true">BATCH-2026-X</span></p>
-                            <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[11px] font-bold uppercase px-2 py-1 rounded border border-orange-200 outline-none">
-                                <option value="Intake">Intake</option>
-                                <option value="Investigation">Investigation</option>
-                                <option value="Treating">Treating</option>
-                                <option value="Demand Review">Demand Review</option>
-                                <option value="BI Demand">BI Demand</option>
-                                <option value="BI Settlement">BI Settlement</option>
-                                <option value="UM Demand">UM Demand</option>
-                                <option value="UM Settlement">UM Settlement</option>
-                                <option value="Lien Negotiation">Lien Negotiation</option>
-                                <option value="Disbursement">Disbursement</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="display-phase" class="text-orange-600 font-black text-2xl uppercase italic tracking-tighter">Intake</div>
-                </div>
-            </div>
-
-            <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
-                <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
-                <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
-                <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
-                <div id="btn-treatment" onclick="showTab('treatment')" class="tab-btn">Treatment</div>
-                <div id="btn-pd" onclick="showTab('pd')" class="tab-btn">Property Damage</div>
-                <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
-                <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
-                <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Documents</div>
-                <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
-                <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
-            </div>
-
-            <div id="pane-profile" class="tab-pane active space-y-6">
-                <div class="grid xl:grid-cols-3 gap-6">
-                    <div class="space-y-6">
-                        <div class="pdf-card">
-                            <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Client Identity</h3>
-                            <div class="space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label>DOB</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                                    <div><label>SSN</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                                </div>
-                                <div><label>Email</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                                <div><label>Address</label><div contenteditable="true" class="text-base font-semibold w-full"></div></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="pdf-card col-span-2">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Accident Narrative</h3>
-                        <div contenteditable="true" class="text-sm w-full min-h-[350px]"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-police" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Accident Reporting</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div><label>Police Arrived?</label><select class="prof-input w-full"><option>No</option><option>Yes</option></select></div>
-                        <div><label>Report Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pane-tasks" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-6">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500">Task Management</h3>
-                        <button onclick="addTaskRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
-                    </div>
-                    <table class="treat-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 15%">Date</th>
-                                <th style="width: 45%">Task</th>
-                                <th style="width: 20%">Assigned To</th>
-                                <th style="width: 15%">Status</th>
-                                <th class="no-print"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tasks-body">
-                            <tr>
-                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                                <td><div contenteditable="true" class="w-full">Requirement...</div></td>
-                                <td><div contenteditable="true">Manager</div></td>
-                                <td><select class="prof-input w-full text-[10px]"><option>Pending</option><option>Started</option><option>Completed</option></select></td>
-                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="pane-notes" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center border-b pb-2 mb-6">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500">Case Log & Notes</h3>
-                        <button onclick="addNoteRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Entry</button>
-                    </div>
-                    <table class="treat-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 15%">Date</th>
-                                <th style="width: 25%">Name</th>
-                                <th style="width: 55%">Notes</th>
-                                <th class="no-print"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="notes-body">
-                            <tr>
-                                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                                <td><div contenteditable="true" class="font-bold">Staff Name</div></td>
-                                <td><div contenteditable="true" class="w-full italic">Update details...</div></td>
-                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="pane-matrix" class="tab-pane">Insurance Matrix Content</div>
-            <div id="pane-treatment" class="tab-pane">Treatment Content</div>
-            <div id="pane-pd" class="tab-pane">Property Damage Content</div>
-            <div id="pane-litigation" class="tab-pane">Litigation Content</div>
-            <div id="pane-finance" class="tab-pane">Finance Content</div>
-            <div id="pane-doc-hub" class="tab-pane">Doc Hub Content</div>
-
-        </div>
-    </main>
-
-    <script>
-        // Core Tab Switching
-        function showTab(id) {
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            const pane = document.getElementById('pane-' + id);
-            const btn = document.getElementById('btn-' + id);
-            if(pane) pane.classList.add('active');
-            if(btn) btn.classList.add('active-tab');
-        }
-
-        // Add Task Row
-        function addTaskRow() {
-            const body = document.getElementById('tasks-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                <td><div contenteditable="true" class="w-full"></div></td>
-                <td><div contenteditable="true"></div></td>
-                <td><select class="prof-input w-full text-[10px]"><option>Pending</option><option>Started</option><option>Completed</option></select></td>
-                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-            `;
-            body.appendChild(row);
-        }
-
-        // Add Note Row
-        function addNoteRow() {
-            const body = document.getElementById('notes-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                <td><div contenteditable="true" class="font-bold"></div></td>
-                <td><div contenteditable="true" class="w-full"></div></td>
-                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
-            `;
-            body.appendChild(row);
-        }
-
-        // PDF and UI Utils
-        function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
-        
-        async function downloadPDF() {
-            const element = document.getElementById('capture-area');
-            const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
-            html2pdf().set(opt).from(element).save();
-        }
-    </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSH | Training Interface</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; font-size: 16px; } 
-        .tab-btn { border-bottom: 3px solid transparent; cursor: pointer; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 11px; padding-bottom: 8px; transition: all 0.3s; white-space: nowrap; }
-        .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
-        .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
         
         [contenteditable="true"] { outline: none; border: 1px solid #f1f5f9; background: #f8fafc; border-radius: 4px; padding: 4px 8px; min-width: 40px; display: inline-block; }
         [contenteditable="true"]:focus { background: #ffffff; border-color: #f97316; }
@@ -310,6 +73,9 @@
                                 <option value="BI Settlement">BI Settlement</option>
                                 <option value="UM Demand">UM Demand</option>
                                 <option value="UM Settlement">UM Settlement</option>
+                                <option value="Mediation">Mediation</option>
+                                <option value="Arbitration">Arbitration</option>
+                                <option value="Litigation">Litigation</option>
                                 <option value="Lien Negotiation">Lien Negotiation</option>
                                 <option value="Disbursement">Disbursement</option>
                             </select>
@@ -328,6 +94,8 @@
                 <div id="btn-litigation" onclick="showTab('litigation')" class="tab-btn">Litigation</div>
                 <div id="btn-finance" onclick="showTab('finance')" class="tab-btn">Expenses & Billing</div>
                 <div id="btn-doc-hub" onclick="showTab('doc-hub')" class="tab-btn">Document Hub</div>
+                <div id="btn-notes" onclick="showTab('notes')" class="tab-btn">Notes</div>
+                <div id="btn-tasks" onclick="showTab('tasks')" class="tab-btn">Tasks</div>
             </div>
 
             <div id="pane-profile" class="tab-pane active space-y-6">
@@ -435,7 +203,7 @@
                 <div>
                     <div class="ins-tab-header flex justify-between">
                         <h4 class="text-[11px] font-bold text-orange-600 uppercase">UM/UIM Claim</h4>
-                        <button onclick="addUM()" class="bg-orange-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase no-print">+ Add UM</button>
+                        <button onclick="addUM()" class="no-print bg-orange-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase no-print">+ Add UM</button>
                     </div>
                     <div class="ins-tab-content" id="um-container">
                         <div class="grid md:grid-cols-5 gap-4">
@@ -594,6 +362,54 @@
                 </div>
             </div>
 
+            <div id="pane-notes" class="tab-pane">
+                 <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center border-b pb-2 mb-6">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500">Case Notes</h3>
+                        <button onclick="addNoteRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Note</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead><tr><th width="150">Date</th><th>Content</th><th class="no-print" width="50"></th></tr></thead>
+                        <tbody id="notes-body">
+                            <tr>
+                                <td><div contenteditable="true">04/20/2026</div></td>
+                                <td><div contenteditable="true" class="w-full italic text-slate-600">Initial training file created...</div></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="pane-tasks" class="tab-pane">
+                 <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center border-b pb-2 mb-6">
+                        <h3 class="text-[11px] font-black uppercase text-orange-500">Task List</h3>
+                        <button onclick="addTaskRow()" class="no-print bg-slate-900 text-white text-[10px] px-3 py-1 rounded-md font-bold uppercase">+ Add Task</button>
+                    </div>
+                    <table class="treat-table">
+                        <thead>
+                            <tr>
+                                <th>Task Description</th>
+                                <th width="150">Assigned To</th>
+                                <th width="120">Due Date</th>
+                                <th width="120">Status</th>
+                                <th class="no-print" width="50"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-body">
+                            <tr>
+                                <td><div contenteditable="true" class="w-full">Perform initial client intake</div></td>
+                                <td><div contenteditable="true" class="w-full">Case Manager</div></td>
+                                <td><div contenteditable="true">04/21/2026</div></td>
+                                <td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td>
+                                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -652,6 +468,25 @@
             body.appendChild(row);
         }
 
+        function addNoteRow() {
+            const body = document.getElementById('notes-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+            body.appendChild(row);
+        }
+
+        function addTaskRow() {
+            const body = document.getElementById('tasks-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><div contenteditable="true" class="w-full"></div></td>
+                <td><div contenteditable="true" class="w-full"></div></td>
+                <td><div contenteditable="true">MM/DD/YYYY</div></td>
+                <td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td>
+                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+            body.appendChild(row);
+        }
+
         function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
 
         async function downloadPDF() {
@@ -662,3 +497,94 @@
     </script>
 </body>
 </html>
+<div id="btn-storage" onclick="showTab('storage')" class="tab-btn">Storage Hub</div>
+<div id="pane-storage" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Storage (Local Browser)</h3>
+        
+        <div class="flex flex-col md:flex-row gap-4 mb-8 bg-slate-50 p-6 rounded-xl border border-slate-200">
+            <div class="flex-1">
+                <label class="text-slate-500">Case Identifier</label>
+                <input type="text" id="save-name" placeholder="e.g. Smith, John - 2026-001" class="w-full p-2.5 border border-slate-200 rounded font-bold text-sm outline-none focus:border-orange-500 bg-white">
+            </div>
+            <div class="flex items-end">
+                <button onclick="saveCaseFile()" class="w-full md:w-auto bg-orange-600 text-white px-8 py-2.5 rounded-lg font-bold uppercase text-xs hover:bg-orange-700 shadow-md transition-all">Save Case Record</button>
+            </div>
+        </div>
+
+        <h4 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest border-b pb-1">Saved Records in this Browser</h4>
+        <div id="saved-cases-list" class="space-y-3">
+            <p class="text-slate-400 text-xs italic">No saved cases found.</p>
+        </div>
+    </div>
+</div>
+// Run this when page loads to show previous saves
+window.addEventListener('load', renderSavedList);
+
+function saveCaseFile() {
+    const nameInput = document.getElementById('save-name');
+    const name = nameInput.value.trim();
+    
+    if (!name) {
+        alert("Please enter a Case Identifier to save.");
+        return;
+    }
+
+    // This captures the current state of the entire workspace
+    const content = document.getElementById('capture-area').innerHTML;
+    const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
+    
+    savedCases[name] = {
+        timestamp: new Date().toLocaleString(),
+        html: content
+    };
+
+    localStorage.setItem('LSH_Cases', JSON.stringify(savedCases));
+    nameInput.value = '';
+    renderSavedList();
+    alert("Case '" + name + "' has been saved to your browser.");
+}
+
+function renderSavedList() {
+    const container = document.getElementById('saved-cases-list');
+    const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
+    const names = Object.keys(savedCases);
+
+    if (names.length === 0) {
+        container.innerHTML = '<p class="text-slate-400 text-xs italic">No saved records found in local storage.</p>';
+        return;
+    }
+
+    container.innerHTML = names.map(name => `
+        <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl hover:shadow-sm transition-all">
+            <div>
+                <div class="font-bold text-slate-800 text-sm">${name}</div>
+                <div class="text-[10px] text-slate-400 uppercase mt-1">Saved: ${savedCases[name].timestamp}</div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="loadCaseFile('${name}')" class="text-orange-600 font-bold text-[10px] uppercase tracking-wider hover:text-orange-800">Retrieve</button>
+                <button onclick="deleteCaseFile('${name}')" class="text-slate-300 font-bold text-[10px] uppercase tracking-wider hover:text-red-500">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function loadCaseFile(name) {
+    if (confirm("Load '" + name + "'? This will replace your current workspace data.")) {
+        const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
+        if (savedCases[name]) {
+            document.getElementById('capture-area').innerHTML = savedCases[name].html;
+            // Ensure we stay on the Storage tab or jump to Profile
+            showTab('profile'); 
+        }
+    }
+}
+
+function deleteCaseFile(name) {
+    if (confirm("Delete '" + name + "' permanently?")) {
+        const savedCases = JSON.parse(localStorage.getItem('LSH_Cases') || '{}');
+        delete savedCases[name];
+        localStorage.setItem('LSH_Cases', JSON.stringify(savedCases));
+        renderSavedList();
+    }
+}
