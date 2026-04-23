@@ -41,7 +41,7 @@
                 Legal Support Help<br><span class="text-orange-500">Training Interface</span>
             </h1>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-6 space-y-4" id="sidebar-actions">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
@@ -141,23 +141,22 @@
                         </div>
                     </div>
                     <div class="pdf-card">
-                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Accident Narrative</h3>
+                        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-4 border-b pb-2">Case Narrative</h3>
                         <div contenteditable="true" class="text-sm w-full min-h-[350px]"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="pane-police" class="tab-pane">
+            <div id="pane-police" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Accident Reporting</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
                         <div><label>Police Arrived?</label><select class="prof-input w-full"><option>No</option><option>Yes</option></select></div>
                         <div><label>Report Number</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div class="no-print">
-                            <label>Action</label>
-                            <input type="file" id="police-upload-main" class="hidden" onchange="handleQuickUpload(this, 'Police Report')">
-                            <button onclick="document.getElementById('police-upload-main').click()" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full">Upload Police Report</button>
-                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label>Accident Narrative (Per Police Report)</label>
+                        <div contenteditable="true" class="text-sm w-full min-h-[200px] border border-slate-100 rounded p-4 bg-slate-50 italic text-slate-700">Type police narrative here...</div>
                     </div>
                 </div>
             </div>
@@ -343,21 +342,21 @@
 
             <div id="pane-doc-hub" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-slate-900 no-print">
-                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Quick Upload Portal</h3>
+                    <h3 class="text-[11px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Quick Upload Portal (Up to 5 files)</h3>
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                        <input type="file" id="up-police" class="hidden" onchange="handleQuickUpload(this, 'Police Report')">
+                        <input type="file" id="up-police" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Police Report')">
                         <button onclick="document.getElementById('up-police').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Upload Police Report</button>
 
-                        <input type="file" id="up-med" class="hidden" onchange="handleQuickUpload(this, 'Medical Records')">
+                        <input type="file" id="up-med" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Medical Records')">
                         <button onclick="document.getElementById('up-med').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Medical Records</button>
 
-                        <input type="file" id="up-inv" class="hidden" onchange="handleQuickUpload(this, 'Invoices')">
+                        <input type="file" id="up-inv" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Invoices')">
                         <button onclick="document.getElementById('up-inv').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Invoices</button>
 
-                        <input type="file" id="up-ins" class="hidden" onchange="handleQuickUpload(this, 'Insurance')">
+                        <input type="file" id="up-ins" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Insurance')">
                         <button onclick="document.getElementById('up-ins').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Insurance Files</button>
 
-                        <input type="file" id="up-lit" class="hidden" onchange="handleQuickUpload(this, 'Litigation Docs')">
+                        <input type="file" id="up-lit" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Litigation Docs')">
                         <button onclick="document.getElementById('up-lit').click()" class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-orange-100 transition-all">Add Litigation Docs</button>
                     </div>
                 </div>
@@ -515,28 +514,94 @@
             const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(opt).from(element).save();
         }
+    </script>
 
-        // NEW HELPER FOR UPLOADS
-        function handleQuickUpload(input, category) {
-            if (input.files && input.files[0]) {
-                const fileName = input.files[0].name;
-                const body = document.getElementById('doc-body');
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><select class="prof-input w-full text-[11px] uppercase font-bold">
-                        <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
-                        <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
-                        <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
-                        <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
-                        <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
-                        <option>Others</option>
-                    </select></td>
-                    <td><div contenteditable="true" class="w-full font-bold text-orange-600">${fileName}</div></td>
-                    <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-                body.prepend(row);
-                input.value = ''; // Reset input
-            }
-        }
+    <script>
+        (function() {
+            const STORAGE_KEY = 'LSH_CASE_DATA';
+
+            window.handleEnhancedUpload = function(input, category) {
+                if (input.files) {
+                    const files = Array.from(input.files).slice(0, 5);
+                    const body = document.getElementById('doc-body');
+                    files.forEach(file => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><select class="prof-input w-full text-[11px] uppercase font-bold">
+                                <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
+                                <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
+                                <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
+                                <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
+                                <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
+                                <option>Others</option>
+                            </select></td>
+                            <td><div contenteditable="true" class="w-full font-bold text-orange-600">${file.name}</div></td>
+                            <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+                        body.prepend(row);
+                    });
+                    input.value = '';
+                }
+            };
+
+            window.saveCurrentEntry = function() {
+                const data = {
+                    phase: document.getElementById('display-phase').innerText,
+                    editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
+                    selects: Array.from(document.querySelectorAll('select')).map(el => el.value),
+                    htmlContainers: {
+                        um: document.getElementById('um-container').innerHTML,
+                        facilities: document.getElementById('facility-container').innerHTML,
+                        finance: document.getElementById('finance-body').innerHTML,
+                        docs: document.getElementById('doc-body').innerHTML,
+                        discovery: document.getElementById('discovery-body').innerHTML,
+                        notes: document.getElementById('notes-body').innerHTML,
+                        tasks: document.getElementById('tasks-body').innerHTML
+                    }
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                alert('Case data saved successfully!');
+            };
+
+            window.retrieveEntry = function() {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (!saved) return alert('No saved data found.');
+                const data = JSON.parse(saved);
+                document.getElementById('display-phase').innerText = data.phase;
+                if(data.htmlContainers) {
+                    Object.keys(data.htmlContainers).forEach(key => {
+                        const el = document.getElementById(key === 'um' ? 'um-container' : key === 'facilities' ? 'facility-container' : key);
+                        if(el) el.innerHTML = data.htmlContainers[key];
+                    });
+                }
+                const editables = document.querySelectorAll('[contenteditable="true"]');
+                data.editables.forEach((val, i) => { if(editables[i]) editables[i].innerHTML = val; });
+                const selects = document.querySelectorAll('select');
+                data.selects.forEach((val, i) => { if(selects[i]) selects[i].value = val; });
+                alert('Data retrieved and loaded.');
+            };
+
+            window.createNewFile = function() {
+                if(confirm("Clear workspace for a new entry?")) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    window.location.reload();
+                }
+            };
+
+            window.addEventListener('DOMContentLoaded', () => {
+                const sidebar = document.getElementById('sidebar-actions');
+                if (sidebar) {
+                    const persistenceGroup = document.createElement('div');
+                    persistenceGroup.className = "pt-4 mt-4 border-t border-slate-800 space-y-2";
+                    persistenceGroup.innerHTML = `
+                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-2">Data Management</p>
+                        <button onclick="saveCurrentEntry()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all">Save Entry</button>
+                        <button onclick="retrieveEntry()" class="w-full border border-emerald-500/30 text-emerald-500 py-2 rounded-lg font-bold text-[10px] uppercase hover:bg-emerald-500/10 transition-all">Retrieve Entry</button>
+                        <button onclick="createNewFile()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all">New Entry File</button>
+                    `;
+                    sidebar.appendChild(persistenceGroup);
+                }
+            });
+        })();
     </script>
 </body>
 </html>
