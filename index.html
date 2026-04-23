@@ -607,15 +607,11 @@
             });
         })();
     </script>
-    <script>
+   <script>
     (function() {
-        // 1. Wait for the DOM to load
         window.addEventListener('DOMContentLoaded', () => {
-            // Find the Quick Upload Portal container
             const uploadPortal = document.querySelector('#pane-doc-hub .grid');
-            
             if (uploadPortal) {
-                // Create the new General Case File buttons
                 const newButtons = document.createElement('div');
                 newButtons.className = "col-span-full grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 mt-3 border-t border-slate-200";
                 newButtons.innerHTML = `
@@ -632,38 +628,21 @@
                         <button onclick="document.getElementById('up-firmfiles').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Firm Files</button>
                     </div>
                 `;
-                
-                // Append them to your existing portal
                 uploadPortal.appendChild(newButtons);
             }
-
-            // 2. Expand the dropdown options in the Document Table to include the new categories
-            const originalAddDocRow = window.addDocRow;
-            window.addDocRow = function() {
-                const body = document.getElementById('doc-body');
-                const row = document.createElement('tr');
-                row.innerHTML = `<td><select class="prof-input w-full text-[11px] uppercase font-bold">
-                    <option>Medical Records</option>
-                    <option>Insurance</option>
-                    <option>Litigation Docs</option>
-                    <option>Invoices</option>
-                    <option>Photo Evidence</option>
-                    <option>Client ID</option>
-                    <option>Firm Files</option>
-                    <option>Others</option>
-                </select></td><td><div contenteditable="true" class="w-full italic text-slate-400">File_Name.pdf</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-                body.appendChild(row);
-            };
         });
 
-        // 3. Patch the handleEnhancedUpload to support the new categories if they aren't in the original switch
-        const originalHandleEnhanced = window.handleEnhancedUpload;
+        // OVERRIDE: handleEnhancedUpload to add "Click to View" functionality
         window.handleEnhancedUpload = function(input, category) {
             if (input.files) {
                 const files = Array.from(input.files).slice(0, 5);
                 const body = document.getElementById('doc-body');
+                
                 files.forEach(file => {
+                    // Create a temporary URL for the file so it can be opened
+                    const fileURL = URL.createObjectURL(file);
                     const row = document.createElement('tr');
+                    
                     row.innerHTML = `
                         <td><select class="prof-input w-full text-[11px] uppercase font-bold">
                             <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
@@ -674,9 +653,13 @@
                             <option ${category === 'Photo Evidence' ? 'selected' : ''}>Photo Evidence</option>
                             <option ${category === 'Client ID' ? 'selected' : ''}>Client ID</option>
                             <option ${category === 'Firm Files' ? 'selected' : ''}>Firm Files</option>
-                            <option ${!['Medical Records','Insurance','Litigation Docs','Invoices','Police Report','Photo Evidence','Client ID','Firm Files'].includes(category) ? 'selected' : ''}>Others</option>
                         </select></td>
-                        <td><div contenteditable="true" class="w-full font-bold text-orange-600">${file.name}</div></td>
+                        <td>
+                            <div contenteditable="true" class="hidden">${file.name}</div>
+                            <a href="${fileURL}" target="_blank" class="text-orange-600 font-bold text-[12px] underline decoration-orange-300 hover:text-orange-800 transition-all cursor-pointer">
+                                📄 ${file.name} (Click to View)
+                            </a>
+                        </td>
                         <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
                     body.prepend(row);
                 });
@@ -684,6 +667,7 @@
             }
         };
     })();
+</script>
 </script>
 </body>
 </html>
