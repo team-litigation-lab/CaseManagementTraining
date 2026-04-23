@@ -681,6 +681,68 @@
         el.addEventListener('change', () => updateColors(el));
     });
 </script>
+                <script>
+    (function() {
+        // 1. Create and Add the Total Display UI
+        window.addEventListener('DOMContentLoaded', () => {
+            const treatmentPane = document.getElementById('pane-treatment');
+            if (treatmentPane) {
+                const totalCard = document.createElement('div');
+                totalCard.className = "pdf-card border-l-8 border-green-600 mt-6 bg-green-50";
+                totalCard.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-[11px] font-black uppercase text-green-700">Total Case Medical Charges</h3>
+                        <div id="grand-total-display" class="text-xl font-black text-green-700">$ 0.00</div>
+                    </div>
+                `;
+                treatmentPane.appendChild(totalCard);
+                calculateGrandTotal(); // Initial run
+            }
+        });
+
+        // 2. The Calculation Logic
+        window.calculateGrandTotal = function() {
+            let total = 0;
+            // Target the last column in your treatment cards (the Charges field)
+            const chargeFields = document.querySelectorAll('#facility-container [contenteditable="true"]');
+            
+            chargeFields.forEach((field, index) => {
+                // We only want every 3rd field if looking at the card grid, 
+                // but a safer way is checking the label above it.
+                const label = field.previousElementSibling;
+                if (label && (label.innerText.includes('CHARGES') || label.innerText.includes('TOTAL CHARGES'))) {
+                    let val = field.innerText.replace(/[$,\s]/g, ''); // Remove $, commas, and spaces
+                    let num = parseFloat(val);
+                    if (!isNaN(num)) {
+                        total += num;
+                    }
+                }
+            });
+
+            const display = document.getElementById('grand-total-display');
+            if (display) {
+                display.innerText = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                }).format(total);
+            }
+        };
+
+        // 3. Listen for changes in the Charges fields
+        document.addEventListener('input', (e) => {
+            if (e.target.hasAttribute('contenteditable')) {
+                calculateGrandTotal();
+            }
+        });
+
+        // Ensure calculation works when a new facility is added
+        const originalAddFacility = window.addFacility;
+        window.addFacility = function() {
+            originalAddFacility();
+            calculateGrandTotal();
+        };
+    })();
+</script>
 </script>
 </body>
 </html>
