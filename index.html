@@ -45,7 +45,7 @@
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
             <button onclick="CaseVault.openVault()" class="w-full border border-slate-700 text-slate-300 py-3 rounded-lg font-bold text-xs uppercase hover:bg-slate-900 transition-all mb-2">View Case Vault</button>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
-            <button onclick="CaseVault.save()" class="...">Save Case</button>
+            <button onclick="CaseVault.save()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-black text-xs uppercase shadow-md transition-all mb-2">Save Case File</button>
         </div>
     </aside>
 
@@ -81,6 +81,7 @@
                                 <option value="Litigation">Litigation</option>
                                 <option value="Lien Negotiation">Lien Negotiation</option>
                                 <option value="Disbursement">Disbursement</option>
+                                <option value="Disbursement">Settled</option>
                                 <div id="pane-storage" class="tab-pane">
     <div class="pdf-card border-l-8 border-orange-500">
         <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2 tracking-widest">Case Vault</h3>
@@ -583,37 +584,34 @@
     // Auto-init
     window.addEventListener('DOMContentLoaded', () => CaseVault.render());
 </script>
-    <script>
+   <script>
     const CaseVault = {
         KEY: 'LSH_STORAGE_VAULT',
 
-        // 1. OPEN VAULT (Handles Tab Switching Safely)
+        // 1. OPEN VAULT
         open: function() {
-            // Hide everything first to avoid "tab mess-ups"
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
             
-            // Show Storage Pane
             const pane = document.getElementById('pane-storage');
             if (pane) {
                 pane.classList.add('active');
                 this.render();
-            } else {
-                alert("Error: 'pane-storage' section is missing from your HTML.");
             }
         },
 
-        // 2. SAVE CASE
+        // 2. Save Case
         save: function() {
             try {
-                // Look for Client Name and Case ID
+                // Ensure the current phase select is updated in the HTML before saving
+                const phaseSelect = document.querySelector('select[onchange="updatePhase(this.value)"]');
+                if(phaseSelect) phaseSelect.options[phaseSelect.selectedIndex].setAttribute('selected', 'selected');
+
                 const name = document.querySelector('#capture-area [contenteditable="true"]')?.innerText.trim() || "Unknown";
                 const id = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
                 const fileLabel = `${name} | ${id}`;
                 
                 const workspace = document.getElementById('capture-area');
-                if (!workspace) return alert("Error: 'capture-area' not found.");
-
                 const htmlSnapshot = workspace.innerHTML;
                 const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
                 
@@ -626,25 +624,21 @@
                 alert("Case Saved Successfully!");
                 this.render();
             } catch (e) {
-                console.error(e);
-                alert("Save failed. Check console for errors.");
+                alert("Save failed. Workspace area not found.");
             }
         },
 
-        // 3. RETRIEVE CASE
+        // 3. RETRIEVE CASE (With Button Re-Binding)
         load: function(key) {
             const store = JSON.parse(localStorage.getItem(this.KEY) || '{}');
             if (store[key]) {
                 const workspace = document.getElementById('capture-area');
                 workspace.innerHTML = store[key].html;
                 
-                // Return to Profile Tab automatically so the user sees data
+                // IMPORTANT: After loading HTML, we must ensure the original script can find the new buttons
+                // We force a return to the Profile tab
                 if (typeof showTab === 'function') {
                     showTab('profile');
-                } else {
-                    // Fallback if original showTab is broken
-                    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                    document.getElementById('pane-profile').classList.add('active');
                 }
             }
         },
@@ -659,7 +653,7 @@
             }
         },
 
-        // 5. RENDER LIST (Uses Inter Font & Original Colors)
+        // 5. RENDER LIST
         render: function() {
             const list = document.getElementById('vault-list');
             if (!list) return;
@@ -686,7 +680,6 @@
         }
     };
 
-    // Auto-refresh when page opens
     window.addEventListener('DOMContentLoaded', () => CaseVault.render());
 </script>
 </body>
