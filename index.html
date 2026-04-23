@@ -43,7 +43,6 @@
         </div>
         <div class="p-6 space-y-4">
             <button onclick="downloadPDF()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg transition-all">Download PDF</button>
-            <button onclick="StorageManager.save()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-lg font-bold text-xs uppercase transition-all mb-2">Save Case File</button>
             <button onclick="window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 transition-all">Clear All Data</button>
         </div>
     </aside>
@@ -87,7 +86,6 @@
             </div>
 
             <div id="tab-navigation" class="flex flex-wrap gap-5 border-b mb-6 no-print">
-                <div id="btn-storage" onclick="showTab('storage')" class="tab-btn">Case Files</div>
                 <div id="btn-profile" onclick="showTab('profile')" class="tab-btn active-tab">Case Profile</div>
                 <div id="btn-police" onclick="showTab('police')" class="tab-btn">Police Report</div>
                 <div id="btn-matrix" onclick="showTab('matrix')" class="tab-btn">Insurance Matrix</div>
@@ -495,53 +493,107 @@
             const element = document.getElementById('capture-area');
             const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(opt).from(element).save();
-            <div id="pane-storage" class="tab-pane">
-    <div class="pdf-card border-l-8 border-orange-500">
-        <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Stored Records</h3>
-        <div id="saved-cases-list" class="space-y-3">
-            <p class="text-slate-400 text-xs italic">No saved cases found.</p>
-        </div>
-    </div>
-</div>
         }
     </script>
+</body>
     <script>
+    // --- 1. NAVIGATION LOGIC (Fixed to work with saved files) ---
+    function showTab(id) {
+        const panes = document.querySelectorAll('.tab-pane');
+        const btns = document.querySelectorAll('.tab-btn');
+        
+        panes.forEach(p => p.classList.remove('active'));
+        btns.forEach(b => b.classList.remove('active-tab'));
+        
+        const targetPane = document.getElementById('pane-' + id);
+        const targetBtn = document.getElementById('btn-' + id);
+        
+        if (targetPane) targetPane.classList.add('active');
+        if (targetBtn) targetBtn.classList.add('active-tab');
+        
+        // Refresh list automatically when entering the Case Files tab
+        if (id === 'storage') StorageManager.render();
+    }
+
+    // --- 2. ORIGINAL INTERFACE LOGIC (Facility, UM, Finance, etc.) ---
+    function addUM() {
+        const container = document.getElementById('um-container');
+        const div = document.createElement('div');
+        div.className = "grid md:grid-cols-5 gap-4 mt-4 pt-4 border-t border-slate-100 relative";
+        div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-0 right-0 text-red-500">&times;</button><div><label>Policy Holder</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Claim #</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Limits</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>`;
+        container.appendChild(div);
+    }
+
+    function addFacility() {
+        const container = document.getElementById('facility-container');
+        const div = document.createElement('div');
+        div.className = "pdf-card relative border-t-4 border-orange-500";
+        div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl">&times;</button><div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4"><div><label>Facility Name</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded"></div></div><div><label>Specialty</label><select class="prof-input w-full border-orange-200"><option value="Chiro">Chiro</option><option value="Ortho">Ortho</option><option value="Surgery">Surgery</option><option value="EMS">EMS</option><option value="EMC">EMC</option></select></div><div><label>Last Treatment Schedule</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div></div><div><label>Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div></div>`;
+        container.appendChild(div);
+    }
+
+    function addFinanceRow() {
+        const body = document.getElementById('finance-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold">$ 0.00</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+        body.appendChild(row);
+    }
+
+    function addDocRow() {
+        const body = document.getElementById('doc-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><select class="prof-input w-full text-[11px] uppercase font-bold"><option>Medical Records</option><option>Insurance</option><option>Litigation Docs</option><option>Invoices</option><option>Others</option></select></td><td><div contenteditable="true" class="w-full"></div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+        body.appendChild(row);
+    }
+
+    function addNoteRow() {
+        const body = document.getElementById('notes-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full italic text-slate-600"></div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+        body.appendChild(row);
+    }
+
+    function addTaskRow() {
+        const body = document.getElementById('tasks-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
+        body.appendChild(row);
+    }
+
+    function toggleVehicleUI(val) {
+        const r = document.getElementById('ui-repairable');
+        const t = document.getElementById('ui-totalled');
+        if(!r || !t) return;
+        r.classList.add('hidden'); t.classList.add('hidden');
+        if(val === 'repairable') r.classList.remove('hidden');
+        if(val === 'totalled') t.classList.remove('hidden');
+    }
+
+    // --- 3. STORAGE MANAGER (Case Save/Retrieve) ---
     const StorageManager = {
-        // Saves the current state of the interface
         save: function() {
-            // It looks for the Client Name and Case ID automatically to name the file
-            const client = document.querySelector('[contenteditable="true"]').innerText.trim() || "Unnamed";
+            // Automatically names the file based on the Client Name and Case ID
+            const client = document.querySelector('[contenteditable="true"]').innerText.trim() || "Unknown";
             const id = document.getElementById('case-id-val')?.innerText.trim() || "NoID";
-            const fileName = `${client}_${id}_${new Date().toLocaleDateString().replace(/\//g, '-')}`;
+            const fileName = `${client} (${id})`;
             
             const data = document.getElementById('capture-area').innerHTML;
             const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
             
-            store[fileName] = {
-                timestamp: new Date().toLocaleString(),
-                html: data
-            };
-            
+            store[fileName] = { timestamp: new Date().toLocaleString(), html: data };
             localStorage.setItem('LSH_VAULT', JSON.stringify(store));
-            alert("Case successfully saved to browser storage.");
+            alert("Case Saved!");
             this.render();
         },
 
-        // Shows the list of saved cases
         render: function() {
             const list = document.getElementById('saved-cases-list');
             if (!list) return;
-            
             const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
             const keys = Object.keys(store);
             
-            if (keys.length === 0) {
-                list.innerHTML = '<p class="text-slate-400 text-xs italic">No records found.</p>';
-                return;
-            }
-
-            list.innerHTML = keys.map(key => `
-                <div class="flex justify-between items-center bg-slate-50 border border-slate-200 p-4 rounded-xl">
+            list.innerHTML = keys.length ? keys.map(key => `
+                <div class="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl mb-2">
                     <div>
                         <div class="font-bold text-slate-800 text-sm">${key}</div>
                         <div class="text-[10px] text-slate-400 uppercase">${store[key].timestamp}</div>
@@ -550,23 +602,19 @@
                         <button onclick="StorageManager.load('${key}')" class="text-orange-600 font-black text-[10px] uppercase hover:underline">Retrieve</button>
                         <button onclick="StorageManager.delete('${key}')" class="text-slate-300 font-bold text-[10px] uppercase hover:text-red-500">Delete</button>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('') : '<p class="text-slate-400 text-xs italic">No saved cases found.</p>';
         },
 
-        // Loads a case back onto the screen
         load: function(key) {
             const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
             if (store[key]) {
                 document.getElementById('capture-area').innerHTML = store[key].html;
-                // Important: tell the original script to go to the profile tab
-                if (typeof showTab === "function") showTab('profile');
+                showTab('profile'); // Jumps back to profile view after loading
             }
         },
 
-        // Deletes a case
         delete: function(key) {
-            if (confirm("Delete this case file permanently?")) {
+            if (confirm("Permanently delete this record?")) {
                 const store = JSON.parse(localStorage.getItem('LSH_VAULT') || '{}');
                 delete store[key];
                 localStorage.setItem('LSH_VAULT', JSON.stringify(store));
@@ -575,8 +623,22 @@
         }
     };
 
-    // Initialize the list when page opens
+    // --- 4. UTILITY FUNCTIONS ---
+    function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
+    
+    async function downloadPDF() {
+        const element = document.getElementById('capture-area');
+        const opt = { 
+            margin: 0.5, 
+            filename: 'Case_Summary.pdf', 
+            image: { type: 'jpeg', quality: 0.98 }, 
+            html2canvas: { scale: 2 }, 
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
+        };
+        html2pdf().set(opt).from(element).save();
+    }
+
+    // Load saved list when browser finishes loading
     window.addEventListener('DOMContentLoaded', () => StorageManager.render());
 </script>
-</body>
 </html>
