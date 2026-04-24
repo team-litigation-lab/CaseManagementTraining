@@ -1316,31 +1316,50 @@
         text-transform: uppercase !important;
     }
 </style>
+<script>
+<style>
+/* THE NUCLEAR CSS OVERRIDE */
+/* This targets the first contenteditable on the page and freezes its style */
+[contenteditable="true"]:first-of-type {
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1 !important;
+    display: block !important;
+    min-height: 40px !important;
+    transition: none !important; /* Prevents the "shrinking" animation */
+}
+
+/* Fixes the "Others" dropdown color to make it look professional */
+.text-blue-600 {
+    color: #2563eb !important;
+    font-weight: 700 !important;
+}
+</style>
 
 <script>
 (function() {
-    const lockNameSize = () => {
-        // 1. Identify the name field (usually the first one)
+    const forceCmsFonts = () => {
+        // Find the Name Field
         const nameField = document.querySelector('[contenteditable="true"]');
-        
-        if (nameField && !nameField.dataset.cmsId) {
-            // Give it a unique ID so our CSS above can lock it
-            nameField.setAttribute('data-cms-id', 'client-name-header');
+        if (nameField) {
+            // Remove any classes that might be causing the shrink (like text-xl or text-sm)
+            nameField.classList.remove('text-xl', 'text-sm', 'text-base', 'text-lg');
             
-            // 2. Add an 'input' listener to catch the moment you type
-            nameField.addEventListener('input', function() {
-                this.style.fontSize = "28px";
-                this.style.fontWeight = "800";
-            });
+            // If the label "Client:" is still there, hide it again
+            const label = nameField.previousElementSibling;
+            if (label && label.innerText.toUpperCase().includes("CLIENT")) {
+                label.style.display = "none";
+            }
         }
     };
 
-    // Run immediately and every time you click
-    window.addEventListener('load', lockNameSize);
-    document.addEventListener('click', () => setTimeout(lockNameSize, 50));
-    // High-frequency check to fight the "shrinking" bug
-    setInterval(lockNameSize, 500);
+    // Run every time a key is pressed to fight the original script
+    document.addEventListener('input', forceCmsFonts);
+    document.addEventListener('keyup', forceCmsFonts);
+    window.addEventListener('load', forceCmsFonts);
 })();
+</script>
 </script>
 </script>
 </body>
