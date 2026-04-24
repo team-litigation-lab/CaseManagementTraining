@@ -1188,77 +1188,59 @@
 </script>
 <script>
 (function() {
-    const applyCMSTheming = () => {
+    const applyPowerCMS = () => {
         try {
-            // 1. PRIMARY IDENTITY (The CMS Header)
-            const editables = document.querySelectorAll('[contenteditable="true"]');
-            if (editables.length > 0) {
-                const nameField = editables[0];
+            // 1. FORCE CMS HEADER: Name over Contact
+            const nameField = document.querySelector('[contenteditable="true"]');
+            if (nameField && !nameField.dataset.cmsApplied) {
+                // Find the container and force it to a vertical column
                 const container = nameField.closest('.flex');
-
-                if (container && !nameField.dataset.styled) {
-                    // Stack Name over Contact
-                    container.style.flexDirection = "column";
-                    container.style.alignItems = "flex-start";
-                    container.style.gap = "2px";
-
-                    // CMS Header Font (Size 28, Bold, Professional)
-                    nameField.style.fontSize = "28px";
-                    nameField.style.fontWeight = "800";
-                    nameField.style.color = "#1e293b";
-                    nameField.style.letterSpacing = "-0.5px";
+                if (container) {
+                    container.style.cssText = "flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; display: flex !important;";
                     
-                    // Hide "Client:" label
+                    // Style the Name (Professional CMS Size)
+                    nameField.style.cssText = "font-size: 30px !important; font-weight: 800 !important; color: #0f172a !important; line-height: 1 !important; letter-spacing: -0.5px !important; border: none !important; outline: none !important; margin: 0 !important; padding: 0 !important;";
+                    
+                    // Hide the "Client:" label if it exists
                     const label = nameField.previousElementSibling;
                     if (label && label.innerText.toUpperCase().includes("CLIENT")) {
                         label.style.display = "none";
                     }
-                    nameField.dataset.styled = "true";
+                    nameField.dataset.cmsApplied = "true";
                 }
             }
 
-            // 2. SETTLEMENT BOX (The Financial Result)
+            // 2. FORCE SETTLEMENT FINANCIAL BOX
             document.querySelectorAll('label').forEach(label => {
                 const txt = label.innerText.toUpperCase();
                 if (txt.includes("SETTLEMENT") || txt.includes("AMOUNT")) {
                     const amount = label.nextElementSibling;
                     if (amount && amount.contentEditable === "true") {
-                        amount.style.fontSize = "22px";
-                        amount.style.fontWeight = "700";
-                        amount.style.color = "#166534"; // CMS Success Green
-                        amount.style.background = "#f0fdf4";
-                        amount.style.padding = "4px 10px";
-                        amount.style.borderRadius = "4px";
-                        amount.style.border = "1px solid #dcfce7";
+                        amount.style.cssText = "font-size: 24px !important; font-weight: 700 !important; color: #166534 !important; background: #f0fdf4 !important; padding: 6px 12px !important; border-radius: 6px !important; border: 1px solid #dcfce7 !important; display: inline-block !important; font-family: ui-sans-serif, system-ui !important;";
                     }
                 }
             });
 
-            // 3. DROPDOWN "OTHERS" LOGIC
-            document.querySelectorAll('select').forEach(select => {
-                if (!select.dataset.observed) {
-                    select.addEventListener('change', function() {
-                        if (this.value === "Others") {
-                            const input = document.createElement('div');
-                            input.contentEditable = "true";
-                            input.className = "text-sm font-bold text-blue-600 border-b border-blue-200 outline-none";
-                            input.innerText = "SPECIFY TYPE...";
-                            this.replaceWith(input);
-                            input.focus();
-                        }
-                    });
-                    select.dataset.observed = "true";
+            // 3. EMERGENCY ROOM DROPDOWN (Ensures ER is always at the top)
+            document.querySelectorAll('select').forEach(sel => {
+                if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
+                    const er = document.createElement('option');
+                    er.value = "Emergency Room";
+                    er.text = "Emergency Room";
+                    sel.insertBefore(er, sel.firstChild);
                 }
             });
 
         } catch (e) {
-            console.log("Theming applied silently.");
+            console.warn("CMS Layout pending...");
         }
     };
 
-    // Run safely
-    window.addEventListener('load', applyCMSTheming);
-    document.addEventListener('click', () => setTimeout(applyCMSTheming, 50));
+    // Initialize and keep active across tab changes
+    window.addEventListener('load', applyPowerCMS);
+    document.addEventListener('click', () => setTimeout(applyPowerCMS, 50));
+    // Interval check to fight back against your original script's CSS
+    setInterval(applyPowerCMS, 1000);
 })();
 </script>
 </script>
