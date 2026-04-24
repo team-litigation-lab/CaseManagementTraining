@@ -1427,48 +1427,77 @@
         text-transform: uppercase !important;
     }
 </style>
+<style>
+    /* 1. TARGET THE FIRST EDITABLE FIELD ON THE WHOLE PAGE */
+    /* This rule doesn't care about classes or IDs. It only cares about position. */
+    [contenteditable="true"]:first-of-type {
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #1e293b !important; /* Professional CMS Slate */
+        line-height: 1 !important;
+        display: block !important;
+        text-transform: uppercase !important;
+        min-height: 40px !important;
+    }
 
+    /* 2. HIDE THE CLIENT LABEL PERMANENTLY */
+    label:first-of-type {
+        display: none !important;
+    }
+
+    /* 3. FORCE THE STACK (NAME OVER CONTACT) */
+    /* This targets the container holding the name and contact */
+    .pdf-card:first-of-type div.flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+    }
+
+    /* 4. TARGET SETTLEMENT AMOUNT (THE FINANCIAL BOX) */
+    /* We search for the field containing the $ sign or standard settlement position */
+    [contenteditable="true"]:nth-of-type(4) {
+        color: #16a34a !important; /* Green */
+        font-size: 24px !important;
+        font-weight: 700 !important;
+        background: #f0fdf4 !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+    }
+</style>
 <script>
-(function() {
-    const forceStyles = (el) => {
-        el.style.setProperty('font-size', '32px', 'important');
-        el.style.setProperty('font-weight', '900', 'important');
-        el.style.setProperty('color', '#0f172a', 'important');
-        el.classList.add('cms-name-locked');
-    };
+    // This script handles the 'Others' logic which is the only thing CSS can't do alone
+    (function() {
+        const applyLogic = () => {
+            document.querySelectorAll('select').forEach(select => {
+                if (select.innerHTML.includes('MVA') && !select.dataset.observed) {
+                    select.addEventListener('change', function() {
+                        if (this.value === "Others") {
+                            const wrapper = document.createElement('div');
+                            wrapper.style.cssText = "display:flex; align-items:center; gap:8px;";
+                            
+                            const input = document.createElement('div');
+                            input.contentEditable = "true";
+                            input.style.cssText = "border-bottom:2px solid #3b82f6; color:#2563eb; font-weight:bold; outline:none; min-width:120px;";
+                            input.innerText = "TYPE TYPE...";
+                            
+                            const reset = document.createElement('button');
+                            reset.innerHTML = "↺";
+                            reset.style.cssText = "border:none; background:#f1f5f9; border-radius:4px; padding:2px 6px; cursor:pointer;";
+                            reset.onclick = () => location.reload(); // Simple way to reset without breaking logic
 
-    const initLock = () => {
-        const nameField = document.querySelector('.pdf-card [contenteditable="true"]');
-        if (!nameField) return;
-
-        // 1. Initial Force
-        forceStyles(nameField);
-
-        // 2. The "Aggressive Guard"
-        // This watches the element itself for ANY change to its style or classes
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === "attributes") {
-                    // If the main script tries to change style/class, we force it back
-                    forceStyles(nameField);
+                            wrapper.appendChild(input);
+                            wrapper.appendChild(reset);
+                            this.replaceWith(wrapper);
+                            input.focus();
+                        }
+                    });
+                    select.dataset.observed = "true";
                 }
             });
-        });
+        };
 
-        observer.observe(nameField, { attributes: true, attributeFilter: ['style', 'class'] });
-
-        // 3. The "Typing Guard"
-        nameField.addEventListener('input', () => forceStyles(nameField));
-        nameField.addEventListener('blur', () => forceStyles(nameField));
-    };
-
-    // Run on load and whenever the DOM changes (to catch refreshes)
-    const bodyObserver = new MutationObserver(() => initLock());
-    bodyObserver.observe(document.body, { childList: true, subtree: true });
-
-    window.addEventListener('load', initLock);
-    initLock();
-})();
+        setInterval(applyLogic, 1000);
+    })();
 </script>
 </script>
 </body>
