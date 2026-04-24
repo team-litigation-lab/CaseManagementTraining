@@ -1243,64 +1243,67 @@
     setInterval(applyPowerCMS, 1000);
 })();
 </script>
-    <script>
+<script>
 (function() {
-    const applyOthersLogic = () => {
-        // Target all dropdowns to find the Case Type one
-        document.querySelectorAll('select').forEach(select => {
-            // Identify Case Type menu (usually contains MVA) and ensure we haven't patched it yet
-            if (select.innerHTML.includes('MVA') && !select.dataset.resetLogic) {
+    const applyOthersLogicOnly = () => {
+        // Target only selects that are NOT in the header/identity area
+        const allSelects = document.querySelectorAll('select');
+        
+        allSelects.forEach(select => {
+            // Only target the Case Type dropdown (containing MVA)
+            // and make sure we haven't already added the listener
+            if (select.innerHTML.includes('MVA') && !select.dataset.logicActive) {
                 
                 select.addEventListener('change', function() {
                     if (this.value === "Others") {
                         const originalSelect = this;
                         
-                        // Create the wrapper for the input and back button
-                        const wrapper = document.createElement('div');
-                        wrapper.style.display = "inline-flex";
-                        wrapper.style.alignItems = "center";
-                        wrapper.style.gap = "5px";
+                        // Create a small container that won't shift layout
+                        const container = document.createElement('span');
+                        container.style.display = "inline-flex";
+                        container.style.alignItems = "center";
+                        container.style.gap = "4px";
 
-                        // Create editable field
-                        const input = document.createElement('div');
+                        // The editable text field
+                        const input = document.createElement('span');
                         input.contentEditable = "true";
-                        input.style.cssText = "border-bottom: 2px solid #3b82f6; color: #2563eb; font-weight: bold; outline: none; min-width: 120px; font-size: 14px;";
-                        input.innerText = "SPECIFY TYPE...";
+                        input.style.cssText = "border-bottom: 1px solid #60a5fa; color: #2563eb; font-weight: bold; outline: none; min-width: 80px; font-size: 13px; display: inline-block;";
+                        input.innerText = "Specify...";
 
-                        // Create the "Return to Menu" button
+                        // The "Back" button
                         const backBtn = document.createElement('button');
                         backBtn.innerHTML = "↺";
-                        backBtn.title = "Return to dropdown";
-                        backBtn.style.cssText = "background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0px 5px; cursor: pointer; color: #64748b; font-size: 12px;";
+                        backBtn.style.cssText = "border: none; background: #f1f5f9; color: #94a3b8; cursor: pointer; border-radius: 3px; padding: 0 4px; font-size: 12px;";
                         
-                        // If clicked, swap the input wrapper back for the original select menu
                         backBtn.onclick = (e) => {
                             e.preventDefault();
-                            wrapper.replaceWith(originalSelect);
-                            originalSelect.value = "MVA"; // Resets to default
+                            container.replaceWith(originalSelect);
+                            originalSelect.value = "MVA";
                         };
 
-                        wrapper.appendChild(input);
-                        wrapper.appendChild(backBtn);
+                        container.appendChild(input);
+                        container.appendChild(backBtn);
                         
-                        // Replace the dropdown with our new custom input group
-                        this.replaceWith(wrapper);
+                        this.replaceWith(container);
                         
-                        // Focus and auto-clear
                         input.focus();
-                        input.onfocus = function() { if(this.innerText.includes("SPECIFY")) this.innerText = ""; };
+                        input.onfocus = function() { if(this.innerText === "Specify...") this.innerText = ""; };
                     }
                 });
-                
-                // Mark as patched so we don't add multiple listeners
-                select.dataset.resetLogic = "true";
+                select.dataset.logicActive = "true";
             }
         });
     };
 
-    // Run once on load and watch for clicks (like tab switches)
-    window.addEventListener('load', applyOthersLogic);
-    document.addEventListener('click', () => setTimeout(applyOthersLogic, 50));
+    // Run only after the full page is stable
+    window.addEventListener('load', applyOthersLogicOnly);
+    
+    // Only run on clicks that are NOT in the header to prevent jumpiness
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.pdf-card')) { // Assuming your header is in a card
+            setTimeout(applyOthersLogicOnly, 50);
+        }
+    });
 })();
 </script>
 </script>
