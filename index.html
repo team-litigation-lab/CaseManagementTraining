@@ -1144,24 +1144,42 @@
 </script>
 <script>
 (function() {
-    const applyVisualFixes = () => {
-        // 1. STYLE THE NAME ONLY (Visual only, won't break scripts)
-        // Targets the primary client name container
-        const nameField = document.querySelector('[contenteditable="true"]');
-        if (nameField && (nameField.innerText.includes("Client") || nameField.innerText.length > 0)) {
-            // We use .style.cssText to apply changes without overwriting other properties
-            nameField.style.fontSize = "52px"; 
-            nameField.style.fontWeight = "900";
-            nameField.style.lineHeight = "1";
-            nameField.style.letterSpacing = "-2px";
-            nameField.style.color = "#0f172a";
-            nameField.style.display = "inline-block";
-            nameField.style.minWidth = "300px";
+    const applyProfessionalIdentity = () => {
+        // 1. TARGET THE NAME AREA
+        const allEditables = document.querySelectorAll('[contenteditable="true"]');
+        if (allEditables.length > 0) {
+            const nameEl = allEditables[0]; 
+
+            // REMOVE "CLIENT:" LABEL (Finds the label specifically paired with the name)
+            const label = nameEl.previousElementSibling;
+            if (label && label.innerText.toUpperCase().includes("CLIENT")) {
+                label.style.display = "none";
+            }
+
+            // STYLE THE EDITABLE NAME AREA (LARGER THAN INTAKE)
+            nameEl.style.fontSize = "56px"; 
+            nameEl.style.fontWeight = "900";
+            nameEl.style.lineHeight = "1";
+            nameEl.style.letterSpacing = "-2px";
+            nameEl.style.color = "#0f172a";
+            nameEl.style.textTransform = "uppercase";
+            nameEl.style.minWidth = "500px";
+            nameEl.style.border = "none";
+            nameEl.style.background = "transparent";
+            nameEl.style.padding = "0";
+
+            // AUTO-ERASE LOGIC
+            if (nameEl.innerText.trim() === "Client's Name") {
+                nameEl.addEventListener('focus', function() {
+                    if (this.innerText.trim() === "Client's Name") {
+                        this.innerText = "";
+                    }
+                }, { once: true }); // Only erases the first time they click
+            }
         }
 
-        // 2. ADD EMERGENCY ROOM (Only if missing)
+        // 2. FACILITY DROPDOWN: ADD EMERGENCY ROOM
         document.querySelectorAll('select').forEach(sel => {
-            // We look for 'Chiro' to identify the facility specialty dropdown
             if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
                 const erOption = document.createElement('option');
                 erOption.value = "Emergency Room";
@@ -1171,22 +1189,21 @@
         });
     };
 
-    // Run on load
-    window.addEventListener('load', applyVisualFixes);
+    // Initialize on Load
+    window.addEventListener('load', applyProfessionalIdentity);
 
-    // Run on click to catch newly added facilities
+    // Watch for new Facilities added via button click
     document.addEventListener('click', (e) => {
         if (e.target.innerText && e.target.innerText.includes('Facility')) {
-            setTimeout(applyVisualFixes, 50);
+            setTimeout(applyProfessionalIdentity, 50);
         }
     });
 
-    // Run when a tab is switched to ensure font stays large
+    // Ensure the large font persists through Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => setTimeout(applyVisualFixes, 10));
+        btn.addEventListener('click', () => setTimeout(applyProfessionalIdentity, 10));
     });
 })();
-</script>
 </script>
 </body>
 </html>
