@@ -1336,17 +1336,29 @@
     font-weight: 700 !important;
 }
 </style>
-
+<style>
+/* 1. THE PERMANENT CSS LOCK */
+/* This rule is loaded before any scripts and stays active after refresh */
+[contenteditable="true"]:first-of-type,
+.client-name-forced {
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+    display: block !important;
+    min-height: 36px !important;
+}
+</style>
 <script>
 (function() {
-    const forceCmsFonts = () => {
-        // Find the Name Field
+    const applyCmsLock = () => {
         const nameField = document.querySelector('[contenteditable="true"]');
         if (nameField) {
-            // Remove any classes that might be causing the shrink (like text-xl or text-sm)
-            nameField.classList.remove('text-xl', 'text-sm', 'text-base', 'text-lg');
+            // Apply a unique class to ensure the CSS above sticks
+            nameField.classList.add('client-name-forced');
             
-            // If the label "Client:" is still there, hide it again
+            // Hide "Client:" label again if it reappeared after refresh
             const label = nameField.previousElementSibling;
             if (label && label.innerText.toUpperCase().includes("CLIENT")) {
                 label.style.display = "none";
@@ -1354,13 +1366,22 @@
         }
     };
 
-    // Run every time a key is pressed to fight the original script
-    document.addEventListener('input', forceCmsFonts);
-    document.addEventListener('keyup', forceCmsFonts);
-    window.addEventListener('load', forceCmsFonts);
+    // 2. THE OBSERVER (The "Guard")
+    // This watches the page for any changes (like a refresh or script re-render)
+    const observer = new MutationObserver((mutations) => {
+        applyCmsLock();
+    });
+
+    // Start watching the body for changes
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Run on initial load
+    window.addEventListener('load', applyCmsLock);
+    applyCmsLock();
 })();
-</script>
-</script>
 </script>
 </body>
 </html>
