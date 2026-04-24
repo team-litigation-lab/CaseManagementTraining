@@ -1306,6 +1306,42 @@
     });
 })();
 </script>
+    <style>
+    /* This CSS rule is the strongest way to lock the font size */
+    [data-cms-id="client-name-header"] {
+        font-size: 28px !important;
+        font-weight: 800 !important;
+        color: #1e293b !important;
+        line-height: 1.1 !important;
+        text-transform: uppercase !important;
+    }
+</style>
+
+<script>
+(function() {
+    const lockNameSize = () => {
+        // 1. Identify the name field (usually the first one)
+        const nameField = document.querySelector('[contenteditable="true"]');
+        
+        if (nameField && !nameField.dataset.cmsId) {
+            // Give it a unique ID so our CSS above can lock it
+            nameField.setAttribute('data-cms-id', 'client-name-header');
+            
+            // 2. Add an 'input' listener to catch the moment you type
+            nameField.addEventListener('input', function() {
+                this.style.fontSize = "28px";
+                this.style.fontWeight = "800";
+            });
+        }
+    };
+
+    // Run immediately and every time you click
+    window.addEventListener('load', lockNameSize);
+    document.addEventListener('click', () => setTimeout(lockNameSize, 50));
+    // High-frequency check to fight the "shrinking" bug
+    setInterval(lockNameSize, 500);
+})();
+</script>
 </script>
 </body>
 </html>
