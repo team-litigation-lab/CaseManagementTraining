@@ -988,7 +988,7 @@
         if (allEditables.length > 0) {
             // Find the one that says "Client's Name" or is the very first one
             const nameField = Array.from(allEditables).find(el => el.innerText.includes("Name")) || allEditables[0];
-            nameField.style.fontSize = "32px";
+            nameField.style.fontSize = "50px";
             nameField.style.fontWeight = "900";
             nameField.style.display = "block";
             nameField.style.color = "#0f172a";
@@ -1001,17 +1001,17 @@
                 const patchBar = document.createElement('div');
                 patchBar.id = 'lsh-dashboard-patch';
                 // Using flexbox that wraps so it doesn't push elements off screen
-                patchBar.style = "background:#0f172a; color:white; padding:15px; border-radius:10px; margin:20px 0; display:flex; flex-wrap:wrap; gap:25px; align-items:center; justify-content:space-between; font-family:sans-serif;";
+                patchBar.style = "background:#0f172a; color:orange; padding:15px; border-radius:10px; margin:20px 0; display:flex; flex-wrap:wrap; gap:25px; align-items:center; justify-content:space-between; font-family:sans-serif;";
                 
                 patchBar.innerHTML = `
                     <div style="display:flex; gap:20px;">
                         <div>
                             <label style="font-size:10px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Date of Loss</label>
-                            <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px;">MM/DD/YYYY</div>
+                            <div contenteditable="true" style="font-size:14px; color:black; font-weight:bold; border-bottom:1px solid #334155; min-width:100px;">MM/DD/YYYY</div>
                         </div>
                         <div>
                             <label style="font-size:10px; color:#f87171; font-weight:bold; text-transform:uppercase;">Statute (SOL)</label>
-                            <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px; color:#f87171;">MM/DD/YYYY</div>
+                            <div contenteditable="true" style="font-size:14px; Red; font-weight:bold; border-bottom:1px solid #334155; min-width:100px; color:#f87171;">MM/DD/YYYY</div>
                         </div>
                     </div>
                     <div style="background:#1e293b; padding:8px 12px; border-radius:6px; display:flex; align-items:center; gap:8px; border:1px solid #334155;">
