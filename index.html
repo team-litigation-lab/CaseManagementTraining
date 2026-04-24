@@ -1309,31 +1309,33 @@
         };
     })();
 </script>
-   <script>
+  <script>
     (function() {
         window.addEventListener('DOMContentLoaded', () => {
             const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
             if (!headerCard) return;
 
-            // 1. RESTRUCTURE THE HEADER INTO TWO ROWS
-            // We find the existing top row and clean it up
-            const topRow = headerCard.querySelector('.flex.justify-between.items-center');
-            if (topRow) {
-                topRow.className = "flex flex-col gap-6"; // Change to vertical stack
-                
-                // Identify the two main sections
-                const clientData = topRow.querySelector('.flex.items-center.gap-2') || topRow.children[0];
-                const adminData = topRow.querySelector('.flex.items-center.gap-4.border-l') || topRow.children[1];
+            // 1. CLEAR THE HEADER AND START FRESH
+            // This prevents duplicates and messy overlaps
+            headerCard.innerHTML = ''; 
+            headerCard.className = "pdf-card border-l-8 border-orange-500 bg-white p-6 shadow-sm mb-6";
 
-                // 2. STYLE LEVEL 1 (Identity Row)
-                clientData.className = "flex flex-wrap items-center gap-8 w-full border-b pb-4 border-slate-50";
-                
-                // Inject Injury Type if missing
-                if (!document.getElementById('injected-injury-type')) {
-                    const typeDiv = document.createElement('div');
-                    typeDiv.id = 'injected-injury-type';
-                    typeDiv.className = "flex items-baseline gap-2";
-                    typeDiv.innerHTML = `
+            // 2. CREATE THE TOP ROW (Client Name, Contact, Type, Settlement)
+            const row1 = document.createElement('div');
+            row1.className = "flex flex-wrap items-center justify-between w-full mb-6 pb-4 border-b border-slate-50";
+            row1.innerHTML = `
+                <div class="flex items-center gap-8 flex-wrap">
+                    <div class="flex items-baseline gap-2">
+                        <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
+                        <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase">Click to Name</div>
+                    </div>
+                    
+                    <div class="flex items-baseline gap-2">
+                        <label class="text-[9px] text-slate-400 font-black uppercase">Contact:</label>
+                        <div contenteditable="true" class="text-sm font-bold text-slate-600">(000) 000-0000</div>
+                    </div>
+
+                    <div id="injected-injury-type" class="flex items-baseline gap-2">
                         <label class="text-[9px] text-slate-400 font-black uppercase">Type:</label>
                         <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
                                 style="color: #1e3a8a; font-size: 18px; font-weight: 900; text-transform: uppercase;">
@@ -1344,28 +1346,45 @@
                             <option value="Animal Bite">Animal Bite</option>
                             <option value="Others">Others</option>
                         </select>
-                    `;
-                    // Insert before Target Settlement
-                    const targetSettlement = Array.from(clientData.children).find(el => el.innerHTML.includes('TARGET'));
-                    if (targetSettlement) {
-                        clientData.insertBefore(typeDiv, targetSettlement);
-                    }
-                }
+                    </div>
 
-                // 3. STYLE LEVEL 2 (Admin Row - DOL, SOL, Case ID)
-                // We place this below the identity row
-                adminData.className = "flex flex-wrap items-center gap-10 w-full bg-slate-50/50 p-3 rounded-lg";
-                adminData.style.borderLeft = "none"; // Remove the vertical line since it's now a horizontal row
-                adminData.style.paddingLeft = "12px";
+                    <div class="flex items-baseline gap-2">
+                        <label class="text-[9px] text-orange-600 font-black uppercase">Target Settlement:</label>
+                        <div contenteditable="true" class="text-lg font-black text-orange-600 tracking-tighter">$ 0.00</div>
+                    </div>
+                </div>
+            `;
 
-                // Ensure the DOL/SOL block is horizontal within this row
-                const datesBlock = adminData.querySelector('#injected-header-dates');
-                if (datesBlock) {
-                    datesBlock.className = "flex items-center gap-8 mr-auto";
-                    datesBlock.style.borderRight = "none";
-                    datesBlock.querySelectorAll('.flex-col').forEach(el => el.className = "flex items-center gap-2");
-                }
-            }
+            // 3. CREATE THE BOTTOM ROW (DOL, SOL, Case ID, Phase)
+            const row2 = document.createElement('div');
+            row2.className = "flex flex-wrap items-center justify-between w-full bg-slate-50 p-3 rounded-lg";
+            row2.innerHTML = `
+                <div class="flex items-center gap-10">
+                    <div class="flex items-center gap-2">
+                        <label class="text-[9px] text-slate-400 font-bold uppercase">DOL:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-slate-700">MM/DD/YYYY</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-[9px] text-red-500 font-bold uppercase">SOL:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-red-600">MM/DD/YYYY</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-[9px] text-slate-400 font-bold uppercase">Case ID:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-slate-700">#000000</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-[9px] text-slate-400 font-bold uppercase">Phase:</label>
+                    <div id="display-phase" class="text-[10px] font-black text-slate-900 uppercase bg-white px-3 py-1 rounded shadow-sm border border-slate-100">
+                        Intake
+                    </div>
+                </div>
+            `;
+
+            // 4. INJECT THE NEW ROWS INTO THE CARD
+            headerCard.appendChild(row1);
+            headerCard.appendChild(row2);
         });
     })();
 </script>
