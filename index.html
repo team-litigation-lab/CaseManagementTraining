@@ -962,5 +962,76 @@
         });
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. REMOVE OLD SAVE/RETRIEVE BUTTONS
+            // We search for buttons containing the text to ensure we grab the right ones
+            const sidebarButtons = document.querySelectorAll('#sidebar-actions button');
+            sidebarButtons.forEach(btn => {
+                const text = btn.innerText.toUpperCase();
+                if (text.includes('SAVE ENTRY') || text.includes('RETRIEVE ENTRY')) {
+                    btn.remove();
+                }
+            });
+
+            // 2. ENHANCE REPOSITORY SEARCH
+            const repoContainer = document.getElementById('repo-container');
+            if (repoContainer && !document.getElementById('repo-search-wrapper')) {
+                // Create a wrapper for the search bar
+                const searchWrapper = document.createElement('div');
+                searchWrapper.id = 'repo-search-wrapper';
+                searchWrapper.className = "mb-4 px-1";
+                
+                searchWrapper.innerHTML = `
+                    <div class="relative group">
+                        <input type="text" id="repo-search" 
+                            placeholder="Find existing case..." 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[11px] text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all"
+                            onkeyup="filterRepository()">
+                        <div class="absolute left-2.5 top-2.5 text-slate-500 group-focus-within:text-orange-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert after the Repository header
+                const list = document.getElementById('repo-list');
+                repoContainer.insertBefore(searchWrapper, list);
+            }
+        });
+
+        // 3. UPDATED FILTER LOGIC
+        // This works with the 'saveToRepository' data structure
+        window.filterRepository = function() {
+            const query = document.getElementById('repo-search').value.toLowerCase();
+            const list = document.getElementById('repo-list');
+            const REPO_KEY = 'LSH_REPOSITORY';
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+
+            const filteredRepo = repo.filter(item => 
+                item.clientName.toLowerCase().includes(query) || 
+                (item.phase && item.phase.toLowerCase().includes(query))
+            );
+
+            if (filteredRepo.length === 0) {
+                list.innerHTML = '<div class="text-[10px] text-slate-600 italic text-center py-6 border border-dashed border-slate-800 rounded-lg">No cases match your search.</div>';
+                return;
+            }
+
+            // Render the filtered list
+            list.innerHTML = filteredRepo.map(item => `
+                <div onclick="loadFromRepo(${item.id})" class="group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-orange-500/50 transition-all relative mb-2">
+                    <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-2 right-2 text-slate-700 hover:text-red-500 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                    <div class="text-[10px] font-black text-white uppercase truncate pr-6">${item.clientName}</div>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-[8px] text-orange-500/80 font-black uppercase tracking-wider">${item.phase || 'Unknown'}</span>
+                        <span class="text-[8px] text-slate-600">${item.timestamp}</span>
+                    </div>
+                </div>
+            `).join('');
+        };
+    })();
+</script>
 </body>
 </html>
