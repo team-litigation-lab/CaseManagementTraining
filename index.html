@@ -1416,24 +1416,58 @@
         font-weight: 600 !important;
     }
 </style>
+<style>
+    /* Global force - targets the name field and prevents UI scaling */
+    .cms-name-locked {
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        line-height: 1 !important;
+        display: block !important;
+        text-transform: uppercase !important;
+    }
+</style>
 
 <script>
 (function() {
-    // This function clears the placeholder "Client's Name" 
-    const handlePlaceholder = () => {
-        const nameField = document.querySelector('.pdf-card [contenteditable="true"]');
-        if (nameField && nameField.innerText.trim() === "Client's Name") {
-            nameField.onfocus = function() {
-                if (this.innerText.trim() === "Client's Name") this.innerText = "";
-            };
-        }
+    const forceStyles = (el) => {
+        el.style.setProperty('font-size', '32px', 'important');
+        el.style.setProperty('font-weight', '900', 'important');
+        el.style.setProperty('color', '#0f172a', 'important');
+        el.classList.add('cms-name-locked');
     };
 
-    // Use a robust interval to "Re-Hook" the placeholder logic if the script re-renders
-    setInterval(handlePlaceholder, 1000);
-    
-    // Initial Run
-    window.addEventListener('load', handlePlaceholder);
+    const initLock = () => {
+        const nameField = document.querySelector('.pdf-card [contenteditable="true"]');
+        if (!nameField) return;
+
+        // 1. Initial Force
+        forceStyles(nameField);
+
+        // 2. The "Aggressive Guard"
+        // This watches the element itself for ANY change to its style or classes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === "attributes") {
+                    // If the main script tries to change style/class, we force it back
+                    forceStyles(nameField);
+                }
+            });
+        });
+
+        observer.observe(nameField, { attributes: true, attributeFilter: ['style', 'class'] });
+
+        // 3. The "Typing Guard"
+        nameField.addEventListener('input', () => forceStyles(nameField));
+        nameField.addEventListener('blur', () => forceStyles(nameField));
+    };
+
+    // Run on load and whenever the DOM changes (to catch refreshes)
+    const bodyObserver = new MutationObserver(() => initLock());
+    bodyObserver.observe(document.body, { childList: true, subtree: true });
+
+    window.addEventListener('load', initLock);
+    initLock();
 })();
 </script>
 </script>
