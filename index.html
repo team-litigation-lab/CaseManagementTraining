@@ -1142,5 +1142,46 @@
     });
 })();
 </script>
+    <script>
+(function() {
+    const runLSHFinalFixes = () => {
+        // 1. PROFESSIONAL FONT FIX: TARGET PRIMARY CLIENT NAME
+        // Looks for the first occurrence of the Client Name display
+        const clientNameEl = document.querySelector('.text-xl.font-black.text-slate-900.uppercase');
+        if (clientNameEl) {
+            clientNameEl.style.fontSize = "42px"; // Increased size
+            clientNameEl.style.fontWeight = "900";
+            clientNameEl.style.letterSpacing = "-1.5px";
+            clientNameEl.style.lineHeight = "1";
+            clientNameEl.style.color = "#0f172a"; // Professional Slate-950
+        }
+
+        // 2. FACILITY DROPDOWN FIX: ADD EMERGENCY ROOM
+        // Targets all select elements that contain specialty options
+        const allSelects = document.querySelectorAll('select');
+        allSelects.forEach(select => {
+            const content = select.innerHTML;
+            // Check if it's the specialty dropdown and if ER is missing
+            if (content.includes('Chiro') && !content.includes('Emergency Room')) {
+                const erOption = document.createElement('option');
+                erOption.value = "Emergency Room";
+                erOption.text = "Emergency Room";
+                select.appendChild(erOption);
+            }
+        });
+    };
+
+    // RUN ON LOAD
+    window.addEventListener('load', runLSHFinalFixes);
+
+    // RUN ON CLICK: Specifically catches when a user adds a new facility card
+    document.addEventListener('click', (e) => {
+        if (e.target.innerText && e.target.innerText.includes('Add Facility')) {
+            // Small delay to allow the HTML for the new card to exist
+            setTimeout(runLSHFinalFixes, 50);
+        }
+    });
+})();
+</script>
 </body>
 </html>
