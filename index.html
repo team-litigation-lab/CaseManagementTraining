@@ -889,13 +889,16 @@
 </script>
 <script>
 /**
- * LSH CONSOLIDATED PATCH
- * Includes: Header Overhaul, Passenger Logic, Primary Injury Tab, and Field Cleanup
+ * LSH TAB-SAFE MASTER PATCH
+ * Fixes Header, Dashboard, and Passengers while protecting Navigation Tabs
  */
 (function() {
     const initPatch = () => {
-        // --- 1. MASTER HEADER OVERHAUL ---
+        // --- 1. HEADER OVERHAUL (Targeted) ---
+        // We find the header card specifically. If your header is inside #capture-area, 
+        // we target the first card with the orange border.
         const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
+        
         if (headerCard) {
             headerCard.innerHTML = ''; 
             headerCard.className = "pdf-card border-l-8 border-orange-500 bg-white p-6 shadow-sm mb-6";
@@ -970,13 +973,15 @@
             headerCard.appendChild(row2);
         }
 
-        // --- 2. PRIMARY INJURY & PASSENGER SECTIONS ---
+        // --- 2. INJECT PASSENGER SECTION INTO CASE PROFILE PANE ---
         const profilePane = document.getElementById('pane-profile');
         if (profilePane && !document.getElementById('passenger-section')) {
+            // Add Primary Injury Card
             const injuryCard = document.createElement('div');
             injuryCard.className = "pdf-card border-l-8 border-red-500 mb-8 bg-white shadow-sm";
             injuryCard.innerHTML = `<h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2 tracking-widest">Injuries Sustained (Primary)</h3><div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed"></div>`;
             
+            // Add Passenger Section
             const passengerSec = document.createElement('div');
             passengerSec.id = 'passenger-section';
             passengerSec.className = "block w-full mt-10 pb-10";
@@ -985,40 +990,27 @@
             profilePane.appendChild(injuryCard);
             profilePane.appendChild(passengerSec);
         }
-
-        // --- 3. CLEANUP EMPLOYER/JOB TITLE ---
-        document.querySelectorAll('#pane-profile [contenteditable="true"]').forEach(el => {
-            const label = el.previousElementSibling?.innerText || "";
-            if (label.includes('Employer') || label.includes('Job Title')) {
-                if (el.innerText.includes('Click here to list diagnoses')) el.innerText = '';
-                el.className = "text-sm font-bold w-full p-2 border border-slate-100 rounded bg-white text-slate-900";
-            }
-        });
     };
 
-    // Passenger Logic
+    // --- 3. DYNAMIC ACTIONS ---
     window.addPassengerRow = function() {
         const container = document.getElementById('passenger-container');
-        if (container.children.length >= 5) return alert("Limit 5");
+        if (container.children.length >= 5) return alert("Limit 5 reached");
         const div = document.createElement('div');
-        div.className = "pdf-card border-t-8 border-slate-200 bg-white relative";
-        div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-3 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button><div class="grid lg:grid-cols-4 gap-6 p-2"><div><label>Name</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div><div><label>Contact</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div><div><label>DOB</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div><div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div></div><div class="mt-4"><label class="text-red-500 text-[9px] font-black">Injuries Sustained</label><div contenteditable="true" class="text-sm italic p-3 bg-slate-50 rounded min-h-[50px]"></div></div>`;
+        div.className = "pdf-card border-t-8 border-slate-200 bg-white relative p-4 mb-4 shadow-sm";
+        div.innerHTML = `
+            <button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
+            <div class="grid lg:grid-cols-4 gap-4">
+                <div><label class="text-[9px] uppercase font-bold text-slate-400">Name</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+                <div><label class="text-[9px] uppercase font-bold text-slate-400">Contact</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+                <div><label class="text-[9px] uppercase font-bold text-slate-400">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
+                <div><label class="text-[9px] uppercase font-bold text-slate-400">Carrier</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+            </div>
+            <div class="mt-4">
+                <label class="text-[9px] uppercase font-bold text-red-500">Injuries Sustained</label>
+                <div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div>
+            </div>`;
         container.appendChild(div);
-    };
-
-    // Global Clear
-    window.clearAllFields = function() {
-        if (!confirm("Clear current screen and backup to archive?")) return;
-        if (window.archiveCurrentCase) window.archiveCurrentCase();
-        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
-            if (el.innerText.includes('/')) el.innerText = 'MM/DD/YYYY';
-            else if (el.innerText.includes('$')) el.innerText = '$ 0.00';
-            else el.innerText = '';
-        });
-        document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
-        ['passenger-container', 'facility-container', 'um-container'].forEach(id => {
-            const c = document.getElementById(id); if (c) c.innerHTML = '';
-        });
     };
 
     window.addEventListener('DOMContentLoaded', initPatch);
