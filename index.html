@@ -1464,40 +1464,63 @@
         border-radius: 4px !important;
     }
 </style>
+<style>
+    /* 1. We redefine the base behavior of the name field at the browser root */
+    :root {
+        --cms-header-size: 32px !important;
+    }
+
+    /* Target the first contenteditable and lock its variables */
+    [contenteditable="true"]:first-of-type {
+        font-size: var(--cms-header-size) !important;
+        font-weight: 900 !important;
+        color: #1e293b !important;
+        line-height: 1 !important;
+        text-transform: uppercase !important;
+        min-height: 40px !important;
+        /* This prevents the script from overriding via inline styles */
+        all: unset !important; 
+        display: block !important;
+        font-family: sans-serif !important;
+        cursor: text !important;
+    }
+
+    /* 2. Fix the layout stack (Name over Contact) */
+    .pdf-card:first-of-type .flex {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 5px !important;
+    }
+
+    /* 3. Hide the "Client:" label */
+    label:first-of-type {
+        display: none !important;
+    }
+</style>
+
 <script>
-    // This script handles the 'Others' logic which is the only thing CSS can't do alone
-    (function() {
-        const applyLogic = () => {
-            document.querySelectorAll('select').forEach(select => {
-                if (select.innerHTML.includes('MVA') && !select.dataset.observed) {
-                    select.addEventListener('change', function() {
-                        if (this.value === "Others") {
-                            const wrapper = document.createElement('div');
-                            wrapper.style.cssText = "display:flex; align-items:center; gap:8px;";
-                            
-                            const input = document.createElement('div');
-                            input.contentEditable = "true";
-                            input.style.cssText = "border-bottom:2px solid #3b82f6; color:#2563eb; font-weight:bold; outline:none; min-width:120px;";
-                            input.innerText = "TYPE TYPE...";
-                            
-                            const reset = document.createElement('button');
-                            reset.innerHTML = "↺";
-                            reset.style.cssText = "border:none; background:#f1f5f9; border-radius:4px; padding:2px 6px; cursor:pointer;";
-                            reset.onclick = () => location.reload(); // Simple way to reset without breaking logic
-
-                            wrapper.appendChild(input);
-                            wrapper.appendChild(reset);
-                            this.replaceWith(wrapper);
-                            input.focus();
-                        }
-                    });
-                    select.dataset.observed = "true";
-                }
+(function() {
+    const lockStyle = () => {
+        const nameField = document.querySelector('[contenteditable="true"]');
+        if (nameField) {
+            // This is the "Secret Sauce":
+            // It creates a 'Proxy' that ignores attempts to change the font size
+            Object.defineProperty(nameField.style, 'fontSize', {
+                get: function() { return '32px'; },
+                set: function() { /* Do nothing - reject the change */ },
+                configurable: true
             });
-        };
+            
+            // Force the font one last time in JS
+            nameField.style.setProperty('font-size', '32px', 'important');
+        }
+    };
 
-        setInterval(applyLogic, 1000);
-    })();
+    // Run every half second to ensure if the element is recreated, we catch it
+    setInterval(lockStyle, 500);
+    window.addEventListener('load', lockStyle);
+})();
 </script>
 </script>
 </body>
