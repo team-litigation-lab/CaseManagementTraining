@@ -1220,5 +1220,94 @@
         };
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            const profilePane = document.getElementById('pane-profile');
+            if (!profilePane) return;
+
+            // 1. STYLED PRIMARY INJURY CARD (Spacing Optimized)
+            const narrativeCard = profilePane.querySelector('.pdf-card:last-child');
+            if (narrativeCard && !document.getElementById('primary-injuries-card')) {
+                const injuryCard = document.createElement('div');
+                injuryCard.id = 'primary-injuries-card';
+                // Added mb-8 for clear breathing room
+                injuryCard.className = "pdf-card border-l-8 border-red-500 mb-8 bg-white shadow-sm";
+                injuryCard.innerHTML = `
+                    <h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2 tracking-widest">Primary Client: Injuries Sustained</h3>
+                    <div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed">
+                        Click here to list diagnoses...
+                    </div>
+                `;
+                narrativeCard.parentNode.insertBefore(injuryCard, narrativeCard);
+            }
+
+            // 2. PASSENGER SECTION WITH FLEX CONTAINER
+            if (!document.getElementById('passenger-section')) {
+                const passengerSection = document.createElement('div');
+                passengerSection.id = 'passenger-section';
+                // Added 'clear-both' and 'block' to prevent float issues
+                passengerSection.className = "block w-full mt-10 pb-10"; 
+                passengerSection.innerHTML = `
+                    <div class="flex justify-between items-center px-2 mb-6 border-b border-slate-200 pb-4">
+                        <div class="flex flex-col">
+                            <h3 class="text-[11px] font-black uppercase text-slate-400 italic">Passenger Records</h3>
+                            <span class="text-[9px] text-slate-400 font-bold uppercase">Up to 5 additional claimants</span>
+                        </div>
+                        <button onclick="addPassengerRow()" id="add-passenger-btn" class="bg-slate-950 text-white text-[10px] px-6 py-2.5 rounded-lg font-bold uppercase transition-all hover:bg-orange-600 shadow-md">
+                            + Add Passenger
+                        </button>
+                    </div>
+                    <div id="passenger-container" class="space-y-6 flex flex-col"></div>
+                `;
+                profilePane.appendChild(passengerSection);
+            }
+        });
+
+        // 3. DYNAMIC ROW LOGIC (Layout Protected)
+        window.addPassengerRow = function() {
+            const container = document.getElementById('passenger-container');
+            const count = container.children.length;
+
+            if (count >= 5) return alert("Passenger limit reached.");
+
+            const div = document.createElement('div');
+            // 'animate-in' style feel (optional but clean)
+            div.className = "pdf-card border-t-8 border-slate-200 bg-white shadow-sm relative overflow-hidden";
+            div.innerHTML = `
+                <div class="absolute top-0 left-0 w-full h-1 bg-slate-100"></div>
+                <button onclick="this.parentElement.remove(); updatePassengerButton();" class="no-print absolute top-3 right-4 text-slate-300 hover:text-red-500 font-bold text-xl transition-colors">&times;</button>
+                
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 p-2">
+                    <div class="flex flex-col"><label>Full Name</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100"></div></div>
+                    <div class="flex flex-col"><label>Contact</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100"></div></div>
+                    <div class="flex flex-col"><label>DOB</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100">MM/DD/YYYY</div></div>
+                    <div class="flex flex-col"><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100"></div></div>
+                </div>
+                
+                <div class="mt-6 pt-4 border-t border-slate-50">
+                    <label class="text-red-500 font-black text-[9px] mb-2">Injuries Sustained</label>
+                    <div contenteditable="true" class="text-sm italic w-full p-4 bg-slate-50 rounded-lg min-h-[50px] text-slate-600">Describe injuries here...</div>
+                </div>
+            `;
+            container.appendChild(div);
+            updatePassengerButton();
+            
+            // Scroll to bottom of the pane so the user sees the new entry
+            div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+
+        window.updatePassengerButton = function() {
+            const btn = document.getElementById('add-passenger-btn');
+            const count = document.getElementById('passenger-container').children.length;
+            if (count >= 5) {
+                btn.style.display = 'none';
+            } else {
+                btn.style.display = 'block';
+                btn.innerText = `+ Add Passenger (${count}/5)`;
+            }
+        };
+    })();
+</script>
 </body>
 </html>
