@@ -1186,72 +1186,81 @@
     });
 })();
 </script>
-    <script>
+<script>
 (function() {
-    const applyCMSLayout = () => {
-        // 1. CMS IDENTITY HEADER (Name over Contact)
-        const nameField = document.querySelector('[contenteditable="true"]');
-        if (nameField && nameField.innerText.includes("Name")) {
-            const container = nameField.closest('.flex');
-            if (container) {
-                // Remove standard alignment and stack vertically
-                container.style.flexDirection = "column";
-                container.style.alignItems = "flex-start";
-                container.style.gap = "4px";
+    const applyCMSTheming = () => {
+        try {
+            // 1. PRIMARY IDENTITY (The CMS Header)
+            const editables = document.querySelectorAll('[contenteditable="true"]');
+            if (editables.length > 0) {
+                const nameField = editables[0];
+                const container = nameField.closest('.flex');
 
-                // Realistic CMS Header Font (Size 28 is the professional sweet spot)
-                nameField.style.fontSize = "28px";
-                nameField.style.fontWeight = "800";
-                nameField.style.color = "#1e293b"; // Deep Slate
-                nameField.style.letterSpacing = "-0.5px";
-                nameField.style.textTransform = "none"; // CMS usually uses Title Case
-                
-                // Remove "Client:" label for a cleaner look
-                const label = nameField.previousElementSibling;
-                if (label && label.tagName === "LABEL") label.style.display = "none";
-            }
-        }
+                if (container && !nameField.dataset.styled) {
+                    // Stack Name over Contact
+                    container.style.flexDirection = "column";
+                    container.style.alignItems = "flex-start";
+                    container.style.gap = "2px";
 
-        // 2. TARGET SETTLEMENT AMOUNT (Professional Financial Style)
-        const allLabels = document.querySelectorAll('label');
-        allLabels.forEach(label => {
-            const text = label.innerText.toUpperCase();
-            if (text.includes("TARGET SETTLEMENT") || text.includes("SETTLEMENT AMOUNT")) {
-                const amountField = label.nextElementSibling;
-                if (amountField && amountField.getAttribute('contenteditable') === 'true') {
-                    // Modern CMS "Financial Dashboard" Style
-                    amountField.style.fontSize = "24px";
-                    amountField.style.fontWeight = "700";
-                    amountField.style.color = "#059669"; // Success Green
-                    amountField.style.padding = "4px 12px";
-                    amountField.style.backgroundColor = "#f0fdf4"; // Light mint tint
-                    amountField.style.borderRadius = "6px";
-                    amountField.style.border = "1px solid #dcfce7";
-                    amountField.style.display = "inline-block";
-                    amountField.style.marginTop = "4px";
+                    // CMS Header Font (Size 28, Bold, Professional)
+                    nameField.style.fontSize = "28px";
+                    nameField.style.fontWeight = "800";
+                    nameField.style.color = "#1e293b";
+                    nameField.style.letterSpacing = "-0.5px";
+                    
+                    // Hide "Client:" label
+                    const label = nameField.previousElementSibling;
+                    if (label && label.innerText.toUpperCase().includes("CLIENT")) {
+                        label.style.display = "none";
+                    }
+                    nameField.dataset.styled = "true";
                 }
             }
-        });
 
-        // 3. CONTACT INFO SUB-HEADER
-        // Assuming the contact field is the one right after the name area
-        const contactField = document.querySelector('[contenteditable="true"]:nth-of-type(2)');
-        if (contactField && contactField !== nameField) {
-            contactField.style.fontSize = "14px";
-            contactField.style.color = "#64748b"; // Subtle gray
-            contactField.style.fontWeight = "500";
+            // 2. SETTLEMENT BOX (The Financial Result)
+            document.querySelectorAll('label').forEach(label => {
+                const txt = label.innerText.toUpperCase();
+                if (txt.includes("SETTLEMENT") || txt.includes("AMOUNT")) {
+                    const amount = label.nextElementSibling;
+                    if (amount && amount.contentEditable === "true") {
+                        amount.style.fontSize = "22px";
+                        amount.style.fontWeight = "700";
+                        amount.style.color = "#166534"; // CMS Success Green
+                        amount.style.background = "#f0fdf4";
+                        amount.style.padding = "4px 10px";
+                        amount.style.borderRadius = "4px";
+                        amount.style.border = "1px solid #dcfce7";
+                    }
+                }
+            });
+
+            // 3. DROPDOWN "OTHERS" LOGIC
+            document.querySelectorAll('select').forEach(select => {
+                if (!select.dataset.observed) {
+                    select.addEventListener('change', function() {
+                        if (this.value === "Others") {
+                            const input = document.createElement('div');
+                            input.contentEditable = "true";
+                            input.className = "text-sm font-bold text-blue-600 border-b border-blue-200 outline-none";
+                            input.innerText = "SPECIFY TYPE...";
+                            this.replaceWith(input);
+                            input.focus();
+                        }
+                    });
+                    select.dataset.observed = "true";
+                }
+            });
+
+        } catch (e) {
+            console.log("Theming applied silently.");
         }
     };
 
-    // Run on load and after short delay for safety
-    window.addEventListener('load', applyCMSLayout);
-    setTimeout(applyCMSLayout, 300);
-    
-    // Maintain layout when tabs are switched
-    document.addEventListener('click', () => {
-        setTimeout(applyCMSLayout, 50);
-    });
+    // Run safely
+    window.addEventListener('load', applyCMSTheming);
+    document.addEventListener('click', () => setTimeout(applyCMSTheming, 50));
 })();
+</script>
 </script>
 </body>
 </html>
