@@ -1309,57 +1309,58 @@
         };
     })();
 </script>
-    <script>
+   <script>
     (function() {
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. Locate the header container
-            const headerFlex = document.querySelector('#capture-area .pdf-card .flex.items-center.gap-2');
+            // 1. Target the main container inside the orange-bordered card
+            const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
+            const mainRow = headerCard ? headerCard.querySelector('.flex.justify-between.items-center') : null;
             
-            if (headerFlex && !document.getElementById('injected-injury-type')) {
-                // Adjust parent gaps to handle the larger text without squashing items
-                headerFlex.className = "flex items-center gap-6 flex-1";
+            if (mainRow) {
+                // FORCE RESTRUCTURE: Change from Flex to Grid for stability
+                // This creates 2 main columns: Left (Data) and Right (Admin/Dates)
+                mainRow.className = "grid grid-cols-12 gap-4 items-center";
 
-                // Create the Injury Type Wrapper
-                const typeDiv = document.createElement('div');
-                typeDiv.id = 'injected-injury-type';
-                typeDiv.className = "flex items-baseline gap-2";
-                
-                // Styling the Select: Dark Blue (#1e3a8a), 18px, Bold
-                typeDiv.innerHTML = `
-                    <label class="text-[9px] text-slate-400 font-black uppercase whitespace-nowrap">Type:</label>
-                    <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
-                            style="color: #1e3a8a; font-size: 18px; font-weight: 900; text-transform: uppercase; font-family: inherit;">
-                        <option value="MVA">MVA</option>
-                        <option value="Slip and Fall">Slip and Fall</option>
-                        <option value="Mass Tort">Mass Tort</option>
-                        <option value="Premise Liability">Premise Liability</option>
-                        <option value="Animal Bite">Animal Bite</option>
-                        <option value="Others">Others</option>
-                    </select>
-                `;
+                // 2. Identify and Wrap the Left Data Column
+                const leftSide = mainRow.querySelector('.flex.items-center.gap-2') || mainRow.children[0];
+                leftSide.className = "col-span-9 flex items-center justify-between pr-6";
 
-                // Create a vertical separator
-                const separator = document.createElement('span');
-                separator.className = "text-slate-200 h-6 border-l mx-1";
-
-                // Find the Target Settlement div to insert "Type" right before it
-                const settlementDiv = Array.from(headerFlex.children).find(el => 
-                    el.innerText && el.innerText.includes('TARGET SETTLEMENT')
-                );
-
-                if (settlementDiv) {
-                    headerFlex.insertBefore(typeDiv, settlementDiv);
-                    headerFlex.insertBefore(separator, settlementDiv);
+                // 3. Inject/Fix Injury Type (if not already there)
+                if (!document.getElementById('injected-injury-type')) {
+                    const typeDiv = document.createElement('div');
+                    typeDiv.id = 'injected-injury-type';
+                    typeDiv.className = "flex items-baseline gap-2";
+                    typeDiv.innerHTML = `
+                        <label class="text-[9px] text-slate-400 font-black uppercase whitespace-nowrap">Type:</label>
+                        <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
+                                style="color: #1e3a8a; font-size: 16px; font-weight: 900; text-transform: uppercase; line-height: 1;">
+                            <option value="MVA">MVA</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Mass Tort">Mass Tort</option>
+                            <option value="Premise Liability">Premise Liability</option>
+                            <option value="Animal Bite">Animal Bite</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    `;
+                    
+                    // Insert it specifically before the Target Settlement
+                    const targetSettlement = Array.from(leftSide.children).find(el => el.innerHTML.includes('TARGET'));
+                    if (targetSettlement) {
+                        leftSide.insertBefore(typeDiv, targetSettlement);
+                        // Add a fresh separator
+                        const sep = document.createElement('span');
+                        sep.className = "text-slate-200 h-6 border-l hidden lg:block";
+                        leftSide.insertBefore(sep, targetSettlement);
+                    }
                 }
-            }
 
-            // 2. Adjust right-side padding to prevent layout break with the larger font
-            const adminBlock = document.querySelector('#capture-area .pdf-card .flex.items-center.gap-6.border-l');
-            if (adminBlock) {
-                adminBlock.style.paddingLeft = "1.5rem"; 
+                // 4. Identify and Wrap the Right Admin Column
+                const rightSide = mainRow.querySelector('.flex.items-center.gap-4.border-l') || mainRow.children[1];
+                rightSide.className = "col-span-3 flex items-center justify-end gap-4 border-l pl-6 border-slate-100";
             }
         });
     })();
+</script>
 </script>
 </body>
 </html>
