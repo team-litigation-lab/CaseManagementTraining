@@ -1093,7 +1093,6 @@
             nameEl.style.lineHeight = "1";
             nameEl.style.color = "#0f172a";
         }
-
         // 3. INTEGRATE DASHBOARD (Only create if 0 exist)
         if (existingDashboards.length === 0) {
             const headerRow = document.querySelector('.pdf-card.border-l-8.border-orange-500');
@@ -1129,24 +1128,6 @@
                 opt.text = "Emergency Room";
                 sel.add(opt);
             }
-        });
-
-        // 5. SIDEBAR BUTTONS
-        const sideActions = document.getElementById('sidebar-actions');
-        if (sideActions) {
-            sideActions.querySelectorAll('button').forEach(btn => {
-                const t = btn.innerText.toUpperCase();
-                if (t.includes('SAVE') || t.includes('ARCHIVE')) {
-                    btn.innerText = "CASE REPOSITORY";
-                    btn.style.background = "#059669";
-                } else if (t.includes('RETRIEVE') || t.includes('LOAD')) {
-                    btn.innerText = "RETRIEVE CASE";
-                } else if (t.includes('PDF')) {
-                    btn.innerText = "Download PDF";
-                    btn.style.background = "#ea580c";
-                }
-            });
-        }
     };
 
     window.addEventListener('load', applyLSHUpdates);
