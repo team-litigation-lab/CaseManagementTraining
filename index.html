@@ -1382,6 +1382,60 @@
     window.addEventListener('load', applyCmsLock);
     applyCmsLock();
 })();
+    <style>
+    /* This targets the FIRST contenteditable div inside the FIRST pdf-card */
+    /* This is the most stable way to target your Name field without using IDs */
+    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        line-height: 1 !important;
+        text-transform: uppercase !important;
+        display: block !important;
+        min-height: 40px !important;
+        padding-top: 5px !important;
+    }
+
+    /* Force the stack: Name over Contact */
+    .pdf-card:first-of-type .flex.items-center, 
+    .pdf-card:first-of-type .flex.items-baseline {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 5px !important;
+    }
+
+    /* Keep the "Client:" label hidden forever */
+    .pdf-card:first-of-type label {
+        display: none !important;
+    }
+    
+    /* Ensure the second editable (Contact) stays professional and small */
+    .pdf-card:first-of-type [contenteditable="true"]:nth-of-type(2) {
+        font-size: 16px !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+    }
+</style>
+
+<script>
+(function() {
+    // This function clears the placeholder "Client's Name" 
+    const handlePlaceholder = () => {
+        const nameField = document.querySelector('.pdf-card [contenteditable="true"]');
+        if (nameField && nameField.innerText.trim() === "Client's Name") {
+            nameField.onfocus = function() {
+                if (this.innerText.trim() === "Client's Name") this.innerText = "";
+            };
+        }
+    };
+
+    // Use a robust interval to "Re-Hook" the placeholder logic if the script re-renders
+    setInterval(handlePlaceholder, 1000);
+    
+    // Initial Run
+    window.addEventListener('load', handlePlaceholder);
+})();
+</script>
 </script>
 </body>
 </html>
