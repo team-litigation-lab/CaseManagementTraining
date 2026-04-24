@@ -770,7 +770,7 @@
                 <div id="repo-list" class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                     </div>
                 <button onclick="saveToRepository()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
-                    💾 Case Repository
+                    💾 Archive Current State
                 </button>
             `;
             sidebar.appendChild(repoContainer);
@@ -888,613 +888,19 @@
     })();
 </script>
 <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            
-            // 1. CLEAN UP HEALTH INSURANCE (SUBROGATION)
-            const healthInsGrid = document.querySelector('#pane-matrix .ins-tab-content .grid');
-            if (healthInsGrid && !document.getElementById('injected-subro')) {
-                healthInsGrid.classList.replace('lg:grid-cols-4', 'lg:grid-cols-3');
-                const subroDiv = document.createElement('div');
-                subroDiv.id = 'injected-subro';
-                subroDiv.innerHTML = `
-                    <label class="text-[9px] text-orange-600 font-black uppercase">Subrogation (Notes/Amount)</label>
-                    <div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2 bg-slate-50 italic text-slate-400">Enter details...</div>
-                `;
-                healthInsGrid.appendChild(subroDiv);
-            }
-
-            // 2. CLEAN UP UM/UIM (POLICY NUMBER)
-            const umGrid = document.querySelector('#um-container .grid');
-            if (umGrid && !document.getElementById('injected-um-policy')) {
-                // Ensure grid is 6 columns
-                umGrid.className = "grid md:grid-cols-6 gap-4"; 
-                
-                const policyDiv = document.createElement('div');
-                policyDiv.id = 'injected-um-policy';
-                policyDiv.innerHTML = `
-                    <label class="text-[9px] text-slate-400 font-black uppercase">Policy Number</label>
-                    <div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2 bg-slate-50"></div>
-                `;
-                // Insert after Carrier (index 1)
-                umGrid.insertBefore(policyDiv, umGrid.children[2]);
-            }
-
-            // 3. CLEAN UP PROPERTY DAMAGE (UPLOAD BUTTONS)
-            const pdSections = ['ui-repairable', 'ui-totalled'];
-            pdSections.forEach(id => {
-                const section = document.getElementById(id);
-                if (section) {
-                    // Remove any old "Action" columns first to prevent duplicates
-                    const oldActions = section.querySelectorAll('.action-col');
-                    oldActions.forEach(el => el.remove());
-
-                    const actionDiv = document.createElement('div');
-                    actionDiv.className = "action-col no-print";
-                    const btnLabel = (id === 'ui-repairable') ? 'Upload Estimate' : 'Upload Valuation';
-                    
-                    actionDiv.innerHTML = `
-                        <label class="text-[9px] text-slate-400 font-black uppercase">Action</label>
-                        <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full hover:bg-slate-800 transition-all">
-                            ${btnLabel}
-                        </button>
-                    `;
-                    section.appendChild(actionDiv);
-                }
-            });
-
-            // 4. OVERRIDE ADD UM BUTTON
-            window.addUM = function() {
-                const container = document.getElementById('um-container');
-                const div = document.createElement('div');
-                div.className = "grid md:grid-cols-6 gap-4 mt-4 pt-4 border-t border-slate-100 relative";
-                div.innerHTML = `
-                    <button onclick="this.parentElement.remove()" class="no-print absolute top-0 right-0 text-red-500 font-bold">&times;</button>
-                    <div><label>Policy Holder</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    <div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    <div><label>Policy Number</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    <div><label>Claim #</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    <div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                    <div><label>Limits</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>
-                `;
-                container.appendChild(div);
-            };
-        });
-    })();
-</script>
-    <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            // 1. REMOVE OLD SAVE/RETRIEVE BUTTONS
-            // We search for buttons containing the text to ensure we grab the right ones
-            const sidebarButtons = document.querySelectorAll('#sidebar-actions button');
-            sidebarButtons.forEach(btn => {
-                const text = btn.innerText.toUpperCase();
-                if (text.includes('SAVE ENTRY') || text.includes('RETRIEVE ENTRY')) {
-                    btn.remove();
-                }
-            });
-
-            // 2. ENHANCE REPOSITORY SEARCH
-            const repoContainer = document.getElementById('repo-container');
-            if (repoContainer && !document.getElementById('repo-search-wrapper')) {
-                // Create a wrapper for the search bar
-                const searchWrapper = document.createElement('div');
-                searchWrapper.id = 'repo-search-wrapper';
-                searchWrapper.className = "mb-4 px-1";
-                
-                searchWrapper.innerHTML = `
-                    <div class="relative group">
-                        <input type="text" id="repo-search" 
-                            placeholder="Find existing case..." 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-[11px] text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all"
-                            onkeyup="filterRepository()">
-                        <div class="absolute left-2.5 top-2.5 text-slate-500 group-focus-within:text-orange-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        </div>
-                    </div>
-                `;
-                
-                // Insert after the Repository header
-                const list = document.getElementById('repo-list');
-                repoContainer.insertBefore(searchWrapper, list);
-            }
-        });
-
-        // 3. UPDATED FILTER LOGIC
-        // This works with the 'saveToRepository' data structure
-        window.filterRepository = function() {
-            const query = document.getElementById('repo-search').value.toLowerCase();
-            const list = document.getElementById('repo-list');
-            const REPO_KEY = 'LSH_REPOSITORY';
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-
-            const filteredRepo = repo.filter(item => 
-                item.clientName.toLowerCase().includes(query) || 
-                (item.phase && item.phase.toLowerCase().includes(query))
-            );
-
-            if (filteredRepo.length === 0) {
-                list.innerHTML = '<div class="text-[10px] text-slate-600 italic text-center py-6 border border-dashed border-slate-800 rounded-lg">No cases match your search.</div>';
-                return;
-            }
-
-            // Render the filtered list
-            list.innerHTML = filteredRepo.map(item => `
-                <div onclick="loadFromRepo(${item.id})" class="group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-orange-500/50 transition-all relative mb-2">
-                    <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-2 right-2 text-slate-700 hover:text-red-500 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button>
-                    <div class="text-[10px] font-black text-white uppercase truncate pr-6">${item.clientName}</div>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="text-[8px] text-orange-500/80 font-black uppercase tracking-wider">${item.phase || 'Unknown'}</span>
-                        <span class="text-[8px] text-slate-600">${item.timestamp}</span>
-                    </div>
-                </div>
-            `).join('');
-        };
-    })();
-</script>
-    <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            // 1. Update the existing dropdowns in the UI
-            const updateSpecialtyDropdowns = () => {
-                const selects = document.querySelectorAll('#pane-treatment select.prof-input');
-                selects.forEach(select => {
-                    // Check if Emergency Room already exists to prevent duplicates
-                    const exists = Array.from(select.options).some(opt => opt.value === 'ER');
-                    if (!exists) {
-                        const erOption = document.createElement('option');
-                        erOption.value = 'ER';
-                        erOption.text = 'Emergency Room';
-                        select.add(erOption);
-                    }
-                });
-            };
-
-            // 2. Override the addFacility function to include ER in new cards
-            const originalAddFacility = window.addFacility;
-            window.addFacility = function() {
-                const container = document.getElementById('facility-container');
-                const div = document.createElement('div');
-                div.className = "pdf-card relative border-t-4 border-orange-500";
-                div.innerHTML = `
-                    <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl">&times;</button>
-                    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div><label>Facility Name</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded"></div></div>
-                        <div><label>Specialty</label>
-                            <select class="prof-input w-full border-orange-200">
-                                <option value="Chiro">Chiro</option>
-                                <option value="Ortho">Ortho</option>
-                                <option value="Surgery">Surgery</option>
-                                <option value="EMS">EMS</option>
-                                <option value="EMC">EMC</option>
-                                <option value="ER">Emergency Room</option>
-                            </select>
-                        </div>
-                        <div><label>Last Treatment Schedule</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div></div>
-                        <div><label>Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div>
-                    </div>`;
-                container.appendChild(div);
-                if(window.runMedCalculation) runMedCalculation();
-            };
-
-            // Run initial update
-            updateSpecialtyDropdowns();
-        });
-    })();
-</script>
-    <script>
-    (function() {
-        const ACTIVE_CASE_KEY = 'LSH_ACTIVE_SESSION';
-
-        // 1. SAVE STATE ON EVERY INPUT
-        // This captures everything as the user types/changes things
-        const saveActiveSession = () => {
-            const sessionData = {
-                phase: document.getElementById('display-phase').innerText,
-                editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
-                selects: Array.from(document.querySelectorAll('select')).map(el => el.value),
-                html: {
-                    um: document.getElementById('um-container').innerHTML,
-                    fac: document.getElementById('facility-container').innerHTML,
-                    fin: document.getElementById('finance-body').innerHTML,
-                    doc: document.getElementById('doc-body').innerHTML,
-                    note: document.getElementById('notes-body').innerHTML,
-                    task: document.getElementById('tasks-body').innerHTML
-                }
-            };
-            localStorage.setItem(ACTIVE_CASE_KEY, JSON.stringify(sessionData));
-        };
-
-        // 2. RESTORE STATE ON PAGE LOAD
-        const restoreActiveSession = () => {
-            const saved = localStorage.getItem(ACTIVE_CASE_KEY);
-            if (!saved) return;
-
-            const data = JSON.parse(saved);
-
-            // Restore HTML Containers (Tables and Facilities)
-            if(data.html) {
-                if(data.html.um) document.getElementById('um-container').innerHTML = data.html.um;
-                if(data.html.fac) document.getElementById('facility-container').innerHTML = data.html.fac;
-                if(data.html.fin) document.getElementById('finance-body').innerHTML = data.html.fin;
-                if(data.html.doc) document.getElementById('doc-body').innerHTML = data.html.doc;
-                if(data.html.note) document.getElementById('notes-body').innerHTML = data.html.note;
-                if(data.html.task) document.getElementById('tasks-body').innerHTML = data.html.task;
-            }
-
-            // Restore Phase
-            document.getElementById('display-phase').innerText = data.phase;
-
-            // Restore All ContentEditables
-            const editables = document.querySelectorAll('[contenteditable="true"]');
-            data.editables.forEach((val, i) => { 
-                if(editables[i]) editables[i].innerHTML = val; 
-            });
-
-            // Restore All Select Dropdowns
-            const selects = document.querySelectorAll('select');
-            data.selects.forEach((val, i) => { 
-                if(selects[i]) selects[i].value = val; 
-            });
-
-            // Refresh Calculations
-            if(window.runMedCalculation) runMedCalculation();
-            if(window.runExpCalculation) runExpCalculation();
-        };
-
-        // 3. LISTENERS
-        window.addEventListener('DOMContentLoaded', () => {
-            // First, restore what was there before the refresh
-            restoreActiveSession();
-
-            // Then, watch for any changes to save them automatically
-            document.addEventListener('input', saveActiveSession);
-            document.addEventListener('change', saveActiveSession);
-        });
-
-        // 4. CLEAR SESSION ON "NEW ENTRY"
-        // Update your existing createNewFile function to clear the session
-        const originalCreateNew = window.createNewFile;
-        window.createNewFile = function() {
-            if(confirm("Start new entry? This will clear the current screen.")) {
-                localStorage.removeItem(ACTIVE_CASE_KEY);
-                window.location.reload();
-            }
-        };
-
-    })();
-</script>
-    <script>
-    (function() {
-        /**
-         * DELETE FUNCTIONALITY
-         * Removes a specific case from the localStorage repository
-         */
-        window.deleteCaseFile = function(id, event) {
-            // 1. Stop the 'Load Case' function from firing when the delete button is clicked
-            if (event) event.stopPropagation();
-
-            const REPO_KEY = 'LSH_REPOSITORY';
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            
-            // 2. Find the case to confirm the name with the user
-            const targetCase = repo.find(item => item.id === id);
-            const clientName = targetCase ? targetCase.clientName : "this case";
-
-            // 3. Confirmation Dialog
-            if (confirm(`Are you sure you want to permanently delete the archive for: ${clientName}?`)) {
-                
-                // 4. Filter the array to remove the selected ID
-                const updatedRepo = repo.filter(item => item.id !== id);
-                
-                // 5. Save the updated list back to storage
-                localStorage.setItem(REPO_KEY, JSON.stringify(updatedRepo));
-                
-                // 6. Refresh the sidebar UI (calls your existing render function)
-                if (window.renderRepoList) {
-                    window.renderRepoList();
-                } else {
-                    // Fallback: if renderRepoList isn't global, reload the page to show changes
-                    window.location.reload();
-                }
-            }
-        };
-
-        /**
-         * UI OVERRIDE
-         * This ensures the delete button (×) is actually rendered inside your list items.
-         * If your existing renderRepoList doesn't have the button, this helps.
-         */
-        const originalRender = window.renderRepoList;
-        window.renderRepoList = function() {
-            if (originalRender) originalRender();
-            
-            // Post-process: Ensure every repo item has a functional delete button
-            document.querySelectorAll('#repo-list > div').forEach((el, index) => {
-                if (!el.querySelector('.btn-delete-case')) {
-                    // This assumes your repo items have the ID stored or accessible
-                    // If your existing render logic already includes the button, you can skip this part
-                }
-            });
-        };
-    })();
-</script>
-    <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            const profilePane = document.getElementById('pane-profile');
-            if (!profilePane) return;
-
-            // 1. STYLED PRIMARY INJURY CARD (Spacing Optimized)
-            const narrativeCard = profilePane.querySelector('.pdf-card:last-child');
-            if (narrativeCard && !document.getElementById('primary-injuries-card')) {
-                const injuryCard = document.createElement('div');
-                injuryCard.id = 'primary-injuries-card';
-                // Added mb-8 for clear breathing room
-                injuryCard.className = "pdf-card border-l-8 border-red-500 mb-8 bg-white shadow-sm";
-                injuryCard.innerHTML = `
-                    <h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2 tracking-widest">Primary Client: Injuries Sustained</h3>
-                    <div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed">
-                        Click here to list diagnoses...
-                    </div>
-                `;
-                narrativeCard.parentNode.insertBefore(injuryCard, narrativeCard);
-            }
-
-            // 2. PASSENGER SECTION WITH FLEX CONTAINER
-            if (!document.getElementById('passenger-section')) {
-                const passengerSection = document.createElement('div');
-                passengerSection.id = 'passenger-section';
-                // Added 'clear-both' and 'block' to prevent float issues
-                passengerSection.className = "block w-full mt-10 pb-10"; 
-                passengerSection.innerHTML = `
-                    <div class="flex justify-between items-center px-2 mb-6 border-b border-slate-200 pb-4">
-                        <div class="flex flex-col">
-                            <h3 class="text-[11px] font-black uppercase text-slate-400 italic">Passenger Records</h3>
-                            <span class="text-[9px] text-slate-400 font-bold uppercase">Up to 5 additional claimants</span>
-                        </div>
-                        <button onclick="addPassengerRow()" id="add-passenger-btn" class="bg-slate-950 text-white text-[10px] px-6 py-2.5 rounded-lg font-bold uppercase transition-all hover:bg-orange-600 shadow-md">
-                            + Add Passenger
-                        </button>
-                    </div>
-                    <div id="passenger-container" class="space-y-6 flex flex-col"></div>
-                `;
-                profilePane.appendChild(passengerSection);
-            }
-        });
-
-        // 3. DYNAMIC ROW LOGIC (Layout Protected)
-        window.addPassengerRow = function() {
-            const container = document.getElementById('passenger-container');
-            const count = container.children.length;
-
-            if (count >= 5) return alert("Passenger limit reached.");
-
-            const div = document.createElement('div');
-            // 'animate-in' style feel (optional but clean)
-            div.className = "pdf-card border-t-8 border-slate-200 bg-white shadow-sm relative overflow-hidden";
-            div.innerHTML = `
-                <div class="absolute top-0 left-0 w-full h-1 bg-slate-100"></div>
-                <button onclick="this.parentElement.remove(); updatePassengerButton();" class="no-print absolute top-3 right-4 text-slate-300 hover:text-red-500 font-bold text-xl transition-colors">&times;</button>
-                
-                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 p-2">
-                    <div class="flex flex-col"><label>Full Name</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100"></div></div>
-                    <div class="flex flex-col"><label>Contact</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100"></div></div>
-                    <div class="flex flex-col"><label>DOB</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100">MM/DD/YYYY</div></div>
-                    <div class="flex flex-col"><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full p-2 border-b border-slate-100"></div></div>
-                </div>
-                
-                <div class="mt-6 pt-4 border-t border-slate-50">
-                    <label class="text-red-500 font-black text-[9px] mb-2">Injuries Sustained</label>
-                    <div contenteditable="true" class="text-sm italic w-full p-4 bg-slate-50 rounded-lg min-h-[50px] text-slate-600">Describe injuries here...</div>
-                </div>
-            `;
-            container.appendChild(div);
-            updatePassengerButton();
-            
-            // Scroll to bottom of the pane so the user sees the new entry
-            div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        };
-
-        window.updatePassengerButton = function() {
-            const btn = document.getElementById('add-passenger-btn');
-            const count = document.getElementById('passenger-container').children.length;
-            if (count >= 5) {
-                btn.style.display = 'none';
-            } else {
-                btn.style.display = 'block';
-                btn.innerText = `+ Add Passenger (${count}/5)`;
-            }
-        };
-    })();
-</script>
-  <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
-            if (!headerCard) return;
-
-            // 1. Wipe the header to prevent double/triple elements
+/**
+ * LSH CONSOLIDATED PATCH
+ * Includes: Header Overhaul, Passenger Logic, Primary Injury Tab, and Field Cleanup
+ */
+(function() {
+    const initPatch = () => {
+        // --- 1. MASTER HEADER OVERHAUL ---
+        const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
+        if (headerCard) {
             headerCard.innerHTML = ''; 
             headerCard.className = "pdf-card border-l-8 border-orange-500 bg-white p-6 shadow-sm mb-6";
 
-            // 2. BUILD TOP ROW (Name, Contact, Target, Status)
-            const row1 = document.createElement('div');
-            row1.className = "flex justify-between items-start w-full mb-6";
-            row1.innerHTML = `
-                <div class="flex flex-col gap-1">
-                    <label class="text-[9px] text-slate-400 font-black uppercase">Primary Client</label>
-                    <div contenteditable="true" class="text-2xl font-black text-slate-900 uppercase tracking-tight">Click to Name</div>
-                    <div class="flex items-center gap-4 mt-1">
-                        <div class="flex items-center gap-2">
-                             <label class="text-[9px] text-slate-400 font-bold uppercase">Contact:</label>
-                             <div contenteditable="true" class="text-xs font-bold text-slate-600">(000) 000-0000</div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                             <label class="text-[9px] text-orange-600 font-bold uppercase">Target:</label>
-                             <div contenteditable="true" class="text-xs font-black text-orange-600">$ 0.00</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex flex-col items-end gap-1">
-                    <label class="text-[9px] text-slate-400 font-black uppercase">Case Status</label>
-                    <div contenteditable="true" class="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-100 uppercase tracking-widest shadow-sm">
-                        Active Case
-                    </div>
-                </div>
-            `;
-
-            // 3. BUILD BOTTOM DASHBOARD (DOL/SOL in Black, Type in Middle, Phase Dropdown)
-            const row2 = document.createElement('div');
-            row2.className = "flex items-center justify-between w-full bg-slate-900 p-3 rounded-lg shadow-lg";
-            row2.innerHTML = `
-                <div class="flex items-center gap-6">
-                    <div class="flex items-center gap-2">
-                        <label class="text-[10px] text-slate-500 font-black uppercase">DOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-bold text-white uppercase bg-slate-800 px-2 py-0.5 rounded">MM/DD/YYYY</div>
-                    </div>
-                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
-                        <label class="text-[10px] text-red-500 font-black uppercase">SOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-bold text-red-500 uppercase bg-slate-800 px-2 py-0.5 rounded">MM/DD/YYYY</div>
-                    </div>
-                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
-                        <label class="text-[10px] text-slate-500 font-black uppercase">ID:</label>
-                        <div contenteditable="true" class="text-[11px] font-bold text-slate-300 uppercase">#0000</div>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-2 bg-slate-800 px-4 py-1.5 rounded border border-slate-700 mx-auto">
-                    <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
-                    <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
-                            style="color: #60a5fa; font-size: 14px; font-weight: 900; text-transform: uppercase;">
-                        <option value="MVA">MVA</option>
-                        <option value="Slip and Fall">Slip and Fall</option>
-                        <option value="Mass Tort">Mass Tort</option>
-                        <option value="Premise Liability">Premise Liability</option>
-                        <option value="Animal Bite">Animal Bite</option>
-                        <option value="Others">Others</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <label class="text-[9px] text-slate-500 font-black uppercase">Phase:</label>
-                    <select id="display-phase" class="text-[10px] font-black text-white uppercase bg-orange-600 px-3 py-1.5 rounded shadow-sm border border-orange-500 outline-none cursor-pointer">
-                        <option value="Intake">Intake</option>
-                        <option value="Treatment">Treatment</option>
-                        <option value="Demand">Demand</option>
-                        <option value="Negotiation">Negotiation</option>
-                        <option value="Litigation">Litigation</option>
-                        <option value="Settled">Settled</option>
-                    </select>
-                </div>
-            `;
-
-            headerCard.appendChild(row1);
-            headerCard.appendChild(row2);
-        });
-    })();
-</script>
-   <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
-            if (!headerCard) return;
-
-            // 1. CLEAR & RESTRUCTURE MAIN CARD
-            headerCard.innerHTML = ''; 
-            headerCard.className = "pdf-card border-l-8 border-orange-500 bg-white p-6 shadow-sm mb-6";
-
-            // 2. BUILD TOP LEVEL: CLIENT IDENTITY & CASE STATUS
-            const row1 = document.createElement('div');
-            row1.className = "flex justify-between items-start w-full mb-6";
-            row1.innerHTML = `
-                <div class="flex flex-col gap-1 bg-slate-100 p-4 rounded-xl border border-slate-200 min-w-[400px]">
-                    <label class="text-[9px] text-slate-500 font-black uppercase tracking-widest">Primary Client</label>
-                    <div contenteditable="true" class="text-2xl font-black text-slate-900 uppercase tracking-tight outline-none">Click to Name</div>
-                    <div class="flex items-center gap-3 mt-1">
-                         <div class="flex items-center gap-1">
-                            <label class="text-[9px] text-slate-400 font-bold uppercase">Contact:</label>
-                            <div contenteditable="true" class="text-xs font-bold text-slate-600 outline-none">(000) 000-0000</div>
-                         </div>
-                    </div>
-                </div>
-
-                <div class="flex flex-col items-end gap-1 pt-2">
-                    <label class="text-[9px] text-slate-400 font-black uppercase">Case Status</label>
-                    <div contenteditable="true" class="text-[10px] font-black text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 uppercase tracking-widest shadow-sm outline-none">
-                        Active Case
-                    </div>
-                </div>
-            `;
-
-            // 3. BUILD BOTTOM LEVEL: DASHBOARD BAR (Orange DOL/ID & Money placement)
-            const row2 = document.createElement('div');
-            row2.className = "flex items-center justify-between w-full bg-slate-900 p-3 rounded-xl shadow-2xl border border-slate-800";
-            row2.innerHTML = `
-                <div class="flex items-center gap-6">
-                    <div class="flex items-center gap-2">
-                        <label class="text-[10px] text-slate-500 font-black uppercase">DOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg shadow-inner min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
-                    </div>
-                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
-                        <label class="text-[10px] text-red-500 font-black uppercase">SOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-black text-black uppercase bg-white px-3 py-1.5 rounded-lg shadow-inner min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
-                    </div>
-                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
-                        <label class="text-[10px] text-slate-500 font-black uppercase">ID:</label>
-                        <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg shadow-inner min-w-[70px] text-center outline-none">#0000</div>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-2 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700 mx-auto">
-                    <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
-                    <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
-                            style="color: #60a5fa; font-size: 14px; font-weight: 900; text-transform: uppercase;">
-                        <option value="MVA">MVA</option>
-                        <option value="Slip and Fall">Slip and Fall</option>
-                        <option value="Mass Tort">Mass Tort</option>
-                        <option value="Premise Liability">Premise Liability</option>
-                        <option value="Animal Bite">Animal Bite</option>
-                        <option value="Others">Others</option>
-                    </select>
-                </div>
-
-                <div class="flex flex-col items-end gap-1">
-                    <div class="flex items-center gap-2 pr-1">
-                        <label class="text-[9px] text-orange-500 font-black uppercase">Target Settlement:</label>
-                        <div contenteditable="true" class="text-sm font-black text-orange-500 tracking-tighter outline-none">$ 0.00</div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-[9px] text-slate-500 font-black uppercase">Phase:</label>
-                        <select id="display-phase" class="text-[10px] font-black text-white uppercase bg-orange-600 px-4 py-2 rounded-lg shadow-md border border-orange-500 outline-none cursor-pointer">
-                            <option value="Intake">Intake</option>
-                            <option value="Treatment">Treatment</option>
-                            <option value="Demand">Demand</option>
-                            <option value="Negotiation">Negotiation</option>
-                            <option value="Litigation">Litigation</option>
-                            <option value="Settled">Settled</option>
-                        </select>
-                    </div>
-                </div>
-            `;
-
-            headerCard.appendChild(row1);
-            headerCard.appendChild(row2);
-        });
-    })();
-</script>
-<script>
-    (function() {
-        const buildMasterHeader = () => {
-            const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
-            if (!headerCard) return;
-
-            // 1. Wipe it clean so no old scripts can mess it up
-            headerCard.innerHTML = ''; 
-            headerCard.className = "pdf-card border-l-8 border-orange-500 bg-white p-6 shadow-sm mb-6";
-
-            // 2. TOP ROW: Identity (Side-by-Side) & Case Status
+            // Row 1: Identity (Side-by-Side)
             const row1 = document.createElement('div');
             row1.className = "flex justify-between items-start w-full mb-6";
             row1.innerHTML = `
@@ -1512,10 +918,9 @@
                 <div class="flex flex-col items-end gap-1 pt-2">
                     <label class="text-[9px] text-slate-400 font-black uppercase">Case Status</label>
                     <div contenteditable="true" class="text-[10px] font-black text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 uppercase tracking-widest shadow-sm outline-none">Active Case</div>
-                </div>
-            `;
+                </div>`;
 
-            // 3. BOTTOM ROW: Dates (Orange DOL/ID), Injury Type (Middle), Settlement/Phase (Right)
+            // Row 2: Dashboard (Orange DOL/ID, Type, Settlement/Phase)
             const row2 = document.createElement('div');
             row2.className = "flex items-center justify-between w-full bg-slate-900 p-3 rounded-xl shadow-2xl border border-slate-800";
             row2.innerHTML = `
@@ -1533,7 +938,6 @@
                         <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg min-w-[70px] text-center outline-none">#0000</div>
                     </div>
                 </div>
-
                 <div class="flex items-center gap-2 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700 mx-auto">
                     <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
                     <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none text-blue-400 font-black uppercase text-sm">
@@ -1545,7 +949,6 @@
                         <option value="Others">Others</option>
                     </select>
                 </div>
-
                 <div class="flex flex-col items-end gap-1">
                     <div class="flex items-center gap-2 pr-1">
                         <label class="text-[9px] text-orange-500 font-black uppercase">Target Settlement:</label>
@@ -1562,16 +965,64 @@
                             <option value="Settled">Settled</option>
                         </select>
                     </div>
-                </div>
-            `;
-
+                </div>`;
             headerCard.appendChild(row1);
             headerCard.appendChild(row2);
-        };
+        }
 
-        // Run once on load
-        window.addEventListener('DOMContentLoaded', buildMasterHeader);
-    })();
+        // --- 2. PRIMARY INJURY & PASSENGER SECTIONS ---
+        const profilePane = document.getElementById('pane-profile');
+        if (profilePane && !document.getElementById('passenger-section')) {
+            const injuryCard = document.createElement('div');
+            injuryCard.className = "pdf-card border-l-8 border-red-500 mb-8 bg-white shadow-sm";
+            injuryCard.innerHTML = `<h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2 tracking-widest">Injuries Sustained (Primary)</h3><div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed"></div>`;
+            
+            const passengerSec = document.createElement('div');
+            passengerSec.id = 'passenger-section';
+            passengerSec.className = "block w-full mt-10 pb-10";
+            passengerSec.innerHTML = `<div class="flex justify-between items-center px-2 mb-6 border-b pb-4"><h3 class="text-[11px] font-black uppercase text-slate-400 italic">Passenger Records</h3><button onclick="addPassengerRow()" id="add-passenger-btn" class="bg-slate-900 text-white text-[10px] px-6 py-2 rounded font-bold uppercase hover:bg-orange-600 transition-all">+ Add Passenger</button></div><div id="passenger-container" class="space-y-6 flex flex-col"></div>`;
+            
+            profilePane.appendChild(injuryCard);
+            profilePane.appendChild(passengerSec);
+        }
+
+        // --- 3. CLEANUP EMPLOYER/JOB TITLE ---
+        document.querySelectorAll('#pane-profile [contenteditable="true"]').forEach(el => {
+            const label = el.previousElementSibling?.innerText || "";
+            if (label.includes('Employer') || label.includes('Job Title')) {
+                if (el.innerText.includes('Click here to list diagnoses')) el.innerText = '';
+                el.className = "text-sm font-bold w-full p-2 border border-slate-100 rounded bg-white text-slate-900";
+            }
+        });
+    };
+
+    // Passenger Logic
+    window.addPassengerRow = function() {
+        const container = document.getElementById('passenger-container');
+        if (container.children.length >= 5) return alert("Limit 5");
+        const div = document.createElement('div');
+        div.className = "pdf-card border-t-8 border-slate-200 bg-white relative";
+        div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-3 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button><div class="grid lg:grid-cols-4 gap-6 p-2"><div><label>Name</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div><div><label>Contact</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div><div><label>DOB</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div><div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold p-2 border-b"></div></div></div><div class="mt-4"><label class="text-red-500 text-[9px] font-black">Injuries Sustained</label><div contenteditable="true" class="text-sm italic p-3 bg-slate-50 rounded min-h-[50px]"></div></div>`;
+        container.appendChild(div);
+    };
+
+    // Global Clear
+    window.clearAllFields = function() {
+        if (!confirm("Clear current screen and backup to archive?")) return;
+        if (window.archiveCurrentCase) window.archiveCurrentCase();
+        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+            if (el.innerText.includes('/')) el.innerText = 'MM/DD/YYYY';
+            else if (el.innerText.includes('$')) el.innerText = '$ 0.00';
+            else el.innerText = '';
+        });
+        document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        ['passenger-container', 'facility-container', 'um-container'].forEach(id => {
+            const c = document.getElementById(id); if (c) c.innerHTML = '';
+        });
+    };
+
+    window.addEventListener('DOMContentLoaded', initPatch);
+})();
 </script>
 </body>
 </html>
