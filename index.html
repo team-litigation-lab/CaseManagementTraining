@@ -1060,9 +1060,9 @@
     }
 })();
 </script>
-    <script>
+<script>
 (function() {
-    const runExtendedPatch = () => {
+    const runFinalPatch = () => {
         // --- 1. PRIMARY CLIENT IDENTITY (LARGE FONT) ---
         const allEditables = document.querySelectorAll('[contenteditable="true"]');
         if (allEditables.length > 0) {
@@ -1070,7 +1070,6 @@
             nameField.style.fontSize = "34px";
             nameField.style.fontWeight = "900";
             nameField.style.color = "#0f172a";
-            nameField.style.lineHeight = "1.1";
         }
 
         // --- 2. DASHBOARD BAR (DOL, SOL, TYPE) ---
@@ -1107,10 +1106,9 @@
         }
 
         // --- 3. HEALTH INSURANCE: SUBROGATION FIELDS ---
-        // Looks for the Health Insurance section in the Insurance Matrix
         const matrixPanes = document.querySelectorAll('.ins-tab-content');
         if (matrixPanes.length > 0 && !document.getElementById('subro-patch')) {
-            const healthInsPane = matrixPanes[0]; // Usually the first pane in Matrix
+            const healthInsPane = matrixPanes[0]; 
             const subroDiv = document.createElement('div');
             subroDiv.id = 'subro-patch';
             subroDiv.style = "margin-top:15px; padding-top:15px; border-top:1px solid #f1f5f9; display:grid; grid-template-columns: 1fr 1fr; gap:20px;";
@@ -1130,7 +1128,6 @@
         // --- 4. UM/UIM FIELD: ADD POLICY NUMBER ---
         const umContainer = document.getElementById('um-container');
         if (umContainer && !document.getElementById('um-policy-patch')) {
-            // Find the grid inside UM container
             const umGrid = umContainer.querySelector('.grid');
             if (umGrid) {
                 const policyDiv = document.createElement('div');
@@ -1139,32 +1136,40 @@
                     <label style="font-size:11px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Policy Number</label>
                     <div contenteditable="true" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #f1f5f9; padding:4px 8px; border-radius:4px; width:100%;"></div>
                 `;
-                // Insert as the very first field in the UM grid
                 umGrid.insertBefore(policyDiv, umGrid.firstChild);
             }
         }
 
-        // --- 5. RENAME BUTTONS TO REPOSITORY ---
+        // --- 5. RENAME BUTTONS (SPECIFIC FILTER) ---
         const buttons = document.querySelectorAll('button');
         buttons.forEach(btn => {
             const txt = btn.innerText.toUpperCase();
+            // Only rename if it's a data management button
             if (txt.includes('SAVE') || txt.includes('ARCHIVE')) {
                 btn.innerText = "CASE REPOSITORY";
                 btn.style.background = "#059669"; 
             }
             if (txt.includes('RETRIEVE') || txt.includes('LOAD')) {
+                // Check to make sure we aren't accidentally renaming the PDF button
+                if (!txt.includes('PDF')) {
+                    btn.innerText = "RETRIEVE CASE";
+                }
+            }
+            // Force reset PDF button in case it was changed previously
+            if (txt.includes('DOWNLOAD') && txt.includes('PDF')) {
                 btn.innerText = "Download PDF";
+                btn.style.backgroundColor = "#ea580c";
             }
         });
     };
 
-    // Safe execution
     if (document.readyState === 'complete') {
-        runExtendedPatch();
+        runFinalPatch();
     } else {
-        window.addEventListener('load', runExtendedPatch);
+        window.addEventListener('load', runFinalPatch);
     }
 })();
+</script>
 </script>
 </body>
 </html>
