@@ -1060,5 +1060,111 @@
     }
 })();
 </script>
+    <script>
+(function() {
+    const runExtendedPatch = () => {
+        // --- 1. PRIMARY CLIENT IDENTITY (LARGE FONT) ---
+        const allEditables = document.querySelectorAll('[contenteditable="true"]');
+        if (allEditables.length > 0) {
+            const nameField = Array.from(allEditables).find(el => el.innerText.includes("Name")) || allEditables[0];
+            nameField.style.fontSize = "34px";
+            nameField.style.fontWeight = "900";
+            nameField.style.color = "#0f172a";
+            nameField.style.lineHeight = "1.1";
+        }
+
+        // --- 2. DASHBOARD BAR (DOL, SOL, TYPE) ---
+        if (!document.getElementById('lsh-dashboard-patch')) {
+            const header = document.querySelector('.pdf-card.border-l-8.border-orange-500');
+            if (header) {
+                const patchBar = document.createElement('div');
+                patchBar.id = 'lsh-dashboard-patch';
+                patchBar.style = "background:#0f172a; color:white; padding:15px; border-radius:10px; margin:20px 0; display:flex; flex-wrap:wrap; gap:25px; align-items:center; justify-content:space-between; font-family:sans-serif; border-left: 8px solid #f97316;";
+                patchBar.innerHTML = `
+                    <div style="display:flex; gap:20px;">
+                        <div>
+                            <label style="font-size:10px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Date of Loss</label>
+                            <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px;">MM/DD/YYYY</div>
+                        </div>
+                        <div>
+                            <label style="font-size:10px; color:#f87171; font-weight:bold; text-transform:uppercase;">Statute (SOL)</label>
+                            <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px; color:#f87171;">MM/DD/YYYY</div>
+                        </div>
+                    </div>
+                    <div style="background:#1e293b; padding:8px 12px; border-radius:6px; display:flex; align-items:center; gap:8px; border:1px solid #334155;">
+                        <span style="font-size:10px; font-weight:900; color:#f97316; font-style:italic;">CASE TYPE:</span>
+                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer; text-transform:uppercase;">
+                            <option value="MVA">MVA</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Premise Liability">Premise Liability</option>
+                            <option value="Animal Bite">Animal Bite</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                `;
+                header.parentNode.insertBefore(patchBar, header.nextSibling);
+            }
+        }
+
+        // --- 3. HEALTH INSURANCE: SUBROGATION FIELDS ---
+        // Looks for the Health Insurance section in the Insurance Matrix
+        const matrixPanes = document.querySelectorAll('.ins-tab-content');
+        if (matrixPanes.length > 0 && !document.getElementById('subro-patch')) {
+            const healthInsPane = matrixPanes[0]; // Usually the first pane in Matrix
+            const subroDiv = document.createElement('div');
+            subroDiv.id = 'subro-patch';
+            subroDiv.style = "margin-top:15px; padding-top:15px; border-top:1px solid #f1f5f9; display:grid; grid-template-columns: 1fr 1fr; gap:20px;";
+            subroDiv.innerHTML = `
+                <div>
+                    <label style="font-size:11px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Subrogation Claim?</label>
+                    <div contenteditable="true" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #f1f5f9; padding:4px 8px; border-radius:4px; width:100%;">NO</div>
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Subrogation Amount</label>
+                    <div contenteditable="true" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #f1f5f9; padding:4px 8px; border-radius:4px; width:100%; color:#ef4444;">$ 0.00</div>
+                </div>
+            `;
+            healthInsPane.appendChild(subroDiv);
+        }
+
+        // --- 4. UM/UIM FIELD: ADD POLICY NUMBER ---
+        const umContainer = document.getElementById('um-container');
+        if (umContainer && !document.getElementById('um-policy-patch')) {
+            // Find the grid inside UM container
+            const umGrid = umContainer.querySelector('.grid');
+            if (umGrid) {
+                const policyDiv = document.createElement('div');
+                policyDiv.id = 'um-policy-patch';
+                policyDiv.innerHTML = `
+                    <label style="font-size:11px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Policy Number</label>
+                    <div contenteditable="true" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #f1f5f9; padding:4px 8px; border-radius:4px; width:100%;"></div>
+                `;
+                // Insert as the very first field in the UM grid
+                umGrid.insertBefore(policyDiv, umGrid.firstChild);
+            }
+        }
+
+        // --- 5. RENAME BUTTONS TO REPOSITORY ---
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            const txt = btn.innerText.toUpperCase();
+            if (txt.includes('SAVE') || txt.includes('ARCHIVE')) {
+                btn.innerText = "CASE REPOSITORY";
+                btn.style.background = "#059669"; 
+            }
+            if (txt.includes('RETRIEVE') || txt.includes('LOAD')) {
+                btn.innerText = "RETRIEVE CASE";
+            }
+        });
+    };
+
+    // Safe execution
+    if (document.readyState === 'complete') {
+        runExtendedPatch();
+    } else {
+        window.addEventListener('load', runExtendedPatch);
+    }
+})();
+</script>
 </body>
 </html>
