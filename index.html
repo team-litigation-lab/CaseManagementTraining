@@ -1388,5 +1388,62 @@
         });
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. Identify the container card (orange border)
+            const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
+            if (!headerCard) return;
+
+            // 2. Target the second row (the admin/dates row)
+            // If you used my previous script, it might be a div with bg-slate-50
+            let adminRow = headerCard.querySelector('.bg-slate-50') || headerCard.children[1];
+            
+            if (adminRow) {
+                // Reset styling to a 100% width horizontal bar
+                adminRow.className = "flex items-center justify-between w-full bg-slate-900 p-3 rounded-lg mt-4 shadow-inner";
+                adminRow.style.borderLeft = "none";
+                
+                // Clear the row to rebuild it perfectly
+                adminRow.innerHTML = `
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">DOL:</label>
+                            <div contenteditable="true" class="text-[11px] font-bold text-white uppercase">MM/DD/YYYY</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] text-red-400 font-bold uppercase tracking-tighter">SOL:</label>
+                            <div contenteditable="true" class="text-[11px] font-bold text-red-400 uppercase">MM/DD/YYYY</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Case ID:</label>
+                            <div contenteditable="true" class="text-[11px] font-bold text-slate-300 uppercase">#000000</div>
+                        </div>
+                    </div>
+
+                    <div id="type-injury-center" class="flex items-center gap-2 bg-slate-800 px-4 py-1.5 rounded-md border border-slate-700">
+                        <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
+                        <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
+                                style="color: #60a5fa; font-size: 15px; font-weight: 900; text-transform: uppercase; line-height: 1;">
+                            <option value="MVA">MVA</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Mass Tort">Mass Tort</option>
+                            <option value="Premise Liability">Premise Liability</option>
+                            <option value="Animal Bite">Animal Bite</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <label class="text-[9px] text-slate-500 font-black uppercase">Current Phase:</label>
+                        <div id="display-phase" class="text-[10px] font-black text-white uppercase bg-orange-600 px-4 py-1.5 rounded-md shadow-sm border border-orange-500">
+                            Intake
+                        </div>
+                    </div>
+                `;
+            }
+        });
+    })();
+</script>
 </body>
 </html>
