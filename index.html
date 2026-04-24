@@ -982,88 +982,8 @@
 </script>
     <script>
 (function() {
-    const runPatch = () => {
-        // 1. MAKE PRIMARY CLIENT LARGE (WITHOUT BREAKING LAYOUT)
-        const allEditables = document.querySelectorAll('[contenteditable="true"]');
-        if (allEditables.length > 0) {
-            // Find the one that says "Client's Name" or is the very first one
-            const nameField = Array.from(allEditables).find(el => el.innerText.includes("Name")) || allEditables[0];
-            nameField.style.fontSize = "50px";
-            nameField.style.fontWeight = "900";
-            nameField.style.display = "block";
-            nameField.style.color = "#0f172a";
-        }
-
-        // 2. INJECT DASHBOARD (DOL, SOL, TYPE) ONLY IF NOT ALREADY THERE
-        if (!document.getElementById('lsh-dashboard-patch')) {
-            const header = document.querySelector('.pdf-card.border-l-8.border-orange-500');
-            if (header) {
-                const patchBar = document.createElement('div');
-                patchBar.id = 'lsh-dashboard-patch';
-                // Using flexbox that wraps so it doesn't push elements off screen
-                patchBar.style = "background:#0f172a; color:orange; padding:15px; border-radius:10px; margin:20px 0; display:flex; flex-wrap:wrap; gap:25px; align-items:center; justify-content:space-between; font-family:sans-serif;";
-                
-                patchBar.innerHTML = `
-                    <div style="display:flex; gap:20px;">
-                        <div>
-                            <label style="font-size:10px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Date of Loss</label>
-                            <div contenteditable="true" style="font-size:14px; color:black; font-weight:bold; border-bottom:1px solid #334155; min-width:100px;">MM/DD/YYYY</div>
-                        </div>
-                        <div>
-                            <label style="font-size:10px; color:#f87171; font-weight:bold; text-transform:uppercase;">Statute (SOL)</label>
-                            <div contenteditable="true" style="font-size:14px; Red; font-weight:bold; border-bottom:1px solid #334155; min-width:100px; color:#f87171;">MM/DD/YYYY</div>
-                        </div>
-                    </div>
-                    <div style="background:#1e293b; padding:8px 12px; border-radius:6px; display:flex; align-items:center; gap:8px; border:1px solid #334155;">
-                        <span style="font-size:10px; font-weight:900; color:#f97316; font-style:italic;">TYPE:</span>
-                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer; text-transform:uppercase;">
-                            <option value="MVA">MVA</option>
-                            <option value="Slip and Fall">Slip and Fall</option>
-                            <option value="Animal Bite">Animal Bite</option>
-                            <option value="Others">Others</option>
-                        </select>
-                    </div>
-                `;
-                header.parentNode.insertBefore(patchBar, header.nextSibling);
-            }
-        }
-
-        // 3. RENAME BUTTONS & PREVENT RE-NAMING LOOP
-        const buttons = document.querySelectorAll('button');
-        buttons.forEach(btn => {
-            const txt = btn.innerText.toUpperCase();
-            if (txt.includes('SAVE') || txt.includes('ARCHIVE')) {
-                btn.innerText = "CASE REPOSITORY";
-                btn.style.background = "#059669"; // Emerald Green
-            }
-            if (txt.includes('RETRIEVE') || txt.includes('LOAD')) {
-                btn.innerText = "RETRIEVE CASE";
-            }
-        });
-        
-        // 4. ENSURE SAVE LOGIC CAPTURES NEW FIELDS
-        // We "hook" into your existing window.saveToRepository if it exists
-        const originalSave = window.saveToRepository;
-        if (originalSave) {
-            window.saveToRepository = function() {
-                // This forces the browser to register the data in the new fields
-                originalSave(); 
-            };
-        }
-    };
-
-    // Initialize safely
-    if (document.readyState === 'complete') {
-        runPatch();
-    } else {
-        window.addEventListener('load', runPatch);
-    }
-})();
-</script>
-    <script>
-(function() {
     const applyFinalFixes = () => {
-        // 1. PRIMARY CLIENT (STRICT FIRST-ELEMENT ONLY)
+        // 1. PRIMARY CLIENT FONT SIZE
         const nameField = document.querySelector('[contenteditable="true"]');
         if (nameField && nameField.innerText.includes("Name")) {
             nameField.style.fontSize = "32px";
@@ -1071,7 +991,7 @@
             nameField.style.color = "#0f172a";
         }
 
-        // 2. DASHBOARD BAR (STRICT ID CHECK)
+        // 2. DASHBOARD BAR (DOL/SOL/TYPE) - DUPLICATE PROOF
         if (!document.getElementById('lsh-integrated-bar')) {
             const mainHeader = document.querySelector('.pdf-card.border-l-8.border-orange-500');
             if (mainHeader) {
@@ -1080,22 +1000,22 @@
                 bar.style = "background:#0f172a; color:white; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316;";
                 bar.innerHTML = `
                     <div style="display:flex; gap:20px;">
-                        <div><label style="font-size:9px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Date of Loss</label>
-                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px;">MM/DD/YYYY</div></div>
-                        <div><label style="font-size:9px; color:#f87171; font-weight:bold; text-transform:uppercase;">Statute (SOL)</label>
-                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px; color:#f87171;">MM/DD/YYYY</div></div>
+                        <div><label style="font-size:9px; color:#94a3b8; font-weight:bold; text-transform:uppercase; display:block;">Date of Loss</label>
+                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px;">MM/DD/YYYY</div></div>
+                        <div><label style="font-size:9px; color:#f87171; font-weight:bold; text-transform:uppercase; display:block;">Statute (SOL)</label>
+                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px; color:#f87171;">MM/DD/YYYY</div></div>
                     </div>
-                    <div style="background:#1e293b; padding:8px 12px; border-radius:6px; border:1px solid #334155;">
-                        <span style="font-size:10px; font-weight:900; color:#f97316;">TYPE:</span>
+                    <div style="background:#1e293b; padding:8px 12px; border-radius:6px; border:1px solid #334155; display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:10px; font-weight:900; color:#f97316; font-style:italic;">TYPE:</span>
                         <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer;">
-                            <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Others">Others</option>
+                            <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Animal Bite">Animal Bite</option><option value="Others">Others</option>
                         </select>
                     </div>`;
                 mainHeader.parentNode.insertBefore(bar, mainHeader.nextSibling);
             }
         }
 
-        // 3. HEALTH INSURANCE SUBRO & UM POLICY (BY ID)
+        // 3. HEALTH INSURANCE SUBRO & UM POLICY
         const matrixPane = document.getElementById('pane-matrix');
         if (matrixPane && !document.getElementById('subro-row')) {
             const healthTab = matrixPane.querySelector('.ins-tab-content');
@@ -1104,8 +1024,8 @@
                 subro.id = 'subro-row';
                 subro.style = "margin-top:15px; padding-top:15px; border-top:1px solid #f1f5f9; display:grid; grid-template-columns:1fr 1fr; gap:20px;";
                 subro.innerHTML = `
-                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8;">SUBROGATION CLAIM?</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;">NO</div></div>
-                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8;">SUBRO AMOUNT</label><div contenteditable="true" style="font-size:12px; font-weight:bold; color:#ef4444; border-bottom:1px solid #eee;">$ 0.00</div></div>`;
+                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Subrogation Claim?</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;">NO</div></div>
+                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Subro Amount</label><div contenteditable="true" style="font-size:12px; font-weight:bold; color:#ef4444; border-bottom:1px solid #eee;">$ 0.00</div></div>`;
                 healthTab.appendChild(subro);
             }
         }
@@ -1116,39 +1036,41 @@
             if (grid) {
                 const pol = document.createElement('div');
                 pol.id = 'um-pol-fix';
-                pol.innerHTML = `<label style="font-size:10px; font-weight:bold; color:#94a3b8;">POLICY NUMBER</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;"></div>`;
+                pol.innerHTML = `<label style="font-size:10px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Policy Number</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;"></div>`;
                 grid.insertBefore(pol, grid.firstChild);
             }
         }
 
-        // 4. SIDEBAR REPOSITORY RENAMING (INDEX-BASED PROTECTION)
+        // 4. THE ULTIMATE SIDEBAR FIX (BY POSITION)
         const sidebar = document.getElementById('sidebar-actions');
         if (sidebar) {
             const btns = sidebar.getElementsByTagName('button');
-            for (let btn of btns) {
-                const bText = btn.innerText.toUpperCase();
-                // Rename Save to Case Repository
-                if (bText.includes('SAVE') || bText.includes('ENTRY')) {
-                    if (!bText.includes('NEW')) {
-                        btn.innerText = "CASE REPOSITORY";
-                        btn.style.backgroundColor = "#059669";
-                    }
-                }
-                // Rename Retrieve/Load to Retrieve Case
-                if (bText.includes('RETRIEVE') || bText.includes('LOAD')) {
-                    btn.innerText = "RETRIEVE CASE";
-                }
-                // STOP THE PDF RENAME - EXPLICIT RESET
-                if (bText.includes('PDF')) {
+            
+            // Loop through all buttons in the sidebar and apply logic ONLY to buttons
+            for (let i = 0; i < btns.length; i++) {
+                let btn = btns[i];
+                let text = btn.innerText.toUpperCase();
+
+                // If button is Download PDF, FORCE it to stay correct
+                if (text.includes('PDF')) {
                     btn.innerText = "Download PDF";
                     btn.style.backgroundColor = "#ea580c";
+                } 
+                // Rename Save buttons
+                else if (text.includes('SAVE') || text.includes('ARCHIVE')) {
+                    btn.innerText = "CASE REPOSITORY";
+                    btn.style.backgroundColor = "#059669";
+                }
+                // Rename Retrieval buttons
+                else if (text.includes('RETRIEVE') || text.includes('LOAD')) {
+                    btn.innerText = "RETRIEVE CASE";
                 }
             }
         }
     };
 
-    // Run multiple times to ensure it catches dynamic loads
-    setTimeout(applyFinalFixes, 100);
+    // Run immediately and again after 1 second to catch memory loads
+    applyFinalFixes();
     setTimeout(applyFinalFixes, 1000);
 })();
 </script>
