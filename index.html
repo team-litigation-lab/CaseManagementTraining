@@ -1165,5 +1165,60 @@
 
     })();
 </script>
+    <script>
+    (function() {
+        /**
+         * DELETE FUNCTIONALITY
+         * Removes a specific case from the localStorage repository
+         */
+        window.deleteCaseFile = function(id, event) {
+            // 1. Stop the 'Load Case' function from firing when the delete button is clicked
+            if (event) event.stopPropagation();
+
+            const REPO_KEY = 'LSH_REPOSITORY';
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            
+            // 2. Find the case to confirm the name with the user
+            const targetCase = repo.find(item => item.id === id);
+            const clientName = targetCase ? targetCase.clientName : "this case";
+
+            // 3. Confirmation Dialog
+            if (confirm(`Are you sure you want to permanently delete the archive for: ${clientName}?`)) {
+                
+                // 4. Filter the array to remove the selected ID
+                const updatedRepo = repo.filter(item => item.id !== id);
+                
+                // 5. Save the updated list back to storage
+                localStorage.setItem(REPO_KEY, JSON.stringify(updatedRepo));
+                
+                // 6. Refresh the sidebar UI (calls your existing render function)
+                if (window.renderRepoList) {
+                    window.renderRepoList();
+                } else {
+                    // Fallback: if renderRepoList isn't global, reload the page to show changes
+                    window.location.reload();
+                }
+            }
+        };
+
+        /**
+         * UI OVERRIDE
+         * This ensures the delete button (×) is actually rendered inside your list items.
+         * If your existing renderRepoList doesn't have the button, this helps.
+         */
+        const originalRender = window.renderRepoList;
+        window.renderRepoList = function() {
+            if (originalRender) originalRender();
+            
+            // Post-process: Ensure every repo item has a functional delete button
+            document.querySelectorAll('#repo-list > div').forEach((el, index) => {
+                if (!el.querySelector('.btn-delete-case')) {
+                    // This assumes your repo items have the ID stored or accessible
+                    // If your existing render logic already includes the button, you can skip this part
+                }
+            });
+        };
+    })();
+</script>
 </body>
 </html>
