@@ -1085,15 +1085,7 @@
                 existingDashboards[i].remove();
             }
         }
-
-        // 2. LARGE CLIENT NAME
-        const nameEl = document.querySelector('.text-xl.font-black.text-slate-900.uppercase');
-        if (nameEl) {
-            nameEl.style.fontSize = "40px";
-            nameEl.style.lineHeight = "1";
-            nameEl.style.color = "#0f172a";
-        }
-        // 3. INTEGRATE DASHBOARD (Only create if 0 exist)
+        // 2. INTEGRATE DASHBOARD (Only create if 0 exist)
         if (existingDashboards.length === 0) {
             const headerRow = document.querySelector('.pdf-card.border-l-8.border-orange-500');
             if (headerRow) {
@@ -1172,7 +1164,6 @@
 
     // Initialize on Load
     window.addEventListener('load', applyProfessionalIdentity);
-
     // Watch for new Facilities added via button click
     document.addEventListener('click', (e) => {
         if (e.target.innerText && e.target.innerText.includes('Facility')) {
