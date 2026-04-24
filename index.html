@@ -747,42 +747,49 @@
         });
     })();
 </script>
-    <script>
+<script>
     (function() {
         const REPO_KEY = 'LSH_REPOSITORY';
 
-        // 1. Create the Repository UI in the Sidebar
         const injectRepoUI = () => {
             const sidebar = document.getElementById('sidebar-actions');
             if (!sidebar) return;
 
+            // Remove old container if it exists to avoid duplicates on reload
+            const oldRepo = document.getElementById('repo-container');
+            if (oldRepo) oldRepo.remove();
+
             const repoContainer = document.createElement('div');
+            repoContainer.id = 'repo-container';
             repoContainer.className = "pt-4 mt-4 border-t border-slate-800";
             repoContainer.innerHTML = `
-                <p class="text-[9px] font-black text-slate-500 uppercase mb-3 tracking-widest">Case Repository</p>
-                <div id="repo-list" class="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                    <p class="text-[10px] text-slate-600 italic">No saved cases found.</p>
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Case Repository</p>
+                    <span id="repo-count" class="text-[9px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">0</span>
                 </div>
-                <button onclick="saveToRepository()" class="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
-                    + Archive Current Case
+                <div id="repo-list" class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                    </div>
+                <button onclick="saveToRepository()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
+                    💾 Archive Current State
                 </button>
             `;
             sidebar.appendChild(repoContainer);
             renderRepoList();
         };
 
-        // 2. Save the current state as a new entry in the repository
         window.saveToRepository = function() {
-            const clientName = document.querySelector('[contenteditable="true"]').innerText.trim() || "Unknown Client";
-            const caseId = document.querySelectorAll('[contenteditable="true"]')[11]?.innerText || "No-ID"; // Heuristic index for Case ID
-            const timestamp = new Date().toLocaleString();
+            // Grab Client Name and DOL to create a unique identifier
+            const clientName = document.querySelector('[contenteditable="true"]').innerText.trim() || "New Client";
+            const dol = document.querySelectorAll('[contenteditable="true"]')[2]?.innerText || "No-Date";
+            const timestamp = new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             
             const currentData = {
-                id: Date.now(),
+                id: Date.now(), // Unique ID for every single save
+                fileName: `${clientName} (${timestamp})`,
                 clientName: clientName,
-                caseId: caseId,
                 timestamp: timestamp,
                 phase: document.getElementById('display-phase').innerText,
+                // Capture all content
                 editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
                 selects: Array.from(document.querySelectorAll('select')).map(el => el.value),
                 htmlContainers: {
@@ -797,25 +804,29 @@
             };
 
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            repo.unshift(currentData); // Add to start of list
+            repo.unshift(currentData); // Push to top
             localStorage.setItem(REPO_KEY, JSON.stringify(repo));
             renderRepoList();
-            alert(`Case for ${clientName} archived successfully.`);
+            
+            // Visual feedback
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "✓ ARCHIVED";
+            btn.classList.replace('bg-emerald-600', 'bg-slate-700');
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.replace('bg-slate-700', 'bg-emerald-600');
+            }, 1500);
         };
 
-        // 3. Load a specific case from the repository
         window.loadFromRepo = function(id) {
-            if(!confirm("Load this case? Current unsaved changes will be lost.")) return;
-            
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
             const data = repo.find(item => item.id === id);
-            
             if (!data) return;
 
-            // Apply phase
-            document.getElementById('display-phase').innerText = data.phase;
-            
-            // Restore HTML structures
+            if(!confirm(`Load archive for "${data.clientName}"? \nUnsaved changes on the current screen will be lost.`)) return;
+
+            // Restore HTML structure first
             if(data.htmlContainers) {
                 Object.keys(data.htmlContainers).forEach(key => {
                     const el = document.getElementById(key === 'um' ? 'um-container' : key === 'facilities' ? 'facility-container' : key);
@@ -823,41 +834,52 @@
                 });
             }
 
-            // Restore all text and dropdowns
+            // Restore Phase
+            document.getElementById('display-phase').innerText = data.phase;
+
+            // Restore all inputs
             const editables = document.querySelectorAll('[contenteditable="true"]');
             data.editables.forEach((val, i) => { if(editables[i]) editables[i].innerHTML = val; });
             
             const selects = document.querySelectorAll('select');
             data.selects.forEach((val, i) => { if(selects[i]) selects[i].value = val; });
 
-            alert(`Restored case: ${data.clientName}`);
+            // Trigger calc updates
+            if(window.runMedCalculation) runMedCalculation();
+            if(window.runExpCalculation) runExpCalculation();
+            
+            alert("Case Archive Loaded.");
         };
 
-        // 4. Delete a case from repository
         window.deleteFromRepo = function(id, e) {
             e.stopPropagation();
-            if(!confirm("Delete this archive?")) return;
+            if(!confirm("Permanently delete this file from the repository?")) return;
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
             repo = repo.filter(item => item.id !== id);
             localStorage.setItem(REPO_KEY, JSON.stringify(repo));
             renderRepoList();
         };
 
-        // 5. Update the sidebar list
         window.renderRepoList = function() {
             const list = document.getElementById('repo-list');
+            const countDisplay = document.getElementById('repo-count');
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
             
+            countDisplay.innerText = repo.length;
+
             if (repo.length === 0) {
-                list.innerHTML = '<p class="text-[10px] text-slate-600 italic">No saved cases found.</p>';
+                list.innerHTML = '<p class="text-[10px] text-slate-600 italic text-center py-4">Repository is empty.</p>';
                 return;
             }
 
             list.innerHTML = repo.map(item => `
-                <div onclick="loadFromRepo(${item.id})" class="group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-orange-500/50 transition-all relative">
-                    <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-2 right-2 text-slate-700 hover:text-red-500 text-xs">×</button>
-                    <div class="text-[10px] font-black text-orange-500 uppercase truncate pr-4">${item.clientName}</div>
-                    <div class="text-[8px] text-slate-500 font-bold uppercase mt-1">${item.phase} | ${item.timestamp}</div>
+                <div onclick="loadFromRepo(${item.id})" class="group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all relative">
+                    <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-2 right-2 text-slate-700 hover:text-red-500 text-sm font-bold">×</button>
+                    <div class="text-[10px] font-black text-white uppercase truncate pr-4">${item.clientName}</div>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-[8px] text-slate-500 font-bold uppercase">${item.phase}</span>
+                        <span class="text-[8px] text-slate-600">${item.timestamp}</span>
+                    </div>
                 </div>
             `).join('');
         };
@@ -866,10 +888,5 @@
     })();
 </script>
 
-<style>
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #020617; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-</style>
 </body>
 </html>
