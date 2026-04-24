@@ -1309,5 +1309,57 @@
         };
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. Locate the header container
+            const headerFlex = document.querySelector('#capture-area .pdf-card .flex.items-center.gap-2');
+            
+            if (headerFlex && !document.getElementById('injected-injury-type')) {
+                // Adjust parent gaps to handle the larger text without squashing items
+                headerFlex.className = "flex items-center gap-6 flex-1";
+
+                // Create the Injury Type Wrapper
+                const typeDiv = document.createElement('div');
+                typeDiv.id = 'injected-injury-type';
+                typeDiv.className = "flex items-baseline gap-2";
+                
+                // Styling the Select: Dark Blue (#1e3a8a), 18px, Bold
+                typeDiv.innerHTML = `
+                    <label class="text-[9px] text-slate-400 font-black uppercase whitespace-nowrap">Type:</label>
+                    <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
+                            style="color: #1e3a8a; font-size: 18px; font-weight: 900; text-transform: uppercase; font-family: inherit;">
+                        <option value="MVA">MVA</option>
+                        <option value="Slip and Fall">Slip and Fall</option>
+                        <option value="Mass Tort">Mass Tort</option>
+                        <option value="Premise Liability">Premise Liability</option>
+                        <option value="Animal Bite">Animal Bite</option>
+                        <option value="Others">Others</option>
+                    </select>
+                `;
+
+                // Create a vertical separator
+                const separator = document.createElement('span');
+                separator.className = "text-slate-200 h-6 border-l mx-1";
+
+                // Find the Target Settlement div to insert "Type" right before it
+                const settlementDiv = Array.from(headerFlex.children).find(el => 
+                    el.innerText && el.innerText.includes('TARGET SETTLEMENT')
+                );
+
+                if (settlementDiv) {
+                    headerFlex.insertBefore(typeDiv, settlementDiv);
+                    headerFlex.insertBefore(separator, settlementDiv);
+                }
+            }
+
+            // 2. Adjust right-side padding to prevent layout break with the larger font
+            const adminBlock = document.querySelector('#capture-area .pdf-card .flex.items-center.gap-6.border-l');
+            if (adminBlock) {
+                adminBlock.style.paddingLeft = "1.5rem"; 
+            }
+        });
+    })();
+</script>
 </body>
 </html>
