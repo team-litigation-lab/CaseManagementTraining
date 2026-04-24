@@ -1511,5 +1511,33 @@
         });
     })();
 </script>
+    window.clearAllFields = function() {
+    const confirmClear = confirm("Are you sure? I will save a backup to your Repository before wiping the screen.");
+    if (!confirmClear) return;
+
+    // AUTO-SAVE BEFORE CLEARING
+    // This triggers your existing archive function so nothing is lost
+    if (window.archiveCurrentCase) {
+        window.archiveCurrentCase(); 
+    }
+
+    // Now proceed with the wipe
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+        if (el.innerText.includes('/')) el.innerText = 'MM/DD/YYYY';
+        else if (el.innerText.includes('$')) el.innerText = '$ 0.00';
+        else if (el.innerText.includes('#')) el.innerText = '#0000';
+        else el.innerText = '';
+    });
+
+    document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    
+    ['passenger-container', 'facility-container', 'um-container'].forEach(id => {
+        const c = document.getElementById(id);
+        if (c) c.innerHTML = '';
+    });
+
+    localStorage.removeItem('LSH_ACTIVE_SESSION');
+    alert("Case backed up to Repository and screen cleared.");
+};
 </body>
 </html>
