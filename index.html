@@ -1009,5 +1009,108 @@
     window.addEventListener('DOMContentLoaded', applyFixes);
 })();
 </script>
+    <script>
+(function() {
+    function injectMasterFixes() {
+        // 1. FIND THE HEADER (Targets the card with the Orange Border)
+        const header = document.querySelector('.pdf-card.border-l-8.border-orange-500');
+        
+        if (header && !header.dataset.fixed) {
+            header.innerHTML = `
+                <div class="flex justify-between items-start w-full mb-6">
+                    <div class="flex items-center gap-10 bg-slate-100 p-5 rounded-xl border border-slate-200 flex-1 mr-10 shadow-inner">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Primary Client</label>
+                            <div contenteditable="true" class="text-3xl font-black text-slate-900 uppercase tracking-tight outline-none leading-none">Click to Name</div>
+                        </div>
+                        <div class="h-10 border-l border-slate-300 mx-2"></div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Contact Number</label>
+                            <div contenteditable="true" class="text-xl font-bold text-slate-700 outline-none leading-none">(000) 000-0000</div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 pt-2">
+                        <label class="text-[9px] text-slate-400 font-black uppercase">Case Status</label>
+                        <div contenteditable="true" class="text-[10px] font-black text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 uppercase tracking-widest shadow-sm outline-none">Active Case</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between w-full bg-slate-900 p-3 rounded-xl shadow-2xl border border-slate-800">
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] text-slate-500 font-black uppercase">DOL:</label>
+                            <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
+                        </div>
+                        <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
+                            <label class="text-[10px] text-red-500 font-black uppercase">SOL:</label>
+                            <div contenteditable="true" class="text-[11px] font-black text-black uppercase bg-white px-3 py-1.5 rounded-lg min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
+                        </div>
+                        <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
+                            <label class="text-[10px] text-slate-500 font-black uppercase">ID:</label>
+                            <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg min-w-[70px] text-center outline-none">#0000</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700 mx-auto">
+                        <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
+                        <select class="bg-transparent border-none p-0 outline-none cursor-pointer text-blue-400 font-black uppercase text-sm">
+                            <option value="MVA">MVA</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Mass Tort">Mass Tort</option>
+                            <option value="Premise Liability">Premise Liability</option>
+                            <option value="Animal Bite">Animal Bite</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col items-end gap-1">
+                        <div class="flex items-center gap-2 pr-1">
+                            <label class="text-[9px] text-orange-500 font-black uppercase">Target Settlement:</label>
+                            <div contenteditable="true" class="text-sm font-black text-orange-500 tracking-tighter outline-none">$ 0.00</div>
+                        </div>
+                        <select id="display-phase" class="text-[10px] font-black text-white uppercase bg-orange-600 px-4 py-2 rounded-lg border border-orange-500 outline-none cursor-pointer">
+                            <option value="Intake">Intake</option>
+                            <option value="Treatment">Treatment</option>
+                            <option value="Demand">Demand</option>
+                            <option value="Negotiation">Negotiation</option>
+                            <option value="Litigation">Litigation</option>
+                            <option value="Settled">Settled</option>
+                        </select>
+                    </div>
+                </div>`;
+            header.dataset.fixed = "true"; // Mark as fixed so it doesn't loop
+        }
+
+        // 2. CLEANUP EMPLOYER FIELDS
+        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+            const label = el.previousElementSibling?.innerText || "";
+            if (label.includes('Employer') || label.includes('Job Title')) {
+                if (el.innerText.includes('Click here to list diagnoses')) {
+                    el.innerText = '';
+                    el.style.color = "black";
+                    el.style.fontStyle = "normal";
+                }
+            }
+        });
+    }
+
+    // Run immediately and again after 1 second to catch any delayed loading
+    injectMasterFixes();
+    setTimeout(injectMasterFixes, 1000);
+
+    // Global Clear Script
+    window.clearAllFields = function() {
+        if (!confirm("Save to Archive and clear all entries?")) return;
+        if (window.archiveCurrentCase) window.archiveCurrentCase();
+        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+            if (el.innerText.includes('/')) el.innerText = 'MM/DD/YYYY';
+            else if (el.innerText.includes('$')) el.innerText = '$ 0.00';
+            else if (el.innerText.includes('#')) el.innerText = '#0000';
+            else el.innerText = '';
+        });
+        alert("Form Cleared.");
+    };
+})();
+</script>
 </body>
 </html>
