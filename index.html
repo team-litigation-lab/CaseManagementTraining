@@ -1074,40 +1074,117 @@
     setTimeout(applyFinalFixes, 1000);
 })();
 </script>
-    function addFacility() {
-    const container = document.getElementById('facility-container');
-    const div = document.createElement('div');
-    div.className = "pdf-card relative border-t-4 border-orange-500";
+    <script>
+(function() {
+    // 1. Redefine the addFacility function to include Emergency Room
+    window.addFacility = function() {
+        const container = document.getElementById('facility-container');
+        if (!container) return; // Safety check
+
+        const div = document.createElement('div');
+        div.className = "pdf-card relative border-t-4 border-orange-500 mb-4";
+        
+        // This is the blueprint for every new facility card
+        div.innerHTML = `
+            <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl hover:text-red-500 transition-colors">&times;</button>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="text-[10px] text-slate-400 font-black uppercase">Facility Name</label>
+                    <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded outline-none"></div>
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 font-black uppercase">Specialty</label>
+                    <select class="prof-input w-full border-orange-200 rounded p-1 text-sm font-bold outline-none">
+                        <option value="Emergency Room">Emergency Room</option>
+                        <option value="Chiro">Chiro</option>
+                        <option value="Ortho">Ortho</option>
+                        <option value="Surgery">Surgery</option>
+                        <option value="EMS">EMS</option>
+                        <option value="Physical Therapy">Physical Therapy</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 font-black uppercase">Last Treatment</label>
+                    <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded outline-none">MM/DD/YYYY</div>
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 font-black uppercase">Charges</label>
+                    <div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded outline-none">$ 0.00</div>
+                </div>
+            </div>`;
+        
+        container.appendChild(div);
+    };
+
+    // 2. Fix existing static dropdowns already on the page
+    const fixStaticDropdowns = () => {
+        document.querySelectorAll('select').forEach(sel => {
+            if ((sel.innerHTML.includes('Chiro') || sel.innerHTML.includes('Ortho')) && !sel.innerHTML.includes('Emergency Room')) {
+                const erOption = document.createElement('option');
+                erOption.value = "Emergency Room";
+                erOption.text = "Emergency Room";
+                sel.insertBefore(erOption, sel.firstChild); // Put it at the top
+            }
+        });
+    };
+
+    // Run the fix for static elements once the page is ready
+    window.addEventListener('load', fixStaticDropdowns);
+    // Safety backup run
+    setTimeout(fixStaticDropdowns, 500);
+})();
+</script>
+    <script>
+(function() {
+    const patchNameOnly = () => {
+        try {
+            // 1. Find all editable fields
+            const editables = document.querySelectorAll('[contenteditable="true"]');
+            if (editables.length === 0) return;
+
+            // 2. Identify the Client Name field (usually the first one)
+            const nameField = editables[0];
+
+            // 3. Hide the label if it exists
+            const label = nameField.previousElementSibling;
+            if (label && (label.innerText.includes("Client") || label.tagName === 'LABEL')) {
+                label.style.display = "none";
+            }
+
+            // 4. Apply Size 20 Gray Style
+            nameField.style.fontSize = "20px";
+            nameField.style.color = "#64748b"; // Slate Gray
+            nameField.style.fontWeight = "600";
+            nameField.style.textTransform = "uppercase";
+            nameField.style.letterSpacing = "0.5px";
+            nameField.style.outline = "none";
+
+            // 5. Auto-erase placeholder logic
+            if (nameField.innerText.trim() === "Client's Name") {
+                nameField.onfocus = function() {
+                    if (this.innerText.trim() === "Client's Name") {
+                        this.innerText = "";
+                    }
+                };
+            }
+        } catch (err) {
+            // This prevents the "Page is showing errors" message
+            console.warn("Name patch skipped: Element not found yet.");
+        }
+    };
+
+    // Run safely
+    if (document.readyState === 'complete') {
+        patchNameOnly();
+    } else {
+        window.addEventListener('load', patchNameOnly);
+    }
     
-    // This innerHTML defines exactly what appears when you click "+ Add Facility"
-    div.innerHTML = `
-        <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl">&times;</button>
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-                <label>Facility Name</label>
-                <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded"></div>
-            </div>
-            <div>
-                <label>Specialty</label>
-                <select class="prof-input w-full border-orange-200">
-                    <option value="Emergency Room">Emergency Room</option>
-                    <option value="Chiro">Chiro</option>
-                    <option value="Ortho">Ortho</option>
-                    <option value="Surgery">Surgery</option>
-                    <option value="EMS">EMS</option>
-                    <option value="EMC">EMC</option>
-                </select>
-            </div>
-            <div>
-                <label>Last Treatment Schedule</label>
-                <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div>
-            </div>
-            <div>
-                <label>Charges</label>
-                <div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div>
-            </div>
-        </div>`;
-    container.appendChild(div);
-}
+    // Refresh the fix when clicking tabs (without causing errors)
+    document.addEventListener('click', () => {
+        setTimeout(patchNameOnly, 10);
+    });
+})();
+</script>
 </body>
 </html>
