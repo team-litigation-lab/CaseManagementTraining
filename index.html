@@ -1484,5 +1484,32 @@
         });
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            // Target the Employer and Job Title editable divs
+            // This assumes they are within your 'pane-profile' section
+            const profileEditables = document.querySelectorAll('#pane-profile [contenteditable="true"]');
+            
+            profileEditables.forEach(el => {
+                // Check if the element's label/context is Employer or Job Title
+                const label = el.previousElementSibling?.innerText || "";
+                
+                if (label.includes('Employer') || label.includes('Job Title')) {
+                    // Remove the injury-related placeholder text
+                    if (el.innerText.includes('Click here to list diagnoses')) {
+                        el.innerText = ''; 
+                    }
+                    
+                    // Optional: Reset style to ensure it doesn't look like the Injury block
+                    el.className = "text-sm font-bold w-full p-2 border border-slate-100 rounded bg-white";
+                    el.style.minHeight = "auto";
+                    el.style.fontStyle = "normal";
+                    el.style.color = "#0f172a"; // Slate-900 (Solid Black/Dark)
+                }
+            });
+        });
+    })();
+</script>
 </body>
 </html>
