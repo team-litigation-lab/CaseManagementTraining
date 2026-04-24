@@ -1033,5 +1033,137 @@
         };
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. Update the existing dropdowns in the UI
+            const updateSpecialtyDropdowns = () => {
+                const selects = document.querySelectorAll('#pane-treatment select.prof-input');
+                selects.forEach(select => {
+                    // Check if Emergency Room already exists to prevent duplicates
+                    const exists = Array.from(select.options).some(opt => opt.value === 'ER');
+                    if (!exists) {
+                        const erOption = document.createElement('option');
+                        erOption.value = 'ER';
+                        erOption.text = 'Emergency Room';
+                        select.add(erOption);
+                    }
+                });
+            };
+
+            // 2. Override the addFacility function to include ER in new cards
+            const originalAddFacility = window.addFacility;
+            window.addFacility = function() {
+                const container = document.getElementById('facility-container');
+                const div = document.createElement('div');
+                div.className = "pdf-card relative border-t-4 border-orange-500";
+                div.innerHTML = `
+                    <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl">&times;</button>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div><label>Facility Name</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded"></div></div>
+                        <div><label>Specialty</label>
+                            <select class="prof-input w-full border-orange-200">
+                                <option value="Chiro">Chiro</option>
+                                <option value="Ortho">Ortho</option>
+                                <option value="Surgery">Surgery</option>
+                                <option value="EMS">EMS</option>
+                                <option value="EMC">EMC</option>
+                                <option value="ER">Emergency Room</option>
+                            </select>
+                        </div>
+                        <div><label>Last Treatment Schedule</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div></div>
+                        <div><label>Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div>
+                    </div>`;
+                container.appendChild(div);
+                if(window.runMedCalculation) runMedCalculation();
+            };
+
+            // Run initial update
+            updateSpecialtyDropdowns();
+        });
+    })();
+</script>
+    <script>
+    (function() {
+        const ACTIVE_CASE_KEY = 'LSH_ACTIVE_SESSION';
+
+        // 1. SAVE STATE ON EVERY INPUT
+        // This captures everything as the user types/changes things
+        const saveActiveSession = () => {
+            const sessionData = {
+                phase: document.getElementById('display-phase').innerText,
+                editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
+                selects: Array.from(document.querySelectorAll('select')).map(el => el.value),
+                html: {
+                    um: document.getElementById('um-container').innerHTML,
+                    fac: document.getElementById('facility-container').innerHTML,
+                    fin: document.getElementById('finance-body').innerHTML,
+                    doc: document.getElementById('doc-body').innerHTML,
+                    note: document.getElementById('notes-body').innerHTML,
+                    task: document.getElementById('tasks-body').innerHTML
+                }
+            };
+            localStorage.setItem(ACTIVE_CASE_KEY, JSON.stringify(sessionData));
+        };
+
+        // 2. RESTORE STATE ON PAGE LOAD
+        const restoreActiveSession = () => {
+            const saved = localStorage.getItem(ACTIVE_CASE_KEY);
+            if (!saved) return;
+
+            const data = JSON.parse(saved);
+
+            // Restore HTML Containers (Tables and Facilities)
+            if(data.html) {
+                if(data.html.um) document.getElementById('um-container').innerHTML = data.html.um;
+                if(data.html.fac) document.getElementById('facility-container').innerHTML = data.html.fac;
+                if(data.html.fin) document.getElementById('finance-body').innerHTML = data.html.fin;
+                if(data.html.doc) document.getElementById('doc-body').innerHTML = data.html.doc;
+                if(data.html.note) document.getElementById('notes-body').innerHTML = data.html.note;
+                if(data.html.task) document.getElementById('tasks-body').innerHTML = data.html.task;
+            }
+
+            // Restore Phase
+            document.getElementById('display-phase').innerText = data.phase;
+
+            // Restore All ContentEditables
+            const editables = document.querySelectorAll('[contenteditable="true"]');
+            data.editables.forEach((val, i) => { 
+                if(editables[i]) editables[i].innerHTML = val; 
+            });
+
+            // Restore All Select Dropdowns
+            const selects = document.querySelectorAll('select');
+            data.selects.forEach((val, i) => { 
+                if(selects[i]) selects[i].value = val; 
+            });
+
+            // Refresh Calculations
+            if(window.runMedCalculation) runMedCalculation();
+            if(window.runExpCalculation) runExpCalculation();
+        };
+
+        // 3. LISTENERS
+        window.addEventListener('DOMContentLoaded', () => {
+            // First, restore what was there before the refresh
+            restoreActiveSession();
+
+            // Then, watch for any changes to save them automatically
+            document.addEventListener('input', saveActiveSession);
+            document.addEventListener('change', saveActiveSession);
+        });
+
+        // 4. CLEAR SESSION ON "NEW ENTRY"
+        // Update your existing createNewFile function to clear the session
+        const originalCreateNew = window.createNewFile;
+        window.createNewFile = function() {
+            if(confirm("Start new entry? This will clear the current screen.")) {
+                localStorage.removeItem(ACTIVE_CASE_KEY);
+                window.location.reload();
+            }
+        };
+
+    })();
+</script>
 </body>
 </html>
