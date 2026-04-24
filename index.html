@@ -1122,5 +1122,80 @@
         });
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            
+            // 1. CLEAN UP HEALTH INSURANCE (SUBROGATION)
+            const healthInsGrid = document.querySelector('#pane-matrix .ins-tab-content .grid');
+            if (healthInsGrid && !document.getElementById('injected-subro')) {
+                healthInsGrid.classList.replace('lg:grid-cols-4', 'lg:grid-cols-3');
+                const subroDiv = document.createElement('div');
+                subroDiv.id = 'injected-subro';
+                subroDiv.innerHTML = `
+                    <label class="text-[9px] text-orange-600 font-black uppercase">Subrogation (Notes/Amount)</label>
+                    <div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2 bg-slate-50 italic text-slate-400">Enter details...</div>
+                `;
+                healthInsGrid.appendChild(subroDiv);
+            }
+
+            // 2. CLEAN UP UM/UIM (POLICY NUMBER)
+            const umGrid = document.querySelector('#um-container .grid');
+            if (umGrid && !document.getElementById('injected-um-policy')) {
+                // Ensure grid is 6 columns
+                umGrid.className = "grid md:grid-cols-6 gap-4"; 
+                
+                const policyDiv = document.createElement('div');
+                policyDiv.id = 'injected-um-policy';
+                policyDiv.innerHTML = `
+                    <label class="text-[9px] text-slate-400 font-black uppercase">Policy Number</label>
+                    <div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2 bg-slate-50"></div>
+                `;
+                // Insert after Carrier (index 1)
+                umGrid.insertBefore(policyDiv, umGrid.children[2]);
+            }
+
+            // 3. CLEAN UP PROPERTY DAMAGE (UPLOAD BUTTONS)
+            const pdSections = ['ui-repairable', 'ui-totalled'];
+            pdSections.forEach(id => {
+                const section = document.getElementById(id);
+                if (section) {
+                    // Remove any old "Action" columns first to prevent duplicates
+                    const oldActions = section.querySelectorAll('.action-col');
+                    oldActions.forEach(el => el.remove());
+
+                    const actionDiv = document.createElement('div');
+                    actionDiv.className = "action-col no-print";
+                    const btnLabel = (id === 'ui-repairable') ? 'Upload Estimate' : 'Upload Valuation';
+                    
+                    actionDiv.innerHTML = `
+                        <label class="text-[9px] text-slate-400 font-black uppercase">Action</label>
+                        <button class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded font-bold uppercase w-full hover:bg-slate-800 transition-all">
+                            ${btnLabel}
+                        </button>
+                    `;
+                    section.appendChild(actionDiv);
+                }
+            });
+
+            // 4. OVERRIDE ADD UM BUTTON
+            window.addUM = function() {
+                const container = document.getElementById('um-container');
+                const div = document.createElement('div');
+                div.className = "grid md:grid-cols-6 gap-4 mt-4 pt-4 border-t border-slate-100 relative";
+                div.innerHTML = `
+                    <button onclick="this.parentElement.remove()" class="no-print absolute top-0 right-0 text-red-500 font-bold">&times;</button>
+                    <div><label>Policy Holder</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Policy Number</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Claim #</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                    <div><label>Limits</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>
+                `;
+                container.appendChild(div);
+            };
+        });
+    })();
+</script>
 </body>
 </html>
