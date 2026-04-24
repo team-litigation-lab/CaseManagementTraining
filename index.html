@@ -1142,46 +1142,51 @@
     });
 })();
 </script>
-    <script>
+<script>
 (function() {
-    const runLSHFinalFixes = () => {
-        // 1. PROFESSIONAL FONT FIX: TARGET PRIMARY CLIENT NAME
-        // Looks for the first occurrence of the Client Name display
-        const clientNameEl = document.querySelector('.text-xl.font-black.text-slate-900.uppercase');
-        if (clientNameEl) {
-            clientNameEl.style.fontSize = "42px"; // Increased size
-            clientNameEl.style.fontWeight = "900";
-            clientNameEl.style.letterSpacing = "-1.5px";
-            clientNameEl.style.lineHeight = "1";
-            clientNameEl.style.color = "#0f172a"; // Professional Slate-950
+    const applyVisualFixes = () => {
+        // 1. STYLE THE NAME ONLY (Visual only, won't break scripts)
+        // Targets the primary client name container
+        const nameField = document.querySelector('[contenteditable="true"]');
+        if (nameField && (nameField.innerText.includes("Client") || nameField.innerText.length > 0)) {
+            // We use .style.cssText to apply changes without overwriting other properties
+            nameField.style.fontSize = "52px"; 
+            nameField.style.fontWeight = "900";
+            nameField.style.lineHeight = "1";
+            nameField.style.letterSpacing = "-2px";
+            nameField.style.color = "#0f172a";
+            nameField.style.display = "inline-block";
+            nameField.style.minWidth = "300px";
         }
 
-        // 2. FACILITY DROPDOWN FIX: ADD EMERGENCY ROOM
-        // Targets all select elements that contain specialty options
-        const allSelects = document.querySelectorAll('select');
-        allSelects.forEach(select => {
-            const content = select.innerHTML;
-            // Check if it's the specialty dropdown and if ER is missing
-            if (content.includes('Chiro') && !content.includes('Emergency Room')) {
+        // 2. ADD EMERGENCY ROOM (Only if missing)
+        document.querySelectorAll('select').forEach(sel => {
+            // We look for 'Chiro' to identify the facility specialty dropdown
+            if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
                 const erOption = document.createElement('option');
                 erOption.value = "Emergency Room";
                 erOption.text = "Emergency Room";
-                select.appendChild(erOption);
+                sel.appendChild(erOption);
             }
         });
     };
 
-    // RUN ON LOAD
-    window.addEventListener('load', runLSHFinalFixes);
+    // Run on load
+    window.addEventListener('load', applyVisualFixes);
 
-    // RUN ON CLICK: Specifically catches when a user adds a new facility card
+    // Run on click to catch newly added facilities
     document.addEventListener('click', (e) => {
-        if (e.target.innerText && e.target.innerText.includes('Add Facility')) {
-            // Small delay to allow the HTML for the new card to exist
-            setTimeout(runLSHFinalFixes, 50);
+        if (e.target.innerText && e.target.innerText.includes('Facility')) {
+            setTimeout(applyVisualFixes, 50);
         }
     });
+
+    // Run when a tab is switched to ensure font stays large
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => setTimeout(applyVisualFixes, 10));
+    });
 })();
+</script>
 </script>
 </body>
 </html>
