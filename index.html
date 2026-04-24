@@ -997,11 +997,11 @@
             if (mainHeader) {
                 const bar = document.createElement('div');
                 bar.id = 'lsh-integrated-bar';
-                bar.style = "background:#0f172a; color:white; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316;";
+                bar.style = "background:#0f172a; color:black; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316;";
                 bar.innerHTML = `
                     <div style="display:flex; gap:20px;">
                         <div><label style="font-size:9px; color:#94a3b8; font-weight:bold; text-transform:uppercase; display:block;">Date of Loss</label>
-                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px;">MM/DD/YYYY</div></div>
+                        <div contenteditable="true" style="font-size:14px; color:black font-weight:bold; border-bottom:1px solid #334155; min-width:110px;">MM/DD/YYYY</div></div>
                         <div><label style="font-size:9px; color:#f87171; font-weight:bold; text-transform:uppercase; display:block;">Statute (SOL)</label>
                         <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px; color:#f87171;">MM/DD/YYYY</div></div>
                     </div>
@@ -1009,6 +1009,7 @@
                         <span style="font-size:10px; font-weight:900; color:#f97316; font-style:italic;">TYPE:</span>
                         <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer;">
                             <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Animal Bite">Animal Bite</option><option value="Others">Others</option>
+                            <option value="MVA">MVA</option><option value="Mass Tort">Slip and Fall</option><option value="Animal Bite">Animal Bite</option><option value="Others">Others</option>
                         </select>
                     </div>`;
                 mainHeader.parentNode.insertBefore(bar, mainHeader.nextSibling);
@@ -1072,6 +1073,88 @@
     // Run immediately and again after 1 second to catch memory loads
     applyFinalFixes();
     setTimeout(applyFinalFixes, 1000);
+})();
+</script>
+    <script>
+(function() {
+    const applyLSHUpdatesV9 = () => {
+        // 1. PRIMARY CLIENT FONT FIX (LARGE & PROFESSIONAL)
+        const allEditables = document.querySelectorAll('[contenteditable="true"]');
+        allEditables.forEach(el => {
+            if (el.innerText.toUpperCase().includes("CLIENT'S NAME") || (el.parentElement.innerHTML.toUpperCase().includes("CLIENT:") && el.classList.contains('text-xl'))) {
+                el.style.fontSize = "42px";
+                el.style.fontWeight = "900";
+                el.style.letterSpacing = "-1.5px";
+                el.style.lineHeight = "1";
+                el.style.color = "#0f172a";
+                el.style.textTransform = "uppercase";
+            }
+        });
+
+        // 2. FACILITY DROPDOWN EDIT: ADD EMERGENCY ROOM
+        // This targets all existing and future specialty dropdowns
+        const specialtySelects = document.querySelectorAll('select');
+        specialtySelects.forEach(select => {
+            // Identify if this is a specialty dropdown
+            const options = Array.from(select.options).map(o => o.value.toUpperCase());
+            if (options.includes("CHIRO") || options.includes("ORTHO")) {
+                if (!options.includes("EMERGENCY ROOM")) {
+                    const erOption = document.createElement('option');
+                    erOption.value = "Emergency Room";
+                    erOption.text = "Emergency Room";
+                    select.appendChild(erOption);
+                }
+            }
+        });
+
+        // 3. DASHBOARD BAR (DOL, SOL, TYPE)
+        if (!document.getElementById('lsh-integrated-bar-v9')) {
+            const mainHeader = document.querySelector('.pdf-card.border-l-8.border-orange-500');
+            if (mainHeader) {
+                const bar = document.createElement('div');
+                bar.id = 'lsh-integrated-bar-v9';
+                bar.style = "background:#0f172a; color:white; padding:18px; border-radius:12px; margin:25px 0; display:flex; gap:40px; align-items:center; border-left:8px solid #f97316; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);";
+                bar.innerHTML = `
+                    <div style="display:flex; gap:30px;">
+                        <div><label style="font-size:10px; color:#94a3b8; font-weight:800; text-transform:uppercase; display:block; margin-bottom:4px;">Date of Loss</label>
+                        <div contenteditable="true" style="font-size:16px; font-weight:bold; border-bottom:1px solid #334155; min-width:120px; outline:none;">MM/DD/YYYY</div></div>
+                        <div><label style="font-size:10px; color:#f87171; font-weight:800; text-transform:uppercase; display:block; margin-bottom:4px;">Statute (SOL)</label>
+                        <div contenteditable="true" style="font-size:16px; font-weight:bold; border-bottom:1px solid #334155; min-width:120px; color:#f87171; outline:none;">MM/DD/YYYY</div></div>
+                    </div>
+                    <div style="background:#1e293b; padding:10px 20px; border-radius:8px; border:1px solid #334155; display:flex; align-items:center; gap:12px;">
+                        <span style="font-size:11px; font-weight:900; color:#f97316; font-style:italic; letter-spacing:1px;">TYPE:</span>
+                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:800; font-size:13px; outline:none; cursor:pointer; text-transform:uppercase;">
+                            <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Animal Bite">Animal Bite</option><option value="Others">Others</option>
+                        </select>
+                    </div>`;
+                mainHeader.parentNode.insertBefore(bar, mainHeader.nextSibling);
+            }
+        }
+
+        // 4. SIDEBAR BUTTON PROTECTION
+        const sidebar = document.getElementById('sidebar-actions');
+        if (sidebar) {
+            const btns = sidebar.getElementsByTagName('button');
+            for (let btn of btns) {
+                const bText = btn.innerText.toUpperCase();
+                if (bText.includes('PDF')) {
+                    btn.innerText = "Download PDF";
+                    btn.style.backgroundColor = "#ea580c";
+                } else if (bText.includes('SAVE') || bText.includes('ARCHIVE') || bText.includes('REPOSITORY')) {
+                    btn.innerText = "CASE REPOSITORY";
+                    btn.style.backgroundColor = "#059669";
+                } else if (bText.includes('RETRIEVE') || bText.includes('LOAD')) {
+                    btn.innerText = "RETRIEVE CASE";
+                }
+            }
+        }
+    };
+
+    // Re-run the specialty logic whenever a new facility is added
+    const observer = new MutationObserver(applyLSHUpdatesV9);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    applyLSHUpdatesV9();
 })();
 </script>
 </body>
