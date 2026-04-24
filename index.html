@@ -1312,28 +1312,31 @@
    <script>
     (function() {
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. Target the main container inside the orange-bordered card
             const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
-            const mainRow = headerCard ? headerCard.querySelector('.flex.justify-between.items-center') : null;
-            
-            if (mainRow) {
-                // FORCE RESTRUCTURE: Change from Flex to Grid for stability
-                // This creates 2 main columns: Left (Data) and Right (Admin/Dates)
-                mainRow.className = "grid grid-cols-12 gap-4 items-center";
+            if (!headerCard) return;
 
-                // 2. Identify and Wrap the Left Data Column
-                const leftSide = mainRow.querySelector('.flex.items-center.gap-2') || mainRow.children[0];
-                leftSide.className = "col-span-9 flex items-center justify-between pr-6";
+            // 1. RESTRUCTURE THE HEADER INTO TWO ROWS
+            // We find the existing top row and clean it up
+            const topRow = headerCard.querySelector('.flex.justify-between.items-center');
+            if (topRow) {
+                topRow.className = "flex flex-col gap-6"; // Change to vertical stack
+                
+                // Identify the two main sections
+                const clientData = topRow.querySelector('.flex.items-center.gap-2') || topRow.children[0];
+                const adminData = topRow.querySelector('.flex.items-center.gap-4.border-l') || topRow.children[1];
 
-                // 3. Inject/Fix Injury Type (if not already there)
+                // 2. STYLE LEVEL 1 (Identity Row)
+                clientData.className = "flex flex-wrap items-center gap-8 w-full border-b pb-4 border-slate-50";
+                
+                // Inject Injury Type if missing
                 if (!document.getElementById('injected-injury-type')) {
                     const typeDiv = document.createElement('div');
                     typeDiv.id = 'injected-injury-type';
                     typeDiv.className = "flex items-baseline gap-2";
                     typeDiv.innerHTML = `
-                        <label class="text-[9px] text-slate-400 font-black uppercase whitespace-nowrap">Type:</label>
+                        <label class="text-[9px] text-slate-400 font-black uppercase">Type:</label>
                         <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
-                                style="color: #1e3a8a; font-size: 16px; font-weight: 900; text-transform: uppercase; line-height: 1;">
+                                style="color: #1e3a8a; font-size: 18px; font-weight: 900; text-transform: uppercase;">
                             <option value="MVA">MVA</option>
                             <option value="Slip and Fall">Slip and Fall</option>
                             <option value="Mass Tort">Mass Tort</option>
@@ -1342,25 +1345,29 @@
                             <option value="Others">Others</option>
                         </select>
                     `;
-                    
-                    // Insert it specifically before the Target Settlement
-                    const targetSettlement = Array.from(leftSide.children).find(el => el.innerHTML.includes('TARGET'));
+                    // Insert before Target Settlement
+                    const targetSettlement = Array.from(clientData.children).find(el => el.innerHTML.includes('TARGET'));
                     if (targetSettlement) {
-                        leftSide.insertBefore(typeDiv, targetSettlement);
-                        // Add a fresh separator
-                        const sep = document.createElement('span');
-                        sep.className = "text-slate-200 h-6 border-l hidden lg:block";
-                        leftSide.insertBefore(sep, targetSettlement);
+                        clientData.insertBefore(typeDiv, targetSettlement);
                     }
                 }
 
-                // 4. Identify and Wrap the Right Admin Column
-                const rightSide = mainRow.querySelector('.flex.items-center.gap-4.border-l') || mainRow.children[1];
-                rightSide.className = "col-span-3 flex items-center justify-end gap-4 border-l pl-6 border-slate-100";
+                // 3. STYLE LEVEL 2 (Admin Row - DOL, SOL, Case ID)
+                // We place this below the identity row
+                adminData.className = "flex flex-wrap items-center gap-10 w-full bg-slate-50/50 p-3 rounded-lg";
+                adminData.style.borderLeft = "none"; // Remove the vertical line since it's now a horizontal row
+                adminData.style.paddingLeft = "12px";
+
+                // Ensure the DOL/SOL block is horizontal within this row
+                const datesBlock = adminData.querySelector('#injected-header-dates');
+                if (datesBlock) {
+                    datesBlock.className = "flex items-center gap-8 mr-auto";
+                    datesBlock.style.borderRight = "none";
+                    datesBlock.querySelectorAll('.flex-col').forEach(el => el.className = "flex items-center gap-2");
+                }
             }
         });
     })();
-</script>
 </script>
 </body>
 </html>
