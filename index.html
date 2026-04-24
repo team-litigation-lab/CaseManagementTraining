@@ -714,5 +714,38 @@
             document.addEventListener('input', (e) => { if (e.target.closest('#finance-body')) runExpCalculation(); });
         })();
     </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            // Find the Case ID container to anchor the new dates
+            const caseIdContainer = document.querySelector('#capture-area .flex.flex-col.items-end.gap-2');
+            
+            if (caseIdContainer) {
+                // Create the wrapper for DOL and SOL
+                const dateGroup = document.createElement('div');
+                dateGroup.className = "flex flex-col gap-2 mr-4 pr-4 border-r border-slate-100";
+                
+                dateGroup.innerHTML = `
+                    <div class="flex items-center gap-2 justify-end">
+                        <label class="text-[9px] text-slate-400 font-bold uppercase mb-0">DOL:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-slate-900 border border-transparent hover:border-slate-200 px-1 rounded">MM/DD/YYYY</div>
+                    </div>
+                    <div class="flex items-center gap-2 justify-end">
+                        <label class="text-[9px] text-red-500 font-bold uppercase mb-0">SOL:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-red-600 border border-transparent hover:border-slate-200 px-1 rounded">MM/DD/YYYY</div>
+                    </div>
+                `;
+                
+                // Insert it right before the Case ID/Phase dropdown section
+                caseIdContainer.parentNode.insertBefore(dateGroup, caseIdContainer);
+                
+                // Ensure the new fields use the correct font family
+                dateGroup.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                    el.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+                });
+            }
+        });
+    })();
+</script>
 </body>
 </html>
