@@ -1,3 +1,5 @@
+DO NOT ERASE
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -58,9 +60,13 @@
             <div class="pdf-card border-l-8 border-orange-500 mb-8 bg-white shadow-sm p-6">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-2">
-                        <div class="flex items-baseline gap-6">
-                            <div contenteditable="true" class="text-[20px] font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
-                        </div>
+                       <div class="flex items-baseline">
+    <div contenteditable="true" 
+         onfocus="if(this.innerText.trim()==='Client\'s Name')this.innerText=''" 
+         class="text-[20px] font-bold text-slate-500 uppercase leading-none outline-none border-none bg-transparent p-0 min-w-[200px]">
+         Client's Name
+    </div>
+</div>
                         <span class="text-slate-200 h-6 border-l"></span>
                         <div class="flex items-baseline gap-4">
                             <label class="text-[9px] text-slate-400 font-black uppercase">Contact:</label>
