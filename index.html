@@ -1243,6 +1243,66 @@
     setInterval(applyPowerCMS, 1000);
 })();
 </script>
+    <script>
+(function() {
+    const applyOthersLogic = () => {
+        // Target all dropdowns to find the Case Type one
+        document.querySelectorAll('select').forEach(select => {
+            // Identify Case Type menu (usually contains MVA) and ensure we haven't patched it yet
+            if (select.innerHTML.includes('MVA') && !select.dataset.resetLogic) {
+                
+                select.addEventListener('change', function() {
+                    if (this.value === "Others") {
+                        const originalSelect = this;
+                        
+                        // Create the wrapper for the input and back button
+                        const wrapper = document.createElement('div');
+                        wrapper.style.display = "inline-flex";
+                        wrapper.style.alignItems = "center";
+                        wrapper.style.gap = "5px";
+
+                        // Create editable field
+                        const input = document.createElement('div');
+                        input.contentEditable = "true";
+                        input.style.cssText = "border-bottom: 2px solid #3b82f6; color: #2563eb; font-weight: bold; outline: none; min-width: 120px; font-size: 14px;";
+                        input.innerText = "SPECIFY TYPE...";
+
+                        // Create the "Return to Menu" button
+                        const backBtn = document.createElement('button');
+                        backBtn.innerHTML = "↺";
+                        backBtn.title = "Return to dropdown";
+                        backBtn.style.cssText = "background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0px 5px; cursor: pointer; color: #64748b; font-size: 12px;";
+                        
+                        // If clicked, swap the input wrapper back for the original select menu
+                        backBtn.onclick = (e) => {
+                            e.preventDefault();
+                            wrapper.replaceWith(originalSelect);
+                            originalSelect.value = "MVA"; // Resets to default
+                        };
+
+                        wrapper.appendChild(input);
+                        wrapper.appendChild(backBtn);
+                        
+                        // Replace the dropdown with our new custom input group
+                        this.replaceWith(wrapper);
+                        
+                        // Focus and auto-clear
+                        input.focus();
+                        input.onfocus = function() { if(this.innerText.includes("SPECIFY")) this.innerText = ""; };
+                    }
+                });
+                
+                // Mark as patched so we don't add multiple listeners
+                select.dataset.resetLogic = "true";
+            }
+        });
+    };
+
+    // Run once on load and watch for clicks (like tab switches)
+    window.addEventListener('load', applyOthersLogic);
+    document.addEventListener('click', () => setTimeout(applyOthersLogic, 50));
+})();
+</script>
 </script>
 </body>
 </html>
