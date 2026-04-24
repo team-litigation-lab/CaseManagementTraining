@@ -59,12 +59,12 @@
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-2">
                         <div class="flex items-baseline gap-6">
-                            <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
-                            <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
-                        </div>
+    <label class="text-[18px] text-slate-600 font-gray uppercase">Client:</label>
+    <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
+</div>
                         <span class="text-slate-200 h-6 border-l"></span>
-                        <div class="flex items-baseline gap-4">
-                            <label class="text-[9px] text-slate-400 font-black uppercase">Contact:</label>
+                        <div class="flex items-baseline gap-16">
+                            <label class="text-[14px] text-slate-400 font-black uppercase">Contact:</label>
                             <div contenteditable="true" class="text-lg font-bold text-slate-900 leading-none tracking-tight">(000) 000-0000</div>
                         </div>
                         <span class="text-slate-200 h-6 border-l"></span>
@@ -1149,25 +1149,6 @@
         const allEditables = document.querySelectorAll('[contenteditable="true"]');
         if (allEditables.length > 0) {
             const nameEl = allEditables[0]; 
-
-            // REMOVE "CLIENT:" LABEL (Finds the label specifically paired with the name)
-            const label = nameEl.previousElementSibling;
-            if (label && label.innerText.toUpperCase().includes("CLIENT")) {
-                label.style.display = "none";
-            }
-
-            // STYLE THE EDITABLE NAME AREA (LARGER THAN INTAKE)
-            nameEl.style.fontSize = "56px"; 
-            nameEl.style.fontWeight = "900";
-            nameEl.style.lineHeight = "1";
-            nameEl.style.letterSpacing = "-2px";
-            nameEl.style.color = "#0f172a";
-            nameEl.style.textTransform = "uppercase";
-            nameEl.style.minWidth = "500px";
-            nameEl.style.border = "none";
-            nameEl.style.background = "transparent";
-            nameEl.style.padding = "0";
-
             // AUTO-ERASE LOGIC
             if (nameEl.innerText.trim() === "Client's Name") {
                 nameEl.addEventListener('focus', function() {
