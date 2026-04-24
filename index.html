@@ -1186,5 +1186,72 @@
     });
 })();
 </script>
+    <script>
+(function() {
+    const applyCMSLayout = () => {
+        // 1. CMS IDENTITY HEADER (Name over Contact)
+        const nameField = document.querySelector('[contenteditable="true"]');
+        if (nameField && nameField.innerText.includes("Name")) {
+            const container = nameField.closest('.flex');
+            if (container) {
+                // Remove standard alignment and stack vertically
+                container.style.flexDirection = "column";
+                container.style.alignItems = "flex-start";
+                container.style.gap = "4px";
+
+                // Realistic CMS Header Font (Size 28 is the professional sweet spot)
+                nameField.style.fontSize = "28px";
+                nameField.style.fontWeight = "800";
+                nameField.style.color = "#1e293b"; // Deep Slate
+                nameField.style.letterSpacing = "-0.5px";
+                nameField.style.textTransform = "none"; // CMS usually uses Title Case
+                
+                // Remove "Client:" label for a cleaner look
+                const label = nameField.previousElementSibling;
+                if (label && label.tagName === "LABEL") label.style.display = "none";
+            }
+        }
+
+        // 2. TARGET SETTLEMENT AMOUNT (Professional Financial Style)
+        const allLabels = document.querySelectorAll('label');
+        allLabels.forEach(label => {
+            const text = label.innerText.toUpperCase();
+            if (text.includes("TARGET SETTLEMENT") || text.includes("SETTLEMENT AMOUNT")) {
+                const amountField = label.nextElementSibling;
+                if (amountField && amountField.getAttribute('contenteditable') === 'true') {
+                    // Modern CMS "Financial Dashboard" Style
+                    amountField.style.fontSize = "24px";
+                    amountField.style.fontWeight = "700";
+                    amountField.style.color = "#059669"; // Success Green
+                    amountField.style.padding = "4px 12px";
+                    amountField.style.backgroundColor = "#f0fdf4"; // Light mint tint
+                    amountField.style.borderRadius = "6px";
+                    amountField.style.border = "1px solid #dcfce7";
+                    amountField.style.display = "inline-block";
+                    amountField.style.marginTop = "4px";
+                }
+            }
+        });
+
+        // 3. CONTACT INFO SUB-HEADER
+        // Assuming the contact field is the one right after the name area
+        const contactField = document.querySelector('[contenteditable="true"]:nth-of-type(2)');
+        if (contactField && contactField !== nameField) {
+            contactField.style.fontSize = "14px";
+            contactField.style.color = "#64748b"; // Subtle gray
+            contactField.style.fontWeight = "500";
+        }
+    };
+
+    // Run on load and after short delay for safety
+    window.addEventListener('load', applyCMSLayout);
+    setTimeout(applyCMSLayout, 300);
+    
+    // Maintain layout when tabs are switched
+    document.addEventListener('click', () => {
+        setTimeout(applyCMSLayout, 50);
+    });
+})();
+</script>
 </body>
 </html>
