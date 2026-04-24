@@ -1167,5 +1167,97 @@
     else { window.addEventListener('load', runUltraPatch); }
 })();
 </script>
+    <script>
+(function() {
+    const applyFinalFixes = () => {
+        // 1. PRIMARY CLIENT (STRICT FIRST-ELEMENT ONLY)
+        const nameField = document.querySelector('[contenteditable="true"]');
+        if (nameField && nameField.innerText.includes("Name")) {
+            nameField.style.fontSize = "32px";
+            nameField.style.fontWeight = "900";
+            nameField.style.color = "#0f172a";
+        }
+
+        // 2. DASHBOARD BAR (STRICT ID CHECK)
+        if (!document.getElementById('lsh-integrated-bar')) {
+            const mainHeader = document.querySelector('.pdf-card.border-l-8.border-orange-500');
+            if (mainHeader) {
+                const bar = document.createElement('div');
+                bar.id = 'lsh-integrated-bar';
+                bar.style = "background:#0f172a; color:white; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316;";
+                bar.innerHTML = `
+                    <div style="display:flex; gap:20px;">
+                        <div><label style="font-size:9px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Date of Loss</label>
+                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px;">MM/DD/YYYY</div></div>
+                        <div><label style="font-size:9px; color:#f87171; font-weight:bold; text-transform:uppercase;">Statute (SOL)</label>
+                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:100px; color:#f87171;">MM/DD/YYYY</div></div>
+                    </div>
+                    <div style="background:#1e293b; padding:8px 12px; border-radius:6px; border:1px solid #334155;">
+                        <span style="font-size:10px; font-weight:900; color:#f97316;">TYPE:</span>
+                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer;">
+                            <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Others">Others</option>
+                        </select>
+                    </div>`;
+                mainHeader.parentNode.insertBefore(bar, mainHeader.nextSibling);
+            }
+        }
+
+        // 3. HEALTH INSURANCE SUBRO & UM POLICY (BY ID)
+        const matrixPane = document.getElementById('pane-matrix');
+        if (matrixPane && !document.getElementById('subro-row')) {
+            const healthTab = matrixPane.querySelector('.ins-tab-content');
+            if (healthTab) {
+                const subro = document.createElement('div');
+                subro.id = 'subro-row';
+                subro.style = "margin-top:15px; padding-top:15px; border-top:1px solid #f1f5f9; display:grid; grid-template-columns:1fr 1fr; gap:20px;";
+                subro.innerHTML = `
+                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8;">SUBROGATION CLAIM?</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;">NO</div></div>
+                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8;">SUBRO AMOUNT</label><div contenteditable="true" style="font-size:12px; font-weight:bold; color:#ef4444; border-bottom:1px solid #eee;">$ 0.00</div></div>`;
+                healthTab.appendChild(subro);
+            }
+        }
+
+        const umField = document.getElementById('um-container');
+        if (umField && !document.getElementById('um-pol-fix')) {
+            const grid = umField.querySelector('.grid');
+            if (grid) {
+                const pol = document.createElement('div');
+                pol.id = 'um-pol-fix';
+                pol.innerHTML = `<label style="font-size:10px; font-weight:bold; color:#94a3b8;">POLICY NUMBER</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;"></div>`;
+                grid.insertBefore(pol, grid.firstChild);
+            }
+        }
+
+        // 4. SIDEBAR REPOSITORY RENAMING (INDEX-BASED PROTECTION)
+        const sidebar = document.getElementById('sidebar-actions');
+        if (sidebar) {
+            const btns = sidebar.getElementsByTagName('button');
+            for (let btn of btns) {
+                const bText = btn.innerText.toUpperCase();
+                // Rename Save to Case Repository
+                if (bText.includes('SAVE') || bText.includes('ENTRY')) {
+                    if (!bText.includes('NEW')) {
+                        btn.innerText = "CASE REPOSITORY";
+                        btn.style.backgroundColor = "#059669";
+                    }
+                }
+                // Rename Retrieve/Load to Retrieve Case
+                if (bText.includes('RETRIEVE') || bText.includes('LOAD')) {
+                    btn.innerText = "RETRIEVE CASE";
+                }
+                // STOP THE PDF RENAME - EXPLICIT RESET
+                if (bText.includes('PDF')) {
+                    btn.innerText = "Download PDF";
+                    btn.style.backgroundColor = "#ea580c";
+                }
+            }
+        }
+    };
+
+    // Run multiple times to ensure it catches dynamic loads
+    setTimeout(applyFinalFixes, 100);
+    setTimeout(applyFinalFixes, 1000);
+})();
+</script>
 </body>
 </html>
