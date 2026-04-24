@@ -747,5 +747,129 @@
         });
     })();
 </script>
+    <script>
+    (function() {
+        const REPO_KEY = 'LSH_REPOSITORY';
+
+        // 1. Create the Repository UI in the Sidebar
+        const injectRepoUI = () => {
+            const sidebar = document.getElementById('sidebar-actions');
+            if (!sidebar) return;
+
+            const repoContainer = document.createElement('div');
+            repoContainer.className = "pt-4 mt-4 border-t border-slate-800";
+            repoContainer.innerHTML = `
+                <p class="text-[9px] font-black text-slate-500 uppercase mb-3 tracking-widest">Case Repository</p>
+                <div id="repo-list" class="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    <p class="text-[10px] text-slate-600 italic">No saved cases found.</p>
+                </div>
+                <button onclick="saveToRepository()" class="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
+                    + Archive Current Case
+                </button>
+            `;
+            sidebar.appendChild(repoContainer);
+            renderRepoList();
+        };
+
+        // 2. Save the current state as a new entry in the repository
+        window.saveToRepository = function() {
+            const clientName = document.querySelector('[contenteditable="true"]').innerText.trim() || "Unknown Client";
+            const caseId = document.querySelectorAll('[contenteditable="true"]')[11]?.innerText || "No-ID"; // Heuristic index for Case ID
+            const timestamp = new Date().toLocaleString();
+            
+            const currentData = {
+                id: Date.now(),
+                clientName: clientName,
+                caseId: caseId,
+                timestamp: timestamp,
+                phase: document.getElementById('display-phase').innerText,
+                editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
+                selects: Array.from(document.querySelectorAll('select')).map(el => el.value),
+                htmlContainers: {
+                    um: document.getElementById('um-container').innerHTML,
+                    facilities: document.getElementById('facility-container').innerHTML,
+                    finance: document.getElementById('finance-body').innerHTML,
+                    docs: document.getElementById('doc-body').innerHTML,
+                    discovery: document.getElementById('discovery-body').innerHTML,
+                    notes: document.getElementById('notes-body').innerHTML,
+                    tasks: document.getElementById('tasks-body').innerHTML
+                }
+            };
+
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            repo.unshift(currentData); // Add to start of list
+            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            renderRepoList();
+            alert(`Case for ${clientName} archived successfully.`);
+        };
+
+        // 3. Load a specific case from the repository
+        window.loadFromRepo = function(id) {
+            if(!confirm("Load this case? Current unsaved changes will be lost.")) return;
+            
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            const data = repo.find(item => item.id === id);
+            
+            if (!data) return;
+
+            // Apply phase
+            document.getElementById('display-phase').innerText = data.phase;
+            
+            // Restore HTML structures
+            if(data.htmlContainers) {
+                Object.keys(data.htmlContainers).forEach(key => {
+                    const el = document.getElementById(key === 'um' ? 'um-container' : key === 'facilities' ? 'facility-container' : key);
+                    if(el) el.innerHTML = data.htmlContainers[key];
+                });
+            }
+
+            // Restore all text and dropdowns
+            const editables = document.querySelectorAll('[contenteditable="true"]');
+            data.editables.forEach((val, i) => { if(editables[i]) editables[i].innerHTML = val; });
+            
+            const selects = document.querySelectorAll('select');
+            data.selects.forEach((val, i) => { if(selects[i]) selects[i].value = val; });
+
+            alert(`Restored case: ${data.clientName}`);
+        };
+
+        // 4. Delete a case from repository
+        window.deleteFromRepo = function(id, e) {
+            e.stopPropagation();
+            if(!confirm("Delete this archive?")) return;
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            repo = repo.filter(item => item.id !== id);
+            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            renderRepoList();
+        };
+
+        // 5. Update the sidebar list
+        window.renderRepoList = function() {
+            const list = document.getElementById('repo-list');
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            
+            if (repo.length === 0) {
+                list.innerHTML = '<p class="text-[10px] text-slate-600 italic">No saved cases found.</p>';
+                return;
+            }
+
+            list.innerHTML = repo.map(item => `
+                <div onclick="loadFromRepo(${item.id})" class="group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-orange-500/50 transition-all relative">
+                    <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-2 right-2 text-slate-700 hover:text-red-500 text-xs">×</button>
+                    <div class="text-[10px] font-black text-orange-500 uppercase truncate pr-4">${item.clientName}</div>
+                    <div class="text-[8px] text-slate-500 font-bold uppercase mt-1">${item.phase} | ${item.timestamp}</div>
+                </div>
+            `).join('');
+        };
+
+        window.addEventListener('DOMContentLoaded', injectRepoUI);
+    })();
+</script>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #020617; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+</style>
 </body>
 </html>
