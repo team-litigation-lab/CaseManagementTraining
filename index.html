@@ -1,3 +1,5 @@
+DO NOT ERASE
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,12 +61,11 @@
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-2">
                         <div class="flex items-baseline gap-6">
-    <label class="text-[18px] text-slate-600 font-gray uppercase">Client:</label>
-    <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
-</div>
+                            <div contenteditable="true" class="text-[20px] font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
+                        </div>
                         <span class="text-slate-200 h-6 border-l"></span>
-                        <div class="flex items-baseline gap-16">
-                            <label class="text-[14px] text-slate-400 font-black uppercase">Contact:</label>
+                        <div class="flex items-baseline gap-4">
+                            <label class="text-[9px] text-slate-400 font-black uppercase">Contact:</label>
                             <div contenteditable="true" class="text-lg font-bold text-slate-900 leading-none tracking-tight">(000) 000-0000</div>
                         </div>
                         <span class="text-slate-200 h-6 border-l"></span>
@@ -997,11 +998,11 @@
             if (mainHeader) {
                 const bar = document.createElement('div');
                 bar.id = 'lsh-integrated-bar';
-                bar.style = "background:#0f172a; color:black; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316;";
+                bar.style = "background:#0f172a; color:white; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316;";
                 bar.innerHTML = `
                     <div style="display:flex; gap:20px;">
                         <div><label style="font-size:9px; color:#94a3b8; font-weight:bold; text-transform:uppercase; display:block;">Date of Loss</label>
-                        <div contenteditable="true" style="font-size:14px; color:black font-weight:bold; border-bottom:1px solid #334155; min-width:110px;">MM/DD/YYYY</div></div>
+                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px;">MM/DD/YYYY</div></div>
                         <div><label style="font-size:9px; color:#f87171; font-weight:bold; text-transform:uppercase; display:block;">Statute (SOL)</label>
                         <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px; color:#f87171;">MM/DD/YYYY</div></div>
                     </div>
@@ -1009,7 +1010,6 @@
                         <span style="font-size:10px; font-weight:900; color:#f97316; font-style:italic;">TYPE:</span>
                         <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer;">
                             <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Animal Bite">Animal Bite</option><option value="Others">Others</option>
-                            <option value="MVA">MVA</option><option value="Mass Tort">Slip and Fall</option><option value="Animal Bite">Animal Bite</option><option value="Others">Others</option>
                         </select>
                     </div>`;
                 mainHeader.parentNode.insertBefore(bar, mainHeader.nextSibling);
@@ -1075,107 +1075,40 @@
     setTimeout(applyFinalFixes, 1000);
 })();
 </script>
-<script>
-(function() {
-    const applyLSHUpdates = () => {
-        // 1. DUPLICATE PROTECTION: Remove any accidental doubles first
-        const existingDashboards = document.querySelectorAll('[id^="patch-dashboard-"]');
-        if (existingDashboards.length > 1) {
-            for (let i = 1; i < existingDashboards.length; i++) {
-                existingDashboards[i].remove();
-            }
-        }
-        // 2. INTEGRATE DASHBOARD (Only create if 0 exist)
-        if (existingDashboards.length === 0) {
-            const headerRow = document.querySelector('.pdf-card.border-l-8.border-orange-500');
-            if (headerRow) {
-                const dash = document.createElement('div');
-                dash.id = 'patch-dashboard-v11';
-                dash.style = "background:#0f172a; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316; color:white;";
-                dash.innerHTML = `
-                    <div style="display:flex; gap:20px;">
-                        <div><label style="font-size:9px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Date of Loss</label>
-                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px;">MM/DD/YYYY</div></div>
-                        <div><label style="font-size:9px; color:#f87171; font-weight:bold; text-transform:uppercase;">Statute (SOL)</label>
-                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px; color:#f87171;">MM/DD/YYYY</div></div>
-                    </div>
-                    <div style="background:#1e293b; padding:8px 12px; border-radius:6px; border:1px solid #334155; display:flex; align-items:center; gap:10px;">
-                        <span style="font-size:10px; font-weight:900; color:#f97316;">TYPE:</span>
-                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer;">
-                            <option value="MVA">MVA</option>
-                            <option value="Slip and Fall">Slip and Fall</option>
-                            <option value="Animal Bite">Animal Bite</option>
-                            <option value="Others">Others</option>
-                        </select>
-                    </div>`;
-                headerRow.parentNode.insertBefore(dash, headerRow.nextSibling);
-            }
-        }
-
-        // 4. ADD EMERGENCY ROOM TO DROPDOWNS
-        document.querySelectorAll('select').forEach(sel => {
-            if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
-                const opt = document.createElement('option');
-                opt.value = "Emergency Room";
-                opt.text = "Emergency Room";
-                sel.add(opt);
-            }
-    };
-
-    window.addEventListener('load', applyLSHUpdates);
-    // document.addEventListener('click', applyLSHUpdates); // Disabled to prevent duplicate firing, ER logic handled below
-
-    // Specialized listener for "Add Facility" button only to avoid global click spam
-    document.addEventListener('click', (e) => {
-        if (e.target.innerText && e.target.innerText.includes('Add Facility')) {
-            setTimeout(applyLSHUpdates, 50); // Small delay to let the card be created
-        }
-        applyLSHUpdates(); // General run
-    });
-})();
-</script>
-<script>
-(function() {
-    const applyProfessionalIdentity = () => {
-        // 1. TARGET THE NAME AREA
-        const allEditables = document.querySelectorAll('[contenteditable="true"]');
-        if (allEditables.length > 0) {
-            const nameEl = allEditables[0]; 
-            // AUTO-ERASE LOGIC
-            if (nameEl.innerText.trim() === "Client's Name") {
-                nameEl.addEventListener('focus', function() {
-                    if (this.innerText.trim() === "Client's Name") {
-                        this.innerText = "";
-                    }
-                }, { once: true }); // Only erases the first time they click
-            }
-        }
-
-        // 2. FACILITY DROPDOWN: ADD EMERGENCY ROOM
-        document.querySelectorAll('select').forEach(sel => {
-            if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
-                const erOption = document.createElement('option');
-                erOption.value = "Emergency Room";
-                erOption.text = "Emergency Room";
-                sel.appendChild(erOption);
-            }
-        });
-    };
-
-    // Initialize on Load
-    window.addEventListener('load', applyProfessionalIdentity);
-    // Watch for new Facilities added via button click
-    document.addEventListener('click', (e) => {
-        if (e.target.innerText && e.target.innerText.includes('Facility')) {
-            setTimeout(applyProfessionalIdentity, 50);
-        }
-    });
-
-    // Ensure the large font persists through Tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => setTimeout(applyProfessionalIdentity, 10));
-    });
-})();
-</script>
+    function addFacility() {
+    const container = document.getElementById('facility-container');
+    const div = document.createElement('div');
+    div.className = "pdf-card relative border-t-4 border-orange-500";
+    
+    // This innerHTML defines exactly what appears when you click "+ Add Facility"
+    div.innerHTML = `
+        <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl">&times;</button>
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+                <label>Facility Name</label>
+                <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded"></div>
+            </div>
+            <div>
+                <label>Specialty</label>
+                <select class="prof-input w-full border-orange-200">
+                    <option value="Emergency Room">Emergency Room</option>
+                    <option value="Chiro">Chiro</option>
+                    <option value="Ortho">Ortho</option>
+                    <option value="Surgery">Surgery</option>
+                    <option value="EMS">EMS</option>
+                    <option value="EMC">EMC</option>
+                </select>
+            </div>
+            <div>
+                <label>Last Treatment Schedule</label>
+                <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div>
+            </div>
+            <div>
+                <label>Charges</label>
+                <div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div>
+            </div>
+        </div>`;
+    container.appendChild(div);
+}
 </body>
 </html>
