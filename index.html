@@ -1062,7 +1062,7 @@
 </script>
 <script>
 (function() {
-    const runFinalPatch = () => {
+    const runStrictPatch = () => {
         // --- 1. PRIMARY CLIENT IDENTITY (LARGE FONT) ---
         const allEditables = document.querySelectorAll('[contenteditable="true"]');
         if (allEditables.length > 0) {
@@ -1072,7 +1072,7 @@
             nameField.style.color = "#0f172a";
         }
 
-        // --- 2. DASHBOARD BAR (DOL, SOL, TYPE) ---
+        // --- 2. INTEGRATED DASHBOARD: DOL, SOL, TYPE ---
         if (!document.getElementById('lsh-dashboard-patch')) {
             const header = document.querySelector('.pdf-card.border-l-8.border-orange-500');
             if (header) {
@@ -1105,7 +1105,7 @@
             }
         }
 
-        // --- 3. HEALTH INSURANCE: SUBROGATION FIELDS ---
+        // --- 3. HEALTH INSURANCE & UM POLICY NUMBER FIX ---
         const matrixPanes = document.querySelectorAll('.ins-tab-content');
         if (matrixPanes.length > 0 && !document.getElementById('subro-patch')) {
             const healthInsPane = matrixPanes[0]; 
@@ -1125,48 +1125,41 @@
             healthInsPane.appendChild(subroDiv);
         }
 
-        // --- 4. UM/UIM FIELD: ADD POLICY NUMBER ---
         const umContainer = document.getElementById('um-container');
         if (umContainer && !document.getElementById('um-policy-patch')) {
             const umGrid = umContainer.querySelector('.grid');
             if (umGrid) {
                 const policyDiv = document.createElement('div');
                 policyDiv.id = 'um-policy-patch';
-                policyDiv.innerHTML = `
-                    <label style="font-size:11px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Policy Number</label>
-                    <div contenteditable="true" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #f1f5f9; padding:4px 8px; border-radius:4px; width:100%;"></div>
-                `;
+                policyDiv.innerHTML = `<label style="font-size:11px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Policy Number</label><div contenteditable="true" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #f1f5f9; padding:4px 8px; border-radius:4px; width:100%;"></div>`;
                 umGrid.insertBefore(policyDiv, umGrid.firstChild);
             }
         }
 
-        // --- 5. RENAME BUTTONS (SPECIFIC FILTER) ---
-        const buttons = document.querySelectorAll('button');
-        buttons.forEach(btn => {
-            const txt = btn.innerText.toUpperCase();
-            // Only rename if it's a data management button
-            if (txt.includes('SAVE') || txt.includes('ARCHIVE')) {
-                btn.innerText = "CASE REPOSITORY";
-                btn.style.background = "#059669"; 
-            }
-            if (txt.includes('RETRIEVE') || txt.includes('LOAD')) {
-                // Check to make sure we aren't accidentally renaming the PDF button
-                if (!txt.includes('PDF')) {
+        // --- 4. STRICT SIDEBAR-ONLY RENAMING (NO CONFLICT MODE) ---
+        // This only looks inside the left dark menu
+        const sidebar = document.querySelector('aside');
+        if (sidebar) {
+            const sidebarButtons = sidebar.querySelectorAll('button');
+            sidebarButtons.forEach(btn => {
+                const txt = btn.innerText.toUpperCase();
+                if (txt.includes('SAVE') || txt.includes('ARCHIVE')) {
+                    btn.innerText = "CASE REPOSITORY";
+                    btn.style.backgroundColor = "#059669"; // Green
+                } else if (txt.includes('RETRIEVE') || txt.includes('LOAD')) {
                     btn.innerText = "RETRIEVE CASE";
+                } else if (txt.includes('PDF')) {
+                    btn.innerText = "Download PDF";
+                    btn.style.backgroundColor = "#ea580c"; // Reset PDF to Orange
                 }
-            }
-            // Force reset PDF button in case it was changed previously
-            if (txt.includes('DOWNLOAD') && txt.includes('PDF')) {
-                btn.innerText = "Download PDF";
-                btn.style.backgroundColor = "#ea580c";
-            }
-        });
+            });
+        }
     };
 
     if (document.readyState === 'complete') {
-        runFinalPatch();
+        runStrictPatch();
     } else {
-        window.addEventListener('load', runFinalPatch);
+        window.addEventListener('load', runStrictPatch);
     }
 })();
 </script>
