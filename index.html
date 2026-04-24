@@ -889,131 +889,124 @@
 </script>
 <script>
 /**
- * LSH TAB-SAFE MASTER PATCH
- * Fixes Header, Dashboard, and Passengers while protecting Navigation Tabs
+ * LSH SURGICAL MASTER PATCH
+ * This script only touches the header and specific fields. 
+ * It will NOT mess up your Navigation Tabs.
  */
 (function() {
-    const initPatch = () => {
-        // --- 1. HEADER OVERHAUL (Targeted) ---
-        // We find the header card specifically. If your header is inside #capture-area, 
-        // we target the first card with the orange border.
-        const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
-        
+    const applyFixes = () => {
+        // 1. SELECT THE HEADER CARD (The one with the orange left border)
+        const allCards = document.querySelectorAll('.pdf-card');
+        let headerCard = null;
+        allCards.forEach(card => {
+            if (card.classList.contains('border-l-8') && card.classList.contains('border-orange-500')) {
+                headerCard = card;
+            }
+        });
+
         if (headerCard) {
-            headerCard.innerHTML = ''; 
-            headerCard.className = "pdf-card border-l-8 border-orange-500 bg-white p-6 shadow-sm mb-6";
+            // Rebuild ONLY the inside of the header card
+            headerCard.innerHTML = `
+                <div class="flex justify-between items-start w-full mb-6">
+                    <div class="flex items-center gap-10 bg-slate-100 p-5 rounded-xl border border-slate-200 flex-1 mr-10 shadow-inner">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Primary Client</label>
+                            <div contenteditable="true" class="text-3xl font-black text-slate-900 uppercase tracking-tight outline-none leading-none">Click to Name</div>
+                        </div>
+                        <div class="h-10 border-l border-slate-300 mx-2"></div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Contact Number</label>
+                            <div contenteditable="true" class="text-xl font-bold text-slate-700 outline-none leading-none">(000) 000-0000</div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 pt-2">
+                        <label class="text-[9px] text-slate-400 font-black uppercase">Case Status</label>
+                        <div contenteditable="true" class="text-[10px] font-black text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 uppercase tracking-widest shadow-sm outline-none">Active Case</div>
+                    </div>
+                </div>
 
-            // Row 1: Identity (Side-by-Side)
-            const row1 = document.createElement('div');
-            row1.className = "flex justify-between items-start w-full mb-6";
-            row1.innerHTML = `
-                <div class="flex items-center gap-10 bg-slate-100 p-5 rounded-xl border border-slate-200 flex-1 mr-10 shadow-inner">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Primary Client</label>
-                        <div contenteditable="true" class="text-3xl font-black text-slate-900 uppercase tracking-tight outline-none leading-none">Click to Name</div>
+                <div class="flex items-center justify-between w-full bg-slate-900 p-3 rounded-xl shadow-2xl border border-slate-800">
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] text-slate-500 font-black uppercase">DOL:</label>
+                            <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
+                        </div>
+                        <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
+                            <label class="text-[10px] text-red-500 font-black uppercase">SOL:</label>
+                            <div contenteditable="true" class="text-[11px] font-black text-black uppercase bg-white px-3 py-1.5 rounded-lg min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
+                        </div>
+                        <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
+                            <label class="text-[10px] text-slate-500 font-black uppercase">ID:</label>
+                            <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg min-w-[70px] text-center outline-none">#0000</div>
+                        </div>
                     </div>
-                    <div class="h-10 border-l border-slate-300 mx-2"></div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Contact Number</label>
-                        <div contenteditable="true" class="text-xl font-bold text-slate-700 outline-none leading-none">(000) 000-0000</div>
-                    </div>
-                </div>
-                <div class="flex flex-col items-end gap-1 pt-2">
-                    <label class="text-[9px] text-slate-400 font-black uppercase">Case Status</label>
-                    <div contenteditable="true" class="text-[10px] font-black text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 uppercase tracking-widest shadow-sm outline-none">Active Case</div>
-                </div>`;
 
-            // Row 2: Dashboard (Orange DOL/ID, Type, Settlement/Phase)
-            const row2 = document.createElement('div');
-            row2.className = "flex items-center justify-between w-full bg-slate-900 p-3 rounded-xl shadow-2xl border border-slate-800";
-            row2.innerHTML = `
-                <div class="flex items-center gap-6">
-                    <div class="flex items-center gap-2">
-                        <label class="text-[10px] text-slate-500 font-black uppercase">DOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
-                    </div>
-                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
-                        <label class="text-[10px] text-red-500 font-black uppercase">SOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-black text-black uppercase bg-white px-3 py-1.5 rounded-lg min-w-[100px] text-center outline-none">MM/DD/YYYY</div>
-                    </div>
-                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
-                        <label class="text-[10px] text-slate-500 font-black uppercase">ID:</label>
-                        <div contenteditable="true" class="text-[11px] font-black text-orange-500 uppercase bg-white px-3 py-1.5 rounded-lg min-w-[70px] text-center outline-none">#0000</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700 mx-auto">
-                    <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
-                    <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none text-blue-400 font-black uppercase text-sm">
-                        <option value="MVA">MVA</option>
-                        <option value="Slip and Fall">Slip and Fall</option>
-                        <option value="Mass Tort">Mass Tort</option>
-                        <option value="Premise Liability">Premise Liability</option>
-                        <option value="Animal Bite">Animal Bite</option>
-                        <option value="Others">Others</option>
-                    </select>
-                </div>
-                <div class="flex flex-col items-end gap-1">
-                    <div class="flex items-center gap-2 pr-1">
-                        <label class="text-[9px] text-orange-500 font-black uppercase">Target Settlement:</label>
-                        <div contenteditable="true" class="text-sm font-black text-orange-500 tracking-tighter outline-none">$ 0.00</div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <label class="text-[9px] text-slate-500 font-black uppercase">Phase:</label>
-                        <select id="display-phase" class="text-[10px] font-black text-white uppercase bg-orange-600 px-4 py-2 rounded-lg border border-orange-500 outline-none cursor-pointer">
-                            <option value="Intake">Intake</option>
-                            <option value="Treatment">Treatment</option>
-                            <option value="Demand">Demand</option>
-                            <option value="Negotiation">Negotiation</option>
-                            <option value="Litigation">Litigation</option>
-                            <option value="Settled">Settled</option>
+                    <div class="flex items-center gap-2 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700 mx-auto">
+                        <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
+                        <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none text-blue-400 font-black uppercase text-sm">
+                            <option value="MVA">MVA</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Mass Tort">Mass Tort</option>
+                            <option value="Premise Liability">Premise Liability</option>
+                            <option value="Animal Bite">Animal Bite</option>
+                            <option value="Others">Others</option>
                         </select>
                     </div>
+
+                    <div class="flex flex-col items-end gap-1">
+                        <div class="flex items-center gap-2 pr-1">
+                            <label class="text-[9px] text-orange-500 font-black uppercase">Target Settlement:</label>
+                            <div contenteditable="true" class="text-sm font-black text-orange-500 tracking-tighter outline-none">$ 0.00</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="text-[9px] text-slate-500 font-black uppercase">Phase:</label>
+                            <select id="display-phase" class="text-[10px] font-black text-white uppercase bg-orange-600 px-4 py-2 rounded-lg border border-orange-500 outline-none cursor-pointer">
+                                <option value="Intake">Intake</option>
+                                <option value="Treatment">Treatment</option>
+                                <option value="Demand">Demand</option>
+                                <option value="Negotiation">Negotiation</option>
+                                <option value="Litigation">Litigation</option>
+                                <option value="Settled">Settled</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>`;
-            headerCard.appendChild(row1);
-            headerCard.appendChild(row2);
         }
 
-        // --- 2. INJECT PASSENGER SECTION INTO CASE PROFILE PANE ---
+        // 2. CLEANUP EMPLOYER / JOB TITLE (Remove the Injury Placeholder)
         const profilePane = document.getElementById('pane-profile');
-        if (profilePane && !document.getElementById('passenger-section')) {
-            // Add Primary Injury Card
-            const injuryCard = document.createElement('div');
-            injuryCard.className = "pdf-card border-l-8 border-red-500 mb-8 bg-white shadow-sm";
-            injuryCard.innerHTML = `<h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2 tracking-widest">Injuries Sustained (Primary)</h3><div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed"></div>`;
-            
-            // Add Passenger Section
-            const passengerSec = document.createElement('div');
-            passengerSec.id = 'passenger-section';
-            passengerSec.className = "block w-full mt-10 pb-10";
-            passengerSec.innerHTML = `<div class="flex justify-between items-center px-2 mb-6 border-b pb-4"><h3 class="text-[11px] font-black uppercase text-slate-400 italic">Passenger Records</h3><button onclick="addPassengerRow()" id="add-passenger-btn" class="bg-slate-900 text-white text-[10px] px-6 py-2 rounded font-bold uppercase hover:bg-orange-600 transition-all">+ Add Passenger</button></div><div id="passenger-container" class="space-y-6 flex flex-col"></div>`;
-            
-            profilePane.appendChild(injuryCard);
-            profilePane.appendChild(passengerSec);
+        if (profilePane) {
+            profilePane.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                const labelText = el.previousElementSibling?.innerText || "";
+                if (labelText.includes('Employer') || labelText.includes('Job Title')) {
+                    if (el.innerText.includes('Click here to list diagnoses')) {
+                        el.innerText = '';
+                    }
+                    el.style.color = "#000000"; // Solid Black
+                    el.style.fontStyle = "normal";
+                }
+            });
         }
     };
 
-    // --- 3. DYNAMIC ACTIONS ---
-    window.addPassengerRow = function() {
-        const container = document.getElementById('passenger-container');
-        if (container.children.length >= 5) return alert("Limit 5 reached");
-        const div = document.createElement('div');
-        div.className = "pdf-card border-t-8 border-slate-200 bg-white relative p-4 mb-4 shadow-sm";
-        div.innerHTML = `
-            <button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
-            <div class="grid lg:grid-cols-4 gap-4">
-                <div><label class="text-[9px] uppercase font-bold text-slate-400">Name</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-                <div><label class="text-[9px] uppercase font-bold text-slate-400">Contact</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-                <div><label class="text-[9px] uppercase font-bold text-slate-400">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
-                <div><label class="text-[9px] uppercase font-bold text-slate-400">Carrier</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-            </div>
-            <div class="mt-4">
-                <label class="text-[9px] uppercase font-bold text-red-500">Injuries Sustained</label>
-                <div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div>
-            </div>`;
-        container.appendChild(div);
+    // 3. GLOBAL CLEAR (Safe Version)
+    window.clearAllFields = function() {
+        if (!confirm("Save a backup to Archive and clear the screen?")) return;
+        if (window.archiveCurrentCase) window.archiveCurrentCase();
+        
+        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+            if (el.innerText.includes('/')) el.innerText = 'MM/DD/YYYY';
+            else if (el.innerText.includes('$')) el.innerText = '$ 0.00';
+            else if (el.innerText.includes('#')) el.innerText = '#0000';
+            else el.innerText = '';
+        });
+        document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        const pc = document.getElementById('passenger-container'); if (pc) pc.innerHTML = '';
+        const fc = document.getElementById('facility-container'); if (fc) fc.innerHTML = '';
     };
 
-    window.addEventListener('DOMContentLoaded', initPatch);
+    // Run when page loads
+    window.addEventListener('DOMContentLoaded', applyFixes);
 })();
 </script>
 </body>
