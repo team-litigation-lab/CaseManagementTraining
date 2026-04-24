@@ -1445,5 +1445,82 @@
         });
     })();
 </script>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', () => {
+            const headerCard = document.querySelector('#capture-area .pdf-card.border-l-8');
+            if (!headerCard) return;
+
+            // 1. REBUILD TOP ROW (Client Name + Case Status in Upper Right)
+            let topRow = headerCard.querySelector('.flex.justify-between') || headerCard.children[0];
+            topRow.className = "flex justify-between items-start w-full mb-6";
+            topRow.innerHTML = `
+                <div class="flex flex-col gap-1">
+                    <label class="text-[9px] text-slate-400 font-black uppercase">Primary Client</label>
+                    <div contenteditable="true" class="text-2xl font-black text-slate-900 uppercase tracking-tight">Click to Enter Name</div>
+                    <div class="flex items-center gap-4 mt-1">
+                        <div class="flex items-center gap-2">
+                             <label class="text-[9px] text-slate-400 font-bold uppercase">Contact:</label>
+                             <div contenteditable="true" class="text-xs font-bold text-slate-600">(000) 000-0000</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <label class="text-[9px] text-orange-600 font-bold uppercase">Target:</label>
+                             <div contenteditable="true" class="text-xs font-black text-orange-600">$ 0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end gap-1">
+                    <label class="text-[9px] text-slate-400 font-black uppercase">Case Status</label>
+                    <div id="display-status" contenteditable="true" class="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-100 uppercase tracking-widest shadow-sm">
+                        Active Case
+                    </div>
+                </div>
+            `;
+
+            // 2. REBUILD BOTTOM ROW (DOL, SOL, Type in Middle, Phase at Right)
+            let adminRow = headerCard.querySelector('.bg-slate-900') || headerCard.children[1] || document.createElement('div');
+            if (!adminRow.parentNode) headerCard.appendChild(adminRow);
+            
+            adminRow.className = "flex items-center justify-between w-full bg-slate-900 p-3 rounded-lg shadow-lg border border-slate-800";
+            adminRow.innerHTML = `
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-2">
+                        <label class="text-[10px] text-slate-500 font-black uppercase">DOL:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-white uppercase">MM/DD/YYYY</div>
+                    </div>
+                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
+                        <label class="text-[10px] text-red-500 font-black uppercase">SOL:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-red-500 uppercase">MM/DD/YYYY</div>
+                    </div>
+                    <div class="flex items-center gap-2 pl-4 border-l border-slate-700">
+                        <label class="text-[10px] text-slate-500 font-black uppercase">ID:</label>
+                        <div contenteditable="true" class="text-[11px] font-bold text-slate-400 uppercase">#0000</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 bg-slate-800 px-4 py-1.5 rounded border border-slate-700 mx-auto">
+                    <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
+                    <select class="prof-input bg-transparent border-none p-0 outline-none cursor-pointer appearance-none" 
+                            style="color: #60a5fa; font-size: 14px; font-weight: 900; text-transform: uppercase;">
+                        <option value="MVA">MVA</option>
+                        <option value="Slip and Fall">Slip and Fall</option>
+                        <option value="Mass Tort">Mass Tort</option>
+                        <option value="Premise Liability">Premise Liability</option>
+                        <option value="Animal Bite">Animal Bite</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <label class="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Current Phase:</label>
+                    <div id="display-phase" class="text-[10px] font-black text-white uppercase bg-orange-600 px-4 py-1.5 rounded shadow-sm border border-orange-500">
+                        Intake
+                    </div>
+                </div>
+            `;
+        });
+    })();
+</script>
 </body>
 </html>
