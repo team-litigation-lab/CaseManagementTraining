@@ -1078,7 +1078,15 @@
 <script>
 (function() {
     const applyLSHUpdates = () => {
-        // 1. LARGE CLIENT NAME (Targets specifically by class and position)
+        // 1. DUPLICATE PROTECTION: Remove any accidental doubles first
+        const existingDashboards = document.querySelectorAll('[id^="patch-dashboard-"]');
+        if (existingDashboards.length > 1) {
+            for (let i = 1; i < existingDashboards.length; i++) {
+                existingDashboards[i].remove();
+            }
+        }
+
+        // 2. LARGE CLIENT NAME
         const nameEl = document.querySelector('.text-xl.font-black.text-slate-900.uppercase');
         if (nameEl) {
             nameEl.style.fontSize = "40px";
@@ -1086,12 +1094,12 @@
             nameEl.style.color = "#0f172a";
         }
 
-        // 2. INTEGRATE DASHBOARD (DOL, SOL, TYPE) - ONLY IF MISSING
-        if (!document.getElementById('patch-dashboard-v10')) {
+        // 3. INTEGRATE DASHBOARD (Only create if 0 exist)
+        if (existingDashboards.length === 0) {
             const headerRow = document.querySelector('.pdf-card.border-l-8.border-orange-500');
             if (headerRow) {
                 const dash = document.createElement('div');
-                dash.id = 'patch-dashboard-v10';
+                dash.id = 'patch-dashboard-v11';
                 dash.style = "background:#0f172a; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316; color:white;";
                 dash.innerHTML = `
                     <div style="display:flex; gap:20px;">
@@ -1102,15 +1110,18 @@
                     </div>
                     <div style="background:#1e293b; padding:8px 12px; border-radius:6px; border:1px solid #334155; display:flex; align-items:center; gap:10px;">
                         <span style="font-size:10px; font-weight:900; color:#f97316;">TYPE:</span>
-                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; cursor:pointer;">
-                            <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Others">Others</option>
+                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer;">
+                            <option value="MVA">MVA</option>
+                            <option value="Slip and Fall">Slip and Fall</option>
+                            <option value="Animal Bite">Animal Bite</option>
+                            <option value="Others">Others</option>
                         </select>
                     </div>`;
                 headerRow.parentNode.insertBefore(dash, headerRow.nextSibling);
             }
         }
 
-        // 3. ADD EMERGENCY ROOM TO DROPDOWNS
+        // 4. ADD EMERGENCY ROOM TO DROPDOWNS
         document.querySelectorAll('select').forEach(sel => {
             if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
                 const opt = document.createElement('option');
@@ -1120,7 +1131,7 @@
             }
         });
 
-        // 4. SIDEBAR BUTTONS - TARGETED BY ID TO PREVENT OVER-REACH
+        // 5. SIDEBAR BUTTONS
         const sideActions = document.getElementById('sidebar-actions');
         if (sideActions) {
             sideActions.querySelectorAll('button').forEach(btn => {
@@ -1138,10 +1149,16 @@
         }
     };
 
-    // Run once on load
     window.addEventListener('load', applyLSHUpdates);
-    // Run whenever the user clicks (this catches new Facilities being added)
-    document.addEventListener('click', applyLSHUpdates);
+    // document.addEventListener('click', applyLSHUpdates); // Disabled to prevent duplicate firing, ER logic handled below
+
+    // Specialized listener for "Add Facility" button only to avoid global click spam
+    document.addEventListener('click', (e) => {
+        if (e.target.innerText && e.target.innerText.includes('Add Facility')) {
+            setTimeout(applyLSHUpdates, 50); // Small delay to let the card be created
+        }
+        applyLSHUpdates(); // General run
+    });
 })();
 </script>
 </body>
