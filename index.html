@@ -1561,6 +1561,74 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
+    <style>
+    /* 1. PHYSICAL CSS OVERRIDE */
+    /* This targets the name field by its position to ensure it never stays small */
+    [contenteditable="true"]:first-of-type {
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #1e293b !important;
+        line-height: 1.1 !important;
+        text-transform: uppercase !important;
+        display: block !important;
+        min-height: 40px !important;
+        outline: none !important;
+        border: none !important;
+    }
+
+    /* 2. LAYOUT OVERRIDE */
+    /* This forces the Name to stay ON TOP and the Contact to stay BELOW */
+    .pdf-card:first-of-type div.flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+        display: flex !important;
+    }
+
+    /* 3. LABEL OVERRIDE */
+    /* This makes sure the "Client:" label never reappears */
+    label:first-of-type {
+        display: none !important;
+        visibility: hidden !important;
+    }
+</style>
+
+<script>
+(function() {
+    const lockCmsStyles = () => {
+        const nameField = document.querySelector('[contenteditable="true"]');
+        if (nameField) {
+            // Force the font size property directly into the element style attribute
+            nameField.style.setProperty('font-size', '32px', 'important');
+            nameField.style.setProperty('font-weight', '900', 'important');
+            
+            // Handle the placeholder auto-erase
+            if (nameField.innerText.trim() === "Client's Name") {
+                nameField.onfocus = function() {
+                    if (this.innerText.trim() === "Client's Name") this.innerText = "";
+                };
+            }
+        }
+    };
+
+    // Use a MutationObserver to watch the element
+    // If your main script tries to change the class or style, this changes it back instantly
+    const observer = new MutationObserver((mutations) => {
+        lockCmsStyles();
+    });
+
+    // Start the observer once the page is ready
+    window.addEventListener('load', () => {
+        const target = document.querySelector('body');
+        observer.observe(target, { childList: true, subtree: true, attributes: true });
+        lockCmsStyles();
+    });
+
+    // Force style on every keystroke as a backup
+    document.addEventListener('input', lockCmsStyles);
+    document.addEventListener('keyup', lockCmsStyles);
+})();
+</script>
 </script>
 </body>
 </html>
