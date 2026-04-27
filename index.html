@@ -1610,16 +1610,38 @@
         display: none !important;
     }
 </style>
+<style>
+    /* This rule is so specific it will crush Tailwind classes */
+    .cms-header-lock, 
+    [contenteditable="true"]:first-of-type {
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #1e293b !important;
+        text-transform: uppercase !important;
+        line-height: 1 !important;
+        display: block !important;
+        min-height: 40px !important;
+    }
+
+    /* Hide the Client Label */
+    label:first-of-type {
+        display: none !important;
+    }
+</style>
 
 <script>
 (function() {
-    const fixName = () => {
+    const applyLock = () => {
+        // Find the name field
         const nameField = document.querySelector('[contenteditable="true"]');
         if (nameField) {
-            // Re-apply the font size directly to the element to stop the shrink
+            // 1. Add the class our CSS is looking for
+            nameField.classList.add('cms-header-lock');
+            
+            // 2. Force the style attribute directly (strongest JS move)
             nameField.style.setProperty('font-size', '32px', 'important');
             
-            // Fix the placeholder logic
+            // 3. Clear placeholder if needed
             if (nameField.innerText.trim() === "Client's Name") {
                 nameField.onfocus = function() {
                     if (this.innerText.trim() === "Client's Name") this.innerText = "";
@@ -1628,16 +1650,27 @@
         }
     };
 
-    // Run when typing or clicking
-    document.addEventListener('input', fixName);
-    document.addEventListener('click', fixName);
-    
-    // Initial run
-    window.addEventListener('load', fixName);
-    fixName();
-})();
-</script>
+    // THE SECRET WEAPON: A high-speed Observer
+    // If the main script deletes/re-creates the name, this catches it in 1ms
+    const observer = new MutationObserver((mutations) => {
+        applyLock();
+    });
 
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style']
+    });
+
+    // Run on every possible trigger
+    ['input', 'keydown', 'keyup', 'mousedown'].forEach(event => {
+        document.addEventListener(event, applyLock);
+    });
+
+    window.addEventListener('load', applyLock);
+    applyLock();
+})();
 </script>
 </body>
 </html>
