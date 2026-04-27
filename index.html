@@ -1592,17 +1592,34 @@
         visibility: hidden !important;
     }
 </style>
+<style>
+    /* We target ONLY the font and color, nothing else */
+    [contenteditable="true"]:first-of-type {
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #1e293b !important;
+        text-transform: uppercase !important;
+        line-height: 1.2 !important;
+        /* We remove the background/border to keep it clean */
+        border: none !important;
+        outline: none !important;
+    }
+
+    /* Hide only the very first label (the Client label) */
+    label:first-of-type {
+        display: none !important;
+    }
+</style>
 
 <script>
 (function() {
-    const lockCmsStyles = () => {
+    const fixName = () => {
         const nameField = document.querySelector('[contenteditable="true"]');
         if (nameField) {
-            // Force the font size property directly into the element style attribute
+            // Re-apply the font size directly to the element to stop the shrink
             nameField.style.setProperty('font-size', '32px', 'important');
-            nameField.style.setProperty('font-weight', '900', 'important');
             
-            // Handle the placeholder auto-erase
+            // Fix the placeholder logic
             if (nameField.innerText.trim() === "Client's Name") {
                 nameField.onfocus = function() {
                     if (this.innerText.trim() === "Client's Name") this.innerText = "";
@@ -1611,24 +1628,16 @@
         }
     };
 
-    // Use a MutationObserver to watch the element
-    // If your main script tries to change the class or style, this changes it back instantly
-    const observer = new MutationObserver((mutations) => {
-        lockCmsStyles();
-    });
-
-    // Start the observer once the page is ready
-    window.addEventListener('load', () => {
-        const target = document.querySelector('body');
-        observer.observe(target, { childList: true, subtree: true, attributes: true });
-        lockCmsStyles();
-    });
-
-    // Force style on every keystroke as a backup
-    document.addEventListener('input', lockCmsStyles);
-    document.addEventListener('keyup', lockCmsStyles);
+    // Run when typing or clicking
+    document.addEventListener('input', fixName);
+    document.addEventListener('click', fixName);
+    
+    // Initial run
+    window.addEventListener('load', fixName);
+    fixName();
 })();
 </script>
+
 </script>
 </body>
 </html>
