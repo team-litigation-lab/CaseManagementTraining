@@ -1561,6 +1561,54 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
+<style>
+    /* 1. LOCK FONT SIZE & COLOR */
+    /* Targeting by position (first editable) to ensure it works after refresh */
+    [contenteditable="true"]:first-of-type {
+        font-size: 30px !important;
+        font-weight: 800 !important;
+        color: #1e293b !important; /* Professional Slate */
+        text-transform: uppercase !important;
+        line-height: 1.1 !important;
+        display: block !important;
+        /* Ensure it remains clickable/editable */
+        pointer-events: auto !important;
+        user-select: text !important;
+        -webkit-user-modify: read-write !important;
+    }
+
+    /* 2. HIDE THE "CLIENT:" LABEL */
+    label:first-of-type {
+        display: none !important;
+    }
+
+    /* 3. FIX THE LAYOUT (STACKING) */
+    /* This forces the Name above the Contact without breaking the flex container */
+    .pdf-card:first-of-type .flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 5px !important;
+    }
+</style>
+
+<script>
+    // This is a "Light" script that ONLY handles the placeholder auto-erase
+    // It does NOT fight the main script for control, so it won't crash
+    (function() {
+        const cleanPlaceholder = () => {
+            const nameField = document.querySelector('[contenteditable="true"]');
+            if (nameField && nameField.innerText.trim() === "Client's Name") {
+                nameField.addEventListener('focus', function() {
+                    if (this.innerText.trim() === "Client's Name") {
+                        this.innerText = "";
+                    }
+                }, { once: true });
+            }
+        };
+
+        window.addEventListener('load', cleanPlaceholder);
+        document.addEventListener('click', cleanPlaceholder);
+    })();
 </script>
 </body>
 </html>
