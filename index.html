@@ -1561,57 +1561,72 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-    <style>
-    /* THE UNBREAKABLE LOCK */
-    /* We target the specific hierarchy to ensure this rule has the highest priority */
-    body #capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        display: block !important;
-        width: 100% !important;
-        min-width: 500px !important; /* Forces the box to stay wide */
-        font-size: 32px !important; /* Forces the size to stay large */
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        text-transform: uppercase !important;
-        line-height: 1.2 !important;
-        padding: 0 !important;
-        border: none !important;
-        background: transparent !important;
-    }
-
-    /* Prevents the parent container from shrinking the name's "lane" */
-    body #capture-area .pdf-card:first-of-type .flex {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        display: flex !important;
-    }
-</style>
-
-<script>
+    <script>
+/**
+ * THE LSH "ULTIMATE" LOCK
+ * This script finds the specific name field and kills any outside interference.
+ */
 (function() {
-    // This script performs a "Force Clean" every time you type
-    const nameFieldSelector = '#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type';
-    
-    const forceStyle = () => {
-        const el = document.querySelector(nameFieldSelector);
-        if (el) {
-            // Remove the inline styles that the other scripts are trying to inject
-            el.removeAttribute('style'); 
-            // If the other scripts changed the font size, this forces the browser to re-read the <style> block above
-            el.style.fontSize = "32px"; 
+    const lockNameField = () => {
+        // 1. Find all editable fields and locate the one that originally said "Client's Name"
+        const allEditables = document.querySelectorAll('[contenteditable="true"]');
+        let target = null;
+
+        allEditables.forEach(el => {
+            // We identify it by its position in the header card
+            if (el.closest('.pdf-card:first-of-type')) {
+                target = el;
+            }
+        });
+
+        if (!target || target.dataset.locked === "true") return;
+
+        // 2. APPLY THE HARD CSS LOCK
+        // This overrides every other script in your file
+        const css = `
+            display: block !important;
+            width: 100% !important;
+            min-width: 400px !important;
+            font-size: 32px !important;
+            font-weight: 900 !important;
+            color: #0f172a !important;
+            text-transform: uppercase !important;
+            line-height: 1 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            outline: none !important;
+            background: transparent !important;
+        `;
+        target.style.cssText = css;
+
+        // 3. THE HIJACKER
+        // This prevents other scripts from changing the style attribute ever again
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === "attributes" && mutation.attributeName === "style") {
+                    if (target.style.fontSize !== "32px") {
+                        target.style.cssText = css;
+                    }
+                }
+            });
+        });
+
+        observer.observe(target, { attributes: true });
+        target.dataset.locked = "true"; // Mark as locked so we don't loop
+        
+        // 4. FIX THE PARENT (Stop the squishing)
+        const parentFlex = target.closest('.flex');
+        if (parentFlex) {
+            parentFlex.style.flexDirection = "column";
+            parentFlex.style.alignItems = "flex-start";
+            parentFlex.style.gap = "0px";
         }
     };
 
-    // Watch for typing
-    document.addEventListener('input', (e) => {
-        if (e.target.matches(nameFieldSelector)) {
-            forceStyle();
-        }
-    });
-
-    // Run on startup
-    window.addEventListener('load', forceStyle);
-    // Interval check to kill the "Refresh" shrinking bug
-    setInterval(forceStyle, 100);
+    // Run immediately and frequently to beat the other intervals
+    setInterval(lockNameField, 50); 
+    window.addEventListener('load', lockNameField);
 })();
 </script>
 </script>
