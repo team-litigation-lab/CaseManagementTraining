@@ -1561,6 +1561,50 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
+    <script>
+/**
+ * LSH SURGICAL NAME LOCK
+ * Zero side-effects on surrounding layout elements.
+ */
+(function() {
+    const lockClientNameOnly = () => {
+        // Target ONLY the first contenteditable field (Client Name)
+        const nameField = document.querySelector('[contenteditable="true"]:first-of-type');
+        
+        if (nameField) {
+            // 1. STYLISTIC LOCK
+            // Using 'setProperty' with 'important' to override any competing scripts
+            nameField.style.setProperty('display', 'block', 'important');
+            nameField.style.setProperty('width', '100%', 'important');
+            nameField.style.setProperty('font-size', '32px', 'important');
+            nameField.style.setProperty('min-height', '40px', 'important');
+            nameField.style.setProperty('font-weight', '900', 'important');
+
+            // 2. PARENT LAYOUT PROTECTION
+            // We ensure the name sits in its own row so it doesn't "push" 
+            // the Contact info or Settlement boxes horizontally.
+            const parent = nameField.parentElement;
+            if (parent && parent.classList.contains('flex')) {
+                parent.style.setProperty('flex-direction', 'column', 'important');
+                parent.style.setProperty('align-items', 'flex-start', 'important');
+            }
+        }
+    };
+
+    // Run when the page loads
+    window.addEventListener('load', lockClientNameOnly);
+
+    // Monitor input only for the name field
+    document.addEventListener('input', (e) => {
+        if (e.target === document.querySelector('[contenteditable="true"]:first-of-type')) {
+            lockClientNameOnly();
+        }
+    });
+
+    // Run a final check to handle repository data loading
+    setTimeout(lockClientNameOnly, 500);
+})();
+</script>
 </script>
 </body>
 </html>
