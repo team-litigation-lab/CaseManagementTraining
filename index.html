@@ -286,9 +286,7 @@
                             <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                         </div>
                     </div>
-                </div>
-            </div>
-
+                 </div>
             <div id="pane-litigation" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Information</h3>
@@ -1731,6 +1729,51 @@
     if (target) {
         observer.observe(target, { childList: true });
     }
+})();
+</script>
+        <script>
+/**
+ * LSH PD TAB OVERLAP FIX
+ * Prevents the Third Party Vehicle section from bleeding into other tabs.
+ */
+(function() {
+    const fixPDLayout = () => {
+        const pdPane = document.getElementById('pane-pd');
+        if (!pdPane) return;
+
+        // 1. Ensure the PD Pane is a contained block that allows internal scrolling
+        pdPane.style.setProperty('display', pdPane.classList.contains('active') ? 'block' : 'none', 'important');
+        pdPane.style.setProperty('clear', 'both', 'important');
+        pdPane.style.setProperty('overflow', 'visible', 'important');
+        pdPane.style.setProperty('height', 'auto', 'important');
+
+        // 2. Fix the Third Party Vehicle Card spacing
+        const cards = pdPane.querySelectorAll('.pdf-card');
+        if (cards.length >= 2) {
+            const thirdPartyCard = cards[1];
+            thirdPartyCard.style.setProperty('margin-top', '24px', 'important');
+            thirdPartyCard.style.setProperty('position', 'relative', 'important');
+            thirdPartyCard.style.setProperty('z-index', '1', 'important');
+        }
+
+        // 3. Fix the global capture area to prevent height-truncation
+        const captureArea = document.getElementById('capture-area');
+        if (captureArea) {
+            captureArea.style.setProperty('display', 'block', 'important');
+            captureArea.style.setProperty('overflow-y', 'auto', 'important');
+        }
+    };
+
+    // Run on tab switches
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-btn')) {
+            setTimeout(fixPDLayout, 10);
+        }
+    });
+
+    // Run on load and high-frequency to beat competing layout scripts
+    window.addEventListener('load', fixPDLayout);
+    setInterval(fixPDLayout, 100);
 })();
 </script>
 </script>
