@@ -451,516 +451,126 @@
                     </table>
                 </div>
             </div>
+            <style>
+    /* 1. NUCLEAR HEADER CLEANUP - Matches Screenshot */
+    /* Hides the redundant black bar and the extra date fields in the orange header */
+    #lsh-integrated-bar, 
+    #injected-type-container,
+    .flex.flex-col.gap-2.mr-4.pr-4.border-r, 
+    .flex.flex-col.items-end div.flex.items-center.gap-3,
+    #um-pol-fix,
+    label[class*="text-slate-400"]:contains("DOL:"),
+    label[class*="text-red-500"]:contains("SOL:") {
+        display: none !important;
+    }
 
-        </div> </main>
+    /* 2. REPOSITORY UI FIX - Clean sidebar cards */
+    #repo-list span { display: none !important; }
+    #repo-list .group { background: #0f172a !important; border-color: #1e293b !important; }
+    #repo-list .text-white { display: block !important; font-size: 11px !important; font-weight: 800 !important; }
 
-    <script>
-        function showTab(id) {
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            const pane = document.getElementById('pane-' + id);
-            const btn = document.getElementById('btn-' + id);
-            if(pane) pane.classList.add('active');
-            if(btn) btn.classList.add('active-tab');
-        }
+    /* 3. CLIENT NAME LOCK - Large, Bold, No-Shrink */
+    #client-name-field {
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        text-transform: uppercase !important;
+        display: block !important;
+        width: 100% !important;
+        min-width: 500px !important; /* Prevents shrinking against right-side items */
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    /* Hide "Client:" label in the header card */
+    .pdf-card:first-of-type label:first-of-type { display: none !important; }
 
-        function toggleVehicleUI(val) {
-            const r = document.getElementById('ui-repairable');
-            const t = document.getElementById('ui-totalled');
-            r.classList.add('hidden'); t.classList.add('hidden');
-            if(val === 'repairable') r.classList.remove('hidden');
-            if(val === 'totalled') t.classList.remove('hidden');
-        }
+    /* 4. PROPERTY DAMAGE - Label & Grid Enforcement */
+    #pane-pd label {
+        display: block !important;
+        visibility: visible !important;
+        color: #94a3b8 !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        font-size: 10px !important;
+    }
 
-        function addUM() {
-            const container = document.getElementById('um-container');
-            const div = document.createElement('div');
-            div.className = "grid md:grid-cols-5 gap-4 mt-4 pt-4 border-t border-slate-100 relative";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-0 right-0 text-red-500">&times;</button><div><label>Policy Holder</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Carrier</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Claim #</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Adjuster</label><div contenteditable="true" class="text-sm font-bold w-full border border-slate-100 rounded p-2"></div></div><div><label>Limits</label><div contenteditable="true" class="text-sm font-bold text-green-700 w-full border border-slate-100 rounded p-2"></div></div>`;
-            container.appendChild(div);
-        }
+    /* 5. PASSENGER BOX STYLING - Matches App Theme */
+    .passenger-card {
+        border-left: 8px solid #cbd5e1 !important;
+        background: #ffffff !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    }
+</style>
 
-        function addFacility() {
-            const container = document.getElementById('facility-container');
-            const div = document.createElement('div');
-            div.className = "pdf-card relative border-t-4 border-orange-500";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl">&times;</button><div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4"><div><label>Facility Name</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded"></div></div><div><label>Specialty</label><select class="prof-input w-full border-orange-200"><option value="Chiro">Chiro</option><option value="Ortho">Ortho</option><option value="Surgery">Surgery</option><option value="EMS">EMS</option><option value="EMC">EMC</option></select></div><div><label>Last Treatment Schedule</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div></div><div><label>Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div></div>`;
-            container.appendChild(div);
-        }
-
-        function addFinanceRow() {
-            const body = document.getElementById('finance-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td><div contenteditable="true" class="font-bold">$ 0.00</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function addDocRow() {
-            const body = document.getElementById('doc-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><select class="prof-input w-full text-[11px] uppercase font-bold"><option>Medical Records</option><option>Insurance</option><option>Litigation Docs</option><option>Invoices</option><option>Others</option></select></td><td><div contenteditable="true" class="w-full">New record...</div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function addDiscoveryRow() {
-            const body = document.getElementById('discovery-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">New Request</div></td><td><div contenteditable="true">Defendant</div></td><td><div contenteditable="true">MM/DD/YYYY</div></td><td><select class="prof-input"><option>Pending</option><option>Drafting</option><option>Served</option></select></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function addNoteRow() {
-            const body = document.getElementById('notes-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `<td><div contenteditable="true">MM/DD/YYYY</div></td><td><div contenteditable="true" class="w-full"></div></td><td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function addTaskRow() {
-            const body = document.getElementById('tasks-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><div contenteditable="true" class="w-full"></div></td>
-                <td><div contenteditable="true" class="w-full"></div></td>
-                <td><div contenteditable="true">MM/DD/YYYY</div></td>
-                <td><select class="prof-input w-full"><option>Pending</option><option>Urgent</option><option>Finished</option></select></td>
-                <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-            body.appendChild(row);
-        }
-
-        function updatePhase(val) { document.getElementById('display-phase').innerText = val; }
-
-        async function downloadPDF() {
-            const element = document.getElementById('capture-area');
-            const opt = { margin: 0.5, filename: 'LSH_Case_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
-            html2pdf().set(opt).from(element).save();
-        }
-    </script>
-
-    <script>
-        (function() {
-            const STORAGE_KEY = 'LSH_CASE_DATA';
-
-            window.saveCurrentEntry = function() {
-                const data = {
-                    phase: document.getElementById('display-phase').innerText,
-                    editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
-                    selects: Array.from(document.querySelectorAll('select')).map(el => el.value),
-                    htmlContainers: {
-                        um: document.getElementById('um-container').innerHTML,
-                        facilities: document.getElementById('facility-container').innerHTML,
-                        finance: document.getElementById('finance-body').innerHTML,
-                        docs: document.getElementById('doc-body').innerHTML,
-                        discovery: document.getElementById('discovery-body').innerHTML,
-                        notes: document.getElementById('notes-body').innerHTML,
-                        tasks: document.getElementById('tasks-body').innerHTML
-                    }
-                };
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-                alert('Success: Entry saved to browser memory.');
-            };
-
-            window.retrieveEntry = function() {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (!saved) return alert('No saved data found.');
-                const data = JSON.parse(saved);
-                document.getElementById('display-phase').innerText = data.phase;
-                if(data.htmlContainers) {
-                    Object.keys(data.htmlContainers).forEach(key => {
-                        const el = document.getElementById(key === 'um' ? 'um-container' : key === 'facilities' ? 'facility-container' : key);
-                        if(el) el.innerHTML = data.htmlContainers[key];
-                    });
-                }
-                const editables = document.querySelectorAll('[contenteditable="true"]');
-                data.editables.forEach((val, i) => { if(editables[i]) editables[i].innerHTML = val; });
-                const selects = document.querySelectorAll('select');
-                data.selects.forEach((val, i) => { if(selects[i]) selects[i].value = val; });
-                alert('Entry restored.');
-            };
-
-            window.createNewFile = function() {
-                if(confirm("Start new entry? (Ensure you saved current work)")) {
-                    localStorage.removeItem(STORAGE_KEY);
-                    window.location.reload();
-                }
-            };
-
-            window.addEventListener('DOMContentLoaded', () => {
-                const sidebar = document.getElementById('sidebar-actions');
-                if (sidebar) {
-                    const persistenceGroup = document.createElement('div');
-                    persistenceGroup.className = "pt-4 mt-4 border-t border-slate-800 space-y-2";
-                    persistenceGroup.innerHTML = `
-                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-2">Memory Management</p>
-                        <button onclick="saveCurrentEntry()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all">Save Entry</button>
-                        <button onclick="retrieveEntry()" class="w-full border border-emerald-500/30 text-emerald-500 py-2 rounded-lg font-bold text-[10px] uppercase hover:bg-emerald-500/10 transition-all">Retrieve Entry</button>
-                        <button onclick="createNewFile()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all">New Entry File</button>
-                    `;
-                    sidebar.appendChild(persistenceGroup);
-                }
-            });
-        })();
-    </script>
-
-    <script>
-        (function() {
-            window.addEventListener('DOMContentLoaded', () => {
-                const uploadPortal = document.querySelector('#pane-doc-hub .grid');
-                if (uploadPortal) {
-                    const newButtons = document.createElement('div');
-                    newButtons.className = "col-span-full grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 mt-3 border-t border-slate-200";
-                    newButtons.innerHTML = `
-                        <div class="flex flex-col gap-1">
-                            <input type="file" id="up-photos" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Photo Evidence')">
-                            <button onclick="document.getElementById('up-photos').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Photo Evidence</button>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <input type="file" id="up-clientid" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Client ID')">
-                            <button onclick="document.getElementById('up-clientid').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Client ID</button>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <input type="file" id="up-firmfiles" class="hidden" multiple onchange="handleEnhancedUpload(this, 'Firm Files')">
-                            <button onclick="document.getElementById('up-firmfiles').click()" class="bg-slate-50 border border-slate-300 text-slate-700 text-[10px] py-2 px-3 rounded font-bold uppercase hover:bg-slate-100 transition-all">Upload Firm Files</button>
-                        </div>
-                    `;
-                    uploadPortal.appendChild(newButtons);
-                }
-            });
-
-            window.handleEnhancedUpload = function(input, category) {
-                if (input.files) {
-                    const files = Array.from(input.files).slice(0, 5);
-                    const body = document.getElementById('doc-body');
-                    files.forEach(file => {
-                        const fileURL = URL.createObjectURL(file);
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td><select class="prof-input w-full text-[11px] uppercase font-bold">
-                                <option ${category === 'Medical Records' ? 'selected' : ''}>Medical Records</option>
-                                <option ${category === 'Insurance' ? 'selected' : ''}>Insurance</option>
-                                <option ${category === 'Litigation Docs' ? 'selected' : ''}>Litigation Docs</option>
-                                <option ${category === 'Invoices' ? 'selected' : ''}>Invoices</option>
-                                <option ${category === 'Police Report' ? 'selected' : ''}>Police Report</option>
-                                <option ${category === 'Photo Evidence' ? 'selected' : ''}>Photo Evidence</option>
-                                <option ${category === 'Client ID' ? 'selected' : ''}>Client ID</option>
-                                <option ${category === 'Firm Files' ? 'selected' : ''}>Firm Files</option>
-                            </select></td>
-                            <td>
-                                <div contenteditable="true" class="hidden">${file.name}</div>
-                                <a href="${fileURL}" target="_blank" class="text-orange-600 font-bold text-[12px] underline decoration-orange-300 hover:text-orange-800 transition-all cursor-pointer">
-                                    📄 ${file.name} (Click to View)
-                                </a>
-                            </td>
-                            <td class="no-print"><button onclick="this.parentElement.parentElement.remove()" class="text-slate-300">×</button></td>`;
-                        body.prepend(row);
-                    });
-                    input.value = '';
-                }
-            };
-        })();
-    </script>
-
-    <script>
-        // Calculations
-        (function() {
-            const injectMedTotalUI = () => {
-                const pane = document.getElementById('pane-treatment');
-                if (pane && !document.getElementById('med-total-box')) {
-                    const card = document.createElement('div');
-                    card.id = 'med-total-box';
-                    card.className = "pdf-card border-l-8 border-green-600 mt-6 bg-green-50";
-                    card.innerHTML = `<div class="flex justify-between items-center"><h3 class="text-[11px] font-black uppercase text-green-700">Total Medical Charges</h3><div id="display-med-total" class="text-xl font-black text-green-700">$ 0.00</div></div>`;
-                    pane.appendChild(card);
-                }
-            };
-            window.runMedCalculation = function() {
-                let total = 0;
-                document.querySelectorAll('#facility-container [contenteditable="true"]').forEach(el => {
-                    const label = el.previousElementSibling;
-                    if (label && (label.innerText.includes('CHARGES') || label.innerText.includes('TOTAL'))) {
-                        let num = parseFloat(el.innerText.replace(/[$,\s]/g, ''));
-                        if (!isNaN(num)) total += num;
-                    }
-                });
-                const display = document.getElementById('display-med-total');
-                if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
-            };
-            window.addEventListener('DOMContentLoaded', injectMedTotalUI);
-            document.addEventListener('input', (e) => { if (e.target.closest('#facility-container')) runMedCalculation(); });
-
-            const injectExpTotalUI = () => {
-                const pane = document.getElementById('pane-finance');
-                if (pane && !document.getElementById('exp-total-box')) {
-                    const card = document.createElement('div');
-                    card.id = 'exp-total-box';
-                    card.className = "pdf-card border-l-8 border-blue-600 mt-6 bg-blue-50";
-                    card.innerHTML = `<div class="flex justify-between items-center"><h3 class="text-[11px] font-black uppercase text-blue-700">Total File Expenses</h3><div id="display-exp-total" class="text-xl font-black text-blue-700">$ 0.00</div></div>`;
-                    pane.appendChild(card);
-                }
-            };
-            window.runExpCalculation = function() {
-                let total = 0;
-                document.querySelectorAll('#finance-body tr').forEach(row => {
-                    const amountDiv = row.querySelectorAll('td')[2]?.querySelector('[contenteditable="true"]');
-                    if (amountDiv) {
-                        let num = parseFloat(amountDiv.innerText.replace(/[$,\s]/g, ''));
-                        if (!isNaN(num)) total += num;
-                    }
-                });
-                const display = document.getElementById('display-exp-total');
-                if (display) display.innerText = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(total);
-            };
-            window.addEventListener('DOMContentLoaded', injectExpTotalUI);
-            document.addEventListener('input', (e) => { if (e.target.closest('#finance-body')) runExpCalculation(); });
-        })();
-    </script>
-    <script>
-    (function() {
-        window.addEventListener('DOMContentLoaded', () => {
-            // Find the Case ID container to anchor the new dates
-            const caseIdContainer = document.querySelector('#capture-area .flex.flex-col.items-end.gap-2');
-            
-            if (caseIdContainer) {
-                // Create the wrapper for DOL and SOL
-                const dateGroup = document.createElement('div');
-                dateGroup.className = "flex flex-col gap-2 mr-4 pr-4 border-r border-slate-100";
-                
-                dateGroup.innerHTML = `
-                    <div class="flex items-center gap-2 justify-end">
-                        <label class="text-[9px] text-slate-400 font-bold uppercase mb-0">DOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-bold text-slate-900 border border-transparent hover:border-slate-200 px-1 rounded">MM/DD/YYYY</div>
-                    </div>
-                    <div class="flex items-center gap-2 justify-end">
-                        <label class="text-[9px] text-red-500 font-bold uppercase mb-0">SOL:</label>
-                        <div contenteditable="true" class="text-[11px] font-bold text-red-600 border border-transparent hover:border-slate-200 px-1 rounded">MM/DD/YYYY</div>
-                    </div>
-                `;
-                
-                // Insert it right before the Case ID/Phase dropdown section
-                caseIdContainer.parentNode.insertBefore(dateGroup, caseIdContainer);
-                
-                // Ensure the new fields use the correct font family
-                dateGroup.querySelectorAll('[contenteditable="true"]').forEach(el => {
-                    el.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-                });
-            }
-        });
-    })();
-</script>
 <script>
-    (function() {
-        const REPO_KEY = 'LSH_REPOSITORY';
-
-        const injectRepoUI = () => {
-            const sidebar = document.getElementById('sidebar-actions');
-            if (!sidebar) return;
-
-            // Remove old container if it exists to avoid duplicates on reload
-            const oldRepo = document.getElementById('repo-container');
-            if (oldRepo) oldRepo.remove();
-
-            const repoContainer = document.createElement('div');
-            repoContainer.id = 'repo-container';
-            repoContainer.className = "pt-4 mt-4 border-t border-slate-800";
-            repoContainer.innerHTML = `
-                <div class="flex justify-between items-center mb-3">
-                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Case Repository</p>
-                    <span id="repo-count" class="text-[9px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">0</span>
-                </div>
-                <div id="repo-list" class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                    </div>
-                <button onclick="saveToRepository()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
-                    💾 Archive Current State
-                </button>
-            `;
-            sidebar.appendChild(repoContainer);
-            renderRepoList();
-        };
-
-        window.saveToRepository = function() {
-            // Grab Client Name and DOL to create a unique identifier
-            const clientName = document.querySelector('[contenteditable="true"]').innerText.trim() || "New Client";
-            const dol = document.querySelectorAll('[contenteditable="true"]')[2]?.innerText || "No-Date";
-            const timestamp = new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            
-            const currentData = {
-                id: Date.now(), // Unique ID for every single save
-                fileName: `${clientName} (${timestamp})`,
-                clientName: clientName,
-                timestamp: timestamp,
-                phase: document.getElementById('display-phase').innerText,
-                // Capture all content
-                editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
-                selects: Array.from(document.querySelectorAll('select')).map(el => el.value),
-                htmlContainers: {
-                    um: document.getElementById('um-container').innerHTML,
-                    facilities: document.getElementById('facility-container').innerHTML,
-                    finance: document.getElementById('finance-body').innerHTML,
-                    docs: document.getElementById('doc-body').innerHTML,
-                    discovery: document.getElementById('discovery-body').innerHTML,
-                    notes: document.getElementById('notes-body').innerHTML,
-                    tasks: document.getElementById('tasks-body').innerHTML
-                }
-            };
-
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            repo.unshift(currentData); // Push to top
-            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
-            renderRepoList();
-            
-            // Visual feedback
-            const btn = event.target;
-            const originalText = btn.innerText;
-            btn.innerText = "✓ ARCHIVED";
-            btn.classList.replace('bg-emerald-600', 'bg-slate-700');
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.classList.replace('bg-slate-700', 'bg-emerald-600');
-            }, 1500);
-        };
-
-        window.loadFromRepo = function(id) {
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            const data = repo.find(item => item.id === id);
-            if (!data) return;
-
-            if(!confirm(`Load archive for "${data.clientName}"? \nUnsaved changes on the current screen will be lost.`)) return;
-
-            // Restore HTML structure first
-            if(data.htmlContainers) {
-                Object.keys(data.htmlContainers).forEach(key => {
-                    const el = document.getElementById(key === 'um' ? 'um-container' : key === 'facilities' ? 'facility-container' : key);
-                    if(el) el.innerHTML = data.htmlContainers[key];
-                });
-            }
-
-            // Restore Phase
-            document.getElementById('display-phase').innerText = data.phase;
-
-            // Restore all inputs
-            const editables = document.querySelectorAll('[contenteditable="true"]');
-            data.editables.forEach((val, i) => { if(editables[i]) editables[i].innerHTML = val; });
-            
-            const selects = document.querySelectorAll('select');
-            data.selects.forEach((val, i) => { if(selects[i]) selects[i].value = val; });
-
-            // Trigger calc updates
-            if(window.runMedCalculation) runMedCalculation();
-            if(window.runExpCalculation) runExpCalculation();
-            
-            alert("Case Archive Loaded.");
-        };
-
-        window.deleteFromRepo = function(id, e) {
-            e.stopPropagation();
-            if(!confirm("Permanently delete this file from the repository?")) return;
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            repo = repo.filter(item => item.id !== id);
-            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
-            renderRepoList();
-        };
-
-        window.renderRepoList = function() {
-            const list = document.getElementById('repo-list');
-            const countDisplay = document.getElementById('repo-count');
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            
-            countDisplay.innerText = repo.length;
-
-            if (repo.length === 0) {
-                list.innerHTML = '<p class="text-[10px] text-slate-600 italic text-center py-4">Repository is empty.</p>';
-                return;
-            }
-
-            list.innerHTML = repo.map(item => `
-                <div onclick="loadFromRepo(${item.id})" class="group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all relative">
-                    <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-2 right-2 text-slate-700 hover:text-red-500 text-sm font-bold">×</button>
-                    <div class="text-[10px] font-black text-white uppercase truncate pr-4">${item.clientName}</div>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="text-[8px] text-slate-500 font-bold uppercase">${item.phase}</span>
-                        <span class="text-[8px] text-slate-600">${item.timestamp}</span>
-                    </div>
-                </div>
-            `).join('');
-        };
-
-        window.addEventListener('DOMContentLoaded', injectRepoUI);
-    })();
-</script>
-<script>
-/**
- * LSH FINAL SURGICAL PATCH
- * Consolidates: Header Fix, Injuries, Passengers, and Type Dropdown
- */
 (function() {
-    const runUpdates = () => {
-        // 1. REMOVE SAVE/RETRIEVE OPTIONS (As requested)
-        // This hides the manual data management buttons in the sidebar
-        const sidebar = document.getElementById('sidebar-actions');
-        if (sidebar) {
-            const persistenceButtons = sidebar.querySelectorAll('button');
-            persistenceButtons.forEach(btn => {
-                if (btn.innerText.includes('SAVE') || btn.innerText.includes('RETRIEVE') || btn.innerText.includes('NEW ENTRY')) {
-                    btn.remove();
-                }
-            });
-        }
-
-        // 2. INJECT TYPE OF INJURY DROPDOWN (Middle of Dashboard)
-        const dashboard = document.querySelector('.bg-slate-900');
-        if (dashboard && !document.getElementById('injected-type-container')) {
-            const typeContainer = document.createElement('div');
-            typeContainer.id = 'injected-type-container';
-            typeContainer.className = "flex items-center gap-2 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700 mx-auto";
-            typeContainer.innerHTML = `
-                <label class="text-[9px] text-orange-500 font-black uppercase italic">Type:</label>
-                <select class="bg-transparent border-none p-0 outline-none cursor-pointer text-blue-400 font-black uppercase text-sm">
-                    <option value="MVA">MVA</option>
-                    <option value="Slip and Fall">Slip and Fall</option>
-                    <option value="Premise Liability">Premise Liability</option>
-                    <option value="Mass Tort">Mass Tort</option>
-                    <option value="Animal Bite">Animal Bite</option>
-                    <option value="Others">Others</option>
-                </select>
-            `;
-            // Insert in the middle (before the phase/money block)
-            dashboard.insertBefore(typeContainer, dashboard.lastElementChild);
-        }
-
-        // 3. INJECT PRIMARY INJURY & PASSENGER SECTION (Into Case Profile)
+    const applyLSHMasterLogic = () => {
+        // --- FEATURE 1: PRIMARY INJURY & PASSENGERS (Case Profile) ---
         const profilePane = document.getElementById('pane-profile');
-        if (profilePane && !document.getElementById('passenger-section')) {
+        if (profilePane && !document.getElementById('injury-passenger-wrapper')) {
             const wrapper = document.createElement('div');
+            wrapper.id = 'injury-passenger-wrapper';
             wrapper.className = "mt-10 space-y-8";
             wrapper.innerHTML = `
                 <div class="pdf-card border-l-8 border-red-500 bg-white shadow-sm">
                     <h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2 tracking-widest">Injuries Sustained (Primary)</h3>
                     <div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed"></div>
                 </div>
-
                 <div id="passenger-section">
                     <div class="flex justify-between items-center px-2 mb-6 border-b pb-4">
                         <h3 class="text-[11px] font-black uppercase text-slate-400 italic">Passenger Records</h3>
-                        <button onclick="addPassengerRow()" id="add-passenger-btn" class="bg-slate-900 text-white text-[10px] px-6 py-2 rounded font-bold uppercase hover:bg-orange-600 transition-all">+ Add Passenger</button>
+                        <button onclick="addPassengerRow()" class="no-print bg-slate-900 text-white text-[10px] px-6 py-2 rounded font-bold uppercase hover:bg-orange-600 transition-all">+ Add Passenger</button>
                     </div>
                     <div id="passenger-container" class="space-y-6 flex flex-col"></div>
-                </div>
-            `;
+                </div>`;
             profilePane.appendChild(wrapper);
         }
-    };
 
-    // 4. PASSENGER ADD LOGIC (Limited to 5)
-    window.addPassengerRow = function() {
-        const container = document.getElementById('passenger-container');
-        if (!container) return;
-        if (container.children.length >= 5) {
-            alert("Maximum of 5 passengers allowed.");
-            return;
+        // --- FEATURE 2: THIRD PARTY DRIVER UPDATES (Property Damage) ---
+        const pdPane = document.getElementById('pane-pd');
+        if (pdPane) {
+            const cards = pdPane.querySelectorAll('.pdf-card');
+            const tpCard = cards[1]; 
+            if (tpCard) {
+                // Change label to Driver's Name
+                tpCard.querySelectorAll('label').forEach(label => {
+                    if (label.innerText.includes("LICENSE PLATE")) label.innerText = "DRIVER'S NAME";
+                });
+                // Inject the Driver Details Info Box
+                if (!document.getElementById('tp-driver-details-final')) {
+                    const block = document.createElement('div');
+                    block.id = 'tp-driver-details-final';
+                    block.className = "mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg";
+                    block.innerHTML = `
+                        <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3 tracking-widest">Third Party Driver Information</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div><label class="text-[9px] font-bold">CONTACT NUMBER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label class="text-[9px] font-bold">EMAIL ADDRESS</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label class="text-[9px] font-bold">INSURANCE CARRIER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label class="text-[9px] font-bold">POLICY INFORMATION</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                        </div>`;
+                    tpCard.appendChild(block);
+                }
+            }
         }
 
+        // --- FEATURE 3: DROPDOWN REFINEMENT (Emergency Room) ---
+        document.querySelectorAll('select').forEach(sel => {
+            if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
+                const er = document.createElement('option');
+                er.value = "Emergency Room"; er.text = "Emergency Room";
+                sel.insertBefore(er, sel.firstChild);
+            }
+        });
+    };
+
+    // --- FEATURE 4: PASSENGER ROW LOGIC ---
+    window.addPassengerRow = function() {
+        const container = document.getElementById('passenger-container');
+        if (!container || container.children.length >= 5) return;
         const div = document.createElement('div');
-        div.className = "pdf-card border-t-8 border-slate-200 bg-white relative p-4 mb-4 shadow-sm";
+        div.className = "pdf-card passenger-card relative p-4 mb-4";
         div.innerHTML = `
             <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
             <div class="grid lg:grid-cols-3 gap-4">
@@ -968,825 +578,27 @@
                 <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
                 <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
             </div>
-            <div class="mt-4">
-                <label class="text-[9px] font-bold text-red-500 uppercase">Injuries Sustained</label>
-                <div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div>
-            </div>
-        `;
+            <div class="mt-4"><label class="text-[9px] font-bold text-red-500 uppercase">Injuries Sustained</label><div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div></div>`;
         container.appendChild(div);
     };
 
-    // Run fixes immediately and ensure persistence is untouched
-    window.addEventListener('load', runUpdates);
-})();
-</script>
-    <script>
-(function() {
-    const applyFinalFixes = () => {
-        // 1. PRIMARY CLIENT FONT SIZE
-        const nameField = document.querySelector('[contenteditable="true"]');
-        if (nameField && nameField.innerText.includes("Name")) {
-            nameField.style.fontSize = "32px";
-            nameField.style.fontWeight = "900";
-            nameField.style.color = "#0f172a";
-        }
-
-        // 2. DASHBOARD BAR (DOL/SOL/TYPE) - DUPLICATE PROOF
-        if (!document.getElementById('lsh-integrated-bar')) {
-            const mainHeader = document.querySelector('.pdf-card.border-l-8.border-orange-500');
-            if (mainHeader) {
-                const bar = document.createElement('div');
-                bar.id = 'lsh-integrated-bar';
-                bar.style = "background:#0f172a; color:white; padding:15px; border-radius:10px; margin:20px 0; display:flex; gap:30px; align-items:center; border-left:8px solid #f97316;";
-                bar.innerHTML = `
-                    <div style="display:flex; gap:20px;">
-                        <div><label style="font-size:9px; color:orange; font-weight:bold; text-transform:uppercase; display:block;">Date of Loss</label>
-                        <div contenteditable="true" style="font-size:14px; color:black; font-weight:bold; border-bottom:1px solid #334155; min-width:110px;">MM/DD/YYYY</div></div>
-                        <div><label style="font-size:9px; color:#f87171; font-weight:bold; text-transform:uppercase; display:block;">Statute (SOL)</label>
-                        <div contenteditable="true" style="font-size:14px; font-weight:bold; border-bottom:1px solid #334155; min-width:110px; color:#f87171;">MM/DD/YYYY</div></div>
-                    </div>
-                    <div style="background:#1e293b; padding:8px 12px; border-radius:6px; border:1px solid #334155; display:flex; align-items:center; gap:10px;">
-                        <span style="font-size:10px; font-weight:900; color:#f97316; font-style:italic;">TYPE:</span>
-                        <select style="background:transparent; color:#60a5fa; border:none; font-weight:bold; font-size:12px; outline:none; cursor:pointer;">
-                            <option value="MVA">MVA</option><option value="Slip and Fall">Slip and Fall</option><option value="Animal Bite">Animal Bite</option><option value="Others">Others</option>
-                        </select>
-                    </div>`;
-                mainHeader.parentNode.insertBefore(bar, mainHeader.nextSibling);
-            }
-        }
-
-        // 3. HEALTH INSURANCE SUBRO & UM POLICY
-        const matrixPane = document.getElementById('pane-matrix');
-        if (matrixPane && !document.getElementById('subro-row')) {
-            const healthTab = matrixPane.querySelector('.ins-tab-content');
-            if (healthTab) {
-                const subro = document.createElement('div');
-                subro.id = 'subro-row';
-                subro.style = "margin-top:15px; padding-top:15px; border-top:1px solid #f1f5f9; display:grid; grid-template-columns:1fr 1fr; gap:20px;";
-                subro.innerHTML = `
-                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Subrogation Claim?</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;">NO</div></div>
-                    <div><label style="font-size:10px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Subro Amount</label><div contenteditable="true" style="font-size:12px; font-weight:bold; color:#ef4444; border-bottom:1px solid #eee;">$ 0.00</div></div>`;
-                healthTab.appendChild(subro);
-            }
-        }
-
-        const umField = document.getElementById('um-container');
-        if (umField && !document.getElementById('um-pol-fix')) {
-            const grid = umField.querySelector('.grid');
-            if (grid) {
-                const pol = document.createElement('div');
-                pol.id = 'um-pol-fix';
-                pol.innerHTML = `<label style="font-size:10px; font-weight:bold; color:#94a3b8; text-transform:uppercase;">Policy Number</label><div contenteditable="true" style="font-size:12px; font-weight:bold; border-bottom:1px solid #eee;"></div>`;
-                grid.insertBefore(pol, grid.firstChild);
-            }
-        }
-
-        // 4. THE ULTIMATE SIDEBAR FIX (BY POSITION)
-        const sidebar = document.getElementById('sidebar-actions');
-        if (sidebar) {
-            const btns = sidebar.getElementsByTagName('button');
-            
-            // Loop through all buttons in the sidebar and apply logic ONLY to buttons
-            for (let i = 0; i < btns.length; i++) {
-                let btn = btns[i];
-                let text = btn.innerText.toUpperCase();
-
-                // If button is Download PDF, FORCE it to stay correct
-                if (text.includes('PDF')) {
-                    btn.innerText = "Download PDF";
-                    btn.style.backgroundColor = "#ea580c";
-                } 
-                // Rename Save buttons
-                else if (text.includes('SAVE') || text.includes('ARCHIVE')) {
-                    btn.innerText = "CASE REPOSITORY";
-                    btn.style.backgroundColor = "#059669";
-                }
-                // Rename Retrieval buttons
-                else if (text.includes('RETRIEVE') || text.includes('LOAD')) {
-                    btn.innerText = "RETRIEVE CASE";
-                }
-            }
-        }
-    };
-
-    // Run immediately and again after 1 second to catch memory loads
-    applyFinalFixes();
-    setTimeout(applyFinalFixes, 1000);
-})();
-</script>
-    <script>
-(function() {
-    // 1. Redefine the addFacility function to include Emergency Room
-    window.addFacility = function() {
-        const container = document.getElementById('facility-container');
-        if (!container) return; // Safety check
-
-        const div = document.createElement('div');
-        div.className = "pdf-card relative border-t-4 border-orange-500 mb-4";
-        
-        // This is the blueprint for every new facility card
-        div.innerHTML = `
-            <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold text-xl hover:text-red-500 transition-colors">&times;</button>
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                    <label class="text-[10px] text-slate-400 font-black uppercase">Facility Name</label>
-                    <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded outline-none"></div>
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-black uppercase">Specialty</label>
-                    <select class="prof-input w-full border-orange-200 rounded p-1 text-sm font-bold outline-none">
-                        <option value="Emergency Room">Emergency Room</option>
-                        <option value="Chiro">Chiro</option>
-                        <option value="Ortho">Ortho</option>
-                        <option value="Surgery">Surgery</option>
-                        <option value="EMS">EMS</option>
-                        <option value="Physical Therapy">Physical Therapy</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-black uppercase">Last Treatment</label>
-                    <div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded outline-none">MM/DD/YYYY</div>
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 font-black uppercase">Charges</label>
-                    <div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded outline-none">$ 0.00</div>
-                </div>
-            </div>`;
-        
-        container.appendChild(div);
-    };
-
-    // 2. Fix existing static dropdowns already on the page
-    const fixStaticDropdowns = () => {
-        document.querySelectorAll('select').forEach(sel => {
-            if ((sel.innerHTML.includes('Chiro') || sel.innerHTML.includes('Ortho')) && !sel.innerHTML.includes('Emergency Room')) {
-                const erOption = document.createElement('option');
-                erOption.value = "Emergency Room";
-                erOption.text = "Emergency Room";
-                sel.insertBefore(erOption, sel.firstChild); // Put it at the top
-            }
-        });
-    };
-
-    // Run the fix for static elements once the page is ready
-    window.addEventListener('load', fixStaticDropdowns);
-    // Safety backup run
-    setTimeout(fixStaticDropdowns, 500);
-})();
-</script>
-    <script>
-(function() {
-    const patchNameOnly = () => {
-        try {
-            // 1. Find all editable fields
-            const editables = document.querySelectorAll('[contenteditable="true"]');
-            if (editables.length === 0) return;
-
-            // 2. Identify the Client Name field (usually the first one)
-            const nameField = editables[0];
-
-            // 3. Hide the label if it exists
-            const label = nameField.previousElementSibling;
-            if (label && (label.innerText.includes("Client") || label.tagName === 'LABEL')) {
-                label.style.display = "none";
-            }
-
-            // 4. Apply Size 50 Gray Style
-            nameField.style.fontSize = "20px";
-            nameField.style.color = "#64748b"; // Slate Gray
-            nameField.style.fontWeight = "600";
-            nameField.style.textTransform = "uppercase";
-            nameField.style.letterSpacing = "0.5px";
-            nameField.style.outline = "none";
-
-            // 5. Auto-erase placeholder logic
-            if (nameField.innerText.trim() === "Client's Name") {
-                nameField.onfocus = function() {
-                    if (this.innerText.trim() === "Client's Name") {
-                        this.innerText = "";
-                    }
-                };
-            }
-        } catch (err) {
-            // This prevents the "Page is showing errors" message
-            console.warn("Name patch skipped: Element not found yet.");
-        }
-    };
-
-    // Run safely
-    if (document.readyState === 'complete') {
-        patchNameOnly();
-    } else {
-        window.addEventListener('load', patchNameOnly);
-    }
-    
-    // Refresh the fix when clicking tabs (without causing errors)
-    document.addEventListener('click', () => {
-        setTimeout(patchNameOnly, 10);
-    });
-})();
-</script>
-<script>
-(function() {
-    const applyPowerCMS = () => {
-        try {
-            // 1. FORCE CMS HEADER: Name over Contact
-            const nameField = document.querySelector('[contenteditable="true"]');
-            if (nameField && !nameField.dataset.cmsApplied) {
-                // Find the container and force it to a vertical column
-                const container = nameField.closest('.flex');
-                if (container) {
-                    container.style.cssText = "flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; display: flex !important;";
-                    
-                    // Style the Name (Professional CMS Size)
-                    nameField.style.cssText = "font-size: 30px !important; font-weight: 800 !important; color: #0f172a !important; line-height: 1 !important; letter-spacing: -0.5px !important; border: none !important; outline: none !important; margin: 0 !important; padding: 0 !important;";
-                    
-                    // Hide the "Client:" label if it exists
-                    const label = nameField.previousElementSibling;
-                    if (label && label.innerText.toUpperCase().includes("CLIENT")) {
-                        label.style.display = "none";
-                    }
-                    nameField.dataset.cmsApplied = "true";
-                }
-            }
-
-            // 2. FORCE SETTLEMENT FINANCIAL BOX
-            document.querySelectorAll('label').forEach(label => {
-                const txt = label.innerText.toUpperCase();
-                if (txt.includes("SETTLEMENT") || txt.includes("AMOUNT")) {
-                    const amount = label.nextElementSibling;
-                    if (amount && amount.contentEditable === "true") {
-                        amount.style.cssText = "font-size: 24px !important; font-weight: 700 !important; color: #166534 !important; background: #f0fdf4 !important; padding: 6px 12px !important; border-radius: 6px !important; border: 1px solid #dcfce7 !important; display: inline-block !important; font-family: ui-sans-serif, system-ui !important;";
-                    }
-                }
-            });
-
-            // 3. EMERGENCY ROOM DROPDOWN (Ensures ER is always at the top)
-            document.querySelectorAll('select').forEach(sel => {
-                if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
-                    const er = document.createElement('option');
-                    er.value = "Emergency Room";
-                    er.text = "Emergency Room";
-                    sel.insertBefore(er, sel.firstChild);
-                }
-            });
-
-        } catch (e) {
-            console.warn("CMS Layout pending...");
-        }
-    };
-
-    // Initialize and keep active across tab changes
-    window.addEventListener('load', applyPowerCMS);
-    document.addEventListener('click', () => setTimeout(applyPowerCMS, 50));
-    // Interval check to fight back against your original script's CSS
-    setInterval(applyPowerCMS, 1000);
-})();
-</script>
-<script>
-(function() {
-    const applyOthersLogicOnly = () => {
-        // Target only selects that are NOT in the header/identity area
-        const allSelects = document.querySelectorAll('select');
-        
-        allSelects.forEach(select => {
-            // Only target the Case Type dropdown (containing MVA)
-            // and make sure we haven't already added the listener
-            if (select.innerHTML.includes('MVA') && !select.dataset.logicActive) {
-                
-                select.addEventListener('change', function() {
-                    if (this.value === "Others") {
-                        const originalSelect = this;
-                        
-                        // Create a small container that won't shift layout
-                        const container = document.createElement('span');
-                        container.style.display = "inline-flex";
-                        container.style.alignItems = "center";
-                        container.style.gap = "4px";
-
-                        // The editable text field
-                        const input = document.createElement('span');
-                        input.contentEditable = "true";
-                        input.style.cssText = "border-bottom: 1px solid #60a5fa; color: #2563eb; font-weight: bold; outline: none; min-width: 80px; font-size: 13px; display: inline-block;";
-                        input.innerText = "Specify...";
-
-                        // The "Back" button
-                        const backBtn = document.createElement('button');
-                        backBtn.innerHTML = "↺";
-                        backBtn.style.cssText = "border: none; background: #f1f5f9; color: #94a3b8; cursor: pointer; border-radius: 3px; padding: 0 4px; font-size: 12px;";
-                        
-                        backBtn.onclick = (e) => {
-                            e.preventDefault();
-                            container.replaceWith(originalSelect);
-                            originalSelect.value = "MVA";
-                        };
-
-                        container.appendChild(input);
-                        container.appendChild(backBtn);
-                        
-                        this.replaceWith(container);
-                        
-                        input.focus();
-                        input.onfocus = function() { if(this.innerText === "Specify...") this.innerText = ""; };
-                    }
-                });
-                select.dataset.logicActive = "true";
-            }
-        });
-    };
-
-    // Run only after the full page is stable
-    window.addEventListener('load', applyOthersLogicOnly);
-    
-    // Only run on clicks that are NOT in the header to prevent jumpiness
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.pdf-card')) { // Assuming your header is in a card
-            setTimeout(applyOthersLogicOnly, 50);
+    // --- FEATURE 5: OTHERS SPECIFY LOGIC ---
+    document.addEventListener('change', function(e) {
+        if (e.target.tagName === 'SELECT' && e.target.value === 'Others') {
+            const input = document.createElement('span');
+            input.contentEditable = "true";
+            input.style.cssText = "border-bottom: 1px solid #f97316; color: #f97316; font-weight: bold; outline: none; min-width: 80px; font-size: 13px; margin-left: 5px;";
+            input.innerText = "Specify...";
+            e.target.after(input);
+            input.focus();
         }
     });
-})();
-</script>
-    <style>
-    /* This CSS rule is the strongest way to lock the font size */
-    [data-cms-id="client-name-header"] {
-        font-size: 28px !important;
-        font-weight: 800 !important;
-        color: #1e293b !important;
-        line-height: 1.1 !important;
-        text-transform: uppercase !important;
-    }
-</style>
-<script>
-<style>
-/* THE NUCLEAR CSS OVERRIDE */
-/* This targets the first contenteditable on the page and freezes its style */
-[contenteditable="true"]:first-of-type {
-    font-size: 30px !important;
-    font-weight: 800 !important;
-    color: #0f172a !important;
-    line-height: 1 !important;
-    display: block !important;
-    min-height: 40px !important;
-    transition: none !important; /* Prevents the "shrinking" animation */
-}
 
-/* Fixes the "Others" dropdown color to make it look professional */
-.text-blue-600 {
-    color: #2563eb !important;
-    font-weight: 700 !important;
-}
-</style>
-<style>
-/* 1. THE PERMANENT CSS LOCK */
-/* This rule is loaded before any scripts and stays active after refresh */
-[contenteditable="true"]:first-of-type,
-.client-name-forced {
-    font-size: 30px !important;
-    font-weight: 800 !important;
-    color: #0f172a !important;
-    line-height: 1 !important;
-    text-transform: uppercase !important;
-    display: block !important;
-    min-height: 36px !important;
-}
-</style>
-<script>
-(function() {
-    const applyCmsLock = () => {
-        const nameField = document.querySelector('[contenteditable="true"]');
-        if (nameField) {
-            // Apply a unique class to ensure the CSS above sticks
-            nameField.classList.add('client-name-forced');
-            
-            // Hide "Client:" label again if it reappeared after refresh
-            const label = nameField.previousElementSibling;
-            if (label && label.innerText.toUpperCase().includes("CLIENT")) {
-                label.style.display = "none";
-            }
-        }
-    };
-
-    // 2. THE OBSERVER (The "Guard")
-    // This watches the page for any changes (like a refresh or script re-render)
-    const observer = new MutationObserver((mutations) => {
-        applyCmsLock();
-    });
-
-    // Start watching the body for changes
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-
-    // Run on initial load
-    window.addEventListener('load', applyCmsLock);
-    applyCmsLock();
-})();
-    <style>
-    /* This targets the FIRST contenteditable div inside the FIRST pdf-card */
-    /* This is the most stable way to target your Name field without using IDs */
-    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        line-height: 1 !important;
-        text-transform: uppercase !important;
-        display: block !important;
-        min-height: 40px !important;
-        padding-top: 5px !important;
-    }
-
-    /* Force the stack: Name over Contact */
-    .pdf-card:first-of-type .flex.items-center, 
-    .pdf-card:first-of-type .flex.items-baseline {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 5px !important;
-    }
-
-    /* Keep the "Client:" label hidden forever */
-    .pdf-card:first-of-type label {
-        display: none !important;
-    }
-    
-    /* Ensure the second editable (Contact) stays professional and small */
-    .pdf-card:first-of-type [contenteditable="true"]:nth-of-type(2) {
-        font-size: 16px !important;
-        color: #64748b !important;
-        font-weight: 600 !important;
-    }
-</style>
-<style>
-    /* Global force - targets the name field and prevents UI scaling */
-    .cms-name-locked {
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        line-height: 1 !important;
-        display: block !important;
-        text-transform: uppercase !important;
-    }
-</style>
-<style>
-    /* 1. TARGET THE FIRST EDITABLE FIELD ON THE WHOLE PAGE */
-    /* This rule doesn't care about classes or IDs. It only cares about position. */
-    [contenteditable="true"]:first-of-type {
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #1e293b !important; /* Professional CMS Slate */
-        line-height: 1 !important;
-        display: block !important;
-        text-transform: uppercase !important;
-        min-height: 40px !important;
-    }
-
-    /* 2. HIDE THE CLIENT LABEL PERMANENTLY */
-    label:first-of-type {
-        display: none !important;
-    }
-
-    /* 3. FORCE THE STACK (NAME OVER CONTACT) */
-    /* This targets the container holding the name and contact */
-    .pdf-card:first-of-type div.flex {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 4px !important;
-    }
-
-    /* 4. TARGET SETTLEMENT AMOUNT (THE FINANCIAL BOX) */
-    /* We search for the field containing the $ sign or standard settlement position */
-    [contenteditable="true"]:nth-of-type(4) {
-        color: #16a34a !important; /* Green */
-        font-size: 24px !important;
-        font-weight: 700 !important;
-        background: #f0fdf4 !important;
-        padding: 4px 8px !important;
-        border-radius: 4px !important;
-    }
-</style>
-<style>
-    /* 1. We redefine the base behavior of the name field at the browser root */
-    :root {
-        --cms-header-size: 32px !important;
-    }
-
-    /* Target the first contenteditable and lock its variables */
-    [contenteditable="true"]:first-of-type {
-        font-size: var(--cms-header-size) !important;
-        font-weight: 900 !important;
-        color: #1e293b !important;
-        line-height: 1 !important;
-        text-transform: uppercase !important;
-        min-height: 40px !important;
-        /* This prevents the script from overriding via inline styles */
-        all: unset !important; 
-        display: block !important;
-        font-family: sans-serif !important;
-        cursor: text !important;
-    }
-
-    /* 2. Fix the layout stack (Name over Contact) */
-    .pdf-card:first-of-type .flex {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 5px !important;
-    }
-
-    /* 3. Hide the "Client:" label */
-    label:first-of-type {
-        display: none !important;
-    }
-</style>
-
-<style id="cms-overrides">
-    /* 1. THE FONT LOCK: This targets the FIRST editable field in the FIRST card */
-    /* We use 'all: initial' to wipe the memory of the original script's styles */
-    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        all: initial !important; 
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-        display: block !important;
-        width: 100% !important;
-        min-height: 40px !important;
-        cursor: text !important;
-        outline: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* 2. THE STACK LOCK: Forces Name to sit on top of the Contact info */
-    .pdf-card:first-of-type .flex.items-center, 
-    .pdf-card:first-of-type .flex.items-baseline,
-    .pdf-card:first-of-type .flex {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        justify-content: flex-start !important;
-        gap: 2px !important;
-    }
-
-    /* 3. THE LABEL LOCK: Permanently kills the 'Client:' text */
-    .pdf-card:first-of-type label:first-of-type,
-    .pdf-card:first-of-type div:contains("Client"),
-    .pdf-card:first-of-type .text-slate-400 {
-        display: none !important;
-        visibility: hidden !important;
-        width: 0 !important;
-        height: 0 !important;
-        position: absolute !important;
-    }
-</style>
-
-<script>
-(function() {
-    // This part ensures that even if the page "Re-renders", our styles stay at the very bottom
-    const ensureStyles = () => {
-        const styleTag = document.getElementById('cms-overrides');
-        if (styleTag && styleTag.nextSibling) {
-            // If anything was added after our style, move our style back to the end
-            document.body.appendChild(styleTag);
-        }
-    };
-
-    // Run every time you type or click
-    document.addEventListener('input', ensureStyles);
-    document.addEventListener('click', ensureStyles);
-    
-    // Interval check for the "Refresh" bug
-    setInterval(ensureStyles, 500);
-})();
-</script>
-    <style>
-    /* This targets ONLY the ID we just created */
-    #client-name-field {
-        display: inline-block !important;
-        font-size: 32px !important; /* Large for Name */
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        min-width: 250px !important;
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-    }
-
-    /* This ensures DOL, SOL, and Case ID stay at their original small size */
-    #capture-area .flex div[contenteditable="true"]:not(#client-name-field) {
-        font-size: 11px !important; 
-        font-weight: 700 !important;
-        color: #1e293b !important;
-        min-width: auto !important;
-    }
-<style>
-    /* This rule is so specific it overrules almost any other CSS */
-    body #capture-area #client-name-field {
-        display: inline-block !important;
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        min-width: 300px !important; /* The physical "anti-shrink" barrier */
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-        visibility: visible !important;
-    }
-
-    /* Keeps DOL, SOL, and Case ID at their original small size */
-    #capture-area [contenteditable="true"]:not(#client-name-field) {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        min-width: auto !important;
-    }
-</style>
-
-<script>
-(function() {
-    const nameField = document.getElementById('client-name-field');
-    if (!nameField) return;
-
-    // THE SHIELD: This function forces the size and prevents the shrink
-    const protectName = () => {
-        // Set the size directly in the style attribute with !important
-        nameField.style.setProperty('font-size', '32px', 'important');
-        nameField.style.setProperty('display', 'inline-block', 'important');
-        nameField.style.setProperty('min-width', '300px', 'important');
-        
-        // Remove any smaller font-sizes injected by other scripts
-        if (nameField.style.fontSize !== '32px') {
-            nameField.style.fontSize = '32px';
-        }
-    };
-
-    // THE GUARD: This watches the name field for ANY changes made by other scripts
-    const guard = new MutationObserver((mutations) => {
-        mutations.forEach(() => {
-            // If any script touches the name field, instantly reset it
-            protectName();
-        });
-    });
-
-    // Start guarding the name field specifically
-    guard.observe(nameField, { attributes: true, attributeFilter: ['style', 'class'] });
-
-    // Run on load and every keystroke
-    window.addEventListener('load', protectName);
-    nameField.addEventListener('input', protectName);
-    
-    // High-frequency "Pulse" to ensure we win the race against other scripts
-    setInterval(protectName, 10);
-})();
-</script>
-    <script>
-(function() {
-    const applyLSHUpdates = () => {
-        // 1. HEADER CLEANUP: Remove SOL, DOL, and TYPE from the top dashboard
-        const dashboardElements = [
-            'lsh-integrated-bar', 
-            'injected-type-container'
-        ];
-        dashboardElements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-        });
-
-        // Search for the specific DOL/SOL group by text if the IDs aren't present
-        document.querySelectorAll('div, label').forEach(el => {
-            if (el.innerText.includes('DOL:') || el.innerText.includes('SOL:') || el.innerText === 'TYPE:') {
-                // Ensure we only target the ones in the header area
-                if (el.closest('.pdf-card:first-of-type') || el.closest('.flex-col.items-end')) {
-                    el.parentElement.style.display = 'none';
-                }
-            }
-        });
-
-        // 2. CASE REPOSITORY CLEANUP: Remove Type/MVA from the sidebar list
-        const repoList = document.getElementById('repo-list');
-        if (repoList) {
-            repoList.querySelectorAll('span').forEach(span => {
-                if (span.innerText.includes('MVA') || span.innerText.includes('TYPE')) {
-                    span.remove();
-                }
-            });
-        }
-
-        // 3. PROPERTY DAMAGE: Update Third Party Section
-        const pdPane = document.getElementById('pane-pd');
-        if (pdPane) {
-            // Find the Third Party Card (usually the second pdf-card in this pane)
-            const pdCards = pdPane.querySelectorAll('.pdf-card');
-            const thirdPartyCard = pdCards[1];
-
-            if (thirdPartyCard) {
-                // A. Replace "License Plate" with "Driver's Name"
-                thirdPartyCard.querySelectorAll('label').forEach(label => {
-                    if (label.innerText.includes("LICENSE PLATE")) {
-                        label.innerText = "DRIVER'S NAME";
-                    }
-                });
-
-                // B. Add Driver Information Section (if not already added)
-                if (!document.getElementById('tp-driver-info')) {
-                    const infoSection = document.createElement('div');
-                    infoSection.id = 'tp-driver-info';
-                    infoSection.className = "mt-4 pt-4 border-t border-slate-200 bg-slate-50 p-4 rounded-lg";
-                    infoSection.innerHTML = `
-                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Driver Information</h4>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Email Address</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Policy Information</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                        </div>
-                    `;
-                    // Append it to the bottom of the card
-                    thirdPartyCard.appendChild(infoSection);
-                }
-            }
-        }
-    };
-<script>
-<style>
-    /* 1. FORCE HEADER CLEANUP - These will never show, no matter what */
-    #lsh-integrated-bar, 
-    #injected-type-container, 
-    .flex.flex-col.gap-2.mr-4.pr-4.border-r,
-    .flex.flex-col.items-end div.flex.items-center.gap-3,
-    #um-pol-fix {
-        display: none !important;
-        height: 0 !important;
-        visibility: hidden !important;
-    }
-
-    /* 2. PREVENT NAME SHRINK - Lock the header font */
-    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        display: block !important;
-        text-transform: uppercase !important;
-    }
-    .pdf-card:first-of-type label:first-of-type { display: none !important; }
-
-    /* 3. REPOSITORY - Remove MVA/Phase labels */
-    #repo-list span { display: none !important; }
-
-    /* 4. PROPERTY DAMAGE - Ensure Labels are ALWAYS visible */
-    #pane-pd label {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        color: #94a3b8 !important;
-    }
-</style>
-
-<script>
-(function() {
-    const applyEverything = () => {
-        // --- PROPERTY DAMAGE LOGIC ---
-        const pdPane = document.getElementById('pane-pd');
-        if (pdPane) {
-            const cards = pdPane.querySelectorAll('.pdf-card');
-            const thirdPartyCard = cards[1]; // The second card
-
-            if (thirdPartyCard) {
-                // Change License Plate to Driver
-                thirdPartyCard.querySelectorAll('label').forEach(label => {
-                    if (label.innerText.includes("LICENSE PLATE")) {
-                        label.innerText = "DRIVER'S NAME";
-                    }
-                });
-
-                // Add Driver Details Block
-                if (!document.getElementById('tp-driver-final-lock')) {
-                    const block = document.createElement('div');
-                    block.id = 'tp-driver-final-lock';
-                    block.className = "mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg";
-                    block.innerHTML = `
-                        <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3">Third Party Driver Information</h4>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div><label>CONTACT NUMBER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label>EMAIL ADDRESS</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label>INSURANCE CARRIER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label>POLICY INFORMATION</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                        </div>`;
-                    thirdPartyCard.appendChild(block);
-                }
-            }
-        }
-    };
-
-    // This "Observer" watches the page for any changes and reapplies the fix instantly
-    const observer = new MutationObserver(() => {
-        applyEverything();
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Initial run
-    applyEverything();
+    // Stability interval to keep elements hidden and Name size locked
+    setInterval(applyLSHMasterLogic, 1000);
+    applyLSHMasterLogic();
 })();
 </script>
 </body>
 </html>
+   
