@@ -1562,48 +1562,47 @@
 })();
 </script>
     <style>
-    /* 1. We define the look here. This is much harder for other scripts to break. */
-    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        display: inline-block !important; /* Keeps it in line with other header items */
-        font-size: 32px !important;
+    /* This targets ONLY the ID we just created */
+    #client-name-field {
+        display: inline-block !important;
+        font-size: 32px !important; /* Large for Name */
         font-weight: 900 !important;
         color: #0f172a !important;
-        min-width: 200px !important; /* Prevents it from vanishing or shrinking to 0 */
+        min-width: 250px !important;
         text-transform: uppercase !important;
         line-height: 1 !important;
-        visibility: visible !important;
-        opacity: 1 !important;
+    }
+
+    /* This ensures DOL, SOL, and Case ID stay at their original small size */
+    #capture-area .flex div[contenteditable="true"]:not(#client-name-field) {
+        font-size: 11px !important; 
+        font-weight: 700 !important;
+        color: #1e293b !important;
+        min-width: auto !important;
     }
 </style>
 
 <script>
 (function() {
-    const lockNameField = () => {
-        // Target specifically the first editable in the first card
-        const el = document.querySelector('.pdf-card:first-of-type [contenteditable="true"]:first-of-type');
-        
-        if (el) {
-            // 2. We remove the 'style' attribute that your other scripts are writing to.
-            // This stops the 12px/20px shrinking without killing the element itself.
-            if (el.hasAttribute('style')) {
-                const currentStyle = el.getAttribute('style');
-                // Only wipe it if another script is trying to change the font size
-                if (currentStyle.includes('font-size') || currentStyle.includes('color')) {
-                    el.removeAttribute('style');
+    const lockSpecificName = () => {
+        const nameField = document.getElementById('client-name-field');
+        if (nameField) {
+            // Remove styles injected by competing scripts only on the name field
+            if (nameField.hasAttribute('style')) {
+                const s = nameField.getAttribute('style');
+                if (s.includes('font-size') || s.includes('color')) {
+                    nameField.removeAttribute('style');
                 }
             }
         }
     };
 
-    // Run very frequently to beat the "shrinking" intervals
-    setInterval(lockNameField, 30);
+    // Run frequently to keep the name large and stable
+    setInterval(lockSpecificName, 30);
 
-    // Ensure it stays visible during typing
+    // Keep the style locked while typing
     document.addEventListener('input', (e) => {
-        const nameField = document.querySelector('.pdf-card:first-of-type [contenteditable="true"]:first-of-type');
-        if (e.target === nameField) {
-            lockNameField();
-        }
+        if (e.target.id === 'client-name-field') lockSpecificName();
     });
 })();
 </script>
