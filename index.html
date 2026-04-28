@@ -258,6 +258,7 @@
                             <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                             <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                             <div><label>Address</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label>Driver's Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                         </div>
                     </div>
                 </div>
@@ -275,6 +276,7 @@
                             <div><label>Owner Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                             <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                             <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label>Driver's Name</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                         </div>
                     </div>
                 </div>
@@ -317,7 +319,6 @@
                     </table>
                 </div>
             </div>
-
             <div id="pane-treatment" class="tab-pane space-y-6">
                 <div class="flex justify-between items-center px-2 no-print"><h2 class="text-sm font-black uppercase text-slate-400 italic">Facility Summaries</h2><button onclick="addFacility()" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded font-bold uppercase">+ Add Facility</button></div>
                 <div id="facility-container" class="space-y-4">
@@ -330,8 +331,7 @@
                                 <option value="Surgery">Surgery</option>
                                 <option value="EMS">EMS</option>
                                 <option value="EMC">EMC</option>
-                                <option value="EMC">EMC</option>
-                                <option value="Others">EMC</option>
+                                <option value="Others">Others</option>
                             </select></div>
                             <div><label>Last Treatment Schedule</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div></div>
                             <div><label>Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div>
@@ -339,7 +339,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="pane-finance" class="tab-pane">
                  <div class="pdf-card border-l-8 border-orange-500">
                     <div class="flex justify-between items-center border-b pb-2 mb-4">
@@ -415,7 +414,6 @@
                     </table>
                 </div>
             </div>
-
             <div id="pane-tasks" class="tab-pane">
                  <div class="pdf-card border-l-8 border-orange-500">
                     <div class="flex justify-between items-center border-b pb-2 mb-6">
@@ -772,7 +770,7 @@
                 <div id="repo-list" class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                     </div>
                 <button onclick="saveToRepository()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
-                    💾 Archive Current State
+                    💾 Case Repository
                 </button>
             `;
             sidebar.appendChild(repoContainer);
@@ -788,7 +786,7 @@
             const currentData = {
                 id: Date.now(), // Unique ID for every single save
                 fileName: `${clientName} (${timestamp})`,
-                clientName: clientName,
+                cleanName = data.clientName.replace('id="client-name-field"', '');
                 timestamp: timestamp,
                 phase: document.getElementById('display-phase').innerText,
                 // Capture all content
@@ -1102,6 +1100,8 @@
                         <option value="Ortho">Ortho</option>
                         <option value="Surgery">Surgery</option>
                         <option value="EMS">EMS</option>
+                        <option value="EMC">EMC</option>
+                        <option value="Others">Others</option>
                         <option value="Physical Therapy">Physical Therapy</option>
                     </select>
                 </div>
