@@ -1561,64 +1561,65 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-    <script>
+    <style>
+    /* THE UNBREAKABLE CSS LOCK */
+    /* This targets the name field and freezes its layout so it cannot physically shrink */
+    #capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
+        display: block !important;
+        width: 100% !important;
+        min-width: 600px !important; /* Prevents the 'collapse' effect */
+        font-size: 32px !important; /* Locks the large size */
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        text-transform: uppercase !important;
+        line-height: 1 !important;
+        all: unset !important; /* Wipes the memory of all previous scripts */
+        display: block !important;
+        font-family: 'Inter', sans-serif !important;
+        cursor: text !important;
+        min-height: 40px !important;
+    }
+
+    /* Prevents the parent flex-box from squishing the name lane */
+    #capture-area .pdf-card:first-of-type div.flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        display: flex !important;
+    }
+    
+    /* Hides the "Client:" label permanently */
+    #capture-area .pdf-card:first-of-type label:first-of-type {
+        display: none !important;
+    }
+</style>
+
+<script>
 /**
- * LSH AUTHORITATIVE LAYOUT LOCK
- * This doesn't just change the style; it injects a new CSS rule that 
- * overrides every other script and prevents the "shrink-to-fit" behavior.
+ * THE CLEANER
+ * This script runs every 30ms to strip away any 'style' attributes 
+ * injected by your original scripts, forcing the CSS above to take over.
  */
 (function() {
-    // 1. Inject a Global CSS Rule that has higher priority than inline styles
-    const style = document.createElement('style');
-    style.innerHTML = `
-        /* We target the field by its position to ensure we only hit the Client Name */
-        #capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-            display: block !important;
-            width: 100% !important;
-            min-width: 600px !important; /* Force a wide base so it cannot shrink */
-            font-size: 32px !important;
-            font-weight: 900 !important;
-            color: #0f172a !important;
-            text-transform: uppercase !important;
-            line-height: 1 !important;
-            min-height: 40px !important;
-            overflow: hidden !important;
-            white-space: nowrap !important; /* Prevents text from jumping to next line while typing */
-        }
-
-        /* Force the container to stop trying to fit Name and Contact on one line */
-        #capture-area .pdf-card:first-of-type div.flex {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 5px !important;
-        }
-    `;
-    document.head.appendChild(style);
-
-    // 2. The JavaScript "Janitor"
-    // This runs every time you type to wipe out the "shrinking" styles 
-    // injected by your other scripts.
-    const cleanNameField = () => {
+    const cleanName = () => {
         const nameField = document.querySelector('#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type');
         if (nameField) {
-            // By stripping the 'style' attribute, we force the browser 
-            // to only look at the <style> block we injected above.
-            nameField.removeAttribute('style');
-            
-            // Hide the "Client:" label if it's still there
-            const label = nameField.previousElementSibling;
-            if (label && label.innerText.toUpperCase().includes("CLIENT")) {
-                label.style.display = "none";
+            // This is the key: we remove the 'style' attribute entirely.
+            // This kills the 12px or 20px font-size being forced by your other scripts.
+            if (nameField.hasAttribute('style')) {
+                nameField.removeAttribute('style');
             }
         }
     };
 
-    // Run on every single keystroke
-    document.addEventListener('input', cleanNameField);
-    // Run on page load
-    window.addEventListener('load', cleanNameField);
-    // Run frequently to ensure it stays locked
-    setInterval(cleanNameField, 100);
+    // Run extremely fast to "win" the race against the other scripts
+    setInterval(cleanName, 30);
+    
+    // Extra safety: ensure it runs on every keystroke
+    document.addEventListener('input', (e) => {
+        if (e.target.closest('.pdf-card:first-of-type')) {
+            cleanName();
+        }
+    });
 })();
 </script>
 </script>
