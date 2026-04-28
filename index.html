@@ -60,7 +60,7 @@
                     <div class="flex items-center gap-2">
                         <div class="flex items-baseline gap-6">
                             <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
-                            <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
+                            <div id="client-name-field" contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
                         </div>
                         <span class="text-slate-200 h-6 border-l"></span>
                         <div class="flex items-baseline gap-4">
@@ -1580,30 +1580,62 @@
         color: #1e293b !important;
         min-width: auto !important;
     }
+<style>
+    /* This rule is so specific it overrules almost any other CSS */
+    body #capture-area #client-name-field {
+        display: inline-block !important;
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        min-width: 300px !important; /* The physical "anti-shrink" barrier */
+        text-transform: uppercase !important;
+        line-height: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* Keeps DOL, SOL, and Case ID at their original small size */
+    #capture-area [contenteditable="true"]:not(#client-name-field) {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        min-width: auto !important;
+    }
 </style>
 
 <script>
 (function() {
-    const lockSpecificName = () => {
-        const nameField = document.getElementById('client-name-field');
-        if (nameField) {
-            // Remove styles injected by competing scripts only on the name field
-            if (nameField.hasAttribute('style')) {
-                const s = nameField.getAttribute('style');
-                if (s.includes('font-size') || s.includes('color')) {
-                    nameField.removeAttribute('style');
-                }
-            }
+    const nameField = document.getElementById('client-name-field');
+    if (!nameField) return;
+
+    // THE SHIELD: This function forces the size and prevents the shrink
+    const protectName = () => {
+        // Set the size directly in the style attribute with !important
+        nameField.style.setProperty('font-size', '32px', 'important');
+        nameField.style.setProperty('display', 'inline-block', 'important');
+        nameField.style.setProperty('min-width', '300px', 'important');
+        
+        // Remove any smaller font-sizes injected by other scripts
+        if (nameField.style.fontSize !== '32px') {
+            nameField.style.fontSize = '32px';
         }
     };
 
-    // Run frequently to keep the name large and stable
-    setInterval(lockSpecificName, 30);
-
-    // Keep the style locked while typing
-    document.addEventListener('input', (e) => {
-        if (e.target.id === 'client-name-field') lockSpecificName();
+    // THE GUARD: This watches the name field for ANY changes made by other scripts
+    const guard = new MutationObserver((mutations) => {
+        mutations.forEach(() => {
+            // If any script touches the name field, instantly reset it
+            protectName();
+        });
     });
+
+    // Start guarding the name field specifically
+    guard.observe(nameField, { attributes: true, attributeFilter: ['style', 'class'] });
+
+    // Run on load and every keystroke
+    window.addEventListener('load', protectName);
+    nameField.addEventListener('input', protectName);
+    
+    // High-frequency "Pulse" to ensure we win the race against other scripts
+    setInterval(protectName, 10);
 })();
 </script>
 </script>
