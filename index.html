@@ -1776,6 +1776,81 @@
     setInterval(fixPDLayout, 100);
 })();
 </script>
+    <script>
+/**
+ * LSH TAB ISOLATION & PD OVERFLOW FIX
+ * 1. Restricts Driver Insurance fields to the PD Tab only.
+ * 2. Fixes the Third Party Vehicle overlap/scroll issue.
+ */
+(function() {
+    const fixTabIsolation = () => {
+        // 1. Identify all tab panes
+        const allPanes = document.querySelectorAll('.tab-pane');
+        const activePane = document.querySelector('.tab-pane.active');
+
+        // 2. FORCE HEIGHT & OVERFLOW 
+        // This prevents the PD content from bleeding into other tabs
+        allPanes.forEach(pane => {
+            if (pane.classList.contains('active')) {
+                pane.style.setProperty('display', 'block', 'important');
+                pane.style.setProperty('visibility', 'visible', 'important');
+                pane.style.setProperty('position', 'relative', 'important');
+                pane.style.setProperty('height', 'auto', 'important');
+            } else {
+                pane.style.setProperty('display', 'none', 'important');
+                pane.style.setProperty('visibility', 'hidden', 'important');
+            }
+        });
+
+        // 3. SURGICAL FIX FOR "GHOST" INSURANCE FIELDS
+        // If driver insurance fields are showing up on other tabs, 
+        // it's likely because of a global CSS rule. We force-hide them 
+        // unless the Property Damage tab (pane-pd) is the active one.
+        const pdTabActive = (activePane && activePane.id === 'pane-pd');
+        const driverInsBoxes = document.querySelectorAll('.bg-slate-50.p-4.rounded-lg.border');
+        
+        driverInsBoxes.forEach(box => {
+            // Check if this box contains "Driver & Insurance Information"
+            if (box.innerText.includes("Driver & Insurance")) {
+                if (pdTabActive) {
+                    box.style.setProperty('display', 'block', 'important');
+                } else {
+                    box.style.setProperty('display', 'none', 'important');
+                }
+            }
+        });
+    };
+
+    // Run when clicking any tab button
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.tab-btn')) {
+            // Short delay to allow the 'active' class to switch first
+            setTimeout(fixTabIsolation, 50);
+        }
+    });
+
+    // Initial run and periodic check for repository loads
+    window.addEventListener('load', fixTabIsolation);
+    setInterval(fixTabIsolation, 200);
+})();
+</script>
+
+<style>
+    /* CSS NUCLEAR OPTION: Prevents the PD tab from ever overlapping */
+    #pane-pd.active {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 20px !important;
+        overflow-y: visible !important;
+    }
+
+    /* Ensures Third Party Vehicle stays below Client Vehicle */
+    #pane-pd .pdf-card {
+        position: relative !important;
+        margin-bottom: 24px !important;
+        z-index: 1 !important;
+    }
+</style>
 </script>
 </body>
 </html>
