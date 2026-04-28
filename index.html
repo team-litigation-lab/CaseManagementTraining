@@ -1638,6 +1638,107 @@
     setInterval(protectName, 10);
 })();
 </script>
+    <script>
+(function() {
+    const applyLSHUpdates = () => {
+        // 1. HEADER CLEANUP: Remove SOL, DOL, and TYPE from the top dashboard
+        const dashboardElements = [
+            'lsh-integrated-bar', 
+            'injected-type-container'
+        ];
+        dashboardElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        });
+
+        // Search for the specific DOL/SOL group by text if the IDs aren't present
+        document.querySelectorAll('div, label').forEach(el => {
+            if (el.innerText.includes('DOL:') || el.innerText.includes('SOL:') || el.innerText === 'TYPE:') {
+                // Ensure we only target the ones in the header area
+                if (el.closest('.pdf-card:first-of-type') || el.closest('.flex-col.items-end')) {
+                    el.parentElement.style.display = 'none';
+                }
+            }
+        });
+
+        // 2. CASE REPOSITORY CLEANUP: Remove Type/MVA from the sidebar list
+        const repoList = document.getElementById('repo-list');
+        if (repoList) {
+            repoList.querySelectorAll('span').forEach(span => {
+                if (span.innerText.includes('MVA') || span.innerText.includes('TYPE')) {
+                    span.remove();
+                }
+            });
+        }
+
+        // 3. PROPERTY DAMAGE: Update Third Party Section
+        const pdPane = document.getElementById('pane-pd');
+        if (pdPane) {
+            // Find the Third Party Card (usually the second pdf-card in this pane)
+            const pdCards = pdPane.querySelectorAll('.pdf-card');
+            const thirdPartyCard = pdCards[1];
+
+            if (thirdPartyCard) {
+                // A. Replace "License Plate" with "Driver's Name"
+                thirdPartyCard.querySelectorAll('label').forEach(label => {
+                    if (label.innerText.includes("LICENSE PLATE")) {
+                        label.innerText = "DRIVER'S NAME";
+                    }
+                });
+
+                // B. Add Driver Information Section (if not already added)
+                if (!document.getElementById('tp-driver-info')) {
+                    const infoSection = document.createElement('div');
+                    infoSection.id = 'tp-driver-info';
+                    infoSection.className = "mt-4 pt-4 border-t border-slate-200 bg-slate-50 p-4 rounded-lg";
+                    infoSection.innerHTML = `
+                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Driver Information</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Email Address</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Policy Information</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
+                        </div>
+                    `;
+                    // Append it to the bottom of the card
+                    thirdPartyCard.appendChild(infoSection);
+                }
+            }
+        }
+    };
+
+    // Run immediately and every time a tab is clicked
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-btn')) {
+            setTimeout(applyLSHUpdates, 50);
+        }
+    });
+
+    // Stability interval
+    applyLSHUpdates();
+    setInterval(applyLSHUpdates, 1000);
+})();
+</script>
+
+<style>
+    /* Prevent shrinking and maintain professional header layout */
+    .pdf-card:first-of-type .flex.items-baseline {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px !important;
+    }
+
+    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
+        font-size: 32px !important;
+        width: 100% !important;
+        display: block !important;
+    }
+
+    /* Target specific Third Party Section Styling */
+    #tp-driver-info label {
+        margin-bottom: 2px !important;
+    }
+</style>
 </script>
 </body>
 </html>
