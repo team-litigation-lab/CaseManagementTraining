@@ -60,7 +60,7 @@
                     <div class="flex items-center gap-2">
                         <div class="flex items-baseline gap-6">
                             <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
-                            <div id="client-name-field" contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
+                            <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
                         </div>
                         <span class="text-slate-200 h-6 border-l"></span>
                         <div class="flex items-baseline gap-4">
@@ -240,7 +240,7 @@
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Client Vehicle</h3>
                     <div class="grid md:grid-cols-3 gap-6 mb-8">
                         <div><label>Vehicle Y/M/M</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Driver's Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div><label>Condition</label><select onchange="toggleVehicleUI(this.value)" class="prof-input w-full border-orange-200"><option value="select">-- Select --</option><option value="repairable">Repairable</option><option value="totalled">Total Loss</option></select></div>
                         <div id="ui-repairable" class="hidden col-span-full grid md:grid-cols-3 gap-4 pt-4 border-t">
                             <div><label>Estimate Amount</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full border border-slate-100 rounded p-2">$ 0.00</div></div>
@@ -261,21 +261,12 @@
                         </div>
                     </div>
                 </div>
-</div>
 
-        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6">
-            <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Driver & Insurance Information</h4>
-            <div class="grid md:grid-cols-2 gap-4">
-                <div><label>Driver's Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-            </div>
-        </div>
-    </div>
                 <div class="pdf-card border-l-8 border-slate-400">
                     <h3 class="text-[11px] font-black uppercase text-slate-500 mb-6 border-b pb-2">Third Party Vehicle</h3>
                     <div class="grid md:grid-cols-3 gap-6 mb-8">
                         <div><label>Year / Make / Model</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
-                        <div><label>Driver's Name</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
+                        <div><label>License Plate</label><div contenteditable="true" class="text-base font-bold w-full border border-slate-100 rounded p-2"></div></div>
                         <div><label>Damages</label><div contenteditable="true" class="text-sm italic w-full min-h-[40px] border border-slate-100 rounded p-2 bg-slate-50"></div></div>
                     </div>
                     <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -286,7 +277,9 @@
                             <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
                         </div>
                     </div>
-                 </div>
+                </div>
+            </div>
+
             <div id="pane-litigation" class="tab-pane space-y-6">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="text-[11px] font-black uppercase text-orange-500 mb-6 border-b pb-2">Case Information</h3>
@@ -337,7 +330,6 @@
                                 <option value="Surgery">Surgery</option>
                                 <option value="EMS">EMS</option>
                                 <option value="EMC">EMC</option>
-                                <option value="Others">Others</option>
                             </select></div>
                             <div><label>Last Treatment Schedule</label><div contenteditable="true" class="text-base font-bold w-full p-2 border border-slate-100 rounded">MM/DD/YYYY</div></div>
                             <div><label>Charges</label><div contenteditable="true" class="text-base font-bold text-green-700 w-full p-2 border border-slate-100 rounded">$ 0.00</div></div>
@@ -960,35 +952,28 @@
 
     // 4. PASSENGER ADD LOGIC (Limited to 5)
     window.addPassengerRow = function() {
-    const container = document.getElementById('passenger-container');
-    if (!container) return;
-    if (container.children.length >= 5) {
-        alert("Maximum of 5 passengers allowed.");
-        return;
-    }
+        const container = document.getElementById('passenger-container');
+        if (!container) return;
+        if (container.children.length >= 5) {
+            alert("Maximum of 5 passengers allowed.");
+            return;
+        }
 
-    const div = document.createElement('div');
-    div.className = "pdf-card border-t-8 border-slate-200 bg-white relative p-4 mb-4 shadow-sm";
-    div.innerHTML = `
-        <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
-        <div class="grid lg:grid-cols-3 gap-4">
-            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Passenger Name</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-            <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
-            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-        </div>
-        
-        <div class="grid lg:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-50">
-            <div><label class="text-[9px] font-bold text-orange-500 uppercase">Insurance Carrier</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-            <div><label class="text-[9px] font-bold text-orange-500 uppercase">Policy / Claim #</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-        </div>
-
-        <div class="mt-4">
-            <label class="text-[9px] font-bold text-red-500 uppercase">Injuries Sustained</label>
-            <div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div>
-        </div>
-    `;
-    container.appendChild(div);
-};
+        const div = document.createElement('div');
+        div.className = "pdf-card border-t-8 border-slate-200 bg-white relative p-4 mb-4 shadow-sm";
+        div.innerHTML = `
+            <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
+            <div class="grid lg:grid-cols-3 gap-4">
+                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Passenger Name</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+                <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
+                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+            </div>
+            <div class="mt-4">
+                <label class="text-[9px] font-bold text-red-500 uppercase">Injuries Sustained</label>
+                <div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div>
+            </div>
+        `;
+        container.appendChild(div);
     };
 
     // Run fixes immediately and ensure persistence is untouched
@@ -1576,281 +1561,6 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-    <style>
-    /* This targets ONLY the ID we just created */
-    #client-name-field {
-        display: inline-block !important;
-        font-size: 32px !important; /* Large for Name */
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        min-width: 250px !important;
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-    }
-
-    /* This ensures DOL, SOL, and Case ID stay at their original small size */
-    #capture-area .flex div[contenteditable="true"]:not(#client-name-field) {
-        font-size: 11px !important; 
-        font-weight: 700 !important;
-        color: #1e293b !important;
-        min-width: auto !important;
-    }
-<style>
-    /* This rule is so specific it overrules almost any other CSS */
-    body #capture-area #client-name-field {
-        display: inline-block !important;
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        min-width: 300px !important; /* The physical "anti-shrink" barrier */
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-        visibility: visible !important;
-    }
-
-    /* Keeps DOL, SOL, and Case ID at their original small size */
-    #capture-area [contenteditable="true"]:not(#client-name-field) {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        min-width: auto !important;
-    }
-</style>
-
-<script>
-(function() {
-    const nameField = document.getElementById('client-name-field');
-    if (!nameField) return;
-
-    // THE SHIELD: This function forces the size and prevents the shrink
-    const protectName = () => {
-        // Set the size directly in the style attribute with !important
-        nameField.style.setProperty('font-size', '32px', 'important');
-        nameField.style.setProperty('display', 'inline-block', 'important');
-        nameField.style.setProperty('min-width', '300px', 'important');
-        
-        // Remove any smaller font-sizes injected by other scripts
-        if (nameField.style.fontSize !== '32px') {
-            nameField.style.fontSize = '32px';
-        }
-    };
-
-    // THE GUARD: This watches the name field for ANY changes made by other scripts
-    const guard = new MutationObserver((mutations) => {
-        mutations.forEach(() => {
-            // If any script touches the name field, instantly reset it
-            protectName();
-        });
-    });
-
-    // Start guarding the name field specifically
-    guard.observe(nameField, { attributes: true, attributeFilter: ['style', 'class'] });
-
-    // Run on load and every keystroke
-    window.addEventListener('load', protectName);
-    nameField.addEventListener('input', protectName);
-    
-    // High-frequency "Pulse" to ensure we win the race against other scripts
-    setInterval(protectName, 10);
-})();
-</script>
-    <script>
-/**
- * LSH HEADER CLEANUP
- * 1. Removes DOL/SOL rows
- * 2. Maintains the 32px non-shrinking Client Name
- */
-(function() {
-    const cleanHeader = () => {
-        // 1. REMOVE DOL/SOL
-        // We target the specific container that held the date fields
-        const dateContainers = document.querySelectorAll('#capture-area .flex.flex-col.gap-2.mr-4.pr-4.border-r.border-slate-100');
-        dateContainers.forEach(el => el.remove());
-
-        // 2. RE-LOCK THE NAME FIELD (Safety Check)
-        const nameField = document.getElementById('client-name-field');
-        if (nameField) {
-            nameField.style.setProperty('font-size', '32px', 'important');
-            nameField.style.setProperty('display', 'inline-block', 'important');
-            nameField.style.setProperty('min-width', '300px', 'important');
-            
-            // Clean up any inline styles from old scripts trying to shrink it
-            if (nameField.getAttribute('style').includes('font-size: 20px') || 
-                nameField.getAttribute('style').includes('font-size: 12px')) {
-                nameField.removeAttribute('style');
-                nameField.style.setProperty('font-size', '32px', 'important');
-            }
-        }
-    };
-
-    // Run immediately and every 50ms to ensure they stay gone 
-    // (even if other scripts try to re-inject them)
-    setInterval(cleanHeader, 50);
-    window.addEventListener('load', cleanHeader);
-})();
-</script>
-    <script>
-/**
- * LSH PASSENGER INSURANCE INJECTOR
- * Adds insurance fields to passengers without breaking the existing addPassengerRow function.
- */
-(function() {
-    const injectInsuranceFields = (container) => {
-        // Check if we already injected into this specific passenger card
-        if (container.querySelector('.ins-injected')) return;
-
-        const insDiv = document.createElement('div');
-        insDiv.className = "ins-injected grid lg:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100";
-        insDiv.innerHTML = `
-            <div><label class="text-[9px] font-bold text-orange-500 uppercase">Insurance Carrier</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-            <div><label class="text-[9px] font-bold text-orange-500 uppercase">Policy / Claim #</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-        `;
-
-        // Find the "Injuries Sustained" section to paste the insurance ABOVE it
-        const injurySection = container.querySelector('.mt-4');
-        if (injurySection) {
-            container.insertBefore(insDiv, injurySection);
-        } else {
-            container.appendChild(insDiv);
-        }
-    };
-
-    // The Observer: Watches the passenger container and adds the fields the second a new one appears
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-                if (node.nodeType === 1 && node.classList.contains('pdf-card')) {
-                    injectInsuranceFields(node);
-                }
-            });
-        });
-    });
-
-    const target = document.getElementById('passenger-container');
-    if (target) {
-        observer.observe(target, { childList: true });
-    }
-})();
-</script>
-        <script>
-/**
- * LSH PD TAB OVERLAP FIX
- * Prevents the Third Party Vehicle section from bleeding into other tabs.
- */
-(function() {
-    const fixPDLayout = () => {
-        const pdPane = document.getElementById('pane-pd');
-        if (!pdPane) return;
-
-        // 1. Ensure the PD Pane is a contained block that allows internal scrolling
-        pdPane.style.setProperty('display', pdPane.classList.contains('active') ? 'block' : 'none', 'important');
-        pdPane.style.setProperty('clear', 'both', 'important');
-        pdPane.style.setProperty('overflow', 'visible', 'important');
-        pdPane.style.setProperty('height', 'auto', 'important');
-
-        // 2. Fix the Third Party Vehicle Card spacing
-        const cards = pdPane.querySelectorAll('.pdf-card');
-        if (cards.length >= 2) {
-            const thirdPartyCard = cards[1];
-            thirdPartyCard.style.setProperty('margin-top', '24px', 'important');
-            thirdPartyCard.style.setProperty('position', 'relative', 'important');
-            thirdPartyCard.style.setProperty('z-index', '1', 'important');
-        }
-
-        // 3. Fix the global capture area to prevent height-truncation
-        const captureArea = document.getElementById('capture-area');
-        if (captureArea) {
-            captureArea.style.setProperty('display', 'block', 'important');
-            captureArea.style.setProperty('overflow-y', 'auto', 'important');
-        }
-    };
-
-    // Run on tab switches
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('tab-btn')) {
-            setTimeout(fixPDLayout, 10);
-        }
-    });
-
-    // Run on load and high-frequency to beat competing layout scripts
-    window.addEventListener('load', fixPDLayout);
-    setInterval(fixPDLayout, 100);
-})();
-</script>
-    <script>
-/**
- * LSH TAB ISOLATION & PD OVERFLOW FIX
- * 1. Restricts Driver Insurance fields to the PD Tab only.
- * 2. Fixes the Third Party Vehicle overlap/scroll issue.
- */
-(function() {
-    const fixTabIsolation = () => {
-        // 1. Identify all tab panes
-        const allPanes = document.querySelectorAll('.tab-pane');
-        const activePane = document.querySelector('.tab-pane.active');
-
-        // 2. FORCE HEIGHT & OVERFLOW 
-        // This prevents the PD content from bleeding into other tabs
-        allPanes.forEach(pane => {
-            if (pane.classList.contains('active')) {
-                pane.style.setProperty('display', 'block', 'important');
-                pane.style.setProperty('visibility', 'visible', 'important');
-                pane.style.setProperty('position', 'relative', 'important');
-                pane.style.setProperty('height', 'auto', 'important');
-            } else {
-                pane.style.setProperty('display', 'none', 'important');
-                pane.style.setProperty('visibility', 'hidden', 'important');
-            }
-        });
-
-        // 3. SURGICAL FIX FOR "GHOST" INSURANCE FIELDS
-        // If driver insurance fields are showing up on other tabs, 
-        // it's likely because of a global CSS rule. We force-hide them 
-        // unless the Property Damage tab (pane-pd) is the active one.
-        const pdTabActive = (activePane && activePane.id === 'pane-pd');
-        const driverInsBoxes = document.querySelectorAll('.bg-slate-50.p-4.rounded-lg.border');
-        
-        driverInsBoxes.forEach(box => {
-            // Check if this box contains "Driver & Insurance Information"
-            if (box.innerText.includes("Driver & Insurance")) {
-                if (pdTabActive) {
-                    box.style.setProperty('display', 'block', 'important');
-                } else {
-                    box.style.setProperty('display', 'none', 'important');
-                }
-            }
-        });
-    };
-
-    // Run when clicking any tab button
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.tab-btn')) {
-            // Short delay to allow the 'active' class to switch first
-            setTimeout(fixTabIsolation, 50);
-        }
-    });
-
-    // Initial run and periodic check for repository loads
-    window.addEventListener('load', fixTabIsolation);
-    setInterval(fixTabIsolation, 200);
-})();
-</script>
-
-<style>
-    /* CSS NUCLEAR OPTION: Prevents the PD tab from ever overlapping */
-    #pane-pd.active {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 20px !important;
-        overflow-y: visible !important;
-    }
-
-    /* Ensures Third Party Vehicle stays below Client Vehicle */
-    #pane-pd .pdf-card {
-        position: relative !important;
-        margin-bottom: 24px !important;
-        z-index: 1 !important;
-    }
-</style>
 </script>
 </body>
 </html>
