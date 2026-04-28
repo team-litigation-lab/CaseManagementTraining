@@ -1609,6 +1609,41 @@
     document.addEventListener('click', () => setTimeout(cleanHeader, 10));
 })();
 </script>
+    /* NUCLEAR LAYOUT LOCK */
+/* 1. Force Name and Contact to stack vertically without shrinking */
+.pdf-card:first-of-type .flex.justify-between.items-center:first-of-type {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 15px !important;
+}
+
+/* 2. Lock the Name area specifically */
+.pdf-card:first-of-type div.flex.items-center.gap-2:first-of-type {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+}
+
+/* 3. The Name: Massive and Slate Dark */
+.pdf-card:first-of-type [contenteditable="true"]:first-of-type {
+    font-size: 36px !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    text-transform: uppercase !important;
+    min-width: 400px !important; /* Prevents it from collapsing */
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* 4. The Contact: Professional Slate Gray */
+.pdf-card:first-of-type [contenteditable="true"]:nth-of-type(2) {
+    font-size: 16px !important;
+    color: #64748b !important;
+    font-weight: 600 !important;
+    margin-top: -5px !important;
+}
 </script>
 </body>
 </html>
