@@ -751,10 +751,10 @@
 (function() {
     const REPO_KEY = 'LSH_REPOSITORY';
 
+    // 1. Injects the UI with Export/Import buttons
     const injectRepoUI = () => {
         const sidebar = document.getElementById('sidebar-actions');
         if (!sidebar) return;
-
         const oldRepo = document.getElementById('repo-container');
         if (oldRepo) oldRepo.remove();
 
@@ -767,13 +767,18 @@
                 <span id="repo-count" class="text-[9px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">0</span>
             </div>
             <div id="repo-list" class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar"></div>
+            
             <button onclick="saveToRepository()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
                 💾 Save to Repository
             </button>
-            <div class="flex gap-2 mt-2">
-                <button onclick="exportRepository()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold py-1.5 rounded uppercase">Export</button>
-                <label class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-[9px] font-bold py-1.5 rounded uppercase text-center cursor-pointer">
-                    Import <input type="file" id="import-repo" class="hidden" onchange="importRepository(this)">
+            
+            <div class="grid grid-cols-2 gap-2 mt-2 no-print">
+                <button onclick="exportRepository()" class="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold py-2 rounded uppercase transition-all">
+                    Export Cases
+                </button>
+                <label class="bg-slate-700 hover:bg-slate-600 text-white text-[9px] font-bold py-2 rounded uppercase text-center cursor-pointer transition-all">
+                    Import File
+                    <input type="file" id="import-repo" class="hidden" onchange="importRepository(this)">
                 </label>
             </div>
         `;
@@ -781,14 +786,16 @@
         renderRepoList();
     };
 
+    // 2. Saves data and SANITIZES the name (Fixes the "TYPE" overlap bug)
     window.saveToRepository = function() {
         const nameEl = document.getElementById('client-name-field');
-        const clientName = nameEl ? nameEl.innerText.trim() : "New Client";
+        // We take innerText to strip the ID and the 32px font lock
+        const cleanClientName = nameEl ? nameEl.innerText.trim() : "New Client";
         const timestamp = new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         
         const currentData = {
             id: Date.now(),
-            clientName: clientName,
+            clientName: cleanClientName, // Clean text for the card
             timestamp: timestamp,
             phase: document.getElementById('display-phase').innerText,
             editables: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
@@ -808,9 +815,10 @@
         repo.unshift(currentData);
         localStorage.setItem(REPO_KEY, JSON.stringify(repo));
         renderRepoList();
-        alert("Case Archived to Repository.");
+        alert("Case archived. You can now 'Export' this file to share with others.");
     };
 
+    // 3. Renders the list with isolation styles
     window.renderRepoList = function() {
         const list = document.getElementById('repo-list');
         const countDisplay = document.getElementById('repo-count');
@@ -826,8 +834,8 @@
 
         list.innerHTML = repo.map(item => `
             <div onclick="loadFromRepo(${item.id})" class="repo-card group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all relative mb-2">
-                <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-1 right-2 text-slate-600 hover:text-red-500 text-lg font-bold">×</button>
-                <div class="repo-name text-[11px] font-black text-white uppercase truncate pr-4">${item.clientName}</div>
+                <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-1 right-2 text-slate-700 hover:text-red-500 text-lg font-bold">×</button>
+                <div class="repo-name text-white font-black uppercase truncate pr-4">${item.clientName}</div>
                 <div class="flex justify-between items-center mt-1">
                     <span class="text-[8px] text-orange-500 font-bold uppercase">${item.phase}</span>
                     <span class="text-[8px] text-slate-600">${item.timestamp}</span>
@@ -852,42 +860,69 @@
         data.editables.forEach((val, i) => { if(editables[i]) editables[i].innerHTML = val; });
         const selects = document.querySelectorAll('select');
         data.selects.forEach((val, i) => { if(selects[i]) selects[i].value = val; });
-        
-        alert("Case Loaded.");
+        alert("Case Loaded Successfully.");
     };
 
     window.deleteFromRepo = function(id, e) {
         e.stopPropagation();
         if(!confirm("Delete this case?")) return;
         let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-        repo = repo.filter(item => item.id !== id);
-        localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+        localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id)));
         renderRepoList();
     };
 
-    // Shared Export/Import Logic
+    // 4. SHARING LOGIC: Export as JSON file
     window.exportRepository = function() {
         const data = localStorage.getItem(REPO_KEY);
+        if (!data || data === '[]') return alert("Nothing to export.");
         const blob = new Blob([data], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `LSH_Backup_${new Date().toLocaleDateString()}.json`;
+        a.download = `LSH_Backup_${new Date().toISOString().slice(0,10)}.json`;
         a.click();
     };
 
+    // 5. SHARING LOGIC: Import JSON file from another user
     window.importRepository = function(input) {
+        const file = input.files[0];
+        if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(e) {
-            const imported = JSON.parse(e.target.result);
-            localStorage.setItem(REPO_KEY, JSON.stringify(imported));
-            renderRepoList();
-            alert("Repository Imported.");
+        reader.onload = (e) => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                localStorage.setItem(REPO_KEY, JSON.stringify(imported));
+                renderRepoList();
+                alert("Repository Imported. All shared cases are now visible.");
+            } catch (err) {
+                alert("Invalid file format.");
+            }
         };
-        reader.readAsText(input.files[0]);
+        reader.readAsText(file);
     };
 
     window.addEventListener('DOMContentLoaded', injectRepoUI);
 })();
+</script>
+
+<style>
+    /* CSS Fix for the Repository Card Visual Bug */
+    .repo-card .repo-name {
+        all: unset !important; /* Wipes out the 32px header lock influence */
+        display: block !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        color: white !important;
+        text-transform: uppercase !important;
+        line-height: 1.2 !important;
+        margin-bottom: 2px !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    /* Ensure the sidebar card doesn't expand from the hidden editable ID */
+    #repo-list [contenteditable="true"] {
+        display: none !important;
+    }
+</style>
 </script>
 
 <style>
