@@ -1708,125 +1708,84 @@
     };
 <script>
 <style>
-    /* 1. HEADER CLEANUP - Hides SOL, DOL, and Type Dropdown permanently */
+    /* 1. FORCE HEADER CLEANUP - These will never show, no matter what */
     #lsh-integrated-bar, 
-    #injected-type-container,
-    #injected-type-container,
-    .flex.flex-col.gap-2.mr-4.pr-4.border-r, 
-    [id*="um-pol-fix"], /* Removes policy fixes that might clutter header */
-    .flex.flex-col.items-end div.flex.items-center.gap-3 {
+    #injected-type-container, 
+    .flex.flex-col.gap-2.mr-4.pr-4.border-r,
+    .flex.flex-col.items-end div.flex.items-center.gap-3,
+    #um-pol-fix {
         display: none !important;
         height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: hidden !important;
+        visibility: hidden !important;
     }
 
-    /* 2. REPOSITORY CLEANUP - Strips MVA/Phase labels from sidebar cards */
-    #repo-list span { display: none !important; }
-    #repo-list .text-white { display: block !important; }
-    #repo-list .group { padding-bottom: 8px !important; }
-
-    /* 3. FONT & LAYOUT LOCK - Prevents Name Shrink and Layout Squeezing */
+    /* 2. PREVENT NAME SHRINK - Lock the header font */
     .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
         font-size: 32px !important;
         font-weight: 900 !important;
         color: #0f172a !important;
-        text-transform: uppercase !important;
         display: block !important;
-        width: 100% !important;
-        background: transparent !important;
-        border: none !important;
-        padding: 0 !important;
+        text-transform: uppercase !important;
     }
-    
-    /* Hide the "Client:" label specifically in the header to save space */
-    .pdf-card:first-of-type label:first-of-type { 
-        display: none !important; 
-    }
+    .pdf-card:first-of-type label:first-of-type { display: none !important; }
 
-    /* 4. PROPERTY DAMAGE RECOVERY - Ensures ALL labels are visible and clean */
+    /* 3. REPOSITORY - Remove MVA/Phase labels */
+    #repo-list span { display: none !important; }
+
+    /* 4. PROPERTY DAMAGE - Ensure Labels are ALWAYS visible */
     #pane-pd label {
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
         color: #94a3b8 !important;
-        font-size: 11px !important;
-        margin-bottom: 4px !important;
-    }
-
-    /* Ensure PD editable fields are clean */
-    #pane-pd [contenteditable="true"] {
-        width: 100% !important;
-        background: #f8fafc !important;
-        border: 1px solid #f1f5f9 !important;
     }
 </style>
 
 <script>
 (function() {
-    const applyCleanPatch = () => {
+    const applyEverything = () => {
+        // --- PROPERTY DAMAGE LOGIC ---
         const pdPane = document.getElementById('pane-pd');
-        if (!pdPane) return;
+        if (pdPane) {
+            const cards = pdPane.querySelectorAll('.pdf-card');
+            const thirdPartyCard = cards[1]; // The second card
 
-        const pdCards = pdPane.querySelectorAll('.pdf-card');
-        
-        // --- CLIENT VEHICLE (Card 1) ---
-        // Ensure standard fields are intact
-        if (pdCards[0]) {
-            // No changes needed here, just ensuring standard behavior
-        }
+            if (thirdPartyCard) {
+                // Change License Plate to Driver
+                thirdPartyCard.querySelectorAll('label').forEach(label => {
+                    if (label.innerText.includes("LICENSE PLATE")) {
+                        label.innerText = "DRIVER'S NAME";
+                    }
+                });
 
-        // --- THIRD PARTY VEHICLE (Card 2) ---
-        const thirdPartyCard = pdCards[1];
-        if (thirdPartyCard) {
-            // A. Replace License Plate with Driver's Name
-            thirdPartyCard.querySelectorAll('label').forEach(label => {
-                if (label.innerText.includes("LICENSE PLATE")) {
-                    label.innerText = "DRIVER'S NAME";
+                // Add Driver Details Block
+                if (!document.getElementById('tp-driver-final-lock')) {
+                    const block = document.createElement('div');
+                    block.id = 'tp-driver-final-lock';
+                    block.className = "mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg";
+                    block.innerHTML = `
+                        <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3">Third Party Driver Information</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div><label>CONTACT NUMBER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label>EMAIL ADDRESS</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label>INSURANCE CARRIER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label>POLICY INFORMATION</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                        </div>`;
+                    thirdPartyCard.appendChild(block);
                 }
-            });
-
-            // B. Add the Driver Information Section if missing
-            if (!document.getElementById('tp-driver-info-block')) {
-                const driverDiv = document.createElement('div');
-                driverDiv.id = 'tp-driver-info-block';
-                driverDiv.className = "mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg";
-                driverDiv.innerHTML = `
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3 tracking-widest">Third Party Driver Information</h4>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-bold text-slate-400">CONTACT NUMBER</label>
-                            <div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-bold text-slate-400">EMAIL ADDRESS</label>
-                            <div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-bold text-slate-400">INSURANCE CARRIER</label>
-                            <div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-bold text-slate-400">POLICY INFORMATION</label>
-                            <div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div>
-                        </div>
-                    </div>`;
-                thirdPartyCard.appendChild(driverDiv);
             }
         }
     };
 
-    // Run immediately
-    applyCleanPatch();
-    
-    // Add event listeners for tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => setTimeout(applyCleanPatch, 100));
+    // This "Observer" watches the page for any changes and reapplies the fix instantly
+    const observer = new MutationObserver(() => {
+        applyEverything();
     });
 
-    // Final safety interval to maintain the layout
-    setInterval(applyCleanPatch, 2000);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Initial run
+    applyEverything();
 })();
 </script>
 </body>
