@@ -1563,61 +1563,55 @@
 </script>
     <script>
 /**
- * LSH MASTER LAYOUT CONTROLLER
- * This script "mutes" the competing scripts and locks the Client Name 
- * to a professional, non-shrinking CMS style.
+ * LSH SURGICAL HEADER FIX
+ * Locks the name size without changing the flex-layout of the header.
  */
 (function() {
-    // 1. SURGICAL CSS LOCK
-    // This creates a CSS rule that is so specific, the other scripts' 
-    // inline styles (20px, 12px) will be ignored by the browser.
-    const style = document.createElement('style');
-    style.innerHTML = `
-        /* High-specificity selector to overrule everything else */
-        body #capture-area .pdf-card:first-of-type div[contenteditable="true"]:first-of-type {
-            all: unset !important; /* Resets the "Inline-Block" behavior causing the shrink */
-            display: block !important;
-            width: 100% !important;
-            min-width: 500px !important;
+    const NAME_SELECTOR = '.pdf-card:first-of-type [contenteditable="true"]:first-of-type';
+
+    const applySurgicalFix = () => {
+        const nameField = document.querySelector(NAME_SELECTOR);
+        if (!nameField) return;
+
+        // 1. THE STYLE LOCK
+        // We avoid 'display: block' here to prevent messing up the header alignment.
+        // Instead, we use 'inline-block' with a fixed HEIGHT and specific sizing.
+        nameField.style.cssText = `
             font-size: 32px !important;
             font-weight: 900 !important;
             color: #0f172a !important;
             text-transform: uppercase !important;
-            line-height: 1.1 !important;
-            font-family: 'Inter', sans-serif !important;
-            min-height: 40px !important;
+            line-height: 1 !important;
+            min-width: 250px !important; /* Prevents the 'width' from collapsing */
+            display: inline-block !important;
+            vertical-align: middle !important;
+            all: unset !important; /* Only resets styles for THIS element */
+            display: inline-block !important;
+            font-family: sans-serif !important;
             cursor: text !important;
-        }
+        `;
 
-        /* Prevent horizontal squishing with the contact info */
-        body #capture-area .pdf-card:first-of-type .flex {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-        }
-    `;
-    document.head.appendChild(style);
-
-    // 2. THE SCRIPT SILENCER
-    // This function runs every time you type to make sure no other script
-    // has snuck a "shrink" command onto the element.
-    const enforceStaticName = () => {
-        const nameField = document.querySelector('#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type');
-        if (nameField) {
-            // If another script added a 'style' attribute (like font-size: 12px), we wipe it.
-            if (nameField.hasAttribute('style')) {
-                nameField.removeAttribute('style');
-            }
-            // Ensure it stays a block (stops the shrinking)
-            nameField.style.display = 'block';
+        // 2. DISABLE COMPETING SCRIPTS
+        // This is the most important part. It detects if your other scripts
+        // (like patchNameOnly) try to change the font to 20px and blocks them.
+        if (!nameField.dataset.surgicalLock) {
+            const observer = new MutationObserver(() => {
+                if (nameField.style.fontSize !== '32px') {
+                    nameField.style.setProperty('font-size', '32px', 'important');
+                    nameField.style.setProperty('color', '#0f172a', 'important');
+                }
+            });
+            observer.observe(nameField, { attributes: true, attributeFilter: ['style'] });
+            nameField.dataset.surgicalLock = "true";
         }
     };
 
-    // Run 60 times a second to keep it perfectly stable
-    setInterval(enforceStaticName, 16);
-
-    // Run on typing
+    // Run every 50ms - fast enough to stop the flicker, slow enough not to lag.
+    setInterval(applySurgicalFix, 50);
+    
+    // Ensure it holds during typing
     document.addEventListener('input', (e) => {
-        if (e.target.closest('.pdf-card:first-of-type')) enforceStaticName();
+        if (e.target.matches(NAME_SELECTOR)) applySurgicalFix();
     });
 })();
 </script>
