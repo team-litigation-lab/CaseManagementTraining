@@ -12,7 +12,8 @@
         
         /* 1. HEADER LOCKS (36px Black) */
         #client-name-field { font-size: 36px !important; font-weight: 900 !important; color: #0f172a !important; text-transform: uppercase !important; line-height: 1 !important; outline: none !important; border: none !important; background: transparent !important; padding: 0 !important; min-width: 450px; }
-        .target-settlement-display { font-size: 32px !important; font-weight: 900 !important; color: #166534 !important; letter-spacing: -1px; }
+        .target-settlement-display { font-size: 24px !important; font-weight: 900 !important; color: #166534 !important; letter-spacing: -1px; background: #f0fdf4; padding: 4px 12px; border-radius: 8px; border: 1px solid #dcfce7; }
+        .sol-font-fix { color: #000000 !important; font-weight: 900 !important; }
 
         /* 2. BLACK DASHBOARD BAR */
         #lsh-integrated-bar { background: #0f172a !important; color: white !important; padding: 14px 20px !important; border-radius: 10px !important; margin: 20px 0 !important; display: flex !important; align-items: center !important; border-left: 6px solid #f97316 !important; }
@@ -26,21 +27,25 @@
         /* 4. CARDS & UI COMPONENTS */
         .pdf-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 20px; position: relative; }
         .header-card { border: 2px solid #f97316 !important; }
-        [contenteditable="true"] { outline: none; background: #f8fafc; border-radius: 4px; padding: 6px 10px; border: 1px solid #f1f5f9; }
+        [contenteditable="true"] { outline: none; background: #f8fafc; border-radius: 4px; padding: 6px 10px; border: 1px solid #f1f5f9; min-height: 35px; width: 100%; }
         [contenteditable="true"]:focus { background: #ffffff; border-color: #f97316; }
         label { font-size: 10px !important; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.05em; }
         
-        select.prof-input { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 4px; padding: 6px 10px; font-size: 14px; font-weight: 600; outline: none; width: 100%; }
+        select.prof-input { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 4px; padding: 8px 10px; font-size: 13px; font-weight: 700; outline: none; width: 100%; cursor: pointer; color: #0f172a; }
 
         .treat-table { width: 100%; border-collapse: collapse; }
         .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
-        .treat-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .treat-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
-        /* 5. REPOSITORY SYNC (Matches Screenshot Exactly) */
+        /* 5. HUB BUTTONS */
+        .hub-btn { background: #fffaf0; border: 1px solid #ffedd5; color: #9a3412; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 12px; border-radius: 8px; transition: all 0.2s; text-align: center; cursor: pointer; }
+        .hub-btn:hover { background: #f97316; color: white; border-color: #f97316; }
+
+        /* 6. REPOSITORY SYNC */
         .repo-card { background: #0f172a !important; border: 1px solid #1e293b !important; padding: 12px !important; border-radius: 10px !important; margin-bottom: 10px !important; cursor: pointer !important; position: relative !important; }
         .repo-card .repo-name { all: unset !important; font-size: 11px !important; font-weight: 900 !important; color: white !important; text-transform: uppercase !important; display: block !important; margin-bottom: 6px !important; font-family: 'Inter', sans-serif !important; }
         .repo-type-box { background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px !important; padding: 8px 12px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; margin-bottom: 8px !important; }
-        .repo-type-label { font-size: 10px !important; font-weight: 900 !important; color: #f97316 !important; font-style: italic !important; margin-right: 8px !important; }
+        .repo-type-label { font-size: 10px !important; font-weight: 900 !important; color: #f97316 !important; font-style: italic !important; }
         .repo-type-value { font-size: 12px !important; font-weight: 800 !important; color: #60a5fa !important; }
         .repo-info { display: flex !important; justify-content: space-between !important; align-items: center !important; }
         .repo-phase-text { font-size: 9px !important; font-weight: 900 !important; color: #f97316 !important; text-transform: uppercase !important; }
@@ -55,20 +60,14 @@
 
     <aside class="w-72 bg-[#05070a] text-white flex flex-col no-print shrink-0 border-r border-slate-900">
         <div class="p-8 border-b border-slate-900">
-            <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">
-                Legal Support Help<br><span class="text-orange-500">Training Interface</span>
-            </h1>
+            <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">Legal Support Help<br><span class="text-orange-500">Training Interface</span></h1>
         </div>
-        
         <div class="p-6 flex-1 overflow-y-auto custom-scrollbar" id="sidebar-actions">
-            <button onclick="downloadPDF()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download PDF</button>
+            <button onclick="downloadPDF()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4 transition-all">Download PDF</button>
             <button onclick="if(confirm('Reset current progress?')) window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Reset Screen</button>
-            
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Case Repository</p>
             <div id="repo-list" class="space-y-2"></div>
-            
             <button onclick="saveCase()" class="w-full mt-4 bg-[#10b981] hover:bg-emerald-700 text-white py-2.5 rounded-lg font-black text-[10px] uppercase shadow-lg transition-all">💾 Archive Case</button>
-            
             <div class="grid grid-cols-2 gap-2 mt-2">
                 <button onclick="exportRepo()" class="bg-[#2563eb] text-white text-[9px] font-black py-2 rounded uppercase">Export</button>
                 <label class="bg-[#374151] text-white text-[9px] font-black py-2 rounded uppercase text-center cursor-pointer">Import<input type="file" onchange="importRepo(this)" class="hidden"></label>
@@ -78,7 +77,7 @@
 
     <main class="flex-1 flex flex-col overflow-hidden">
         <header class="h-10 bg-white border-b flex items-center justify-end px-8 no-print shrink-0">
-            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Training System | Full Enterprise Edition</span>
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Welcome to LSH</span>
         </header>
 
         <div class="flex-1 overflow-y-auto p-8 custom-scrollbar" id="capture-area">
@@ -89,27 +88,19 @@
                         <div id="client-name-field" contenteditable="true">CLIENT'S NAME</div>
                         <div class="flex items-center gap-4">
                             <div class="flex items-center gap-2"><label class="mb-0">Contact:</label><div contenteditable="true" style="min-width:120px" class="text-xs font-bold text-slate-700">(000) 000-0000</div></div>
-                            <div class="flex items-center gap-2"><label class="mb-0 text-green-600">Target Settlement:</label><div contenteditable="true" style="min-width:100px" class="text-lg font-black text-green-700 tracking-tight">$ 0.00</div></div>
+                            <div class="flex items-center gap-2"><label class="mb-0 text-green-600">Target Settlement:</label><div contenteditable="true" class="target-settlement-display">$ 0.00</div></div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="flex items-center gap-3 mb-2 justify-end">
-                            <label class="mb-0">Case ID:</label>
-                            <div contenteditable="true" class="text-xs font-bold text-slate-500 min-w-[100px] bg-slate-100 px-2 py-0.5 rounded">BATCH-2026-X</div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[10px] font-black uppercase px-2 py-0.5 rounded border border-orange-100 outline-none cursor-pointer">
-                                <option>Intake</option><option>Demand Review</option><option>Settlement</option>
-                            </select>
-                            <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic tracking-tighter">INTAKE</div>
-                        </div>
+                        <div class="flex items-center gap-3 mb-2 justify-end"><label class="mb-0">Case ID:</label><div contenteditable="true" class="text-xs font-bold text-slate-500 min-w-[100px] bg-slate-100 px-2 py-0.5 rounded">BATCH-2026-X</div></div>
+                        <div class="flex items-center gap-2"><select onchange="updatePhase(this.value)" class="bg-orange-50 text-orange-700 text-[10px] font-black uppercase px-2 py-0.5 rounded border border-orange-100 outline-none cursor-pointer"><option>Intake</option><option>Demand Review</option><option>Settlement</option></select><div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic tracking-tighter">INTAKE</div></div>
                     </div>
                 </div>
 
                 <div id="lsh-integrated-bar">
                     <div class="flex gap-4">
-                        <div class="bg-white rounded px-4 py-1.5 flex items-center shadow-inner"><label class="mb-0 mr-2 text-[8px] text-slate-400 font-black">Date of Loss</label><div contenteditable="true" class="text-slate-900 font-black text-[12px] min-w-[80px]">MM/DD/YYYY</div></div>
-                        <div class="bg-[#f87171] rounded px-4 py-1.5 flex items-center shadow-inner"><label class="mb-0 mr-2 text-[8px] text-white font-black">Statute (SOL)</label><div contenteditable="true" class="text-white font-black text-[12px] min-w-[80px]">MM/DD/YYYY</div></div>
+                        <div class="bg-white rounded px-4 py-1.5 flex items-center shadow-inner"><label class="mb-0 mr-2 text-[8px] text-slate-400 font-black">DATE OF LOSS</label><div contenteditable="true" class="text-slate-900 font-black text-[12px] min-w-[80px]">MM/DD/YYYY</div></div>
+                        <div class="bg-[#f87171] rounded px-4 py-1.5 flex items-center shadow-inner"><label class="mb-0 mr-2 text-[8px] text-white font-black">STATUTE (SOL)</label><div contenteditable="true" class="sol-font-fix text-[12px] min-w-[80px]">MM/DD/YYYY</div></div>
                     </div>
                     <div class="ml-auto flex items-center gap-3">
                         <span class="text-[10px] font-black text-orange-500 italic">TYPE:</span>
@@ -136,79 +127,108 @@
             <div id="pane-profile" class="tab-pane active">
                 <div class="grid grid-cols-3 gap-6">
                     <div class="space-y-6">
-                        <div class="pdf-card"><h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Client Identity</h3>
+                        <div class="pdf-card shadow-sm"><h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Client Identity</h3>
                             <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true"></div></div><div><label>SSN</label><div contenteditable="true"></div></div></div>
                             <div class="mb-4"><label>Email</label><div contenteditable="true"></div></div><div><label>Address</label><div contenteditable="true"></div></div>
                         </div>
-                        <div class="pdf-card shadow-sm border-l-4 border-orange-400"><h3 class="text-[10px] font-black text-orange-400 uppercase mb-4 border-b pb-2">Emergency Contact</h3>
-                            <div class="mb-4"><label>Full Name</label><div contenteditable="true"></div></div>
-                            <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true"></div></div><div><label>Relationship</label><div contenteditable="true"></div></div></div>
-                        </div>
                     </div>
                     <div class="space-y-6">
-                        <div class="pdf-card"><h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Employment</h3>
+                        <div class="pdf-card shadow-sm"><h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Employment</h3>
                             <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option></select></div>
-                            <div class="mb-4"><label>Employer/Company</label><div contenteditable="true"></div></div><div><label>Job Title</label><div contenteditable="true"></div></div>
-                        </div>
-                        <div class="pdf-card shadow-sm border-l-4 border-orange-400"><h3 class="text-[10px] font-black text-orange-400 uppercase mb-4 border-b pb-2">Legal Team</h3>
-                            <div class="mb-4"><label>Lead Attorney</label><div contenteditable="true"></div></div><div><label>Case Manager</label><div contenteditable="true"></div></div>
+                            <div class="mb-4"><label>Employer</label><div contenteditable="true"></div></div>
                         </div>
                     </div>
-                    <div class="pdf-card"><h3 class="text-[10px] font-black text-orange-500 uppercase mb-4 border-b pb-2">Case Narrative</h3>
-                        <div contenteditable="true" class="min-h-[440px] text-sm italic">Type case narrative here...</div>
-                    </div>
+                    <div class="pdf-card shadow-sm"><h3 class="text-[10px] font-black text-orange-500 uppercase mb-4 border-b pb-2">Case Narrative</h3><div contenteditable="true" class="min-h-[250px] text-sm italic">Type case overview...</div></div>
                 </div>
-                <div class="pdf-card border-l-8 border-red-500 mt-6"><label class="text-red-600">Injuries Sustained (Primary)</label>
-                    <div contenteditable="true" class="min-h-[60px] text-sm font-bold"></div>
+                <div class="mt-4">
+                    <div class="flex justify-between items-center mb-2"><label class="text-orange-600 font-black">Passenger Records</label><button onclick="addPassenger()" class="bg-[#0f172a] text-white text-[9px] px-3 py-1 rounded no-print hover:bg-orange-600 transition-all">+ ADD PASSENGER</button></div>
+                    <div id="passenger-container" class="space-y-4"></div>
                 </div>
-                <div class="mt-4"><div class="flex justify-between items-center mb-2"><label>Passenger Records</label><button onclick="addPassenger()" class="bg-slate-900 text-white text-[9px] px-3 py-1 rounded no-print">+ ADD PASSENGER</button></div><div id="passenger-container" class="space-y-2"></div></div>
-            </div>
-
-            <div id="pane-police" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="font-black uppercase text-orange-500 text-[11px] mb-6">Accident Reporting</h3>
-                    <div class="grid grid-cols-2 gap-12 mb-8">
-                        <div><label>Police Arrived?</label><select class="prof-input"><option>No</option><option>Yes</option></select></div>
-                        <div><label>Report Number</label><div contenteditable="true"></div></div>
-                    </div>
-                    <label>Accident Narrative</label><div contenteditable="true" class="min-h-[400px] bg-slate-50 p-4 rounded text-sm italic"></div>
-                </div>
-            </div>
-
-            <div id="pane-matrix" class="tab-pane">
-                <div class="space-y-6">
-                    <div class="pdf-card border-l-4 border-orange-500"><h3 class="font-black text-orange-500 uppercase text-[11px] mb-4">Health Insurance</h3><div class="grid grid-cols-2 gap-6"><div><label>Carrier</label><div contenteditable="true"></div></div><div><label>Member ID</label><div contenteditable="true"></div></div></div></div>
-                    <div class="pdf-card border-l-4 border-orange-500"><h3 class="font-black text-orange-500 uppercase text-[11px] mb-4">Bodily Injury (BI)</h3><div class="grid grid-cols-4 gap-4"><div><label>Policy Holder</label><div contenteditable="true"></div></div><div><label>Carrier</label><div contenteditable="true"></div></div><div><label>Policy #</label><div contenteditable="true"></div></div><div><label>Claim #</label><div contenteditable="true"></div></div></div></div>
-                </div>
-            </div>
-
-            <div id="pane-medical" class="tab-pane">
-                <div class="flex justify-between items-center mb-2"><h3 class="font-black text-slate-400 uppercase text-[11px]">Facility Summaries</h3><button onclick="addFacility()" class="bg-orange-600 text-white text-[10px] px-3 py-1 rounded no-print">+ ADD FACILITY</button></div>
-                <div id="facility-container" class="space-y-2"></div>
-                <div class="pdf-card bg-green-50 mt-6 border-l-8 border-green-600 flex justify-between items-center"><span class="font-black text-green-700 uppercase">Total Medical Specials</span><span id="med-total" class="text-3xl font-black text-green-800">$ 0.00</span></div>
             </div>
 
             <div id="pane-pd" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div class="p-4 border rounded"><label>Client Vehicle Driver</label><div contenteditable="true" class="text-lg font-bold">John Doe</div></div>
-                        <div class="p-4 border rounded"><label>Third Party Operator</label><div contenteditable="true" class="text-lg font-bold">Apex Delivery Services</div></div>
+                <div class="pdf-card border-l-8 border-orange-500 mb-6">
+                    <h3 class="font-black text-orange-500 text-[11px] mb-4 uppercase">Client Vehicle</h3>
+                    <div class="grid grid-cols-4 gap-4 mb-6">
+                        <div><label>Year</label><div contenteditable="true"></div></div>
+                        <div><label>Make</label><div contenteditable="true"></div></div>
+                        <div><label>Model</label><div contenteditable="true"></div></div>
+                        <div><label>Condition</label><select class="prof-input"><option>Repairable</option><option>Total Loss</option></select></div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div><label>Owner Name</label><div contenteditable="true"></div></div>
+                            <div><label>Contact Number</label><div contenteditable="true"></div></div>
+                            <div><label>Driver's Name</label><div contenteditable="true"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pdf-card border-l-8 border-slate-400">
+                    <h3 class="font-black text-slate-400 text-[11px] mb-4 uppercase">Third Party Vehicle</h3>
+                    <div class="grid grid-cols-4 gap-4 mb-6">
+                        <div><label>Year</label><div contenteditable="true"></div></div>
+                        <div><label>Make</label><div contenteditable="true"></div></div>
+                        <div><label>Model</label><div contenteditable="true"></div></div>
+                        <div><label>Damages</label><div contenteditable="true"></div></div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div><label>Owner Name</label><div contenteditable="true"></div></div>
+                            <div><label>Contact Number</label><div contenteditable="true"></div></div>
+                            <div><label>Insurance Carrier</label><div contenteditable="true"></div></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div id="pane-litigation" class="tab-pane"><div class="pdf-card border-l-8 border-red-600"><h3>Litigation Tracker</h3><table id="lit-body" class="treat-table"></table><button onclick="addRow('lit-body')" class="mt-4 bg-[#0f172a] text-white text-[10px] px-4 py-2 rounded no-print">+ ADD TASK</button></div></div>
-            <div id="pane-finance" class="tab-pane"><div class="pdf-card"><h3>Finance</h3><table id="fin-body" class="treat-table"></table><button onclick="addRow('fin-body')" class="mt-4 bg-blue-600 text-white text-[10px] px-4 py-2 rounded no-print">+ ADD ROW</button></div></div>
-            <div id="pane-docs" class="tab-pane"><div class="pdf-card border-l-8 border-slate-900"><h3 class="font-black text-slate-400 uppercase text-[11px] mb-4">Quick Upload Portal</h3><div class="grid grid-cols-5 gap-3 mb-4"><button class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 rounded font-bold uppercase">Police Report</button><button class="bg-orange-50 border border-orange-200 text-orange-700 text-[10px] py-2 rounded font-bold uppercase">Medical Records</button></div><label>File Index</label><div contenteditable="true" class="min-h-[200px]"></div></div></div>
-            <div id="pane-notes" class="tab-pane"><div class="pdf-card"><label>Internal Chronology</label><div contenteditable="true" class="min-h-[500px]"></div></div></div>
-            <div id="pane-tasks" class="tab-pane"><div class="pdf-card"><h3>Pending Items</h3><table id="task-body" class="treat-table"></table><button onclick="addRow('task-body')" class="mt-4 bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print">+ NEW TASK</button></div></div>
+            <div id="pane-finance" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-4"><h3 class="font-black text-orange-500 uppercase text-[11px]">Expenses</h3><button onclick="addRow('fin-body')" class="bg-slate-950 text-white text-[10px] px-3 py-1 rounded no-print">+ ADD ENTRY</button></div>
+                    <table class="treat-table"><thead><tr><th width="150">Date</th><th width="200">Assigned To</th><th>Expense ID / Description</th><th width="150">Amount</th><th width="40"></th></tr></thead><tbody id="fin-body"></tbody></table>
+                </div>
+                <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center"><span class="font-black text-blue-700 uppercase">Total Expenses</span><span id="exp-total" class="text-xl font-black text-blue-700">$ 0.00</span></div>
+            </div>
+
+            <div id="pane-docs" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <h3 class="font-black text-orange-500 uppercase text-[11px] mb-4">Quick Upload Portal</h3>
+                    <div class="grid grid-cols-4 lg:grid-cols-7 gap-2 mb-6 no-print">
+                        <button onclick="addDocument('Medical Records')" class="hub-btn">Medical Records</button>
+                        <button onclick="addDocument('Police Report')" class="hub-btn">Police Report</button>
+                        <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
+                        <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
+                        <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
+                        <button onclick="addDocument('Property Damage')" class="hub-btn">Property Damage</button>
+                        <button onclick="addDocument('Others')" class="hub-btn">Others</button>
+                    </div>
+                    <table class="treat-table"><tbody id="doc-body"></tbody></table>
+                </div>
+            </div>
+
+            <div id="pane-notes" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-4"><h3>Notes</h3><button onclick="addRow('note-body')" class="bg-slate-950 text-white text-[10px] px-3 py-1 rounded no-print">+ ADD NOTE</button></div>
+                    <table class="treat-table"><thead><tr><th width="150">Date</th><th width="200">Assigned To</th><th>Content</th><th width="40"></th></tr></thead><tbody id="note-body"></tbody></table>
+                </div>
+            </div>
+
+            <div id="pane-tasks" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-4"><h3>Tasks</h3><button onclick="addRow('task-body')" class="bg-orange-600 text-white text-[10px] px-3 py-1 rounded no-print">+ ADD TASK</button></div>
+                    <table class="treat-table"><thead><tr><th width="150">Date</th><th>Task</th><th width="200">Assigned To</th><th width="40"></th></tr></thead><tbody id="task-body"></tbody></table>
+                </div>
+            </div>
+
+            <div id="pane-medical" class="tab-pane"><div class="flex justify-between items-center mb-2"><h3>Treatment</h3><button onclick="addFacility()" class="bg-orange-500 text-white text-[10px] px-3 py-1 rounded no-print">+ ADD FACILITY</button></div><div id="facility-container"></div><div class="pdf-card bg-green-50 mt-6 flex justify-between items-center"><span class="font-black uppercase">Total Specials</span><span id="med-total" class="text-3xl font-black text-green-800">$ 0.00</span></div></div>
+            <div id="pane-police" class="tab-pane"><div class="pdf-card border-l-8 border-orange-500"><label>Police Narrative</label><div contenteditable="true" class="min-h-[400px]"></div></div></div>
+            <div id="pane-matrix" class="tab-pane"><div class="pdf-card border-l-4 border-orange-500"><h3>Bodily Injury (BI)</h3><div class="grid grid-cols-4 gap-4 mb-4"><div><label>Carrier</label><div contenteditable="true"></div></div><div><label>Policy #</label><div contenteditable="true"></div></div><div><label>Adjuster</label><div contenteditable="true"></div></div><div><label>Limits</label><div contenteditable="true"></div></div></div><button onclick="addUM()" class="bg-[#f97316] text-white text-[9px] px-3 py-1 rounded no-print">+ ADD PIP/UM</button><div id="um-container" class="mt-4"></div></div></div>
+            <div id="pane-litigation" class="tab-pane"><div class="pdf-card border-l-8 border-orange-500"><h3>Litigation</h3><table id="lit-body" class="treat-table w-full"></table><button onclick="addRow('lit-body')" class="mt-4 bg-[#0f172a] text-white text-[10px] px-4 py-2 rounded no-print">+ ADD TASK</button></div></div>
 
         </div>
     </main>
 
     <script>
-        const REPO_KEY = 'LSH_UNIFIED_MASTER_PRO_V2026';
-
+        const REPO_KEY = 'LSH_PRO_CONSOLIDATED_2026_V2';
         function showTab(id) {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
@@ -216,33 +236,41 @@
             document.getElementById('tab-' + id).classList.add('active-tab');
         }
 
+        const staffOptions = `<option>Case Manager</option><option>Lead Attorney</option><option>Legal Assistant</option><option>Intake Specialist</option>`;
+
         function addPassenger() {
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-4";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button><div class="grid grid-cols-3 gap-4"><div><label>Name</label><div contenteditable="true"></div></div><div><label>DOB</label><div contenteditable="true"></div></div><div><label>Injury</label><div contenteditable="true"></div></div></div>`;
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-4 mb-2";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-4">
+                    <div><label>Name</label><div contenteditable="true"></div></div>
+                    <div><label>DOB</label><div contenteditable="true"></div></div>
+                    <div><label>Contact Info</label><div contenteditable="true"></div></div>
+                    <div><label>Injury</label><div contenteditable="true"></div></div>
+                </div>`;
             document.getElementById('passenger-container').appendChild(div);
         }
 
-        function addFacility() {
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-4 mb-2";
-            div.innerHTML = `<button onclick="this.parentElement.remove(); updateTotals();" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
-                <div class="grid grid-cols-4 gap-6">
-                    <div><label>Facility Name</label><div contenteditable="true"></div></div>
-                    <div><label>Specialty</label><select class="prof-input"><option>Chiro</option><option>Ortho</option></select></div>
-                    <div><label>Last Treatment</label><div contenteditable="true"></div></div>
-                    <div><label>Charges</label><div contenteditable="true" class="med-field font-black text-green-700">$ 0.00</div></div>
-                </div>`;
-            document.getElementById('facility-container').appendChild(div);
+        function addDocument(label) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><div class="bg-slate-100 p-2 rounded text-[10px] font-black text-slate-800 uppercase border border-slate-200 text-center">${label}</div></td><td><div contenteditable="true" class="text-xs">File details...</div></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
+            document.getElementById('doc-body').appendChild(tr);
         }
 
         function addRow(id) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><div contenteditable="true"></div></td><td><div contenteditable="true"></div></td><td><div contenteditable="true" class="font-black">$ 0.00</div></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 no-print">×</button></td>`;
+            const today = new Date().toLocaleDateString();
+            if(id === 'task-body') tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold">${today}</div></td><td><div contenteditable="true" class="text-xs">...</div></td><td><select class="prof-input py-1 text-xs">${staffOptions}</select></td><td><button onclick="this.parentElement.parentElement.remove()">×</button></td>`;
+            else if(id === 'note-body') tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold">${today}</div></td><td><select class="prof-input py-1 text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs min-h-[40px]">...</div></td><td><button onclick="this.parentElement.parentElement.remove()">×</button></td>`;
+            else if(id === 'fin-body') tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold">${today}</div></td><td><select class="prof-input py-1 text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs">ID/Desc</div></td><td><div contenteditable="true" class="font-black exp-field text-xs">$ 0.00</div></td><td><button onclick="this.parentElement.parentElement.remove(); updateTotals();">×</button></td>`;
+            else tr.innerHTML = `<td><select class="prof-input py-1 text-xs"><option>Interrogatories</option></select></td><td><select class="prof-input py-1 text-xs"><option>Defendant</option></select></td><td><div contenteditable="true" class="text-xs sol-font-fix">MM/DD/YYYY</div></td><td><select class="prof-input py-1 text-xs"><option>Pending</option></select></td><td><button onclick="this.parentElement.parentElement.remove()">×</button></td>`;
             document.getElementById(id).appendChild(tr);
         }
 
         function updateTotals() {
-            let total = 0; document.querySelectorAll('.med-field').forEach(el => total += parseFloat(el.innerText.replace(/[$,\s]/g, '')) || 0);
-            document.getElementById('med-total').innerText = '$ ' + total.toLocaleString(undefined, {minimumFractionDigits: 2});
+            let med = 0; document.querySelectorAll('.med-field').forEach(el => med += parseFloat(el.innerText.replace(/[$,\s]/g, '')) || 0);
+            document.getElementById('med-total').innerText = '$ ' + med.toLocaleString(undefined, {minimumFractionDigits: 2});
+            let exp = 0; document.querySelectorAll('.exp-field').forEach(el => exp += parseFloat(el.innerText.replace(/[$,\s]/g, '')) || 0);
+            if(document.getElementById('exp-total')) document.getElementById('exp-total').innerText = '$ ' + exp.toLocaleString(undefined, {minimumFractionDigits: 2});
         }
         setInterval(updateTotals, 1000);
 
@@ -250,47 +278,30 @@
             const name = document.getElementById('client-name-field').innerText.split('\n')[0].trim();
             const data = {
                 id: Date.now(), name: name, phase: document.getElementById('case-type-select').value,
-                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', month:'short', day:'numeric'}),
-                html: { pass: document.getElementById('passenger-container').innerHTML, facs: document.getElementById('facility-container').innerHTML, fin: document.getElementById('fin-body').innerHTML, lit: document.getElementById('lit-body').innerHTML, tasks: document.getElementById('task-body').innerHTML },
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                html: { pass: document.getElementById('passenger-container').innerHTML, facs: document.getElementById('facility-container').innerHTML, fin: document.getElementById('fin-body').innerHTML, um: document.getElementById('um-container').innerHTML, docs: document.getElementById('doc-body').innerHTML, notes: document.getElementById('note-body').innerHTML, tasks: document.getElementById('task-body').innerHTML, lit: document.getElementById('lit-body').innerHTML },
                 inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML), sels: Array.from(document.querySelectorAll('select')).map(el => el.value)
             };
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); repo.unshift(data); localStorage.setItem(REPO_KEY, JSON.stringify(repo)); renderRepo();
         }
-
         function renderRepo() {
-            const list = document.getElementById('repo-list');
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            document.getElementById('repo-count').innerText = repo.length;
-
-            list.innerHTML = repo.map(item => `
-                <div onclick="loadCase(${item.id})" class="repo-card group">
-                    <span onclick="deleteCase(${item.id}, event)" class="absolute top-2 right-4 text-slate-600 font-bold">×</span>
-                    <div class="repo-name">${item.name}</div>
-                    <div class="repo-type-box">
-                        <div><span class="repo-type-label">TYPE:</span><span class="repo-type-value">MVA</span></div>
-                        <span style="color:#3b82f6">▼</span>
-                    </div>
-                    <div class="repo-info">
-                        <span class="repo-phase-text">${item.phase}</span>
-                        <span class="repo-time-text">${item.time}</span>
-                    </div>
-                </div>`).join('') || '<p class="text-center italic py-4 text-xs">Empty</p>';
+            const list = document.getElementById('repo-list'); let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            list.innerHTML = repo.map(item => `<div onclick="loadCase(${item.id})" class="repo-card group"><span class="repo-name">${item.name}</span><div class="repo-type-box"><div><span class="repo-type-label">TYPE:</span><span class="repo-type-value">${item.phase}</span></div><span>▼</span></div><div class="repo-info"><span class="repo-phase-text">ARCHIVED</span><span class="repo-time-text">${item.time}</span></div><button onclick="deleteCase(${item.id}, event)" class="absolute top-2 right-4 text-slate-600 no-print">×</button></div>`).join('') || '<p class="text-center italic py-4 text-[10px]">Empty</p>';
         }
-
         function loadCase(id) {
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); const data = repo.find(i => i.id === id); if (!data) return;
             document.getElementById('passenger-container').innerHTML = data.html.pass; document.getElementById('facility-container').innerHTML = data.html.facs;
-            document.getElementById('fin-body').innerHTML = data.html.fin; document.getElementById('lit-body').innerHTML = data.html.lit;
-            data.inputs.forEach((v, i) => { if(document.querySelectorAll('[contenteditable="true"]')[i]) document.querySelectorAll('[contenteditable="true"]')[i].innerHTML = v; });
-            data.sels.forEach((v, i) => { if(document.querySelectorAll('select')[i]) { document.querySelectorAll('select')[i].value = v; document.querySelectorAll('select')[i].dispatchEvent(new Event('change')); } });
+            document.getElementById('fin-body').innerHTML = data.html.fin; document.getElementById('um-container').innerHTML = data.html.um;
+            document.getElementById('doc-body').innerHTML = data.html.docs; document.getElementById('note-body').innerHTML = data.html.notes;
+            document.getElementById('task-body').innerHTML = data.html.tasks; document.getElementById('lit-body').innerHTML = data.html.lit;
+            const edits = document.querySelectorAll('[contenteditable="true"]'); data.inputs.forEach((v, i) => { if(edits[i]) edits[i].innerHTML = v; });
+            const selects = document.querySelectorAll('select'); data.sels.forEach((v, i) => { if(selects[i]) selects[i].value = v; });
             updateTotals(); showTab('profile');
         }
-
-        function deleteCase(id, e) { e.stopPropagation(); let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); renderRepo(); }
+        function deleteCase(id, e) { e.stopPropagation(); if(confirm("Delete?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); renderRepo(); } }
         function exportRepo() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem(REPO_KEY)], {type:'application/json'})); a.download='LSH_Backup.json'; a.click(); }
         function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Imported"); }; r.readAsText(i.files[0]); }
         function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Case.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
-        
         window.onload = renderRepo;
     </script>
 </body>
