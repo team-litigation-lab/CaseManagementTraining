@@ -963,28 +963,35 @@
 
     // 4. PASSENGER ADD LOGIC (Limited to 5)
     window.addPassengerRow = function() {
-        const container = document.getElementById('passenger-container');
-        if (!container) return;
-        if (container.children.length >= 5) {
-            alert("Maximum of 5 passengers allowed.");
-            return;
-        }
+    const container = document.getElementById('passenger-container');
+    if (!container) return;
+    if (container.children.length >= 5) {
+        alert("Maximum of 5 passengers allowed.");
+        return;
+    }
 
-        const div = document.createElement('div');
-        div.className = "pdf-card border-t-8 border-slate-200 bg-white relative p-4 mb-4 shadow-sm";
-        div.innerHTML = `
-            <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
-            <div class="grid lg:grid-cols-3 gap-4">
-                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Passenger Name</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-                <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
-                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-            </div>
-            <div class="mt-4">
-                <label class="text-[9px] font-bold text-red-500 uppercase">Injuries Sustained</label>
-                <div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div>
-            </div>
-        `;
-        container.appendChild(div);
+    const div = document.createElement('div');
+    div.className = "pdf-card border-t-8 border-slate-200 bg-white relative p-4 mb-4 shadow-sm";
+    div.innerHTML = `
+        <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
+        <div class="grid lg:grid-cols-3 gap-4">
+            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Passenger Name</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+            <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
+            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+        </div>
+        
+        <div class="grid lg:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-50">
+            <div><label class="text-[9px] font-bold text-orange-500 uppercase">Insurance Carrier</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+            <div><label class="text-[9px] font-bold text-orange-500 uppercase">Policy / Claim #</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+        </div>
+
+        <div class="mt-4">
+            <label class="text-[9px] font-bold text-red-500 uppercase">Injuries Sustained</label>
+            <div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div>
+        </div>
+    `;
+    container.appendChild(div);
+};
     };
 
     // Run fixes immediately and ensure persistence is untouched
