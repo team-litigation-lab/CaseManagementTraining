@@ -452,152 +452,133 @@
                 </div>
             </div>
             <style>
-    /* 1. NUCLEAR HEADER CLEANUP - Matches Screenshot */
-    /* Hides the redundant black bar and the extra date fields in the orange header */
+   <style>
+    /* 1. FORCE HEADER CLEANUP - Matches the clean white look in your image */
+    /* This removes the DOL/SOL group, the black bar, and the type dropdown */
     #lsh-integrated-bar, 
     #injected-type-container,
-    .flex.flex-col.gap-2.mr-4.pr-4.border-r, 
+    .flex.flex-col.gap-2.mr-4.pr-4.border-r,
     .flex.flex-col.items-end div.flex.items-center.gap-3,
-    #um-pol-fix,
-    label[class*="text-slate-400"]:contains("DOL:"),
-    label[class*="text-red-500"]:contains("SOL:") {
+    .pdf-card:first-of-type .flex.items-baseline.gap-4 label:contains("DOL:"),
+    .pdf-card:first-of-type .flex.items-baseline.gap-4 label:contains("SOL:") {
         display: none !important;
+        width: 0 !important;
+        overflow: hidden !important;
     }
 
-    /* 2. REPOSITORY UI FIX - Clean sidebar cards */
-    #repo-list span { display: none !important; }
-    #repo-list .group { background: #0f172a !important; border-color: #1e293b !important; }
-    #repo-list .text-white { display: block !important; font-size: 11px !important; font-weight: 800 !important; }
-
-    /* 3. CLIENT NAME LOCK - Large, Bold, No-Shrink */
+    /* 2. HEADER LAYOUT LOCK - Large Name, No Shrink */
     #client-name-field {
         font-size: 32px !important;
         font-weight: 900 !important;
         color: #0f172a !important;
         text-transform: uppercase !important;
-        display: block !important;
-        width: 100% !important;
-        min-width: 500px !important; /* Prevents shrinking against right-side items */
+        min-width: 500px !important; /* Forces the layout to stay wide */
+        display: inline-block !important;
         border: none !important;
         background: transparent !important;
-        padding: 0 !important;
     }
-    /* Hide "Client:" label in the header card */
-    .pdf-card:first-of-type label:first-of-type { display: none !important; }
 
-    /* 4. PROPERTY DAMAGE - Label & Grid Enforcement */
+    /* 3. SIDEBAR REPOSITORY - Matches Screenshot Dark Theme */
+    #repo-list .group {
+        background: #0f172a !important; /* Deep Navy from screenshot */
+        border: 1px solid #1e293b !important;
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+    }
+    #repo-list span { display: none !important; } /* Hides MVA/Type labels inside the card */
+    #repo-list .text-white { 
+        display: block !important; 
+        font-size: 12px !important; 
+        font-weight: 800 !important; 
+        text-transform: uppercase !important;
+    }
+
+    /* 4. PROPERTY DAMAGE - Label Recovery & Driver Info */
     #pane-pd label {
         display: block !important;
         visibility: visible !important;
         color: #94a3b8 !important;
         font-weight: 800 !important;
-        text-transform: uppercase !important;
         font-size: 10px !important;
-    }
-
-    /* 5. PASSENGER BOX STYLING - Matches App Theme */
-    .passenger-card {
-        border-left: 8px solid #cbd5e1 !important;
-        background: #ffffff !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
     }
 </style>
 
 <script>
 (function() {
-    const applyLSHMasterLogic = () => {
-        // --- FEATURE 1: PRIMARY INJURY & PASSENGERS (Case Profile) ---
-        const profilePane = document.getElementById('pane-profile');
-        if (profilePane && !document.getElementById('injury-passenger-wrapper')) {
-            const wrapper = document.createElement('div');
-            wrapper.id = 'injury-passenger-wrapper';
-            wrapper.className = "mt-10 space-y-8";
-            wrapper.innerHTML = `
-                <div class="pdf-card border-l-8 border-red-500 bg-white shadow-sm">
-                    <h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2 tracking-widest">Injuries Sustained (Primary)</h3>
-                    <div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed"></div>
-                </div>
-                <div id="passenger-section">
-                    <div class="flex justify-between items-center px-2 mb-6 border-b pb-4">
-                        <h3 class="text-[11px] font-black uppercase text-slate-400 italic">Passenger Records</h3>
-                        <button onclick="addPassengerRow()" class="no-print bg-slate-900 text-white text-[10px] px-6 py-2 rounded font-bold uppercase hover:bg-orange-600 transition-all">+ Add Passenger</button>
-                    </div>
-                    <div id="passenger-container" class="space-y-6 flex flex-col"></div>
-                </div>`;
-            profilePane.appendChild(wrapper);
-        }
-
-        // --- FEATURE 2: THIRD PARTY DRIVER UPDATES (Property Damage) ---
+    const applyCleanInterface = () => {
+        // --- PROPERTY DAMAGE UPDATES ---
         const pdPane = document.getElementById('pane-pd');
         if (pdPane) {
             const cards = pdPane.querySelectorAll('.pdf-card');
-            const tpCard = cards[1]; 
+            const tpCard = cards[1]; // Third Party Card
             if (tpCard) {
                 // Change label to Driver's Name
                 tpCard.querySelectorAll('label').forEach(label => {
                     if (label.innerText.includes("LICENSE PLATE")) label.innerText = "DRIVER'S NAME";
                 });
-                // Inject the Driver Details Info Box
+                // Add the detail box
                 if (!document.getElementById('tp-driver-details-final')) {
                     const block = document.createElement('div');
                     block.id = 'tp-driver-details-final';
-                    block.className = "mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg";
+                    block.className = "mt-4 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg";
                     block.innerHTML = `
-                        <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3 tracking-widest">Third Party Driver Information</h4>
+                        <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3">Third Party Driver Information</h4>
                         <div class="grid md:grid-cols-2 gap-4">
-                            <div><label class="text-[9px] font-bold">CONTACT NUMBER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label class="text-[9px] font-bold">EMAIL ADDRESS</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label class="text-[9px] font-bold">INSURANCE CARRIER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label class="text-[9px] font-bold">POLICY INFORMATION</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label>Contact Number</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label>Email Address</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label>Insurance Carrier</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
+                            <div><label>Policy Information</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
                         </div>`;
                     tpCard.appendChild(block);
                 }
             }
         }
 
-        // --- FEATURE 3: DROPDOWN REFINEMENT (Emergency Room) ---
-        document.querySelectorAll('select').forEach(sel => {
-            if (sel.innerHTML.includes('Chiro') && !sel.innerHTML.includes('Emergency Room')) {
-                const er = document.createElement('option');
-                er.value = "Emergency Room"; er.text = "Emergency Room";
-                sel.insertBefore(er, sel.firstChild);
-            }
-        });
+        // --- CASE PROFILE: INJURIES & PASSENGERS ---
+        const profilePane = document.getElementById('pane-profile');
+        if (profilePane && !document.getElementById('injury-passenger-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.id = 'injury-passenger-wrapper';
+            wrapper.className = "mt-10 space-y-8";
+            wrapper.innerHTML = `
+                <div class="pdf-card border-l-8 border-red-500 bg-white">
+                    <h3 class="text-[11px] font-black uppercase text-red-600 mb-4 border-b pb-2">Injuries Sustained (Primary)</h3>
+                    <div contenteditable="true" class="text-sm w-full min-h-[80px] italic text-slate-700 bg-slate-50 p-4 rounded leading-relaxed"></div>
+                </div>
+                <div id="passenger-section">
+                    <div class="flex justify-between items-center px-2 mb-6 border-b pb-4">
+                        <h3 class="text-[11px] font-black uppercase text-slate-400 italic">Passenger Records</h3>
+                        <button onclick="addPassengerRow()" class="no-print bg-slate-900 text-white text-[10px] px-6 py-2 rounded font-bold uppercase">+ Add Passenger</button>
+                    </div>
+                    <div id="passenger-container" class="space-y-6 flex flex-col"></div>
+                </div>`;
+            profilePane.appendChild(wrapper);
+        }
     };
 
-    // --- FEATURE 4: PASSENGER ROW LOGIC ---
+    // PASSENGER LOGIC
     window.addPassengerRow = function() {
         const container = document.getElementById('passenger-container');
         if (!container || container.children.length >= 5) return;
         const div = document.createElement('div');
-        div.className = "pdf-card passenger-card relative p-4 mb-4";
+        div.className = "pdf-card border-l-8 border-slate-300 relative p-4 mb-4";
         div.innerHTML = `
-            <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 hover:text-red-500 font-bold text-xl">&times;</button>
+            <button onclick="this.parentElement.remove()" class="no-print absolute top-2 right-4 text-slate-300 font-bold">&times;</button>
             <div class="grid lg:grid-cols-3 gap-4">
-                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Passenger Name</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
-                <div><label class="text-[9px] font-bold text-slate-400 uppercase">DOB</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1">MM/DD/YYYY</div></div>
-                <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-bold border-b border-slate-100 p-1"></div></div>
+                <div><label>Name</label><div contenteditable="true" class="text-sm font-bold border-b p-1"></div></div>
+                <div><label>DOB</label><div contenteditable="true" class="text-sm font-bold border-b p-1"></div></div>
+                <div><label>Contact</label><div contenteditable="true" class="text-sm font-bold border-b p-1"></div></div>
             </div>
-            <div class="mt-4"><label class="text-[9px] font-bold text-red-500 uppercase">Injuries Sustained</label><div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded border border-slate-100 min-h-[40px]"></div></div>`;
+            <div class="mt-4"><label class="text-red-500">Injuries</label><div contenteditable="true" class="text-sm italic p-2 bg-slate-50 rounded min-h-[40px]"></div></div>`;
         container.appendChild(div);
     };
 
-    // --- FEATURE 5: OTHERS SPECIFY LOGIC ---
-    document.addEventListener('change', function(e) {
-        if (e.target.tagName === 'SELECT' && e.target.value === 'Others') {
-            const input = document.createElement('span');
-            input.contentEditable = "true";
-            input.style.cssText = "border-bottom: 1px solid #f97316; color: #f97316; font-weight: bold; outline: none; min-width: 80px; font-size: 13px; margin-left: 5px;";
-            input.innerText = "Specify...";
-            e.target.after(input);
-            input.focus();
-        }
-    });
-
-    // Stability interval to keep elements hidden and Name size locked
-    setInterval(applyLSHMasterLogic, 1000);
-    applyLSHMasterLogic();
+    // Run and Observe
+    const observer = new MutationObserver(() => applyCleanInterface());
+    observer.observe(document.body, { childList: true, subtree: true });
+    applyCleanInterface();
 })();
+</script>
 </script>
 </body>
 </html>
