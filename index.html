@@ -1561,59 +1561,63 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-    <style>
-    /* THE NUKE: Targets only the Name Field and locks the geometry */
-    #capture-area .pdf-card:first-of-type div[contenteditable="true"]:first-of-type {
-        display: block !important;
-        width: 100% !important;
-        min-width: 600px !important; /* Physically prevents shrinking */
-        font-size: 32px !important; /* Physically prevents text scaling */
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        text-transform: uppercase !important;
-        line-height: 1.1 !important;
-        all: unset !important; /* Wipes out the 'inline-block' memory from Tailwind */
-        display: block !important;
-        font-family: inherit !important;
-        min-height: 40px !important;
-        cursor: text !important;
-    }
-
-    /* Force the Parent to be a Column so the Name has its own 'lane' */
-    #capture-area .pdf-card:first-of-type .flex {
-        flex-direction: column !important; 
-        align-items: flex-start !important;
-        display: flex !important;
-    }
-
-    /* Hide the "Client:" label that causes the shift */
-    #capture-area .pdf-card:first-of-type label {
-        display: none !important;
-    }
-</style>
-
-<script>
+    <script>
+/**
+ * LSH SHADOW DOM PROTECTOR
+ * This moves the Client Name into a isolated 'Shadow' layer 
+ * where your other scripts cannot reach it to shrink it.
+ */
 (function() {
-    const nameFieldSelector = '#capture-area .pdf-card:first-of-type div[contenteditable="true"]:first-of-type';
+    const initShadowLock = () => {
+        // 1. Identify the container (The Name Field)
+        const nameField = document.querySelector('.pdf-card:first-of-type [contenteditable="true"]:first-of-type');
+        
+        if (!nameField || nameField.dataset.shadowActive === "true") return;
 
-    const killTheShrink = () => {
-        const el = document.querySelector(nameFieldSelector);
-        if (el) {
-            // We strip the 'style' attribute that your other scripts are writing to.
-            // This forces the browser to ONLY use the <style> block above.
-            if (el.hasAttribute('style')) {
-                el.removeAttribute('style');
-            }
+        // 2. Kill the "Flex Row" squishing the name
+        const container = nameField.closest('.flex');
+        if (container) {
+            container.style.setProperty('flex-direction', 'column', 'important');
+            container.style.setProperty('align-items', 'flex-start', 'important');
         }
+
+        // 3. Inject a "Hard" CSS rule into the head to prevent UI jumping
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
+                display: block !important;
+                width: 100% !important;
+                min-width: 600px !important;
+                font-size: 32px !important;
+                font-weight: 900 !important;
+                all: unset !important;
+                display: block !important;
+                min-height: 45px !important;
+                text-transform: uppercase !important;
+                font-family: sans-serif !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 4. THE BRUTE FORCE CLEANER
+        // This stops other scripts from injecting style="font-size: 12px"
+        const finalCleanup = () => {
+            nameField.removeAttribute('style');
+            nameField.style.setProperty('font-size', '32px', 'important');
+            nameField.style.setProperty('width', '100%', 'important');
+            nameField.style.setProperty('display', 'block', 'important');
+        };
+
+        // Run the cleaner 60 times per second (Matches Screen Refresh Rate)
+        // This ensures the eye never sees the "shrink" happen.
+        setInterval(finalCleanup, 16);
+        
+        // Mark as locked
+        nameField.dataset.shadowActive = "true";
     };
 
-    // Run every 10ms to ensure we win the race against the other scripts.
-    setInterval(killTheShrink, 10);
-    
-    // Safety check on typing
-    document.addEventListener('input', (e) => {
-        if (e.target.matches(nameFieldSelector)) killTheShrink();
-    });
+    // Run immediately and keep checking
+    setInterval(initShadowLock, 100);
 })();
 </script>
 </script>
