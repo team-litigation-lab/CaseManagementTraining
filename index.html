@@ -1561,65 +1561,58 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-    <style>
-    /* THE UNBREAKABLE CSS LOCK */
-    /* This targets the name field and freezes its layout so it cannot physically shrink */
-    #capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        display: block !important;
-        width: 100% !important;
-        min-width: 600px !important; /* Prevents the 'collapse' effect */
-        font-size: 32px !important; /* Locks the large size */
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-        all: unset !important; /* Wipes the memory of all previous scripts */
-        display: block !important;
-        font-family: 'Inter', sans-serif !important;
-        cursor: text !important;
-        min-height: 40px !important;
-    }
-
-    /* Prevents the parent flex-box from squishing the name lane */
-    #capture-area .pdf-card:first-of-type div.flex {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        display: flex !important;
-    }
-    
-    /* Hides the "Client:" label permanently */
-    #capture-area .pdf-card:first-of-type label:first-of-type {
-        display: none !important;
-    }
-</style>
-
-<script>
+    <script>
 /**
- * THE CLEANER
- * This script runs every 30ms to strip away any 'style' attributes 
- * injected by your original scripts, forcing the CSS above to take over.
+ * LSH FINAL "STATIC" LOCK
+ * This script identifies the Client Name field and prevents ANY other 
+ * script from changing its font size or width.
  */
 (function() {
-    const cleanName = () => {
-        const nameField = document.querySelector('#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type');
-        if (nameField) {
-            // This is the key: we remove the 'style' attribute entirely.
-            // This kills the 12px or 20px font-size being forced by your other scripts.
-            if (nameField.hasAttribute('style')) {
-                nameField.removeAttribute('style');
-            }
+    const nameSelector = '#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type';
+
+    const lockProperties = () => {
+        const el = document.querySelector(nameSelector);
+        if (!el) return;
+
+        // 1. THE INLINE BLOCK FIX
+        // Shrinking happens because of "inline-block". We force "block".
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('width', '100%', 'important');
+        el.style.setProperty('min-width', '500px', 'important');
+        
+        // 2. THE FONT LOCK
+        // We force 32px and prevent it from ever being 12px or 20px again.
+        el.style.setProperty('font-size', '32px', 'important');
+        el.style.setProperty('font-weight', '900', 'important');
+        el.style.setProperty('text-transform', 'uppercase', 'important');
+        
+        // 3. THE HIJACK PREVENTION
+        // If another script tries to change the style, we instantly revert it.
+        if (!el.dataset.guarded) {
+            const observer = new MutationObserver(() => {
+                el.style.setProperty('font-size', '32px', 'important');
+                el.style.setProperty('display', 'block', 'important');
+            });
+            observer.observe(el, { attributes: true, attributeFilter: ['style'] });
+            el.dataset.guarded = "true";
         }
     };
 
-    // Run extremely fast to "win" the race against the other scripts
-    setInterval(cleanName, 30);
-    
-    // Extra safety: ensure it runs on every keystroke
-    document.addEventListener('input', (e) => {
-        if (e.target.closest('.pdf-card:first-of-type')) {
-            cleanName();
+    // Run this at a very high frequency (every 20ms) to "win" the style war
+    setInterval(lockProperties, 20);
+
+    // Force the container to stack (Name over Contact) to prevent horizontal squishing
+    const fixContainer = () => {
+        const el = document.querySelector(nameSelector);
+        if (el) {
+            const container = el.closest('.flex');
+            if (container) {
+                container.style.setProperty('flex-direction', 'column', 'important');
+                container.style.setProperty('align-items', 'flex-start', 'important');
+            }
         }
-    });
+    };
+    setInterval(fixContainer, 100);
 })();
 </script>
 </script>
