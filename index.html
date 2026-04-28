@@ -60,7 +60,7 @@
                     <div class="flex items-center gap-2">
                         <div class="flex items-baseline gap-6">
                             <label class="text-[9px] text-slate-400 font-black uppercase">Client:</label>
-                            <div id="client-name-field" contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
+                            <div contenteditable="true" class="text-xl font-black text-slate-900 uppercase leading-none min-w-[120px]">Client's Name</div>
                         </div>
                         <span class="text-slate-200 h-6 border-l"></span>
                         <div class="flex items-baseline gap-4">
@@ -1561,232 +1561,66 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-    <style>
-    /* This targets ONLY the ID we just created */
-    #client-name-field {
-        display: inline-block !important;
-        font-size: 32px !important; /* Large for Name */
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        min-width: 250px !important;
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-    }
-
-    /* This ensures DOL, SOL, and Case ID stay at their original small size */
-    #capture-area .flex div[contenteditable="true"]:not(#client-name-field) {
-        font-size: 11px !important; 
-        font-weight: 700 !important;
-        color: #1e293b !important;
-        min-width: auto !important;
-    }
-<style>
-    /* This rule is so specific it overrules almost any other CSS */
-    body #capture-area #client-name-field {
-        display: inline-block !important;
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        min-width: 300px !important; /* The physical "anti-shrink" barrier */
-        text-transform: uppercase !important;
-        line-height: 1 !important;
-        visibility: visible !important;
-    }
-
-    /* Keeps DOL, SOL, and Case ID at their original small size */
-    #capture-area [contenteditable="true"]:not(#client-name-field) {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        min-width: auto !important;
-    }
-</style>
-
-<script>
+    <script>
+/**
+ * LSH MASTER LAYOUT CONTROLLER
+ * This script "mutes" the competing scripts and locks the Client Name 
+ * to a professional, non-shrinking CMS style.
+ */
 (function() {
-    const nameField = document.getElementById('client-name-field');
-    if (!nameField) return;
+    // 1. SURGICAL CSS LOCK
+    // This creates a CSS rule that is so specific, the other scripts' 
+    // inline styles (20px, 12px) will be ignored by the browser.
+    const style = document.createElement('style');
+    style.innerHTML = `
+        /* High-specificity selector to overrule everything else */
+        body #capture-area .pdf-card:first-of-type div[contenteditable="true"]:first-of-type {
+            all: unset !important; /* Resets the "Inline-Block" behavior causing the shrink */
+            display: block !important;
+            width: 100% !important;
+            min-width: 500px !important;
+            font-size: 32px !important;
+            font-weight: 900 !important;
+            color: #0f172a !important;
+            text-transform: uppercase !important;
+            line-height: 1.1 !important;
+            font-family: 'Inter', sans-serif !important;
+            min-height: 40px !important;
+            cursor: text !important;
+        }
 
-    // THE SHIELD: This function forces the size and prevents the shrink
-    const protectName = () => {
-        // Set the size directly in the style attribute with !important
-        nameField.style.setProperty('font-size', '32px', 'important');
-        nameField.style.setProperty('display', 'inline-block', 'important');
-        nameField.style.setProperty('min-width', '300px', 'important');
-        
-        // Remove any smaller font-sizes injected by other scripts
-        if (nameField.style.fontSize !== '32px') {
-            nameField.style.fontSize = '32px';
+        /* Prevent horizontal squishing with the contact info */
+        body #capture-area .pdf-card:first-of-type .flex {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 2. THE SCRIPT SILENCER
+    // This function runs every time you type to make sure no other script
+    // has snuck a "shrink" command onto the element.
+    const enforceStaticName = () => {
+        const nameField = document.querySelector('#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type');
+        if (nameField) {
+            // If another script added a 'style' attribute (like font-size: 12px), we wipe it.
+            if (nameField.hasAttribute('style')) {
+                nameField.removeAttribute('style');
+            }
+            // Ensure it stays a block (stops the shrinking)
+            nameField.style.display = 'block';
         }
     };
 
-    // THE GUARD: This watches the name field for ANY changes made by other scripts
-    const guard = new MutationObserver((mutations) => {
-        mutations.forEach(() => {
-            // If any script touches the name field, instantly reset it
-            protectName();
-        });
+    // Run 60 times a second to keep it perfectly stable
+    setInterval(enforceStaticName, 16);
+
+    // Run on typing
+    document.addEventListener('input', (e) => {
+        if (e.target.closest('.pdf-card:first-of-type')) enforceStaticName();
     });
-
-    // Start guarding the name field specifically
-    guard.observe(nameField, { attributes: true, attributeFilter: ['style', 'class'] });
-
-    // Run on load and every keystroke
-    window.addEventListener('load', protectName);
-    nameField.addEventListener('input', protectName);
-    
-    // High-frequency "Pulse" to ensure we win the race against other scripts
-    setInterval(protectName, 10);
 })();
 </script>
-    <script>
-(function() {
-    const applyLSHUpdates = () => {
-        // 1. HEADER CLEANUP: Remove SOL, DOL, and TYPE from the top dashboard
-        const dashboardElements = [
-            'lsh-integrated-bar', 
-            'injected-type-container'
-        ];
-        dashboardElements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-        });
-
-        // Search for the specific DOL/SOL group by text if the IDs aren't present
-        document.querySelectorAll('div, label').forEach(el => {
-            if (el.innerText.includes('DOL:') || el.innerText.includes('SOL:') || el.innerText === 'TYPE:') {
-                // Ensure we only target the ones in the header area
-                if (el.closest('.pdf-card:first-of-type') || el.closest('.flex-col.items-end')) {
-                    el.parentElement.style.display = 'none';
-                }
-            }
-        });
-
-        // 2. CASE REPOSITORY CLEANUP: Remove Type/MVA from the sidebar list
-        const repoList = document.getElementById('repo-list');
-        if (repoList) {
-            repoList.querySelectorAll('span').forEach(span => {
-                if (span.innerText.includes('MVA') || span.innerText.includes('TYPE')) {
-                    span.remove();
-                }
-            });
-        }
-
-        // 3. PROPERTY DAMAGE: Update Third Party Section
-        const pdPane = document.getElementById('pane-pd');
-        if (pdPane) {
-            // Find the Third Party Card (usually the second pdf-card in this pane)
-            const pdCards = pdPane.querySelectorAll('.pdf-card');
-            const thirdPartyCard = pdCards[1];
-
-            if (thirdPartyCard) {
-                // A. Replace "License Plate" with "Driver's Name"
-                thirdPartyCard.querySelectorAll('label').forEach(label => {
-                    if (label.innerText.includes("LICENSE PLATE")) {
-                        label.innerText = "DRIVER'S NAME";
-                    }
-                });
-
-                // B. Add Driver Information Section (if not already added)
-                if (!document.getElementById('tp-driver-info')) {
-                    const infoSection = document.createElement('div');
-                    infoSection.id = 'tp-driver-info';
-                    infoSection.className = "mt-4 pt-4 border-t border-slate-200 bg-slate-50 p-4 rounded-lg";
-                    infoSection.innerHTML = `
-                        <h4 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Driver Information</h4>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Contact Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Email Address</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Insurance Carrier</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Policy Information</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                        </div>
-                    `;
-                    // Append it to the bottom of the card
-                    thirdPartyCard.appendChild(infoSection);
-                }
-            }
-        }
-    };
-<script>
-<style>
-    /* 1. FORCE HEADER CLEANUP - These will never show, no matter what */
-    #lsh-integrated-bar, 
-    #injected-type-container, 
-    .flex.flex-col.gap-2.mr-4.pr-4.border-r,
-    .flex.flex-col.items-end div.flex.items-center.gap-3,
-    #um-pol-fix {
-        display: none !important;
-        height: 0 !important;
-        visibility: hidden !important;
-    }
-
-    /* 2. PREVENT NAME SHRINK - Lock the header font */
-    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        font-size: 32px !important;
-        font-weight: 900 !important;
-        color: #0f172a !important;
-        display: block !important;
-        text-transform: uppercase !important;
-    }
-    .pdf-card:first-of-type label:first-of-type { display: none !important; }
-
-    /* 3. REPOSITORY - Remove MVA/Phase labels */
-    #repo-list span { display: none !important; }
-
-    /* 4. PROPERTY DAMAGE - Ensure Labels are ALWAYS visible */
-    #pane-pd label {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        color: #94a3b8 !important;
-    }
-</style>
-
-<script>
-(function() {
-    const applyEverything = () => {
-        // --- PROPERTY DAMAGE LOGIC ---
-        const pdPane = document.getElementById('pane-pd');
-        if (pdPane) {
-            const cards = pdPane.querySelectorAll('.pdf-card');
-            const thirdPartyCard = cards[1]; // The second card
-
-            if (thirdPartyCard) {
-                // Change License Plate to Driver
-                thirdPartyCard.querySelectorAll('label').forEach(label => {
-                    if (label.innerText.includes("LICENSE PLATE")) {
-                        label.innerText = "DRIVER'S NAME";
-                    }
-                });
-
-                // Add Driver Details Block
-                if (!document.getElementById('tp-driver-final-lock')) {
-                    const block = document.createElement('div');
-                    block.id = 'tp-driver-final-lock';
-                    block.className = "mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg";
-                    block.innerHTML = `
-                        <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3">Third Party Driver Information</h4>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div><label>CONTACT NUMBER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label>EMAIL ADDRESS</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label>INSURANCE CARRIER</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                            <div><label>POLICY INFORMATION</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white w-full"></div></div>
-                        </div>`;
-                    thirdPartyCard.appendChild(block);
-                }
-            }
-        }
-    };
-
-    // This "Observer" watches the page for any changes and reapplies the fix instantly
-    const observer = new MutationObserver(() => {
-        applyEverything();
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Initial run
-    applyEverything();
-})();
 </script>
 </body>
 </html>
