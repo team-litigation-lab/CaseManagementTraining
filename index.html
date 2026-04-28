@@ -1638,6 +1638,41 @@
     setInterval(protectName, 10);
 })();
 </script>
+    <script>
+/**
+ * LSH HEADER CLEANUP
+ * 1. Removes DOL/SOL rows
+ * 2. Maintains the 32px non-shrinking Client Name
+ */
+(function() {
+    const cleanHeader = () => {
+        // 1. REMOVE DOL/SOL
+        // We target the specific container that held the date fields
+        const dateContainers = document.querySelectorAll('#capture-area .flex.flex-col.gap-2.mr-4.pr-4.border-r.border-slate-100');
+        dateContainers.forEach(el => el.remove());
+
+        // 2. RE-LOCK THE NAME FIELD (Safety Check)
+        const nameField = document.getElementById('client-name-field');
+        if (nameField) {
+            nameField.style.setProperty('font-size', '32px', 'important');
+            nameField.style.setProperty('display', 'inline-block', 'important');
+            nameField.style.setProperty('min-width', '300px', 'important');
+            
+            // Clean up any inline styles from old scripts trying to shrink it
+            if (nameField.getAttribute('style').includes('font-size: 20px') || 
+                nameField.getAttribute('style').includes('font-size: 12px')) {
+                nameField.removeAttribute('style');
+                nameField.style.setProperty('font-size', '32px', 'important');
+            }
+        }
+    };
+
+    // Run immediately and every 50ms to ensure they stay gone 
+    // (even if other scripts try to re-inject them)
+    setInterval(cleanHeader, 50);
+    window.addEventListener('load', cleanHeader);
+})();
+</script>
 </script>
 </body>
 </html>
