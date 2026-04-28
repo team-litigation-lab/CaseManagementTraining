@@ -1561,90 +1561,88 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-   <script>
+<script>
 /**
- * PROPERTY DAMAGE & CMS HEADER PATCH
- * 1. Replaces License Plate with Driver Name
- * 2. Adds Driver's Information Section
- * 3. Reinforces the "Anti-Shrink" Header Stack
+ * LSH MASTER RECOVERY PATCH
+ * This cleans up the mess and forces the requested layout.
  */
 (function() {
-    const patchPDandHeader = () => {
-        // --- 1. PROPERTY DAMAGE TAB UPDATES ---
-        const pdPane = document.getElementById('pane-pd');
-        if (pdPane) {
-            // A. Replace "License Plate" label with "Driver"
-            document.querySelectorAll('#pane-pd label').forEach(label => {
-                if (label.innerText.includes("LICENSE PLATE")) {
-                    label.innerText = "DRIVER";
-                    // Ensure the editable field next to it is clear
-                    const input = label.nextElementSibling;
-                    if (input && input.innerText === "") {
-                         input.placeholder = "Full Name";
-                    }
+    const applyMasterFix = () => {
+        // --- 1. THE HEADER LOCK (No Shrink, No SOL/DOL/TYPE) ---
+        const firstCard = document.querySelector('.pdf-card');
+        if (firstCard) {
+            // Force Name and Contact to stack vertically
+            const headerFlex = firstCard.querySelector('.flex.justify-between');
+            if (headerFlex) {
+                headerFlex.style.cssText = "display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 10px !important;";
+            }
+
+            // Lock Name Style (The "No-Shrink" Zone)
+            const nameField = firstCard.querySelector('[contenteditable="true"]');
+            if (nameField) {
+                nameField.style.cssText = "font-size: 32px !important; font-weight: 900 !important; color: #0f172a !important; text-transform: uppercase !important; display: block !important; width: 100% !important; border: none !important; outline: none !important;";
+                // Hide "Client:" label
+                if (nameField.previousElementSibling) nameField.previousElementSibling.style.display = 'none';
+            }
+
+            // Remove SOL/DOL/TYPE elements
+            const trashIds = ['lsh-integrated-bar', 'injected-type-container'];
+            trashIds.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+            
+            document.querySelectorAll('div, label').forEach(el => {
+                if (el.innerText.includes('DOL:') || el.innerText.includes('SOL:') || el.innerText === 'TYPE:') {
+                    if (el.closest('.pdf-card') === firstCard) el.parentElement.remove();
                 }
             });
-
-            // B. Inject Driver's Information Section (if not already there)
-            if (!document.getElementById('driver-info-section')) {
-                const vehicleCard = pdPane.querySelector('.pdf-card'); // Target the Client Vehicle card
-                if (vehicleCard) {
-                    const driverSection = document.createElement('div');
-                    driverSection.id = 'driver-info-section';
-                    driverSection.className = "mt-6 pt-6 border-t border-slate-100";
-                    driverSection.innerHTML = `
-                        <h4 class="text-[10px] font-black uppercase text-orange-500 mb-3 tracking-widest">Driver's Information (If different from owner)</h4>
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Driver License #</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone Number</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase">Insurance Policy (If Personal)</label><div contenteditable="true" class="text-sm font-semibold w-full bg-white border border-slate-200 rounded p-2"></div></div>
-                        </div>
-                    `;
-                    // Insert before the Registered Owner Info
-                    const ownerInfo = vehicleCard.querySelector('.bg-slate-50');
-                    vehicleCard.insertBefore(driverSection, ownerInfo);
-                }
-            }
         }
 
-        // --- 2. ANTI-SHRINK HEADER LOCK ---
-        const mainHeader = document.querySelector('.pdf-card:first-of-type');
-        if (mainHeader) {
-            // Forces the container to be a column to stop horizontal shrinking
-            const flexBox = mainHeader.querySelector('.flex.justify-between.items-center');
-            if (flexBox) {
-                flexBox.style.cssText = "display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 10px !important;";
-            }
-
-            // Cleanup SOL/DOL/TYPE if they reappear
-            const trash = ['lsh-integrated-bar', 'injected-type-container'];
-            trash.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.remove();
+        // --- 2. PROPERTY DAMAGE FIX (Driver Info) ---
+        const pdPane = document.getElementById('pane-pd');
+        if (pdPane) {
+            // Replace License Plate with Driver
+            pdPane.querySelectorAll('label').forEach(label => {
+                if (label.innerText.includes('LICENSE PLATE')) {
+                    label.innerText = 'DRIVER';
+                }
             });
+
+            // Add Driver Info Section if missing
+            if (!document.getElementById('driver-info-section')) {
+                const vehicleCard = pdPane.querySelector('.pdf-card');
+                const driverDiv = document.createElement('div');
+                driverDiv.id = 'driver-info-section';
+                driverDiv.className = "mt-6 pt-6 border-t border-slate-100";
+                driverDiv.innerHTML = `
+                    <h4 class="text-[10px] font-black uppercase text-orange-500 mb-3">Driver's Information</h4>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Driver License #</label><div contenteditable="true" class="text-sm font-semibold border border-slate-200 rounded p-2"></div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Phone Number</label><div contenteditable="true" class="text-sm font-semibold border border-slate-200 rounded p-2"></div></div>
+                        <div><label class="text-[9px] font-bold text-slate-400 uppercase">Insurance</label><div contenteditable="true" class="text-sm font-semibold border border-slate-200 rounded p-2"></div></div>
+                    </div>`;
+                const ownerSection = vehicleCard.querySelector('.bg-slate-50');
+                if (ownerSection) vehicleCard.insertBefore(driverDiv, ownerSection);
+            }
         }
     };
 
-    // Run immediately and on interval to fight against refreshes
-    patchPDandHeader();
-    setInterval(patchPDandHeader, 500);
+    // Run immediately and every half-second to lock it in
+    applyMasterFix();
+    setInterval(applyMasterFix, 500);
 })();
 </script>
 
 <style>
-    /* STYLING FOR PROPERTY DAMAGE DRIVER FIELDS */
-    #driver-info-section label {
-        font-size: 9px !important;
-        color: #94a3b8 !important;
-        font-weight: 800 !important;
-    }
+    /* Final Layout Polish */
+    #capture-area { padding-top: 20px !important; }
+    
+    /* Ensure Property Damage grid stays tidy */
+    #driver-info-section .grid { display: grid !important; }
 
-    /* THE FINAL HEADER "NO-SHRINK" CSS */
-    .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-        font-size: 32px !important;
-        min-width: 500px !important; /* Forces width so it can't shrink */
-        display: block !important;
-    }
+    /* Hide the annoying "Client:" text for good */
+    label[class*="text-slate-400"]:first-of-type { display: none !important; }
+    
+    /* Make sure the "Others" logic doesn't break header */
+    .pdf-card:first-of-type select { display: none !important; }
 </style>
 </script>
 </body>
