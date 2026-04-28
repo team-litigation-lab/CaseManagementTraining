@@ -1706,37 +1706,93 @@
             }
         }
     };
+<script>
+(function() {
+    const runMasterFix = () => {
+        try {
+            // 1. HEADER CLEANUP: Remove SOL, DOL, and Type from the dashboard
+            const integratedBar = document.getElementById('lsh-integrated-bar');
+            if (integratedBar) integratedBar.remove();
 
-    // Run immediately and every time a tab is clicked
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('tab-btn')) {
-            setTimeout(applyLSHUpdates, 50);
-        }
-    });
+            const typeContainer = document.getElementById('injected-type-container');
+            if (typeContainer) typeContainer.remove();
 
-    // Stability interval
-    applyLSHUpdates();
-    setInterval(applyLSHUpdates, 1000);
+            // Find any loose DOL/SOL labels in the top header and hide them
+            document.querySelectorAll('.pdf-card:first-of-type label, .pdf-card:first-of-type div').forEach(el => {
+                const txt = el.innerText.toUpperCase();
+                if (txt.includes('DOL:') || txt.includes('SOL:') || txt === 'TYPE:') {
+                    el.parentElement.style.display = 'none';
+                }
+            });
+
+            // 2. REPOSITORY CLEANUP: Remove "MVA" and "Type" from the sidebar list
+            const repoList = document.getElementById('repo-list');
+            if (repoList) {
+                repoList.querySelectorAll('span').forEach(span => {
+                    const txt = span.innerText.toUpperCase();
+                    if (txt.includes('MVA') || txt.includes('TYPE')) {
+                        span.style.display = 'none';
+                    }
+                });
+            }
+
+            // 3. PROPERTY DAMAGE: Update Third Party Section
+            const pdPane = document.getElementById('pane-pd');
+            if (pdPane) {
+                const pdCards = pdPane.querySelectorAll('.pdf-card');
+                // The Second card is the Third Party Vehicle
+                const thirdPartyCard = pdCards[1]; 
+
+                if (thirdPartyCard && !document.getElementById('tp-driver-block')) {
+                    // Replace License Plate Label
+                    thirdPartyCard.querySelectorAll('label').forEach(label => {
+                        if (label.innerText.includes("LICENSE PLATE")) {
+                            label.innerText = "DRIVER'S NAME";
+                        }
+                    });
+
+                    // Inject Driver Info Block
+                    const driverBlock = document.createElement('div');
+                    driverBlock.id = 'tp-driver-block';
+                    driverBlock.className = "mt-4 pt-4 border-t border-slate-100";
+                    driverBlock.innerHTML = `
+                        <h4 class="text-[10px] font-black text-slate-500 uppercase mb-3 tracking-tighter">Third Party Driver Details</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div><label class="text-[9px]">Contact Number</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white"></div></div>
+                            <div><label class="text-[9px]">Email Address</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white"></div></div>
+                            <div><label class="text-[9px]">Insurance Carrier</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white"></div></div>
+                            <div><label class="text-[9px]">Policy Information</label><div contenteditable="true" class="text-sm font-bold border rounded p-2 bg-white"></div></div>
+                        </div>`;
+                    thirdPartyCard.appendChild(driverBlock);
+                }
+            }
+        } catch (e) { console.log("Fix pending..."); }
+    };
+
+    // Run fixes
+    if (document.readyState === 'complete') {
+        runMasterFix();
+    } else {
+        window.addEventListener('load', runMasterFix);
+    }
+    
+    // Maintain fixes when switching tabs
+    document.addEventListener('click', () => setTimeout(runMasterFix, 50));
 })();
 </script>
-
 <style>
-    /* Prevent shrinking and maintain professional header layout */
-    .pdf-card:first-of-type .flex.items-baseline {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 2px !important;
-    }
-
+    /* Prevent the "Shrink" by locking the name field size */
     .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
         font-size: 32px !important;
-        width: 100% !important;
+        font-weight: 900 !important;
         display: block !important;
+        width: 100% !important;
+        min-height: 40px !important;
     }
-
-    /* Target specific Third Party Section Styling */
-    #tp-driver-info label {
-        margin-bottom: 2px !important;
+    
+    /* Hide the "Client:" label that causes layout shifts */
+    .pdf-card:first-of-type label:first-of-type {
+        display: none !important;
     }
 </style>
 </script>
