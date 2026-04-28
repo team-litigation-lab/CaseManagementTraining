@@ -1563,46 +1563,59 @@
 </script>
     <script>
 /**
- * LSH SURGICAL NAME LOCK
- * Zero side-effects on surrounding layout elements.
+ * LSH NUCLEAR NAME LOCK
+ * Uses a ResizeObserver and Pixel-locking to stop the shrinking bug.
  */
 (function() {
-    const lockClientNameOnly = () => {
-        // Target ONLY the first contenteditable field (Client Name)
-        const nameField = document.querySelector('[contenteditable="true"]:first-of-type');
-        
-        if (nameField) {
-            // 1. STYLISTIC LOCK
-            // Using 'setProperty' with 'important' to override any competing scripts
-            nameField.style.setProperty('display', 'block', 'important');
-            nameField.style.setProperty('width', '100%', 'important');
-            nameField.style.setProperty('font-size', '32px', 'important');
-            nameField.style.setProperty('min-height', '40px', 'important');
-            nameField.style.setProperty('font-weight', '900', 'important');
+    const targetNameField = () => document.querySelector('.pdf-card:first-of-type [contenteditable="true"]:first-of-type');
 
-            // 2. PARENT LAYOUT PROTECTION
-            // We ensure the name sits in its own row so it doesn't "push" 
-            // the Contact info or Settlement boxes horizontally.
-            const parent = nameField.parentElement;
-            if (parent && parent.classList.contains('flex')) {
-                parent.style.setProperty('flex-direction', 'column', 'important');
-                parent.style.setProperty('align-items', 'flex-start', 'important');
-            }
+    const applyAbsoluteFix = () => {
+        const el = targetNameField();
+        if (!el) return;
+
+        // 1. THE PIXEL LOCK
+        // We force a specific height and width behavior that prevents the "rubber-band" effect
+        el.style.cssText = `
+            display: block !important;
+            width: 100% !important;
+            min-width: 450px !important; 
+            font-size: 32px !important;
+            font-weight: 900 !important;
+            color: #0f172a !important;
+            text-transform: uppercase !important;
+            line-height: 1.1 !important;
+            all: unset !important;
+            display: block !important;
+            font-family: ui-sans-serif, system-ui, sans-serif !important;
+            cursor: text !important;
+        `;
+
+        // 2. THE CONTAINER FIX
+        // Forces the name to stay on its own line so it doesn't squish elements next to it
+        const container = el.closest('.flex');
+        if (container) {
+            container.style.setProperty('display', 'flex', 'important');
+            container.style.setProperty('flex-direction', 'column', 'important');
+            container.style.setProperty('align-items', 'flex-start', 'important');
+            container.style.setProperty('width', 'auto', 'important');
         }
     };
 
-    // Run when the page loads
-    window.addEventListener('load', lockClientNameOnly);
-
-    // Monitor input only for the name field
-    document.addEventListener('input', (e) => {
-        if (e.target === document.querySelector('[contenteditable="true"]:first-of-type')) {
-            lockClientNameOnly();
+    // 3. THE "GUARD"
+    // This stops ANY other script from changing the name field back
+    const observer = new MutationObserver(() => {
+        const el = targetNameField();
+        if (el && el.style.fontSize !== '32px') {
+            applyAbsoluteFix();
         }
     });
 
-    // Run a final check to handle repository data loading
-    setTimeout(lockClientNameOnly, 500);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Run on Input, Load, and Interval
+    document.addEventListener('input', (e) => { if (e.target === targetNameField()) applyAbsoluteFix(); });
+    window.addEventListener('load', applyAbsoluteFix);
+    setInterval(applyAbsoluteFix, 300); // The final safety net
 })();
 </script>
 </script>
