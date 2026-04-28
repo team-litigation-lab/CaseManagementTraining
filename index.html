@@ -249,7 +249,7 @@
                                 <option value="Others">Others</option>
                             </select>
                             <div id="case-type-other" contenteditable="true" class="hidden text-white text-[11px] px-2 min-w-[120px] outline-none">SPECIFY TYPE...</div>
-                            <button id="revert-type" onclick="revertOther('case-type-select', 'case-type-other', 'revert-type')" class="revert-btn">↺</button>
+                            <button id="revert-type" onclick="revertOther('main-case-type', 'case-type-other', 'revert-type')" class="revert-btn">↺</button>
                         </div>
                     </div>
                 </div>
@@ -451,13 +451,14 @@
             <div id="pane-docs" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <h3 class="mb-6 uppercase text-[11px] font-black text-orange-500 italic">Quick Label Portal</h3>
-                    <div class="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-8 no-print">
+                    <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
                         <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
                         <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
                         <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
                         <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
                         <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
                         <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
+                        <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
                         <button onclick="addDocument('Others')" class="hub-btn">Others</button>
                     </div>
                     <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
@@ -488,6 +489,8 @@
 
     <script>
         const REPO_KEY = 'LSH_ULTRALOCK_V2026_MASTER_DEEP_BUILD';
+        
+        // UPDATED STAFF OPTIONS
         const staffOptions = `
             <option>Lead Attorney</option>
             <option>Associate Attorney</option>
