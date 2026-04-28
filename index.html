@@ -1563,61 +1563,62 @@
 </script>
     <script>
 /**
- * LSH SHADOW DOM PROTECTOR
- * This moves the Client Name into a isolated 'Shadow' layer 
- * where your other scripts cannot reach it to shrink it.
+ * LSH MASTER LAYOUT CONTROLLER
+ * This script "mutes" the competing scripts and locks the Client Name 
+ * to a professional, non-shrinking CMS style.
  */
 (function() {
-    const initShadowLock = () => {
-        // 1. Identify the container (The Name Field)
-        const nameField = document.querySelector('.pdf-card:first-of-type [contenteditable="true"]:first-of-type');
-        
-        if (!nameField || nameField.dataset.shadowActive === "true") return;
-
-        // 2. Kill the "Flex Row" squishing the name
-        const container = nameField.closest('.flex');
-        if (container) {
-            container.style.setProperty('flex-direction', 'column', 'important');
-            container.style.setProperty('align-items', 'flex-start', 'important');
+    // 1. SURGICAL CSS LOCK
+    // This creates a CSS rule that is so specific, the other scripts' 
+    // inline styles (20px, 12px) will be ignored by the browser.
+    const style = document.createElement('style');
+    style.innerHTML = `
+        /* High-specificity selector to overrule everything else */
+        body #capture-area .pdf-card:first-of-type div[contenteditable="true"]:first-of-type {
+            all: unset !important; /* Resets the "Inline-Block" behavior causing the shrink */
+            display: block !important;
+            width: 100% !important;
+            min-width: 500px !important;
+            font-size: 32px !important;
+            font-weight: 900 !important;
+            color: #0f172a !important;
+            text-transform: uppercase !important;
+            line-height: 1.1 !important;
+            font-family: 'Inter', sans-serif !important;
+            min-height: 40px !important;
+            cursor: text !important;
         }
 
-        // 3. Inject a "Hard" CSS rule into the head to prevent UI jumping
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .pdf-card:first-of-type [contenteditable="true"]:first-of-type {
-                display: block !important;
-                width: 100% !important;
-                min-width: 600px !important;
-                font-size: 32px !important;
-                font-weight: 900 !important;
-                all: unset !important;
-                display: block !important;
-                min-height: 45px !important;
-                text-transform: uppercase !important;
-                font-family: sans-serif !important;
+        /* Prevent horizontal squishing with the contact info */
+        body #capture-area .pdf-card:first-of-type .flex {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 2. THE SCRIPT SILENCER
+    // This function runs every time you type to make sure no other script
+    // has snuck a "shrink" command onto the element.
+    const enforceStaticName = () => {
+        const nameField = document.querySelector('#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type');
+        if (nameField) {
+            // If another script added a 'style' attribute (like font-size: 12px), we wipe it.
+            if (nameField.hasAttribute('style')) {
+                nameField.removeAttribute('style');
             }
-        `;
-        document.head.appendChild(style);
-
-        // 4. THE BRUTE FORCE CLEANER
-        // This stops other scripts from injecting style="font-size: 12px"
-        const finalCleanup = () => {
-            nameField.removeAttribute('style');
-            nameField.style.setProperty('font-size', '32px', 'important');
-            nameField.style.setProperty('width', '100%', 'important');
-            nameField.style.setProperty('display', 'block', 'important');
-        };
-
-        // Run the cleaner 60 times per second (Matches Screen Refresh Rate)
-        // This ensures the eye never sees the "shrink" happen.
-        setInterval(finalCleanup, 16);
-        
-        // Mark as locked
-        nameField.dataset.shadowActive = "true";
+            // Ensure it stays a block (stops the shrinking)
+            nameField.style.display = 'block';
+        }
     };
 
-    // Run immediately and keep checking
-    setInterval(initShadowLock, 100);
+    // Run 60 times a second to keep it perfectly stable
+    setInterval(enforceStaticName, 16);
+
+    // Run on typing
+    document.addEventListener('input', (e) => {
+        if (e.target.closest('.pdf-card:first-of-type')) enforceStaticName();
+    });
 })();
 </script>
 </script>
