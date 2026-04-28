@@ -747,47 +747,87 @@
         });
     })();
 </script>
+<style>
+    /* 1. FORCE REPOSITORY CARD RESET */
+    /* This kills any unwanted large fonts or extra boxes inside the sidebar */
+    .repo-card {
+        max-height: 70px !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+    }
+
+    .repo-name {
+        all: unset !important;
+        display: block !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        color: white !important;
+        text-transform: uppercase !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* 2. HIDE THE GHOST 'TYPE' LABELS */
+    /* This hides any 'TYPE' or 'MVA' boxes that were accidentally saved */
+    .repo-card div:not(.repo-name), 
+    .repo-card span,
+    .repo-card select {
+        font-size: 8px !important;
+    }
+
+    /* Target the specific "Ghost" container from your screenshot */
+    .repo-card div[id*="injected"], 
+    .repo-card .bg-slate-800 {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+</style>
+
 <script>
 (function() {
     const REPO_KEY = 'LSH_REPOSITORY';
 
-    const injectRepoUI = () => {
-        const sidebar = document.getElementById('sidebar-actions');
-        if (!sidebar) return;
-        const oldRepo = document.getElementById('repo-container');
-        if (oldRepo) oldRepo.remove();
+    window.renderRepoList = function() {
+        const list = document.getElementById('repo-list');
+        const countDisplay = document.getElementById('repo-count');
+        if (!list) return;
 
-        const repoContainer = document.createElement('div');
-        repoContainer.id = 'repo-container';
-        repoContainer.className = "pt-4 mt-4 border-t border-slate-800";
-        repoContainer.innerHTML = `
-            <div class="flex justify-between items-center mb-3">
-                <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Case Repository</p>
-                <span id="repo-count" class="text-[9px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">0</span>
-            </div>
-            <div id="repo-list" class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar"></div>
+        let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+        countDisplay.innerText = repo.length;
+
+        if (repo.length === 0) {
+            list.innerHTML = '<p class="text-[10px] text-slate-600 italic text-center py-4">Repository is empty.</p>';
+            return;
+        }
+
+        list.innerHTML = repo.map(item => {
+            // SANITIZATION: Strip any HTML tags from the name before displaying
+            const cleanName = item.clientName.replace(/<[^>]*>?/gm, '');
             
-            <button onclick="saveToRepository()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-[10px] uppercase transition-all shadow-lg">
-                💾 Save to Repository
-            </button>
-            
-            <div class="grid grid-cols-2 gap-2 mt-2 no-print">
-                <button onclick="exportRepository()" class="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold py-2 rounded uppercase transition-all">
-                    Export Cases
-                </button>
-                <label class="bg-slate-700 hover:bg-slate-600 text-white text-[9px] font-bold py-2 rounded uppercase text-center cursor-pointer transition-all">
-                    Import File
-                    <input type="file" id="import-repo" class="hidden" onchange="importRepository(this)">
-                </label>
-            </div>
-        `;
-        sidebar.appendChild(repoContainer);
-        renderRepoList();
+            return `
+                <div onclick="loadFromRepo(${item.id})" class="repo-card group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all relative mb-2">
+                    <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-1 right-2 text-slate-700 hover:text-red-500 text-lg font-bold">×</button>
+                    <div class="repo-name">${cleanName}</div>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-[8px] text-orange-500 font-bold uppercase">${item.phase}</span>
+                        <span class="text-[8px] text-slate-600">${item.timestamp}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
     };
 
     window.saveToRepository = function() {
+        // Use textContent instead of innerHTML to avoid grabbing the 'client-name-field' ID
         const nameEl = document.getElementById('client-name-field');
-        const cleanClientName = nameEl ? nameEl.innerText.trim() : "New Client";
+        const cleanClientName = nameEl ? nameEl.textContent.trim() : "New Client";
         const timestamp = new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         
         const currentData = {
@@ -812,90 +852,13 @@
         repo.unshift(currentData);
         localStorage.setItem(REPO_KEY, JSON.stringify(repo));
         renderRepoList();
-        alert("Case archived.");
+        alert("Case Saved.");
     };
 
-    window.renderRepoList = function() {
-        const list = document.getElementById('repo-list');
-        const countDisplay = document.getElementById('repo-count');
-        if (!list) return;
-
-        let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-        countDisplay.innerText = repo.length;
-
-        if (repo.length === 0) {
-            list.innerHTML = '<p class="text-[10px] text-slate-600 italic text-center py-4">Repository is empty.</p>';
-            return;
-        }
-
-        // REMOVED THE "TYPE" LABEL FROM THIS TEMPLATE
-        list.innerHTML = repo.map(item => `
-            <div onclick="loadFromRepo(${item.id})" class="repo-card group bg-slate-900 border border-slate-800 p-3 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all relative mb-2">
-                <button onclick="deleteFromRepo(${item.id}, event)" class="absolute top-1 right-2 text-slate-700 hover:text-red-500 text-lg font-bold">×</button>
-                <div class="repo-name text-white font-black uppercase truncate pr-4">${item.clientName}</div>
-                <div class="flex justify-between items-center mt-1">
-                    <span class="text-[8px] text-orange-500 font-bold uppercase">${item.phase}</span>
-                    <span class="text-[8px] text-slate-600">${item.timestamp}</span>
-                </div>
-            </div>
-        `).join('');
-    };
-
-    window.loadFromRepo = function(id) {
-        let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-        const data = repo.find(item => item.id === id);
-        if (!data || !confirm(`Load case for "${data.clientName}"?`)) return;
-
-        if(data.htmlContainers) {
-            Object.keys(data.htmlContainers).forEach(key => {
-                const el = document.getElementById(key === 'um' ? 'um-container' : key === 'facilities' ? 'facility-container' : key);
-                if(el) el.innerHTML = data.htmlContainers[key];
-            });
-        }
-        document.getElementById('display-phase').innerText = data.phase;
-        const editables = document.querySelectorAll('[contenteditable="true"]');
-        data.editables.forEach((val, i) => { if(editables[i]) editables[i].innerHTML = val; });
-        const selects = document.querySelectorAll('select');
-        data.selects.forEach((val, i) => { if(selects[i]) selects[i].value = val; });
-        alert("Case Loaded.");
-    };
-
-    window.deleteFromRepo = function(id, e) {
-        e.stopPropagation();
-        if(!confirm("Delete this case?")) return;
-        let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-        localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id)));
+    // Re-bind buttons
+    window.addEventListener('DOMContentLoaded', () => {
         renderRepoList();
-    };
-
-    window.exportRepository = function() {
-        const data = localStorage.getItem(REPO_KEY);
-        if (!data || data === '[]') return alert("Nothing to export.");
-        const blob = new Blob([data], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `LSH_Backup_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-    };
-
-    window.importRepository = function(input) {
-        const file = input.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const imported = JSON.parse(e.target.result);
-                localStorage.setItem(REPO_KEY, JSON.stringify(imported));
-                renderRepoList();
-                alert("Repository Imported.");
-            } catch (err) {
-                alert("Invalid file format.");
-            }
-        };
-        reader.readAsText(file);
-    };
-
-    window.addEventListener('DOMContentLoaded', injectRepoUI);
+    });
 })();
 </script>
 </script>
