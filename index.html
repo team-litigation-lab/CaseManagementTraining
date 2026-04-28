@@ -1561,58 +1561,59 @@
     setInterval(ensureStyles, 500);
 })();
 </script>
-    <script>
-/**
- * LSH FINAL "STATIC" LOCK
- * This script identifies the Client Name field and prevents ANY other 
- * script from changing its font size or width.
- */
+    <style>
+    /* THE NUKE: Targets only the Name Field and locks the geometry */
+    #capture-area .pdf-card:first-of-type div[contenteditable="true"]:first-of-type {
+        display: block !important;
+        width: 100% !important;
+        min-width: 600px !important; /* Physically prevents shrinking */
+        font-size: 32px !important; /* Physically prevents text scaling */
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        text-transform: uppercase !important;
+        line-height: 1.1 !important;
+        all: unset !important; /* Wipes out the 'inline-block' memory from Tailwind */
+        display: block !important;
+        font-family: inherit !important;
+        min-height: 40px !important;
+        cursor: text !important;
+    }
+
+    /* Force the Parent to be a Column so the Name has its own 'lane' */
+    #capture-area .pdf-card:first-of-type .flex {
+        flex-direction: column !important; 
+        align-items: flex-start !important;
+        display: flex !important;
+    }
+
+    /* Hide the "Client:" label that causes the shift */
+    #capture-area .pdf-card:first-of-type label {
+        display: none !important;
+    }
+</style>
+
+<script>
 (function() {
-    const nameSelector = '#capture-area .pdf-card:first-of-type [contenteditable="true"]:first-of-type';
+    const nameFieldSelector = '#capture-area .pdf-card:first-of-type div[contenteditable="true"]:first-of-type';
 
-    const lockProperties = () => {
-        const el = document.querySelector(nameSelector);
-        if (!el) return;
-
-        // 1. THE INLINE BLOCK FIX
-        // Shrinking happens because of "inline-block". We force "block".
-        el.style.setProperty('display', 'block', 'important');
-        el.style.setProperty('width', '100%', 'important');
-        el.style.setProperty('min-width', '500px', 'important');
-        
-        // 2. THE FONT LOCK
-        // We force 32px and prevent it from ever being 12px or 20px again.
-        el.style.setProperty('font-size', '32px', 'important');
-        el.style.setProperty('font-weight', '900', 'important');
-        el.style.setProperty('text-transform', 'uppercase', 'important');
-        
-        // 3. THE HIJACK PREVENTION
-        // If another script tries to change the style, we instantly revert it.
-        if (!el.dataset.guarded) {
-            const observer = new MutationObserver(() => {
-                el.style.setProperty('font-size', '32px', 'important');
-                el.style.setProperty('display', 'block', 'important');
-            });
-            observer.observe(el, { attributes: true, attributeFilter: ['style'] });
-            el.dataset.guarded = "true";
-        }
-    };
-
-    // Run this at a very high frequency (every 20ms) to "win" the style war
-    setInterval(lockProperties, 20);
-
-    // Force the container to stack (Name over Contact) to prevent horizontal squishing
-    const fixContainer = () => {
-        const el = document.querySelector(nameSelector);
+    const killTheShrink = () => {
+        const el = document.querySelector(nameFieldSelector);
         if (el) {
-            const container = el.closest('.flex');
-            if (container) {
-                container.style.setProperty('flex-direction', 'column', 'important');
-                container.style.setProperty('align-items', 'flex-start', 'important');
+            // We strip the 'style' attribute that your other scripts are writing to.
+            // This forces the browser to ONLY use the <style> block above.
+            if (el.hasAttribute('style')) {
+                el.removeAttribute('style');
             }
         }
     };
-    setInterval(fixContainer, 100);
+
+    // Run every 10ms to ensure we win the race against the other scripts.
+    setInterval(killTheShrink, 10);
+    
+    // Safety check on typing
+    document.addEventListener('input', (e) => {
+        if (e.target.matches(nameFieldSelector)) killTheShrink();
+    });
 })();
 </script>
 </script>
