@@ -744,12 +744,8 @@ function processUpload(input) {
         window.onload = renderRepo;
     </script>
     <script>
-    /**
- * LSH CONSOLIDATED FINAL OVERRIDE 2026
- * Governs Headers, Buttons, Name Lock, and Upload Portal.
- */
-function applyLSHFinalMaster() {
-    // 1. HEADERS: WHITE ON BLACK
+    function applyLSHFinalMaster() {
+    // 1. ALL TARGET HEADERS (White on Black + Full Width)
     const targetHeaders = [
         "Identity", "Employment Details", "Emergency Contact", "Case Narrative",
         "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
@@ -763,14 +759,19 @@ function applyLSHFinalMaster() {
         const text = el.innerText.trim();
         if (targetHeaders.some(h => h.toLowerCase() === text.toLowerCase())) {
             el.style.setProperty('background-color', '#000000', 'important');
-            el.style.setProperty('color', '#ffffff', 'important'); // WHITE TEXT
+            el.style.setProperty('color', '#ffffff', 'important');
             el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             el.style.setProperty('font-size', '13px', 'important');
             el.style.setProperty('font-weight', '900', 'important');
             el.style.setProperty('font-style', 'normal', 'important');
-            el.style.setProperty('padding', '6px 10px', 'important');
+            el.style.setProperty('padding', '6px 15px', 'important');
             el.style.setProperty('border-radius', '4px', 'important');
+            
+            // THE FIX: Force the black bar to stretch
             el.style.setProperty('display', 'flex', 'important');
+            el.style.setProperty('flex-grow', '1', 'important'); 
+            el.style.setProperty('width', '100%', 'important'); 
+            
             el.style.setProperty('align-items', 'center', 'important');
             el.style.setProperty('height', '32px', 'important');
             el.style.setProperty('margin-bottom', '0px', 'important');
@@ -778,13 +779,25 @@ function applyLSHFinalMaster() {
         }
     });
 
-    // 2. BUTTONS: ORANGE BG / BLACK TEXT
+    // 2. PARENT CONTAINER ALIGNMENT (Alignment Lock)
+    document.querySelectorAll('.flex.justify-between').forEach(parent => {
+        if (parent.querySelector('h3, label') && parent.querySelector('button')) {
+            parent.style.setProperty('display', 'flex', 'important');
+            parent.style.setProperty('flex-direction', 'row', 'important');
+            parent.style.setProperty('align-items', 'center', 'important');
+            parent.style.setProperty('justify-content', 'space-between', 'important');
+            parent.style.setProperty('width', '100%', 'important');
+            parent.style.setProperty('gap', '10px', 'important');
+            parent.style.setProperty('margin-bottom', '10px', 'important');
+        }
+    });
+
+    // 3. BUTTONS (Orange on Black)
     document.querySelectorAll('button').forEach(btn => {
         const onClick = btn.getAttribute('onclick') || "";
         const isUploadTrigger = onClick.includes('triggerUpload') || onClick.includes('addDocument');
         const isStandardAdd = (onClick.includes('add') || onClick.includes('addRow')) && !isUploadTrigger;
 
-        // Apply orange theme to all Add/Upload buttons
         if (isUploadTrigger || isStandardAdd || btn.classList.contains('hub-btn')) {
             btn.style.setProperty('background-color', '#f97316', 'important'); 
             btn.style.setProperty('color', '#000000', 'important');
@@ -793,50 +806,31 @@ function applyLSHFinalMaster() {
             btn.style.setProperty('font-size', '11px', 'important');
             btn.style.setProperty('border', 'none', 'important');
             btn.style.setProperty('border-radius', '4px', 'important');
-            btn.style.setProperty('padding', '4px 12px', 'important');
+            btn.style.setProperty('height', '32px', 'important');
+            btn.style.setProperty('padding', '0 15px', 'important');
             btn.style.setProperty('text-transform', 'uppercase', 'important');
-            btn.style.setProperty('cursor', 'pointer', 'important');
+            btn.style.setProperty('flex-shrink', '0', 'important'); // Prevents button from squishing
 
-            if (isStandardAdd) {
-                btn.innerText = "ADD";
-                btn.style.setProperty('height', '26px', 'important'); // Match header bar height better
-            }
+            if (isStandardAdd) { btn.innerText = "ADD"; }
         }
     });
 
-    // 3. THE "STAIRCASE" ALIGNMENT FIX
-    document.querySelectorAll('.flex.justify-between').forEach(parent => {
-        if (parent.querySelector('h3, label') && parent.querySelector('button')) {
-            parent.style.setProperty('display', 'flex', 'important');
-            parent.style.setProperty('align-items', 'center', 'important');
-            parent.style.setProperty('gap', '10px', 'important');
-        }
-    });
-
-    // 4. CLIENT NAME LOCK (36px, No Blink)
+    // 4. CLIENT NAME & CONTENT LOCKS
     const nameField = document.getElementById('client-name-field');
     if (nameField) {
         nameField.style.setProperty('font-size', '36px', 'important');
-        nameField.style.setProperty('font-family', 'Arial, sans-serif', 'important');
         nameField.style.setProperty('font-weight', '900', 'important');
-        nameField.style.setProperty('color', '#000', 'important');
-        nameField.style.setProperty('flex-shrink', '0', 'important');
     }
 
-    // 5. CONTENT FIELDS (Arial 12pt Bold Black)
     document.querySelectorAll('[contenteditable="true"], select').forEach(field => {
         if (field.id !== 'client-name-field') {
             field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             field.style.setProperty('font-size', '12px', 'important');
-            field.style.setProperty('font-weight', 'bold', 'important');
             field.style.setProperty('color', '#000', 'important');
-            field.style.setProperty('background-color', '#ffffff', 'important');
         }
     });
 }
 
-// Run immediately and every 500ms
-window.addEventListener('DOMContentLoaded', applyLSHFinalMaster);
 setInterval(applyLSHFinalMaster, 500);
 </script>
 </body>
