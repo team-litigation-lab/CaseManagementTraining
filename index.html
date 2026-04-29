@@ -334,5 +334,35 @@
         function handleOtherSystem(s, o, r) { if(document.getElementById(s).value === "Others") { document.getElementById(s).classList.add('hidden'); document.getElementById(o).classList.remove('hidden'); document.getElementById(r).style.display = "inline-block"; } }
         function revertOther(s, o, r) { document.getElementById(s).classList.remove('hidden'); document.getElementById(s).selectedIndex = 0; document.getElementById(o).classList.add('hidden'); document.getElementById(r).style.display = "none"; }
     </script>
+    /**
+ * LSH DATA SCRUBBER
+ * Deletes all placeholder/pre-populated text from editable fields
+ */
+function clearAllPlaceholders() {
+    // List of common placeholder strings to identify and remove
+    const placeholders = [
+        "CLIENT'S NAME", "MM/DD/YYYY", "000-00-0000", "(000) 000-0000", 
+        "client@example.com", "123 Main St, City, State, Zip", "Name", 
+        "e.g. Spouse / Parent", "Additional details...", "Company Name", 
+        "Manager / Laborer", "Details...", "Enter facts of loss...", 
+        "BATCH-2026-X", "TYPE OTHER...", "...", "e.g., LAPD / Florida Highway Patrol",
+        "Name & Badge #", "Street / Intersection", "00:00 AM/PM", "#",
+        "Transcribe police findings...", "List names and phone numbers...",
+        "e.g., Photos, Dashcam, Bodycam, CCTV...", "Enter Name", "Summary..."
+    ];
+
+    const fields = document.querySelectorAll('[contenteditable="true"]');
+    
+    fields.forEach(field => {
+        const currentContent = field.innerText.trim();
+        // If the field contains a placeholder or a generic "...", clear it
+        if (placeholders.includes(currentContent) || currentContent === "...") {
+            field.innerHTML = ""; 
+        }
+    });
+}
+
+// Run it once the page loads to start with a clean slate
+window.addEventListener('DOMContentLoaded', clearAllPlaceholders);
 </body>
 </html>
