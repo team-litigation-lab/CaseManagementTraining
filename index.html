@@ -8,31 +8,30 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         <style>
+    <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
     /* --- 1. CORE SYSTEM --- */
     body { 
         font-family: 'Inter', sans-serif; 
         background-color: #f8fafc; 
-        color: #0f172a; 
-        height: 100vh; 
-        display: flex; 
-        overflow: hidden; 
         margin: 0; 
+        display: flex; 
+        height: 100vh; 
+        overflow: hidden; 
     }
 
     /* --- 2. THE POWER BAR (LOCKED HEADER SYSTEM) --- */
-    /* This container holds the black bar and orange button */
-    .lsh-power-bar, .lsh-row-lock, .flex.justify-between.items-center.mb-6 {
+    .lsh-power-bar, .lsh-row-lock {
         display: flex !important;
         flex-direction: row !important;
         align-items: stretch !important;
         width: 100% !important;
-        margin-bottom: 20px !important; /* Space to prevent table overlap */
+        margin-bottom: 20px !important;
         gap: 0 !important;
     }
 
-    /* The Black Header Bar */
+    /* THE BLACK HEADER (FORCE ARIAL & BOLD) */
     .lsh-main-header, .lsh-header-style {
         background-color: #000000 !important;
         color: #ffffff !important;
@@ -42,20 +41,19 @@
         padding: 0 15px !important;
         display: flex !important;
         align-items: center !important;
-        font-family: Arial, sans-serif !important;
+        font-family: Arial, sans-serif !important; /* FIXED */
         font-size: 13px !important;
-        font-weight: 900 !important;
+        font-weight: 900 !important; /* FIXED */
         text-transform: uppercase !important;
         border-radius: 4px 0 0 4px !important;
-        width: auto !important; /* Allows it to shrink/grow for the button */
+        width: auto !important;
     }
 
-    /* The Orange Action Button */
+    /* THE ORANGE BUTTON */
     .lsh-action-btn, .lsh-btn-style {
         background-color: #f97316 !important;
         color: #000000 !important;
         height: 32px !important;
-        margin: 0 !important;
         padding: 0 20px !important;
         border: none !important;
         border-radius: 0 4px 4px 0 !important;
@@ -66,83 +64,95 @@
         flex-shrink: 0 !important;
     }
 
-    /* --- 3. UI CARDS & TABLES --- */
-    .pdf-card { 
-        background: white; 
-        border: 1px solid #e2e8f0; 
-        border-radius: 12px; 
-        padding: 24px; 
-        margin-bottom: 20px; 
-        position: relative;
+    /* --- 3. NAVIGATION TABS (ORANGE FONT FIX) --- */
+    .tab-btn { 
+        cursor: pointer !important; 
+        color: #94a3b8 !important; /* Inactive color */
+        font-weight: 900 !important; 
+        font-family: Arial, sans-serif !important; /* FIXED */
+        text-transform: uppercase !important; 
+        font-size: 11px !important; 
+        padding: 10px 0 !important; 
+        border-bottom: 3px solid transparent !important; 
+        transition: all 0.2s !important;
+        white-space: nowrap !important;
+    }
+
+    /* ACTIVE TAB STATE - HIGHEST PRIORITY */
+    .active-tab { 
+        border-bottom: 3px solid #f97316 !important; 
+        color: #f97316 !important; /* FORCED ORANGE */
+    }
+
+    /* --- 4. INTEGRATED NAVY BAR FIX --- */
+    #lsh-integrated-bar { 
+        background: #0f172a !important; 
+        color: white !important; 
+        padding: 20px !important; 
+        border-radius: 10px !important; 
+        margin: 20px 0 !important; 
+        display: flex !important; 
+        flex-direction: row !important;
+        align-items: center !important; 
+        border-left: 6px solid #f97316 !important; 
+        min-height: 100px !important;
+        gap: 20px !important;
+    }
+
+    .bar-box { 
+        background: white !important; 
+        border-radius: 8px !important; 
+        padding: 12px !important; 
+        width: 170px !important; 
+        height: 65px !important; 
         display: flex !important;
-        flex-direction: column !important; /* Forces header and table to stack */
+        flex-direction: column !important;
+        justify-content: center !important;
+    }
+
+    .bar-box label { 
+        color: #64748b !important; 
+        font-family: Arial !important; 
+        font-weight: 900 !important; 
+        font-size: 9px !important; 
+    }
+
+    .bar-box div { 
+        color: #000 !important; 
+        font-family: Arial !important; 
+        font-weight: 800 !important; 
+        font-size: 14px !important; 
+    }
+
+    /* --- 5. CARDS & TABLES --- */
+    .pdf-card { 
+        background: white !important; 
+        border: 1px solid #e2e8f0 !important; 
+        border-radius: 12px !important; 
+        padding: 24px !important; 
+        display: flex !important;
+        flex-direction: column !important;
+        margin-bottom: 20px !important;
     }
 
     .treat-table { 
         width: 100% !important; 
-        border-collapse: collapse; 
-        margin-top: 10px !important;
-        clear: both !important;
+        margin-top: 15px !important; 
+        display: table !important; 
     }
 
-    .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
-    .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-
-    /* --- 4. IDENTITY & BARS --- */
-    #client-name-field { font-size: 36px !important; font-weight: 900 !important; color: #000000 !important; text-transform: uppercase !important; line-height: 1 !important; }
+    /* --- 6. UTILITIES --- */
+    .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 250px; }
+    .tab-pane.active { display: block !important; }
     
-    /* --- FIXED INTEGRATED BAR --- */
-#lsh-integrated-bar { 
-    background: #0f172a !important; 
-    color: white !important; 
-    padding: 15px 20px !important; 
-    border-radius: 10px !important; 
-    margin: 20px 0 !important; 
-    display: flex !important; 
-    flex-direction: row !important;
-    align-items: center !important; 
-    border-left: 6px solid #f97316 !important; 
-    gap: 20px !important;
-    min-height: 90px !important; /* Forces the bar to stay open */
-}
-
-.bar-data-container {
-    display: flex !important;
-    flex-direction: row !important; /* Keeps boxes side-by-side */
-    gap: 15px !important;
-    flex-shrink: 0 !important;
-}
-
-.bar-box { 
-    background: white !important; 
-    border-radius: 8px !important; 
-    padding: 10px 15px !important; 
-    display: flex !important; 
-    flex-direction: column !important;
-    justify-content: center !important;
-    width: 160px !important; 
-    height: 60px !important; /* Fixed height for the inner white boxes */
-    flex-shrink: 0 !important;
-}
-
-.bar-box label { 
-    margin-bottom: 2px !important; 
-    color: #64748b !important; 
-    font-size: 9px !important; 
-    font-weight: 900 !important;
-    line-height: 1 !important;
-    text-transform: uppercase !important;
-}
-
-.bar-box div { 
-    color: #0f172a !important; 
-    font-weight: 800 !important; 
-    font-size: 14px !important; 
-}
-
-.sol-box { 
-    background: #fee2e2 !important; 
-    border: 1px solid #fecaca !important; 
+    [contenteditable="true"] { outline: none; background: #f8fafc; border-radius: 4px; padding: 8px 12px; border: 1px solid #f1f5f9; width: 100%; min-height: 38px; }
+    label { font-size: 10px !important; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    
+    @media print { 
+        .no-print { display: none !important; }
+        .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
+    }
+</style>
 }
 </style>
     </style>
