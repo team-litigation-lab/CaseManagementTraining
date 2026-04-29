@@ -745,12 +745,36 @@ function processUpload(input) {
     </script>
     <script>
 /**
- /**
- * LSH MASTER OVERRIDE - V2026.GRID_LOCK_DROPDOWN
- * Forces grid alignment and styles all dropdowns to be white/black bold.
+ * LSH MASTER OVERRIDE - V2026.DYNAMIC_FLEX
+ * Fixes Upload Portal overflow while locking Chronology/Tasks.
  */
+
+// 1. INJECT GLOBAL CSS
+const lshStyles = document.createElement('style');
+lshStyles.innerHTML = `
+    /* standard grid for rows with a single ADD button */
+    .grid-lock-row {
+        display: grid !important;
+        grid-template-columns: 1fr auto !important;
+        align-items: center !important;
+        gap: 0px !important;
+        width: 100% !important;
+    }
+
+    /* flex wrap for the Upload Portal so buttons can go to next line */
+    .portal-wrap {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    h3, label { margin-bottom: 0px !important; }
+`;
+document.head.appendChild(lshStyles);
+
+// 2. JAVASCRIPT LOGIC
 function applyLSHFinalMaster() {
-    // 1. TARGET HEADERS
     const targetHeaders = [
         "Identity", "Demographics", "Employment Details", "Emergency Contact", "Case Narrative",
         "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
@@ -764,25 +788,27 @@ function applyLSHFinalMaster() {
         const text = el.innerText.trim().toUpperCase();
         if (targetHeaders.some(h => h.toUpperCase() === text)) {
             const parent = el.parentElement;
-            const btn = parent ? parent.querySelector('button') : null;
-
-            // GRID LOCK: Forces bar and button to touch
-            if (parent && btn) {
-                parent.style.setProperty('display', 'grid', 'important');
-                parent.style.setProperty('grid-template-columns', '1fr auto', 'important');
-                parent.style.setProperty('align-items', 'center', 'important');
-                parent.style.setProperty('gap', '0px', 'important');
-                parent.style.setProperty('width', '100%', 'important');
+            
+            // LOGIC: If it's the UPLOAD PORTAL, use flex-wrap. Otherwise, use GRID LOCK.
+            if (parent) {
+                if (text.includes("UPLOAD") || text.includes("QUICK LABEL")) {
+                    parent.classList.add('portal-wrap');
+                    parent.classList.remove('grid-lock-row');
+                    el.style.setProperty('width', '100%', 'important'); // Header takes full top row
+                } else if (parent.querySelector('button')) {
+                    parent.classList.add('grid-lock-row');
+                    parent.classList.remove('portal-wrap');
+                }
             }
 
+            // Header Styles (White on Black)
             el.style.setProperty('background-color', '#000000', 'important');
             el.style.setProperty('color', '#ffffff', 'important');
             el.style.setProperty('height', '32px', 'important');
             el.style.setProperty('display', 'flex', 'important');
             el.style.setProperty('align-items', 'center', 'important');
             el.style.setProperty('padding', '0 15px', 'important');
-            el.style.setProperty('margin', '0', 'important');
-            el.style.setProperty('border-radius', '4px 0 0 4px', 'important');
+            el.style.setProperty('border-radius', '4px', 'important');
             el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             el.style.setProperty('font-size', '13px', 'important');
             el.style.setProperty('font-weight', '900', 'important');
@@ -790,59 +816,35 @@ function applyLSHFinalMaster() {
         }
     });
 
-    // 2. ACTION BUTTONS (Orange on Black)
+    // Button Styles
     document.querySelectorAll('button').forEach(btn => {
         const onClick = btn.getAttribute('onclick') || "";
         const isAction = onClick.includes('add') || onClick.includes('addRow') || onClick.includes('triggerUpload') || btn.classList.contains('hub-btn');
 
         if (isAction) {
+            // Only rename the row-adders
             if (!onClick.includes('triggerUpload') && !btn.classList.contains('hub-btn')) {
                 btn.innerText = "ADD";
+                btn.style.setProperty('border-radius', '0 4px 4px 0', 'important');
+            } else {
+                btn.style.setProperty('border-radius', '4px', 'important');
             }
+            
             btn.style.setProperty('background-color', '#f97316', 'important');
             btn.style.setProperty('color', '#000000', 'important');
             btn.style.setProperty('height', '32px', 'important');
-            btn.style.setProperty('border-radius', '0 4px 4px 0', 'important');
             btn.style.setProperty('font-weight', '900', 'important');
-            btn.style.setProperty('padding', '0 20px', 'important');
+            btn.style.setProperty('padding', '0 15px', 'important');
             btn.style.setProperty('border', 'none', 'important');
-            btn.style.setProperty('display', 'flex', 'important');
-            btn.style.setProperty('align-items', 'center', 'important');
         }
     });
 
-    // 3. DROPDOWN OVERRIDE (White Background, Black Bold Text)
-    document.querySelectorAll('select').forEach(select => {
-        select.style.setProperty('background-color', '#ffffff', 'important');
-        select.style.setProperty('color', '#000000', 'important');
-        select.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        select.style.setProperty('font-weight', 'bold', 'important');
-        select.style.setProperty('font-size', '12px', 'important');
-        select.style.setProperty('border', '1px solid #d1d5db', 'important');
-        select.style.setProperty('border-radius', '4px', 'important');
-        select.style.setProperty('padding', '4px', 'important');
-    });
-
-    // 4. CLIENT NAME PROTECTION
+    // Dropdowns and Name Lock
+    document.querySelectorAll('select').forEach(s => s.style.setProperty('background-color', '#fff', 'important'));
     const nameField = document.getElementById('client-name-field');
-    if (nameField) {
-        nameField.style.setProperty('font-size', '36px', 'important');
-        nameField.style.setProperty('font-weight', '900', 'important');
-        nameField.style.setProperty('color', '#000000', 'important');
-    }
-
-    // 5. GLOBAL CONTENT EDITABLE FIELDS
-    document.querySelectorAll('[contenteditable="true"]').forEach(field => {
-        if (field.id !== 'client-name-field') {
-            field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-            field.style.setProperty('font-size', '12px', 'important');
-            field.style.setProperty('font-weight', 'bold', 'important');
-            field.style.setProperty('color', '#000000', 'important');
-        }
-    });
+    if (nameField) nameField.style.setProperty('font-size', '36px', 'important');
 }
 
-// Set Interval to catch dynamically loaded content
 setInterval(applyLSHFinalMaster, 500);
 </script>
 </body>
