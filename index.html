@@ -692,21 +692,16 @@
         function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
         window.onload = renderRepo;
     </script>
-    <script>
     /**
- * LSH MASTER THEME OVERRIDE - V2026.4
- * Forces specific headers to: Arial Bold White on Black
- * Forces content to: Arial 10pt Bold Black
+ * LSH THEME OVERRIDE
+ * Targets 16 specific elements to apply: 
+ * Font: Arial, 12pt, Bold, Orange (#f97316)
+ * Background: Black (#000000)
  */
-function applyLSHMasterStyles() {
-    // 1. LIST OF ALL 20 TARGET HEADERS
-    const targetHeaders = [
+function applySpecificHeaderStyles() {
+    const targetTitles = [
         "Identity", 
         "Employment Details", 
-        "Emergency Contact",
-        "Case Narrative",
-        "Passenger Records",
-        "Police Report Details",
         "Officer's Narrative Summary", 
         "Health Insurance", 
         "Independent Subrogation Card", 
@@ -723,242 +718,39 @@ function applyLSHMasterStyles() {
         "Action Item Log"
     ];
 
-    // 2. APPLY WHITE ON BLACK TO HEADERS
-    const allTextElements = document.querySelectorAll('h3, label, .text-white-600, .text-blue-600');
-    allTextElements.forEach(el => {
+    // Find all potential title elements (h3 and labels)
+    const allHeaders = document.querySelectorAll('h3, label, span, div');
+
+    allHeaders.forEach(el => {
         const text = el.innerText.trim();
-        // Case-insensitive match against our list
-        if (targetHeaders.some(h => h.toLowerCase() === text.toLowerCase())) {
+        
+        // Check if this element matches one of our 16 targets
+        if (targetTitles.includes(text)) {
+            // Apply the "Nuclear" styling for the specific header look
             el.style.setProperty('background-color', '#000000', 'important');
             el.style.setProperty('color', '#f97316', 'important'); // Safety Orange
             el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-            el.style.setProperty('font-size', '13px', 'important');
+            el.style.setProperty('font-size', '14px', 'important'); // Slightly larger for visibility
             el.style.setProperty('font-weight', '900', 'important');
-            el.style.setProperty('padding', '6px 10px', 'important');
+            el.style.setProperty('padding', '8px 12px', 'important');
             el.style.setProperty('border-radius', '4px', 'important');
-            el.style.setProperty('display', 'block', 'important');
+            el.style.setProperty('display', 'inline-block', 'important');
             el.style.setProperty('width', '100%', 'important');
             el.style.setProperty('text-transform', 'uppercase', 'important');
-            el.style.setProperty('margin-bottom', '10px', 'important');
-            el.style.setProperty('letter-spacing', '0.5px', 'important');
-        }
-    });
-
-    // 3. APPLY ARIAL 10PT BOLD BLACK TO CONTENT
-    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
-    contentFields.forEach(field => {
-        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        field.style.setProperty('font-size', '10px', 'important');
-        field.style.setProperty('font-weight', 'bold', 'important');
-        field.style.setProperty('color', '#000000', 'important');
-        field.style.setProperty('background-color', '#ffffff', 'important');
-    });
-}
-
-// 4. DATA SCRUBBER (KEEPS CLIENT NAME)
-function wipePlaceholders() {
-    const placeholders = [
-        "MM/DD/YYYY", "(000) 000-0000", "$ 0.00", "BATCH-2026-X", 
-        "Enter facts of loss...", "Type police summary here...", 
-        "Summary...", "...", "TYPE OTHER...", "Enter Name", 
-        "e.g., LAPD / Florida Highway Patrol", "Name & Badge #", "Street / Intersection"
-    ];
-    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
-        if (placeholders.includes(el.innerText.trim())) {
-            el.innerHTML = "";
+            el.style.setProperty('letter-spacing', '1px', 'important');
         }
     });
 }
 
-// 5. OBSERVER & EXECUTION
-const lshObserver = new MutationObserver(() => {
-    applyLSHMasterStyles();
+// 1. Run immediately
+applySpecificHeaderStyles();
+
+// 2. Run whenever the user clicks a tab or an "Add" button
+document.addEventListener('click', () => {
+    setTimeout(applySpecificHeaderStyles, 50);
 });
 
-const targetArea = document.getElementById('capture-area');
-if (targetArea) {
-    lshObserver.observe(targetArea, { childList: true, subtree: true });
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    wipePlaceholders();
-    applyLSHMasterStyles();
-});
-
-// Periodic enforcement (Every 1 second)
-setInterval(applyLSHMasterStyles, 1000);
-</script>
-    <script>
-        /**
- * LSH IDENTITY HIGHLIGHTER
- * Makes the Identity section pop with a glow, border, and shadow.
- */
-function highlightIdentitySection() {
-    // 1. Identify the card containing the "Identity" header
-    const allCards = document.querySelectorAll('.pdf-card');
-    
-    allCards.forEach(card => {
-        if (card.innerText.toUpperCase().includes("IDENTITY")) {
-            // Apply High-Importance Highlight
-            card.style.setProperty('border', '3px solid #f97316', 'important'); // Safety Orange Border
-            card.style.setProperty('box-shadow', '0 0 20px rgba(249, 115, 22, 0.2)', 'important'); // Orange Glow
-            card.style.setProperty('transform', 'scale(1.01)', 'important'); // Subtle Zoom
-            card.style.setProperty('transition', 'all 0.3s ease', 'important');
-            card.style.setProperty('z-index', '10', 'important');
-            
-            }
-    });
-}
-
-// Run on load and during safety check
-window.addEventListener('DOMContentLoaded', highlightIdentitySection);
-setInterval(highlightIdentitySection, 2000);
-    </script>
-             <script>
-    /**
- * LSH CLIENT NAME NUCLEAR OVERRIDE
- * Forces the Client Name to stay 36px Black/Bold Arial and prevents shrinking.
- */
-/**
- * LSH MASTER THEME OVERRIDE - ANTI-BLINK VERSION
- */
-function applyLSHMasterStyles() {
-    // ... [Keep your Header Logic here] ...
-
-    // UPDATED: Content Styling with "Client Name" Protection
-    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
-    
-    contentFields.forEach(field => {
-        // IF THIS IS THE CLIENT NAME, DO NOT SHRINK IT
-        if (field.id === 'client-name-field') {
-            field.style.setProperty('font-size', '36px', 'important');
-            field.style.setProperty('font-weight', '900', 'important');
-        } else {
-            // ALL OTHER FIELDS GET THE STANDARD SIZE
-            field.style.setProperty('font-size', '12px', 'important');
-            field.style.setProperty('font-weight', 'bold', 'important');
-        }
-        
-        // General styles for everyone
-        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        field.style.setProperty('color', '#000000', 'important');
-        field.style.setProperty('background-color', '#ffffff', 'important');
-    });
-}
-
-// Run immediately and continuously to fight off other scripts
-window.addEventListener('DOMContentLoaded', lockClientNameStyle);
-setInterval(lockClientNameStyle, 500); // Check every half-second for maximum stability
-             </script>
-    <script>
-        /**
- * LSH UNIVERSAL BUTTON OVERRIDE
- * Targets all "Add" buttons, replaces text with "ADD", 
- * and forces Orange Background with Black Text.
- */
-function unifyAddButtons() {
-    // Select all buttons on the page
-    const buttons = document.querySelectorAll('button');
-
-    buttons.forEach(btn => {
-        const btnText = btn.innerText.toUpperCase();
-        
-        // If the button text contains "ADD", apply the master style
-        if (btnText.includes("ADD") || btnText.includes("+")) {
-            // 1. Uniform Text
-            btn.innerText = "ADD";
-
-            // 2. Nuclear Visual Override
-            btn.style.setProperty('background-color', '#f97316', 'important'); // Safety Orange
-            btn.style.setProperty('color', '#000000', 'important');           // Jet Black
-            btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-            btn.style.setProperty('font-weight', '900', 'important');
-            btn.style.setProperty('font-size', '10px', 'important');
-            btn.style.setProperty('text-transform', 'uppercase', 'important');
-            btn.style.setProperty('letter-spacing', '1px', 'important');
-            
-            // 3. Uniform Shape
-            btn.style.setProperty('padding', '8px 20px', 'important');
-            btn.style.setProperty('border-radius', '6px', 'important');
-            btn.style.setProperty('border', 'none', 'important');
-            btn.style.setProperty('cursor', 'pointer', 'important');
-            btn.style.setProperty('box-shadow', '0 2px 4px rgba(0,0,0,0.1)', 'important');
-            
-            // 4. Ensure it doesn't shrink
-            btn.style.setProperty('min-width', '80px', 'important');
-            btn.style.setProperty('height', '32px', 'important');
-        }
-    });
-}
-
-// Run immediately and every second to catch dynamic buttons
-window.addEventListener('DOMContentLoaded', unifyAddButtons);
-setInterval(unifyAddButtons, 1000);
-    </script>
-    <script>
-                /**
-    });
-
-    // 2. Adjust the headers so they don't take up the whole line vertically
-    const headers = document.querySelectorAll('h3, label');
-    headers.forEach(header => {
-        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
-            header.style.setProperty('margin-bottom', '0', 'important'); // Remove the bottom margin
-            header.style.setProperty('display', 'flex', 'important');
-            header.style.setProperty('align-items', 'center', 'important');
-            header.style.setProperty('height', '32px', 'important'); // Match button height
-        }
-    });
-}
-
-// Run immediately and monitor
-window.addEventListener('DOMContentLoaded', fixAlignment);
-setInterval(fixAlignment, 1000);
-        /**
- * LSH NAVIGATION OVERRIDE
- * Makes the main tab buttons bigger, bolder, and high-contrast.
- */
-function enhanceNavigation() {
-    const tabs = document.querySelectorAll('.tab-btn');
-    
-    tabs.forEach(tab => {
-        // 1. Force Larger Text & Bold Arial
-        tab.style.setProperty('font-size', '14px', 'important');
-        tab.style.setProperty('font-weight', '900', 'important');
-        tab.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        
-        // 2. Increase Spacing & Hit-Area
-        tab.style.setProperty('padding', '12px 20px', 'important');
-        tab.style.setProperty('margin-right', '5px', 'important');
-        
-        // 3. Dynamic Styling based on state
-        if (tab.classList.contains('active-tab')) {
-            // Active Tab Style
-            tab.style.setProperty('color', '#f97316', 'important'); // Safety Orange
-            tab.style.setProperty('border-bottom', '4px solid #f97316', 'important');
-            tab.style.setProperty('background-color', '#0f172a', 'important'); // Dark Navy BG for active
-            tab.style.setProperty('border-radius', '6px 6px 0 0', 'important');
-        } else {
-            // Inactive Tab Style
-            tab.style.setProperty('color', '#64748b', 'important');
-            tab.style.setProperty('border-bottom', '4px solid transparent', 'important');
-            tab.style.setProperty('background-color', 'transparent', 'important');
-        }
-    });
-
-    // Ensure the container allows for the bigger tabs without hiding them
-    const container = document.querySelector('.no-print.overflow-x-auto');
-    if (container) {
-        container.style.setProperty('padding-top', '10px', 'important');
-        container.style.setProperty('padding-bottom', '10px', 'important');
-        container.style.setProperty('display', 'flex', 'important');
-        container.style.setProperty('gap', '10px', 'important');
-    }
-}
-
-// Execute and Loop
-window.addEventListener('DOMContentLoaded', enhanceNavigation);
-setInterval(enhanceNavigation, 1000);
-    </script>
+// 3. Constant safety check (every 1.5 seconds)
+setInterval(applySpecificHeaderStyles, 1500);
 </body>
 </html>
