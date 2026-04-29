@@ -693,14 +693,14 @@
         window.onload = renderRepo;
     </script>
     /**
- * LSH MASTER STYLER - THE NUCLEAR OVERRIDE
- * Forces all labels/headers to Blue and all editable content to Arial 12pt Bold Black.
+ * LSH MASTER STYLER - THE NUCLEAR OVERRIDE 
+ * Forces Blue Titles and Arial 12pt Bold Black Content
  */
 function applyDefinitiveStyles() {
     // 1. Force Titles and Labels to Blue
     const blueTargets = document.querySelectorAll('label, h3, .text-orange-600, .text-blue-600, .text-red-600, #display-phase');
     blueTargets.forEach(el => {
-        el.style.setProperty('color', '#1e40af', 'important'); // Professional Deep Blue
+        el.style.setProperty('color', '#1e40af', 'important'); 
         el.style.setProperty('font-weight', '900', 'important');
     });
 
@@ -716,8 +716,7 @@ function applyDefinitiveStyles() {
     });
 }
 
-/**
- * DATA SCRUBBER - WIPES PRE-POPULATED DATA
+/** * DATA SCRUBBER - WIPES PRE-POPULATED DATA 
  */
 function wipeAllPlaceholders() {
     const placeholders = [
@@ -731,16 +730,18 @@ function wipeAllPlaceholders() {
     });
 }
 
-// Create a "Watcher" that applies styles even when you add new dynamic rows
+/**
+ * WATCHER SYSTEM
+ * Start watching the capture area for changes (like adding a passenger)
+ */
 const observer = new MutationObserver(() => {
     applyDefinitiveStyles();
 });
 
-// Start watching the capture area for changes (like adding a passenger)
-observer.observe(document.getElementById('capture-area'), {
-    childList: true,
-    subtree: true
-});
+const captureArea = document.getElementById('capture-area');
+if (captureArea) {
+    observer.observe(captureArea, { childList: true, subtree: true });
+}
 
 // Run immediately on load
 window.addEventListener('DOMContentLoaded', () => {
@@ -750,5 +751,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Constant check for total safety (runs every 1 second)
 setInterval(applyDefinitiveStyles, 1000);
+    </script>
 </body>
 </html>
