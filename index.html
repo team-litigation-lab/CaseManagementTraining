@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSH Training Interface</title>
+    <title>LSH Master Build | Definitive Master 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -132,7 +132,7 @@
 
         /* 4. UI COMPONENTS */
         .pdf-card { 
-            background: lightgray; 
+            background: white; 
             border: 1px solid #e2e8f0; 
             border-radius: 12px; 
             padding: 24px; 
@@ -218,6 +218,7 @@
             position: relative !important; 
             color: white; 
         }
+
         @media print { 
             .no-print { display: none !important; }
             .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
@@ -225,24 +226,6 @@
         }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        /* Fix for Integrated Bar to prevent overlapping boxes */
-#lsh-integrated-bar {
-    display: flex !important;
-    flex-wrap: nowrap !important; /* Forces boxes to stay in one line */
-    align-items: center !important;
-    min-width: 1050px !important; /* Ensures bar is wide enough for PDF */
-}
-
-.bar-data-container {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 15px !important;
-}
-
-.bar-box {
-    width: 210px !important; /* Fixed width lock for white boxes */
-    flex-shrink: 0 !important;
-}
     </style>
 </head>
 <body>
@@ -338,166 +321,46 @@
                 </div>
             </div>
 
-           <div id="pane-profile" class="tab-pane active">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <div class="space-y-6">
-            <div class="pdf-card shadow-sm border-t-4 border-slate-800">
-                <h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">Demographics</h3>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label>DOB</label>
-                        <div contenteditable="true" class="text-sm font-semibold">MM/DD/YYYY</div>
+            <div id="pane-profile" class="tab-pane active">
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Identity</h3>
+                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true"></div></div><div><label>SSN</label><div contenteditable="true"></div></div></div>
+                            <div class="mb-4"><label>Email Address</label><div contenteditable="true"></div></div><div><label>Home Address</label><div contenteditable="true"></div></div>
+                        </div>
+                        <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><h3 class="text-[11px] font-black text-orange-400 uppercase mb-4 border-b pb-2">Emergency Contact</h3>
+                            <div class="mb-4"><label>Full Name</label><div contenteditable="true"></div></div>
+                            <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true"></div></div><div><label>Relationship</label><div contenteditable="true"></div></div></div>
+                        </div>
                     </div>
-                    <div>
-                        <label>SSN</label>
-                        <div contenteditable="true" class="text-sm font-semibold">000-00-0000</div>
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><h3>Employment Details</h3>
+                            <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option><option>Retired</option></select></div>
+                            <div class="mb-4"><label>Employer Name</label><div contenteditable="true"></div></div>
+                            <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true"></div></div>
+                        </div>
                     </div>
+                    <div class="pdf-card shadow-sm"><h3 class="text-orange-500 font-black uppercase text-[11px] mb-4 border-b pb-2">Case Narrative</h3><div contenteditable="true" class="min-h-[440px] text-sm italic leading-relaxed text-slate-600">Enter facts of loss...</div></div>
                 </div>
-                <div class="mb-4">
-                    <label>Email Address</label>
-                    <div contenteditable="true" class="text-sm">client@example.com</div>
-                </div>
-                <div>
-                    <label>Home Address</label>
-                    <div contenteditable="true" class="text-sm min-h-[60px]">123 Main St, City, State, Zip</div>
+                <div class="mt-6">
+                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase">Passenger Records</label><button onclick="addPassenger()" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded no-print hover:bg-orange-600 transition-all font-bold">+ ADD PASSENGER</button></div>
+                    <div id="passenger-container" class="space-y-4"></div>
                 </div>
             </div>
 
-            <div class="pdf-card border-l-4 border-orange-400 shadow-sm bg-orange-50/30">
-                <h3 class="text-[11px] font-black text-orange-500 uppercase mb-4 border-b pb-2 tracking-widest">Emergency Contact</h3>
-                <div class="mb-4">
-                    <label>Full Name</label>
-                    <div contenteditable="true" class="text-sm font-bold">Name</div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label>Phone</label>
-                        <div contenteditable="true" class="text-sm font-bold">(000) 000-0000</div>
-                    </div>
-                    <div>
-                        <label>Relationship</label>
-                        <div contenteditable="true" class="text-sm">Spouse/Parent</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="space-y-6">
-            <div class="pdf-card shadow-sm border-t-4 border-blue-600">
-                <h3 class="text-[11px] font-black text-blue-600 uppercase mb-4 border-b pb-2 tracking-widest">Employment Details</h3>
-                <div class="mb-4">
-                    <label>Status</label>
-                    <select class="prof-input">
-                        <option>Employed</option>
-                        <option>Unemployed</option>
-                        <option>Self-Employed</option>
-                        <option>Retired</option>
-                        <option>Disabled</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label>Employer Name</label>
-                    <div contenteditable="true" class="text-sm">Company Name</div>
-                </div>
-                <div class="mb-4">
-                    <label>Job Position / Title</label>
-                    <div contenteditable="true" class="text-sm italic">Manager / Laborer</div>
-                </div>
-                <div>
-                    <label>Work Address / Phone</label>
-                    <div contenteditable="true" class="text-sm min-h-[60px]">Details...</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="pdf-card shadow-sm border-t-4 border-orange-500">
-            <h3 class="text-orange-500 font-black uppercase text-[11px] mb-4 border-b pb-2 tracking-widest">Case Narrative</h3>
-            <div contenteditable="true" class="min-h-[440px] text-sm italic leading-relaxed text-slate-600 bg-slate-50/50 p-4 rounded border border-dashed border-slate-200">
-                Enter facts of loss and client injury allegations here...
-            </div>
-        </div>
-    </div>
-
-    <div class="mt-8">
-        <div class="flex justify-between items-center mb-4">
-            <label class="text-orange-600 font-black text-sm uppercase tracking-tighter">Passenger Records</label>
-            <button onclick="addPassenger()" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded no-print hover:bg-orange-600 transition-all font-bold tracking-widest shadow-md">+ ADD PASSENGER</button>
-        </div>
-        <div id="passenger-container" class="space-y-4"></div>
-    </div>
-</div>
             <div id="pane-police" class="tab-pane">
-    <div class="pdf-card border-l-8 border-blue-600 shadow-lg">
-        <h3 class="font-black text-blue-600 text-[11px] mb-6 uppercase tracking-widest border-b pb-2">Official Police Report Details</h3>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <div class="space-y-4">
-                <div>
-                    <label>Responding Agency</label>
-                    <div contenteditable="true" class="text-sm font-bold bg-white border border-slate-200 rounded p-2">e.g., LAPD / Florida Highway Patrol</div>
-                </div>
-                <div>
-                    <label>Report Number</label>
-                    <div contenteditable="true" class="text-sm font-black text-blue-700 bg-white border border-slate-200 rounded p-2">#</div>
-                </div>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <label>Reporting Officer</label>
-                    <div contenteditable="true" class="text-sm font-bold bg-white border border-slate-200 rounded p-2">Name & Badge #</div>
-                </div>
-                <div>
-                    <label>Incident Location</label>
-                    <div contenteditable="true" class="text-sm bg-white border border-slate-200 rounded p-2">Street / Intersection</div>
-                </div>
-            </div>
-
-            <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label>Date of Report</label>
-                        <div contenteditable="true" class="text-xs bg-white border border-slate-200 rounded p-2">MM/DD/YYYY</div>
+                <div class="pdf-card border-l-8 border-blue-500">
+                    <h3 class="font-black text-blue-600 text-[11px] mb-6 uppercase tracking-widest">Police Report Details</h3>
+                    <div class="grid grid-cols-3 gap-8 mb-8">
+                        <div><label>Responding Agency</label><div contenteditable="true"></div></div>
+                        <div><label>Report Number</label><div contenteditable="true"></div></div>
+                        <div><label>Reporting Officer</label><div contenteditable="true"></div></div>
                     </div>
-                    <div>
-                        <label>Time of Report</label>
-                        <div contenteditable="true" class="text-xs bg-white border border-slate-200 rounded p-2">00:00 AM/PM</div>
-                    </div>
-                </div>
-                <div>
-                    <label>Violations Cited?</label>
-                    <select class="prof-input">
-                        <option>None</option>
-                        <option>Adverse Driver Cited</option>
-                        <option>Client Cited</option>
-                        <option>Both Parties Cited</option>
-                        <option>Criminal Charges Filed</option>
-                    </select>
+                    <label>Officer's Narrative Summary</label>
+                    <div contenteditable="true" class="min-h-[450px] bg-slate-50 p-6 rounded text-sm italic leading-relaxed text-slate-700">Type police summary here...</div>
                 </div>
             </div>
-        </div>
 
-        <div class="mt-6">
-            <label class="text-blue-600 font-black mb-2 uppercase text-[10px]">Officer's Narrative Summary & Liability Findings</label>
-            <div contenteditable="true" class="min-h-[450px] bg-slate-50 p-6 rounded-lg border-2 border-dashed border-slate-200 text-sm italic leading-relaxed text-slate-700">
-                Transcribe the officer's description of the accident here. 
-                Include point of impact, witness statements, and the officer's conclusion on fault...
-            </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-6 mt-8 no-print">
-            <div class="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                <label class="text-blue-800">Witnesses Identified</label>
-                <div contenteditable="true" class="text-xs min-h-[60px]">List names and phone numbers...</div>
-            </div>
-            <div class="p-4 bg-slate-100 border border-slate-200 rounded-lg">
-                <label class="text-slate-600">Evidence Collected</label>
-                <div contenteditable="true" class="text-xs min-h-[60px]">e.g., Photos, Dashcam, Bodycam, CCTV...</div>
-            </div>
-        </div>
-    </div>
-</div>
             <div id="pane-matrix" class="tab-pane">
                 <div class="space-y-8">
                     <div class="grid grid-cols-2 gap-8">
@@ -612,75 +475,67 @@
                 </div>
             </div>
 
-          <div id="pane-finance" class="tab-pane">
-    <div class="pdf-card border-l-8 border-orange-500">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="font-black text-slate-400 uppercase text-[11px]">Expenses</h3>
-            <button onclick="addRow('fin-body')" class="bg-slate-950 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD ENTRY</button>
-        </div>
-        <table class="treat-table w-full">
-            <thead>
-                <tr>
-                    <th width="150">Date</th>
-                    <th width="200">Staff Member</th>
-                    <th>Expense ID / Description</th>
-                    <th width="150">Amount</th>
-                    <th width="40"></th>
-                </tr>
-            </thead>
-            <tbody id="fin-body"></tbody>
-        </table>
-    </div>
-    <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center">
-        <span class="font-black uppercase text-blue-700 text-xs">Consolidated File Expenses</span>
-        <span id="exp-total" class="text-2xl font-black text-blue-700">$ 0.00</span>
-    </div>
-</div>
+            <div id="pane-finance" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3>Finance Tracking</h3>
+                        <button onclick="addRow('fin-body')" class="bg-slate-950 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD ENTRY</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead>
+                            <tr>
+                                <th width="150">Date</th>
+                                <th width="200">Assigned To</th>
+                                <th>Expense ID / Description</th>
+                                <th width="150">Amount</th>
+                                <th width="40"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="fin-body"></tbody>
+                    </table>
+                </div>
+                <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center">
+                    <span class="font-black uppercase text-blue-700 text-xs">Consolidated File Expenses</span>
+                    <span id="exp-total" class="text-2xl font-black text-blue-700">$ 0.00</span>
+                </div>
+            </div>
 
-<div id="pane-docs" class="tab-pane">
-    <div class="pdf-card border-l-8 border-orange-500">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="font-black text-slate-400 uppercase text-[11px]">Upload Portal</h3>
-        </div>
-        <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
-            <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
-            <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
-            <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
-            <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
-            <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
-            <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
-            <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
-            <button onclick="addDocument('Others')" class="hub-btn">Others</button>
-        </div>
-        <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
-    </div>
-</div>
+            <div id="pane-docs" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <h3 class="mb-6 uppercase text-[11px] font-black text-orange-500 italic">Quick Label Portal</h3>
+                    <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
+                        <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
+                        <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
+                        <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
+                        <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
+                        <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
+                        <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
+                        <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
+                        <button onclick="addDocument('Others')" class="hub-btn">Others</button>
+                    </div>
+                    <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
+                </div>
+            </div>
 
-<div id="pane-notes" class="tab-pane">
-    <div class="pdf-card border-l-8 border-orange-500">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="font-black text-slate-400 uppercase text-[11px]">Case Chronology</h3>
-            <button onclick="addRow('note-body')" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD NOTE</button>
-        </div>
-        <table class="treat-table w-full">
-            <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
-            <tbody id="note-body"></tbody>
-        </table>
-    </div>
-</div>
+            <div id="pane-notes" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6"><h3>Case Chronology</h3><button onclick="addRow('note-body')" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD NOTE</button></div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
+                        <tbody id="note-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="pane-tasks" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6"><h3>Action Item Log</h3><button onclick="addRow('task-body')" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD TASK</button></div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Staff Assigned</th><th>Task Description</th><th width="40"></th></tr></thead>
+                        <tbody id="task-body"></tbody>
+                    </table>
+                </div>
+            </div>
 
-<div id="pane-tasks" class="tab-pane">
-    <div class="pdf-card border-l-8 border-orange-500">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="font-black text-slate-400 uppercase text-[11px]">Action Items</h3>
-            <button onclick="addRow('task-body')" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD TASK</button>
-        </div>
-        <table class="treat-table w-full">
-            <thead><tr><th width="150">Date</th><th width="200">Staff Assigned</th><th>Task Description</th><th width="40"></th></tr></thead>
-            <tbody id="task-body"></tbody>
-        </table>
-    </div>
-</div>
         </div>
     </main>
 
@@ -834,34 +689,326 @@
         function deleteCase(id, e) { e.stopPropagation(); if(confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); renderRepo(); } }
         function exportRepo() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem(REPO_KEY)], {type:'application/json'})); a.download='LSH_Backup.json'; a.click(); }
         function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Data Imported"); }; r.readAsText(i.files[0]); }
-        function downloadPDF() {const element = document.getElementById('capture-area');
-        // PDF Capture Settings
-    const opt = {
-        margin: [0.2, 0.2, 0.2, 0.2], // top, left, buttom, right
-        filename: 'LSH_Case_Summary.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
-            letterRendering: true,
-            width: 1150, // Force capture width to include the right side
-            windowWidth: 1200 // Force virtual browser width
-        },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    // 1. Scroll to top to ensure capture starts at the beginning
-    window.scrollTo(0, 0);
+        function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
+        window.onload = renderRepo;
+    </script>
+    <script>
+    /**
+ * LSH MASTER THEME OVERRIDE - V2026.4
+ * Forces specific headers to: Arial Bold White on Black
+ * Forces content to: Arial 10pt Bold Black
+ */
+function applyLSHMasterStyles() {
+    // 1. LIST OF ALL 20 TARGET HEADERS
+    const targetHeaders = [
+        "Identity", 
+        "Employment Details", 
+        "Emergency Contact",
+        "Case Narrative",
+        "Passenger Records",
+        "Police Report Details",
+        "Officer's Narrative Summary", 
+        "Health Insurance", 
+        "Independent Subrogation Card", 
+        "Bodily Injury (BI) Policies", 
+        "PIP / UM / UIM Coverage Stack", 
+        "Outstanding Case Liens", 
+        "Provider Treatment Matrix",
+        "Client Vehicle", 
+        "Third Party Vehicle", 
+        "Discovery & Filing Tracker", 
+        "Finance Tracking", 
+        "Quick Label Portal",
+        "Case Chronology", 
+        "Action Item Log"
+    ];
 
-    // 2. Temporarily fix the element width to prevent clipping during capture
-    const originalWidth = element.style.width;
-    element.style.width = "1100px"; 
+    // 2. APPLY WHITE ON BLACK TO HEADERS
+    const allTextElements = document.querySelectorAll('h3, label, .text-white-600, .text-blue-600');
+    allTextElements.forEach(el => {
+        const text = el.innerText.trim();
+        // Case-insensitive match against our list
+        if (targetHeaders.some(h => h.toLowerCase() === text.toLowerCase())) {
+            el.style.setProperty('background-color', '#000000', 'important');
+            el.style.setProperty('color', '#f97316', 'important'); // Safety Orange
+            el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            el.style.setProperty('font-size', '13px', 'important');
+            el.style.setProperty('font-weight', '900', 'important');
+            el.style.setProperty('padding', '6px 10px', 'important');
+            el.style.setProperty('border-radius', '4px', 'important');
+            el.style.setProperty('display', 'block', 'important');
+            el.style.setProperty('width', '100%', 'important');
+            el.style.setProperty('text-transform', 'uppercase', 'important');
+            el.style.setProperty('margin-bottom', '10px', 'important');
+            el.style.setProperty('letter-spacing', '0.5px', 'important');
+        }
+    });
 
-    // 3. Execute Capture
-    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
-        // Reset original width after capture is finished
-        element.style.width = originalWidth;
-    }).save();
+    // 3. APPLY ARIAL 10PT BOLD BLACK TO CONTENT
+    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
+    contentFields.forEach(field => {
+        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        field.style.setProperty('font-size', '10px', 'important');
+        field.style.setProperty('font-weight', 'bold', 'important');
+        field.style.setProperty('color', '#000000', 'important');
+        field.style.setProperty('background-color', '#ffffff', 'important');
+    });
 }
+
+// 4. DATA SCRUBBER (KEEPS CLIENT NAME)
+function wipePlaceholders() {
+    const placeholders = [
+        "MM/DD/YYYY", "(000) 000-0000", "$ 0.00", "BATCH-2026-X", 
+        "Enter facts of loss...", "Type police summary here...", 
+        "Summary...", "...", "TYPE OTHER...", "Enter Name", 
+        "e.g., LAPD / Florida Highway Patrol", "Name & Badge #", "Street / Intersection"
+    ];
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+        if (placeholders.includes(el.innerText.trim())) {
+            el.innerHTML = "";
+        }
+    });
+}
+
+// 5. OBSERVER & EXECUTION
+const lshObserver = new MutationObserver(() => {
+    applyLSHMasterStyles();
+});
+
+const targetArea = document.getElementById('capture-area');
+if (targetArea) {
+    lshObserver.observe(targetArea, { childList: true, subtree: true });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    wipePlaceholders();
+    applyLSHMasterStyles();
+});
+
+// Periodic enforcement (Every 1 second)
+setInterval(applyLSHMasterStyles, 1000);
+</script>
+    <script>
+        /**
+ * LSH IDENTITY HIGHLIGHTER
+ * Makes the Identity section pop with a glow, border, and shadow.
+ */
+function highlightIdentitySection() {
+    // 1. Identify the card containing the "Identity" header
+    const allCards = document.querySelectorAll('.pdf-card');
+    
+    allCards.forEach(card => {
+        if (card.innerText.toUpperCase().includes("IDENTITY")) {
+            // Apply High-Importance Highlight
+            card.style.setProperty('border', '3px solid #f97316', 'important'); // Safety Orange Border
+            card.style.setProperty('box-shadow', '0 0 20px rgba(249, 115, 22, 0.2)', 'important'); // Orange Glow
+            card.style.setProperty('transform', 'scale(1.01)', 'important'); // Subtle Zoom
+            card.style.setProperty('transition', 'all 0.3s ease', 'important');
+            card.style.setProperty('z-index', '10', 'important');
+            
+            }
+    });
+}
+
+// Run on load and during safety check
+window.addEventListener('DOMContentLoaded', highlightIdentitySection);
+setInterval(highlightIdentitySection, 2000);
+    </script>
+             <script>
+    /**
+ * LSH CLIENT NAME NUCLEAR OVERRIDE
+ * Forces the Client Name to stay 36px Black/Bold Arial and prevents shrinking.
+ */
+/**
+ * LSH MASTER THEME OVERRIDE - ANTI-BLINK VERSION
+ */
+function applyLSHMasterStyles() {
+    // ... [Keep your Header Logic here] ...
+
+    // UPDATED: Content Styling with "Client Name" Protection
+    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
+    
+    contentFields.forEach(field => {
+        // IF THIS IS THE CLIENT NAME, DO NOT SHRINK IT
+        if (field.id === 'client-name-field') {
+            field.style.setProperty('font-size', '36px', 'important');
+            field.style.setProperty('font-weight', '900', 'important');
+        } else {
+            // ALL OTHER FIELDS GET THE STANDARD SIZE
+            field.style.setProperty('font-size', '12px', 'important');
+            field.style.setProperty('font-weight', 'bold', 'important');
+        }
+        
+        // General styles for everyone
+        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        field.style.setProperty('color', '#000000', 'important');
+        field.style.setProperty('background-color', '#ffffff', 'important');
+    });
+}
+
+// Run immediately and continuously to fight off other scripts
+window.addEventListener('DOMContentLoaded', lockClientNameStyle);
+setInterval(lockClientNameStyle, 500); // Check every half-second for maximum stability
+             </script>
+    <script>
+        /**
+ * LSH UNIVERSAL BUTTON OVERRIDE
+ * Targets all "Add" buttons, replaces text with "ADD", 
+ * and forces Orange Background with Black Text.
+ */
+function unifyAddButtons() {
+    // Select all buttons on the page
+    const buttons = document.querySelectorAll('button');
+
+    buttons.forEach(btn => {
+        const btnText = btn.innerText.toUpperCase();
+        
+        // If the button text contains "ADD", apply the master style
+        if (btnText.includes("ADD") || btnText.includes("+")) {
+            // 1. Uniform Text
+            btn.innerText = "ADD";
+
+            // 2. Nuclear Visual Override
+            btn.style.setProperty('background-color', '#f97316', 'important'); // Safety Orange
+            btn.style.setProperty('color', '#000000', 'important');           // Jet Black
+            btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            btn.style.setProperty('font-weight', '900', 'important');
+            btn.style.setProperty('font-size', '10px', 'important');
+            btn.style.setProperty('text-transform', 'uppercase', 'important');
+            btn.style.setProperty('letter-spacing', '1px', 'important');
+            
+            // 3. Uniform Shape
+            btn.style.setProperty('padding', '8px 20px', 'important');
+            btn.style.setProperty('border-radius', '6px', 'important');
+            btn.style.setProperty('border', 'none', 'important');
+            btn.style.setProperty('cursor', 'pointer', 'important');
+            btn.style.setProperty('box-shadow', '0 2px 4px rgba(0,0,0,0.1)', 'important');
+            
+            // 4. Ensure it doesn't shrink
+            btn.style.setProperty('min-width', '80px', 'important');
+            btn.style.setProperty('height', '32px', 'important');
+        }
+    });
+}
+
+// Run immediately and every second to catch dynamic buttons
+window.addEventListener('DOMContentLoaded', unifyAddButtons);
+setInterval(unifyAddButtons, 1000);
+    </script>
+    <script>
+                /**
+    });
+
+    // 2. Adjust the headers so they don't take up the whole line vertically
+    const headers = document.querySelectorAll('h3, label');
+    headers.forEach(header => {
+        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
+            header.style.setProperty('margin-bottom', '0', 'important'); // Remove the bottom margin
+            header.style.setProperty('display', 'flex', 'important');
+            header.style.setProperty('align-items', 'center', 'important');
+            header.style.setProperty('height', '32px', 'important'); // Match button height
+        }
+    });
+}
+
+// Run immediately and monitor
+window.addEventListener('DOMContentLoaded', fixAlignment);
+setInterval(fixAlignment, 1000);
+        /**
+ * LSH NAVIGATION OVERRIDE
+ * Makes the main tab buttons bigger, bolder, and high-contrast.
+ */
+function enhanceNavigation() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    
+    tabs.forEach(tab => {
+        // 1. Force Larger Text & Bold Arial
+        tab.style.setProperty('font-size', '14px', 'important');
+        tab.style.setProperty('font-weight', '900', 'important');
+        tab.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        
+        // 2. Increase Spacing & Hit-Area
+        tab.style.setProperty('padding', '12px 20px', 'important');
+        tab.style.setProperty('margin-right', '5px', 'important');
+        
+        // 3. Dynamic Styling based on state
+        if (tab.classList.contains('active-tab')) {
+            // Active Tab Style
+            tab.style.setProperty('color', '#f97316', 'important'); // Safety Orange
+            tab.style.setProperty('border-bottom', '4px solid #f97316', 'important');
+            tab.style.setProperty('background-color', '#0f172a', 'important'); // Dark Navy BG for active
+            tab.style.setProperty('border-radius', '6px 6px 0 0', 'important');
+        } else {
+            // Inactive Tab Style
+            tab.style.setProperty('color', '#64748b', 'important');
+            tab.style.setProperty('border-bottom', '4px solid transparent', 'important');
+            tab.style.setProperty('background-color', 'transparent', 'important');
+        }
+    });
+
+    // Ensure the container allows for the bigger tabs without hiding them
+    const container = document.querySelector('.no-print.overflow-x-auto');
+    if (container) {
+        container.style.setProperty('padding-top', '10px', 'important');
+        container.style.setProperty('padding-bottom', '10px', 'important');
+        container.style.setProperty('display', 'flex', 'important');
+        container.style.setProperty('gap', '10px', 'important');
+    }
+    /**
+ * LSH MASTER BUTTON & HEADER ALIGNMENT
+ * Snaps Black Headers and Orange ADD Buttons into a perfectly straight line.
+ */
+function fixAddButtonAlignment() {
+    // 1. Target the specific buttons
+    const addButtons = document.querySelectorAll('button[onclick*="add"], button[onclick*="addRow"]');
+
+    addButtons.forEach(btn => {
+        // Find the parent container (usually the flex div holding the h3 and button)
+        const parent = btn.parentElement;
+        
+        if (parent) {
+            // FORCE PARENT ALIGNMENT
+            parent.style.setProperty('display', 'flex', 'important');
+            parent.style.setProperty('align-items', 'center', 'important'); // This is the magic fix
+            parent.style.setProperty('gap', '10px', 'important');
+        }
+
+        // BUTTON STYLE LOCK
+        btn.innerText = "ADD";
+        btn.style.setProperty('background-color', '#f97316', 'important'); // Orange BG
+        btn.style.setProperty('color', '#000000', 'important');           // Black Text
+        btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        btn.style.setProperty('font-size', '10px', 'important');
+        btn.style.setProperty('font-weight', '900', 'important');
+        btn.style.setProperty('padding', '0 15px', 'important');         // No top/bottom padding
+        btn.style.setProperty('height', '26px', 'important');            // Explicit height
+        btn.style.setProperty('display', 'inline-flex', 'important');
+        btn.style.setProperty('align-items', 'center', 'important');
+        btn.style.setProperty('border', 'none', 'important');
+        btn.style.setProperty('border-radius', '4px', 'important');
+        btn.style.setProperty('margin', '0', 'important');               // Kill stray margins
+    });
+
+    // 2. Fix the Black Headers so they don't have bottom margins pushing the button down
+    const headers = document.querySelectorAll('h3, label');
+    headers.forEach(header => {
+        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
+            header.style.setProperty('margin', '0', 'important');
+            header.style.setProperty('height', '26px', 'important');     // Match button height exactly
+            header.style.setProperty('display', 'flex', 'important');
+            header.style.setProperty('align-items', 'center', 'important');
+        }
+    });
+}
+
+// Run immediately and every second
+window.addEventListener('DOMContentLoaded', fixAddButtonAlignment);
+setInterval(fixAddButtonAlignment, 1000);
+}
+
+// Execute and Loop
+window.addEventListener('DOMContentLoaded', enhanceNavigation);
+setInterval(enhanceNavigation, 1000);
     </script>
 </body>
 </html>
