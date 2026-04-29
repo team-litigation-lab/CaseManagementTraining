@@ -674,6 +674,111 @@ function processUpload(input) {
     setInterval(injectStyles, 50);
 })();
 </script>
+    <script>
+(function() {
+    const applyDefinitiveFixes = () => {
+        const css = `
+            /* 1. THE POWER BAR (Header + ADD Button Lock) */
+            .lsh-power-bar, .lsh-row-lock {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: stretch !important;
+                width: 100% !important;
+                height: 32px !important;
+                margin-bottom: 10px !important;
+                background: none !important;
+            }
+
+            .lsh-power-bar h3, .lsh-row-lock h3, .lsh-main-header {
+                background: #000 !important;
+                color: #fff !important;
+                flex-grow: 1 !important;
+                margin: 0 !important;
+                padding: 0 15px !important;
+                display: flex !important;
+                align-items: center !important;
+                font-family: Arial !important;
+                font-size: 11px !important;
+                font-weight: 900 !important;
+                border-radius: 4px 0 0 4px !important;
+                text-transform: uppercase !important;
+            }
+
+            .lsh-action-btn, .lsh-btn-style, .lsh-power-bar button {
+                background: #f97316 !important;
+                color: #000 !important;
+                font-family: Arial !important;
+                font-weight: 900 !important;
+                font-size: 11px !important;
+                padding: 0 20px !important;
+                border-radius: 0 4px 4px 0 !important;
+                border: none !important;
+                cursor: pointer !important;
+                height: 32px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                flex-shrink: 0 !important;
+            }
+
+            /* 2. KILL GAPS & FONT LOCK */
+            .tab-pane { padding-top: 0 !important; }
+            #capture-area { padding-top: 10px !important; }
+            
+            [contenteditable="true"], input, select, textarea {
+                font-family: Arial, sans-serif !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+                color: #000 !important;
+            }
+
+            /* 3. CLIENT NAME BAR */
+            #client-name-field {
+                background: #000 !important;
+                color: #fff !important;
+                font-family: Arial !important;
+                font-size: 11px !important;
+                font-weight: 900 !important;
+                padding: 8px 15px !important;
+                border-radius: 4px !important;
+                display: inline-flex !important;
+                margin-bottom: 10px !important;
+            }
+
+            /* 4. TAB BUTTONS */
+            .tab-btn { font-family: Arial !important; font-weight: 900 !important; font-size: 11px !important; }
+            .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
+        `;
+
+        if (!document.getElementById('definitive-override')) {
+            const style = document.createElement('style');
+            style.id = 'definitive-override';
+            style.innerHTML = css;
+            document.head.appendChild(style);
+        }
+
+        // AUTO-FIX: Find any loose headers that should be in a Power Bar
+        document.querySelectorAll('.tab-pane h3').forEach(h3 => {
+            const parent = h3.parentElement;
+            const btn = parent.querySelector('button');
+            if (btn && !parent.classList.contains('lsh-power-bar')) {
+                // Wrap them if they aren't already wrapped
+                parent.classList.add('lsh-power-bar');
+                h3.classList.add('lsh-main-header');
+                btn.classList.add('lsh-action-btn');
+                if (btn.innerText.includes('+')) btn.innerText = "ADD";
+            }
+        });
+
+        // Tab Management
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.style.display = pane.classList.contains('active') ? 'block' : 'none';
+        });
+    };
+
+    setInterval(applyDefinitiveFixes, 50);
+})();
+</script>
         </script>
     </body>
 </html>
