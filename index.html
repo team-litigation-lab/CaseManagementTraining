@@ -675,36 +675,102 @@ function processUpload(input) {
 })();
 </script>
     <script>
+/** * LSH DEFINITIVE PEACEKEEPER - COMBINED BUILD
+ * Fixes: Sidebar, Horizontal Dates, Black Bar Headers, and Overlaps.
+ */
 (function() {
-    const applyDefinitiveFixes = () => {
+    const enforcePeace = () => {
         const css = `
-            /* 1. THE POWER BAR (Header + ADD Button Lock) */
+            /* 1. SIDEBAR & MAIN BODY LOCK */
+            html, body { height: 100vh !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
+            body { display: flex !important; flex-direction: row !important; }
+
+            aside { 
+                width: 280px !important; 
+                background: #05070a !important; 
+                flex-shrink: 0 !important; 
+                display: flex !important; 
+                flex-direction: column !important; 
+                border-right: 1px solid #1e293b !important;
+                z-index: 100 !important;
+            }
+
+            main { 
+                flex-grow: 1 !important; 
+                display: flex !important; 
+                flex-direction: column !important; 
+                overflow: hidden !important; 
+                background: #f8fafc !important;
+            }
+
+            #capture-area { flex-grow: 1 !important; overflow-y: auto !important; padding: 20px !important; }
+
+            /* 2. THE NAVY BAR (SIDE-BY-SIDE DATE BOXES FIX) */
+            #lsh-integrated-bar { 
+                background: #0f172a !important; 
+                padding: 20px !important; 
+                border-radius: 10px !important; 
+                margin: 20px 0 !important; 
+                display: flex !important; 
+                flex-direction: row !important; /* FORCES BOXES HORIZONTAL */
+                align-items: center !important; 
+                justify-content: flex-start !important;
+                min-height: 90px !important;
+                border-left: 6px solid #f97316 !important;
+                gap: 15px !important;
+            }
+
+            .bar-box { 
+                background: white !important; 
+                border-radius: 8px !important; 
+                padding: 10px 15px !important; 
+                width: 180px !important; 
+                height: 65px !important; 
+                display: flex !important; 
+                flex-direction: column !important; 
+                justify-content: center !important;
+                flex-shrink: 0 !important;
+            }
+
+            .bar-box label { 
+                color: #64748b !important; 
+                font-family: Arial !important; 
+                font-size: 9px !important; 
+                font-weight: 900 !important; 
+                margin: 0 !important; 
+                background: transparent !important;
+                width: auto !important;
+            }
+
+            /* 3. HEADERS & CLIENT NAME (Black Bar, White Arial 11) */
+            h3, .lsh-main-header, #client-name-field {
+                background: #000 !important;
+                color: #fff !important;
+                font-family: Arial, sans-serif !important;
+                font-size: 11px !important;
+                font-weight: 900 !important;
+                text-transform: uppercase !important;
+                padding: 0 15px !important;
+                margin: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                flex-grow: 1 !important;
+                border-radius: 4px !important;
+                height: 32px !important;
+            }
+
+            /* Adjust corners for "ADD" buttons */
             .lsh-power-bar, .lsh-row-lock {
                 display: flex !important;
                 flex-direction: row !important;
-                align-items: stretch !important;
                 width: 100% !important;
                 height: 32px !important;
                 margin-bottom: 10px !important;
-                background: none !important;
             }
 
-            .lsh-power-bar h3, .lsh-row-lock h3, .lsh-main-header {
-                background: #000 !important;
-                color: #fff !important;
-                flex-grow: 1 !important;
-                margin: 0 !important;
-                padding: 0 15px !important;
-                display: flex !important;
-                align-items: center !important;
-                font-family: Arial !important;
-                font-size: 11px !important;
-                font-weight: 900 !important;
-                border-radius: 4px 0 0 4px !important;
-                text-transform: uppercase !important;
-            }
+            .lsh-power-bar h3, .lsh-row-lock h3 { border-radius: 4px 0 0 4px !important; }
 
-            .lsh-action-btn, .lsh-btn-style, .lsh-power-bar button {
+            .lsh-action-btn, .lsh-btn-style, .lsh-power-bar button, .lsh-row-lock button {
                 background: #f97316 !important;
                 color: #000 !important;
                 font-family: Arial !important;
@@ -717,66 +783,40 @@ function processUpload(input) {
                 height: 32px !important;
                 display: flex !important;
                 align-items: center !important;
-                justify-content: center !important;
                 flex-shrink: 0 !important;
             }
 
-            /* 2. KILL GAPS & FONT LOCK */
-            .tab-pane { padding-top: 0 !important; }
-            #capture-area { padding-top: 10px !important; }
-            
-            [contenteditable="true"], input, select, textarea {
+            /* 4. FONT & SPACING FIXES */
+            [contenteditable="true"], [contenteditable="true"] *, input, select, textarea {
                 font-family: Arial, sans-serif !important;
                 font-weight: 700 !important;
                 font-size: 13px !important;
                 color: #000 !important;
+                text-transform: none !important;
             }
 
-            /* 3. CLIENT NAME BAR */
-            #client-name-field {
-                background: #000 !important;
-                color: #fff !important;
-                font-family: Arial !important;
-                font-size: 11px !important;
-                font-weight: 900 !important;
-                padding: 8px 15px !important;
-                border-radius: 4px !important;
-                display: inline-flex !important;
-                margin-bottom: 10px !important;
-            }
-
-            /* 4. TAB BUTTONS */
-            .tab-btn { font-family: Arial !important; font-weight: 900 !important; font-size: 11px !important; }
+            .pdf-card { display: flex !important; flex-direction: column !important; margin-bottom: 15px !important; padding: 24px !important; background: white !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; }
+            .tab-pane { padding-top: 0 !important; }
+            
+            /* 5. TABS & ORANGE COLOR LOCK */
+            .tab-btn { color: #94a3b8 !important; font-family: Arial !important; font-weight: 900 !important; cursor: pointer !important; font-size: 11px !important; }
             .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
         `;
 
-        if (!document.getElementById('definitive-override')) {
+        if (!document.getElementById('combined-peacekeeper')) {
             const style = document.createElement('style');
-            style.id = 'definitive-override';
+            style.id = 'combined-peacekeeper';
             style.innerHTML = css;
             document.head.appendChild(style);
         }
 
-        // AUTO-FIX: Find any loose headers that should be in a Power Bar
-        document.querySelectorAll('.tab-pane h3').forEach(h3 => {
-            const parent = h3.parentElement;
-            const btn = parent.querySelector('button');
-            if (btn && !parent.classList.contains('lsh-power-bar')) {
-                // Wrap them if they aren't already wrapped
-                parent.classList.add('lsh-power-bar');
-                h3.classList.add('lsh-main-header');
-                btn.classList.add('lsh-action-btn');
-                if (btn.innerText.includes('+')) btn.innerText = "ADD";
-            }
-        });
-
-        // Tab Management
+        // Maintain Tab visibility
         document.querySelectorAll('.tab-pane').forEach(pane => {
             pane.style.display = pane.classList.contains('active') ? 'block' : 'none';
         });
     };
 
-    setInterval(applyDefinitiveFixes, 50);
+    setInterval(enforcePeace, 50);
 })();
 </script>
         </script>
