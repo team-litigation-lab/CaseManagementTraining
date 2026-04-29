@@ -91,33 +91,59 @@
     /* --- 4. IDENTITY & BARS --- */
     #client-name-field { font-size: 36px !important; font-weight: 900 !important; color: #000000 !important; text-transform: uppercase !important; line-height: 1 !important; }
     
-    #lsh-integrated-bar { 
-        background: #0f172a !important; color: white !important; padding: 14px 20px !important; 
-        border-radius: 10px !important; margin: 20px 0 !important; display: flex !important; 
-        align-items: center !important; border-left: 6px solid #f97316 !important; gap: 20px !important; 
-    }
+    /* --- FIXED INTEGRATED BAR --- */
+#lsh-integrated-bar { 
+    background: #0f172a !important; 
+    color: white !important; 
+    padding: 15px 20px !important; 
+    border-radius: 10px !important; 
+    margin: 20px 0 !important; 
+    display: flex !important; 
+    flex-direction: row !important;
+    align-items: center !important; 
+    border-left: 6px solid #f97316 !important; 
+    gap: 20px !important;
+    min-height: 90px !important; /* Forces the bar to stay open */
+}
 
-    .bar-box { background: white !important; border-radius: 8px !important; padding: 10px 15px !important; width: 180px !important; height: 55px !important; color: #0f172a !important; }
-    .sol-box { background: #fee2e2 !important; border: 1px solid #fecaca !important; }
+.bar-data-container {
+    display: flex !important;
+    flex-direction: row !important; /* Keeps boxes side-by-side */
+    gap: 15px !important;
+    flex-shrink: 0 !important;
+}
 
-    /* --- 5. TABS & INPUTS --- */
-    .tab-btn { cursor: pointer; color: #94a3b8; font-weight: 800; text-transform: uppercase; font-size: 10px; padding: 10px 0; border-bottom: 3px solid transparent; white-space: nowrap; }
-    .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
-    .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 250px; }
-    .tab-pane.active { display: block; }
+.bar-box { 
+    background: white !important; 
+    border-radius: 8px !important; 
+    padding: 10px 15px !important; 
+    display: flex !important; 
+    flex-direction: column !important;
+    justify-content: center !important;
+    width: 160px !important; 
+    height: 60px !important; /* Fixed height for the inner white boxes */
+    flex-shrink: 0 !important;
+}
 
-    [contenteditable="true"] { outline: none; background: #f8fafc; border-radius: 4px; padding: 8px 12px; border: 1px solid #f1f5f9; width: 100%; }
-    label { font-size: 10px !important; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; }
-    
-    /* --- 6. UTILITIES --- */
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-    .hub-btn { background: #fffaf0; border: 1px solid #ffedd5; color: #9a3412; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 14px; border-radius: 8px; cursor: pointer; text-align: center; }
+.bar-box label { 
+    margin-bottom: 2px !important; 
+    color: #64748b !important; 
+    font-size: 9px !important; 
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+}
 
-    @media print { 
-        .no-print { display: none !important; }
-        .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
-    }
+.bar-box div { 
+    color: #0f172a !important; 
+    font-weight: 800 !important; 
+    font-size: 14px !important; 
+}
+
+.sol-box { 
+    background: #fee2e2 !important; 
+    border: 1px solid #fecaca !important; 
+}
 </style>
     </style>
 </head>
