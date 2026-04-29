@@ -322,8 +322,9 @@
             </div>
 
             <div id="pane-profile" class="tab-pane active">
-                <div class="pdf-card border-l-5 border-orange-500">
-                        <div class="pdf-card shadow-sm"><h3 class="text-[11px] font-blue text-[13px]slate-600 uppercase mb-4 border-b pb-2">Demographics</h3>
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Identity</h3>
                             <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true"></div></div><div><label>SSN</label><div contenteditable="true"></div></div></div>
                             <div class="mb-4"><label>Email Address</label><div contenteditable="true"></div></div><div><label>Home Address</label><div contenteditable="true"></div></div>
                         </div>
@@ -332,8 +333,8 @@
                             <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true"></div></div><div><label>Relationship</label><div contenteditable="true"></div></div></div>
                         </div>
                     </div>
-                    <div class="pdf-card border-l-5 border-orange-500">
-                    <h3 class="font-black text-blue-600 text-[11px] mb-6 uppercase tracking-widest">Employment Details</h3>
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><h3>Employment Details</h3>
                             <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option><option>Retired</option></select></div>
                             <div class="mb-4"><label>Employer Name</label><div contenteditable="true"></div></div>
                             <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true"></div></div>
@@ -690,67 +691,6 @@
         function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Data Imported"); }; r.readAsText(i.files[0]); }
         function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
         window.onload = renderRepo;
-    </script>
-    <script>
-    <script>
-    /**
-     * LSH DEFINITIVE STYLER
-     * Forces Blue Titles and Arial 12pt Bold Black Content
-     */
-    function applyDefinitiveStyles() {
-        // 1. Force Titles and Labels to Blue
-        const blueTargets = document.querySelectorAll('label, h3, .text-orange-600, .text-blue-600, .text-red-600, #display-phase');
-        blueTargets.forEach(el => {
-            el.style.setProperty('color', '#1e40af', 'important'); 
-            el.style.setProperty('font-weight', '900', 'important');
-        });
-
-        // 2. Force All Editable Content to: Arial, 12px, Bold, Black
-        const contentTargets = document.querySelectorAll('[contenteditable="true"], .sol-font-fix, select');
-        contentTargets.forEach(el => {
-            el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-            el.style.setProperty('font-size', '12px', 'important');
-            el.style.setProperty('font-weight', 'bold', 'important');
-            el.style.setProperty('color', '#000000', 'important');
-            el.style.setProperty('background-color', '#ffffff', 'important');
-        });
-    }
-
-    /** * DATA SCRUBBER (EXCLUDING CLIENT NAME)
-     * Wipes other placeholders but keeps "CLIENT'S NAME"
-     */
-    function wipeSelectedPlaceholders() {
-        const placeholders = [
-            "MM/DD/YYYY", "(000) 000-0000", "$ 0.00", "BATCH-2026-X", 
-            "Enter facts of loss...", "Type police summary here...", 
-            "Summary...", "...", "TYPE OTHER..."
-        ];
-        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
-            if (placeholders.includes(el.innerText.trim())) {
-                el.innerHTML = "";
-            }
-        });
-    }
-
-    // Initialize Observer to watch for newly added passengers/rows
-    const observer = new MutationObserver(() => {
-        applyDefinitiveStyles();
-    });
-
-    const captureArea = document.getElementById('capture-area');
-    if (captureArea) {
-        observer.observe(captureArea, { childList: true, subtree: true });
-    }
-
-    // Execute on Load
-    window.addEventListener('DOMContentLoaded', () => {
-        wipeSelectedPlaceholders();
-        applyDefinitiveStyles();
-    });
-
-    // Persistent check to ensure styles stay locked
-    setInterval(applyDefinitiveStyles, 1000);
-</script>
     </script>
 </body>
 </html>
