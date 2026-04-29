@@ -312,10 +312,10 @@
                     <div onclick="showTab('matrix')" id="tab-matrix" class="tab-btn">Insurance</div>
                     <div onclick="showTab('liens')" id="tab-liens" class="tab-btn">Liens</div>
                     <div onclick="showTab('medical')" id="tab-medical" class="tab-btn">Treatment</div>
-                    <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Prop Damage</div>
+                    <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Property Damage</div>
                     <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
                     <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Finance</div>
-                    <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
+                    <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Document Hub</div>
                     <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
                     <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
                 </div>
@@ -324,7 +324,7 @@
             <div id="pane-profile" class="tab-pane active">
                 <div class="grid grid-cols-3 gap-8">
                     <div class="space-y-6">
-                        <div class="pdf-card shadow-sm"><h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Identity</h3>
+                        <div class="pdf-card shadow-sm"><h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Demographics</h3>
                             <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true"></div></div><div><label>SSN</label><div contenteditable="true"></div></div></div>
                             <div class="mb-4"><label>Email Address</label><div contenteditable="true"></div></div><div><label>Home Address</label><div contenteditable="true"></div></div>
                         </div>
@@ -501,19 +501,33 @@
             </div>
 
             <div id="pane-docs" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="mb-6 uppercase text-[11px] font-black text-orange-500 italic">Quick Label Portal</h3>
-                    <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
-                        <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
-                        <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
-                        <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
-                        <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
-                        <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
-                        <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
-                        <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
-                        <button onclick="addDocument('Others')" class="hub-btn">Others</button>
-                    </div>
-                    <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
+    <div class="pdf-card border-l-8 border-orange-500">
+        <h3 class="mb-6 uppercase text-[11px] font-black text-orange-500 italic">Quick Label Portal</h3>
+        
+        <input type="file" id="universal-uploader" class="hidden" onchange="processUpload(this)">
+        
+        <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
+            <button onclick="triggerUpload('Medical Records')" class="hub-btn">Medical</button>
+            <button onclick="triggerUpload('Police Report')" class="hub-btn">Police</button>
+            <button onclick="triggerUpload('Case Files')" class="hub-btn">Case Files</button>
+            <button onclick="triggerUpload('Invoices')" class="hub-btn">Invoices</button>
+            <button onclick="triggerUpload('Bills')" class="hub-btn">Bills</button>
+            <button onclick="triggerUpload('Property Damage')" class="hub-btn">PD</button>
+            <button onclick="triggerUpload('Litigation Documents')" class="hub-btn">Litigation</button>
+            <button onclick="triggerUpload('Others')" class="hub-btn">Others</button>
+        </div>
+        <table class="treat-table w-full">
+            <thead>
+                <tr>
+                    <th width="200">Category</th>
+                    <th>File Name / Summary</th>
+                    <th width="40"></th>
+                </tr>
+            </thead>
+            <tbody id="doc-body"></tbody>
+        </table>
+    </div>
+</div>
                 </div>
             </div>
 
