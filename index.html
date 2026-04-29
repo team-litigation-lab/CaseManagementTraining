@@ -695,8 +695,8 @@
     <script>
     /**
  * LSH MASTER THEME OVERRIDE - V2026.4
- * Forces specific headers to: Arial Bold Orange on Black
- * Forces content to: Arial 12pt Bold Black
+ * Forces specific headers to: Arial Bold White on Black
+ * Forces content to: Arial 10pt Bold Black
  */
 function applyLSHMasterStyles() {
     // 1. LIST OF ALL 20 TARGET HEADERS
@@ -744,11 +744,11 @@ function applyLSHMasterStyles() {
         }
     });
 
-    // 3. APPLY ARIAL 11PT BOLD BLACK TO CONTENT
+    // 3. APPLY ARIAL 10PT BOLD BLACK TO CONTENT
     const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
     contentFields.forEach(field => {
         field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        field.style.setProperty('font-size', '11px', 'important');
+        field.style.setProperty('font-size', '10px', 'important');
         field.style.setProperty('font-weight', 'bold', 'important');
         field.style.setProperty('color', '#000000', 'important');
         field.style.setProperty('background-color', '#ffffff', 'important');
