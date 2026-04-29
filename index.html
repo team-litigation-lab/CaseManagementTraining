@@ -814,8 +814,7 @@ function highlightIdentitySection() {
 window.addEventListener('DOMContentLoaded', highlightIdentitySection);
 setInterval(highlightIdentitySection, 2000);
     </script>
-      
-       <script>
+             <script>
     /**
  * LSH CLIENT NAME NUCLEAR OVERRIDE
  * Forces the Client Name to stay 36px Black/Bold Arial and prevents shrinking.
@@ -848,5 +847,97 @@ function lockClientNameStyle() {
 window.addEventListener('DOMContentLoaded', lockClientNameStyle);
 setInterval(lockClientNameStyle, 500); // Check every half-second for maximum stability
              </script>
+    <script>
+        /**
+ * LSH UNIVERSAL BUTTON OVERRIDE
+ * Targets all "Add" buttons, replaces text with "ADD", 
+ * and forces Orange Background with Black Text.
+ */
+function unifyAddButtons() {
+    // Select all buttons on the page
+    const buttons = document.querySelectorAll('button');
+
+    buttons.forEach(btn => {
+        const btnText = btn.innerText.toUpperCase();
+        
+        // If the button text contains "ADD", apply the master style
+        if (btnText.includes("ADD") || btnText.includes("+")) {
+            // 1. Uniform Text
+            btn.innerText = "ADD";
+
+            // 2. Nuclear Visual Override
+            btn.style.setProperty('background-color', '#f97316', 'important'); // Safety Orange
+            btn.style.setProperty('color', '#000000', 'important');           // Jet Black
+            btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            btn.style.setProperty('font-weight', '900', 'important');
+            btn.style.setProperty('font-size', '10px', 'important');
+            btn.style.setProperty('text-transform', 'uppercase', 'important');
+            btn.style.setProperty('letter-spacing', '1px', 'important');
+            
+            // 3. Uniform Shape
+            btn.style.setProperty('padding', '8px 20px', 'important');
+            btn.style.setProperty('border-radius', '6px', 'important');
+            btn.style.setProperty('border', 'none', 'important');
+            btn.style.setProperty('cursor', 'pointer', 'important');
+            btn.style.setProperty('box-shadow', '0 2px 4px rgba(0,0,0,0.1)', 'important');
+            
+            // 4. Ensure it doesn't shrink
+            btn.style.setProperty('min-width', '80px', 'important');
+            btn.style.setProperty('height', '32px', 'important');
+        }
+    });
+}
+
+// Run immediately and every second to catch dynamic buttons
+window.addEventListener('DOMContentLoaded', unifyAddButtons);
+setInterval(unifyAddButtons, 1000);
+    </script>
+    <script>
+        /**
+ * LSH NAVIGATION OVERRIDE
+ * Makes the main tab buttons bigger, bolder, and high-contrast.
+ */
+function enhanceNavigation() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    
+    tabs.forEach(tab => {
+        // 1. Force Larger Text & Bold Arial
+        tab.style.setProperty('font-size', '14px', 'important');
+        tab.style.setProperty('font-weight', '900', 'important');
+        tab.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        
+        // 2. Increase Spacing & Hit-Area
+        tab.style.setProperty('padding', '12px 20px', 'important');
+        tab.style.setProperty('margin-right', '5px', 'important');
+        
+        // 3. Dynamic Styling based on state
+        if (tab.classList.contains('active-tab')) {
+            // Active Tab Style
+            tab.style.setProperty('color', '#f97316', 'important'); // Safety Orange
+            tab.style.setProperty('border-bottom', '4px solid #f97316', 'important');
+            tab.style.setProperty('background-color', '#0f172a', 'important'); // Dark Navy BG for active
+            tab.style.setProperty('border-radius', '6px 6px 0 0', 'important');
+        } else {
+            // Inactive Tab Style
+            tab.style.setProperty('color', '#64748b', 'important');
+            tab.style.setProperty('border-bottom', '4px solid transparent', 'important');
+            tab.style.setProperty('background-color', 'transparent', 'important');
+        }
+    });
+
+    // Ensure the container allows for the bigger tabs without hiding them
+    const container = document.querySelector('.no-print.overflow-x-auto');
+    if (container) {
+        container.style.setProperty('padding-top', '10px', 'important');
+        container.style.setProperty('padding-bottom', '10px', 'important');
+        container.style.setProperty('display', 'flex', 'important');
+        container.style.setProperty('gap', '10px', 'important');
+    }
+}
+
+// Execute and Loop
+window.addEventListener('DOMContentLoaded', enhanceNavigation);
+setInterval(enhanceNavigation, 1000);
+    </script>
 </body>
 </html>
