@@ -7,270 +7,118 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* THE POWER BAR CONTAINER */
-.lsh-power-bar {
-    display: flex !important;
-    align-items: stretch !important; /* Forces header and button to same height */
-    width: 100% !important;
-    margin-bottom: 15px !important;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
-}
+        <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
-/* THE BLACK HEADER */
-.lsh-main-header {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    flex-grow: 1 !important; /* Makes it fill the left side */
-    height: 32px !important;
-    margin: 0 !important;
-    padding: 0 15px !important;
-    display: flex !important;
-    align-items: center !important;
-    font-family: Arial, sans-serif !important;
-    font-size: 13px !important;
-    font-weight: 900 !important;
-    text-transform: uppercase !important;
-    border-radius: 4px 0 0 4px !important; /* Rounds ONLY left corners */
-}
+    /* --- 1. CORE SYSTEM --- */
+    body { 
+        font-family: 'Inter', sans-serif; 
+        background-color: #f8fafc; 
+        color: #0f172a; 
+        height: 100vh; 
+        display: flex; 
+        overflow: hidden; 
+        margin: 0; 
+    }
 
-/* THE ORANGE BUTTON */
-.lsh-action-btn {
-    background-color: #f97316 !important;
-    color: #000000 !important;
-    height: 32px !important;
-    margin: 0 !important;
-    padding: 0 20px !important;
-    border: none !important;
-    border-radius: 0 4px 4px 0 !important; /* Rounds ONLY right corners */
-    font-family: Arial, sans-serif !important;
-    font-weight: 900 !important;
-    font-size: 11px !important;
-    cursor: pointer !important;
-    transition: background 0.2s;
-}
+    /* --- 2. THE POWER BAR (LOCKED HEADER SYSTEM) --- */
+    /* This container holds the black bar and orange button */
+    .lsh-power-bar, .lsh-row-lock, .flex.justify-between.items-center.mb-6 {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        margin-bottom: 20px !important; /* Space to prevent table overlap */
+        gap: 0 !important;
+    }
 
-.lsh-action-btn:hover {
-    background-color: #ea580c !important; /* Slightly darker orange on hover */
-}
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f8fafc; 
-            color: #0f172a; 
-            height: 100vh; 
-            display: flex; 
-            overflow: hidden; 
-            margin: 0; 
-        }
+    /* The Black Header Bar */
+    .lsh-main-header, .lsh-header-style {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        flex-grow: 1 !important; 
+        height: 32px !important;
+        margin: 0 !important;
+        padding: 0 15px !important;
+        display: flex !important;
+        align-items: center !important;
+        font-family: Arial, sans-serif !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        text-transform: uppercase !important;
+        border-radius: 4px 0 0 4px !important;
+        width: auto !important; /* Allows it to shrink/grow for the button */
+    }
 
-        /* 1. IDENTITY SYSTEM - PROFESSIONAL LOCK */
-        #client-name-field { 
-            font-size: 36px !important; 
-            font-weight: 900 !important; 
-            color: #000000 !important; 
-            text-transform: uppercase !important; 
-            line-height: 1 !important; 
-            outline: none !important; 
-            border: none !important; 
-            background: transparent !important; 
-            padding: 0 !important; 
-            min-width: 450px; 
-        }
+    /* The Orange Action Button */
+    .lsh-action-btn, .lsh-btn-style {
+        background-color: #f97316 !important;
+        color: #000000 !important;
+        height: 32px !important;
+        margin: 0 !important;
+        padding: 0 20px !important;
+        border: none !important;
+        border-radius: 0 4px 4px 0 !important;
+        font-family: Arial, sans-serif !important;
+        font-weight: 900 !important;
+        font-size: 11px !important;
+        cursor: pointer !important;
+        flex-shrink: 0 !important;
+    }
 
-        .target-settlement-display { 
-            font-size: 24px !important; 
-            font-weight: 900 !important; 
-            color: #166534 !important; 
-            letter-spacing: -1px; 
-            background: #f0fdf4; 
-            padding: 4px 12px; 
-            border-radius: 8px; 
-            border: 1px solid #dcfce7; 
-        }
+    /* --- 3. UI CARDS & TABLES --- */
+    .pdf-card { 
+        background: white; 
+        border: 1px solid #e2e8f0; 
+        border-radius: 12px; 
+        padding: 24px; 
+        margin-bottom: 20px; 
+        position: relative;
+        display: flex !important;
+        flex-direction: column !important; /* Forces header and table to stack */
+    }
 
-        .sol-font-fix { 
-            color: #000000 !important; 
-            font-weight: 900 !important; 
-        }
+    .treat-table { 
+        width: 100% !important; 
+        border-collapse: collapse; 
+        margin-top: 10px !important;
+        clear: both !important;
+    }
 
-        /* 2. PDF FIX: STABLE INTEGRATED BAR */
-        #lsh-integrated-bar { 
-            background: #0f172a !important; 
-            color: white !important; 
-            padding: 14px 20px !important; 
-            border-radius: 10px !important; 
-            margin: 20px 0 !important; 
-            display: flex !important; 
-            flex-direction: row !important;
-            align-items: center !important; 
-            border-left: 6px solid #f97316 !important; 
-            gap: 20px !important;
-            min-height: 80px !important;
-        }
+    .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
+    .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
-        .bar-data-container {
-            display: flex !important;
-            gap: 15px !important;
-            flex-shrink: 0 !important;
-        }
+    /* --- 4. IDENTITY & BARS --- */
+    #client-name-field { font-size: 36px !important; font-weight: 900 !important; color: #000000 !important; text-transform: uppercase !important; line-height: 1 !important; }
+    
+    #lsh-integrated-bar { 
+        background: #0f172a !important; color: white !important; padding: 14px 20px !important; 
+        border-radius: 10px !important; margin: 20px 0 !important; display: flex !important; 
+        align-items: center !important; border-left: 6px solid #f97316 !important; gap: 20px !important; 
+    }
 
-        .bar-box { 
-            background: white !important; 
-            border-radius: 8px !important; 
-            padding: 10px 15px !important; 
-            display: flex !important; 
-            flex-direction: column !important;
-            justify-content: center !important;
-            width: 180px !important; 
-            height: 55px !important;
-            flex-shrink: 0 !important;
-        }
+    .bar-box { background: white !important; border-radius: 8px !important; padding: 10px 15px !important; width: 180px !important; height: 55px !important; color: #0f172a !important; }
+    .sol-box { background: #fee2e2 !important; border: 1px solid #fecaca !important; }
 
-        .bar-box label { 
-            margin-bottom: 2px !important; 
-            color: #64748b !important; 
-            font-size: 9px !important; 
-            font-weight: 900 !important;
-            line-height: 1 !important;
-        }
+    /* --- 5. TABS & INPUTS --- */
+    .tab-btn { cursor: pointer; color: #94a3b8; font-weight: 800; text-transform: uppercase; font-size: 10px; padding: 10px 0; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .active-tab { border-bottom: 3px solid #f97316 !important; color: #f97316 !important; }
+    .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 250px; }
+    .tab-pane.active { display: block; }
 
-        .bar-box div { 
-            color: #0f172a !important; 
-            font-weight: 800 !important; 
-            font-size: 14px !important; 
-        }
+    [contenteditable="true"] { outline: none; background: #f8fafc; border-radius: 4px; padding: 8px 12px; border: 1px solid #f1f5f9; width: 100%; }
+    label { font-size: 10px !important; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    
+    /* --- 6. UTILITIES --- */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    .hub-btn { background: #fffaf0; border: 1px solid #ffedd5; color: #9a3412; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 14px; border-radius: 8px; cursor: pointer; text-align: center; }
 
-        .sol-box { 
-            background: #fee2e2 !important; 
-            border: 1px solid #fecaca !important; 
-        }
-
-        /* 3. NAVIGATION & TABS */
-        .tab-btn { 
-            cursor: pointer; 
-            color: #94a3b8; 
-            font-weight: 800; 
-            text-transform: uppercase; 
-            font-size: 10px; 
-            padding: 10px 0; 
-            transition: all 0.3s; 
-            border-bottom: 3px solid transparent; 
-            white-space: nowrap; 
-        }
-
-        .active-tab { 
-            border-bottom: 3px solid #f97316 !important; 
-            color: #f97316 !important; 
-        }
-
-        .tab-pane { 
-            display: none; 
-            height: 100%; 
-            overflow-y: auto; 
-            padding-bottom: 250px; 
-        }
-
-        .tab-pane.active { 
-            display: block; 
-        }
-
-        /* 4. UI COMPONENTS */
-        .pdf-card { 
-            background: white; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 12px; 
-            padding: 24px; 
-            margin-bottom: 20px; 
-            position: relative; 
-        }
-
-        [contenteditable="true"] { 
-            outline: none; 
-            background: #f8fafc; 
-            border-radius: 4px; 
-            padding: 8px 12px; 
-            border: 1px solid #f1f5f9; 
-            min-height: 38px; 
-            width: 100%; 
-        }
-
-        [contenteditable="true"]:focus { 
-            background: #ffffff; 
-            border-color: #f97316; 
-        }
-
-        label { 
-            font-size: 10px !important; 
-            font-weight: 900; 
-            color: #94a3b8; 
-            text-transform: uppercase; 
-            margin-bottom: 6px; 
-            display: block; 
-            letter-spacing: 0.05em; 
-        }
-        
-        select.prof-input { 
-            background: #f8fafc; 
-            border: 1px solid #f1f5f9; 
-            border-radius: 4px; 
-            padding: 8px 10px; 
-            font-size: 13px; 
-            font-weight: 700; 
-            outline: none; 
-            width: 100%; 
-            color: #0f172a; 
-            cursor: pointer; 
-        }
-
-        .treat-table { width: 100%; border-collapse: collapse; }
-        .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
-        .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-
-        .hub-btn { 
-            background: #fffaf0; 
-            border: 1px solid #ffedd5; 
-            color: #9a3412; 
-            font-size: 9px; 
-            font-weight: 900; 
-            text-transform: uppercase; 
-            padding: 14px; 
-            border-radius: 8px; 
-            text-align: center; 
-            cursor: pointer; 
-        }
-        .hub-btn:hover { background: #f97316; color: white; border-color: #f97316; }
-
-        .revert-btn { 
-            background: #f97316; 
-            color: white; 
-            font-size: 12px; 
-            padding: 4px 8px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            margin-left: 5px; 
-            display: none; 
-            font-weight: 900; 
-        }
-
-        .repo-card { 
-            background: #0f172a !important; 
-            border: 1px solid #1e293b !important; 
-            padding: 12px !important; 
-            border-radius: 10px !important; 
-            margin-bottom: 10px !important; 
-            cursor: pointer !important; 
-            position: relative !important; 
-            color: white; 
-        }
-
-        @media print { 
-            .no-print { display: none !important; }
-            .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
-            #lsh-integrated-bar { -webkit-print-color-adjust: exact; background-color: #0f172a !important; }
-        }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    @media print { 
+        .no-print { display: none !important; }
+        .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
+    }
+</style>
     </style>
 </head>
 <body>
