@@ -8,153 +8,102 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         <style>
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
 
-    /* --- 1. CORE SYSTEM --- */
-    body { 
-        font-family: 'Inter', sans-serif; 
-        background-color: #f8fafc; 
-        margin: 0; 
-        display: flex; 
-        height: 100vh; 
-        overflow: hidden; 
+    /* --- 1. CORE LAYOUT --- */
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+    
+    aside { width: 280px; background-color: #05070a; color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid #1e293b; }
+    main { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* --- 2. THE BLACK BAR HEADERS (Arial 11, White on Black) --- */
+    /* This targets headers, labels, and the Client Name field */
+    h3, .lsh-main-header, .lsh-header-style, #client-name-field {
+        font-family: Arial, sans-serif !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        text-transform: uppercase !important;
+        color: #ffffff !important;
+        background-color: #000000 !important;
+        padding: 8px 15px !important;
+        border-radius: 4px !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-bottom: 12px !important;
+        box-sizing: border-box !important;
     }
 
-    /* --- 2. THE POWER BAR (LOCKED HEADER SYSTEM) --- */
+    /* Override Client Name to not be 100% width if needed */
+    #client-name-field { width: auto !important; display: inline-flex !important; min-width: 300px; }
+
+    /* --- 3. THE POWER BAR (Header + Button Combo) --- */
     .lsh-power-bar, .lsh-row-lock {
         display: flex !important;
         flex-direction: row !important;
         align-items: stretch !important;
         width: 100% !important;
         margin-bottom: 20px !important;
-        gap: 0 !important;
-    }
-
-    /* THE BLACK HEADER (FORCE ARIAL & BOLD) */
-    .lsh-main-header, .lsh-header-style {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-        flex-grow: 1 !important; 
         height: 32px !important;
-        margin: 0 !important;
-        padding: 0 15px !important;
-        display: flex !important;
-        align-items: center !important;
-        font-family: Arial, sans-serif !important; /* FIXED */
-        font-size: 13px !important;
-        font-weight: 900 !important; /* FIXED */
-        text-transform: uppercase !important;
-        border-radius: 4px 0 0 4px !important;
-        width: auto !important;
     }
 
-    /* THE ORANGE BUTTON */
+    .lsh-power-bar h3, .lsh-row-lock h3, .lsh-main-header {
+        border-radius: 4px 0 0 4px !important;
+        margin-bottom: 0 !important;
+        flex-grow: 1 !important;
+    }
+
     .lsh-action-btn, .lsh-btn-style {
         background-color: #f97316 !important;
         color: #000000 !important;
         height: 32px !important;
         padding: 0 20px !important;
-        border: none !important;
         border-radius: 0 4px 4px 0 !important;
-        font-family: Arial, sans-serif !important;
+        font-family: Arial !important;
         font-weight: 900 !important;
         font-size: 11px !important;
+        border: none !important;
         cursor: pointer !important;
         flex-shrink: 0 !important;
     }
 
-    /* --- 3. NAVIGATION TABS (ORANGE FONT FIX) --- */
+    /* --- 4. NAVIGATION TABS (Orange Highlight) --- */
     .tab-btn { 
         cursor: pointer !important; 
-        color: #94a3b8 !important; /* Inactive color */
+        color: #94a3b8 !important; 
         font-weight: 900 !important; 
-        font-family: Arial, sans-serif !important; /* FIXED */
+        font-family: Arial !important;
         text-transform: uppercase !important; 
         font-size: 11px !important; 
-        padding: 10px 0 !important; 
+        padding: 10px 15px !important; 
         border-bottom: 3px solid transparent !important; 
-        transition: all 0.2s !important;
         white-space: nowrap !important;
+        transition: all 0.2s !important;
     }
+    .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
 
-    /* ACTIVE TAB STATE - HIGHEST PRIORITY */
-    .active-tab { 
-        border-bottom: 3px solid #f97316 !important; 
-        color: #f97316 !important; /* FORCED ORANGE */
-    }
-
-    /* --- 4. INTEGRATED NAVY BAR FIX --- */
-    #lsh-integrated-bar { 
-        background: #0f172a !important; 
-        color: white !important; 
-        padding: 20px !important; 
-        border-radius: 10px !important; 
-        margin: 20px 0 !important; 
-        display: flex !important; 
-        flex-direction: row !important;
-        align-items: center !important; 
-        border-left: 6px solid #f97316 !important; 
-        min-height: 100px !important;
-        gap: 20px !important;
-    }
-
-    .bar-box { 
-        background: white !important; 
-        border-radius: 8px !important; 
-        padding: 12px !important; 
-        width: 170px !important; 
-        height: 65px !important; 
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-    }
-
-    .bar-box label { 
-        color: #64748b !important; 
-        font-family: Arial !important; 
-        font-weight: 900 !important; 
-        font-size: 9px !important; 
-    }
-
-    .bar-box div { 
-        color: #000 !important; 
-        font-family: Arial !important; 
-        font-weight: 800 !important; 
-        font-size: 14px !important; 
-    }
-
-    /* --- 5. CARDS & TABLES --- */
+    /* --- 5. CARDS & TABLES (Overlap Fix) --- */
     .pdf-card { 
-        background: white !important; 
-        border: 1px solid #e2e8f0 !important; 
-        border-radius: 12px !important; 
-        padding: 24px !important; 
-        display: flex !important;
-        flex-direction: column !important;
-        margin-bottom: 20px !important;
+        background: white !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; 
+        padding: 24px !important; display: flex !important; flex-direction: column !important; margin-bottom: 20px !important; 
     }
+    .treat-table { width: 100% !important; margin-top: 10px !important; border-collapse: collapse; display: table !important; }
 
-    .treat-table { 
-        width: 100% !important; 
-        margin-top: 15px !important; 
-        display: table !important; 
+    /* --- 6. NAVY BAR FIX --- */
+    #lsh-integrated-bar { 
+        background: #0f172a !important; padding: 20px !important; border-radius: 10px !important; 
+        margin: 20px 0 !important; display: flex !important; gap: 20px !important; border-left: 6px solid #f97316 !important; 
     }
+    .bar-box { background: white !important; border-radius: 8px !important; padding: 12px !important; width: 170px !important; height: 65px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
+    .bar-box label { color: #64748b !important; font-size: 9px !important; background: transparent !important; width: auto !important; padding: 0 !important; margin-bottom: 2px !important; }
+    .bar-box div { color: #000 !important; font-family: Arial !important; font-weight: 800 !important; font-size: 14px !important; }
 
-    /* --- 6. UTILITIES --- */
     .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 250px; }
     .tab-pane.active { display: block !important; }
-    
-    [contenteditable="true"] { outline: none; background: #f8fafc; border-radius: 4px; padding: 8px 12px; border: 1px solid #f1f5f9; width: 100%; min-height: 38px; }
-    label { font-size: 10px !important; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; }
-    
-    @media print { 
-        .no-print { display: none !important; }
-        .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
-    }
-</style>
-}
-</style>
+    [contenteditable="true"] { outline: none; background: #f8fafc; border-radius: 4px; padding: 10px; border: 1px solid #f1f5f9; min-height: 38px; }
+
+    @media print { .no-print { display: none !important; } .tab-pane { display: block !important; 
+                 }
     </style>
 </head>
 <body>
