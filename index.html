@@ -897,6 +897,43 @@ setInterval(unifyAddButtons, 1000);
     </script>
     <script>
         /**
+ * LSH ALIGNMENT LOCK
+ * Fixes the vertical misalignment between Black Headers and Orange ADD Buttons.
+ */
+function fixAlignment() {
+    // 1. Find all containers that hold both a header (h3/label) and a button
+    const containers = document.querySelectorAll('.flex.justify-between, .pdf-card');
+
+    containers.forEach(container => {
+        // We only want to target containers that actually have our custom headers and buttons
+        const hasHeader = container.querySelector('h3, label');
+        const hasButton = container.querySelector('button');
+
+        if (hasHeader && hasButton) {
+            // Force the container to align items perfectly in the center
+            container.style.setProperty('display', 'flex', 'important');
+            container.style.setProperty('align-items', 'center', 'important');
+            container.style.setProperty('justify-content', 'space-between', 'important');
+            container.style.setProperty('gap', '10px', 'important');
+        }
+    });
+
+    // 2. Adjust the headers so they don't take up the whole line vertically
+    const headers = document.querySelectorAll('h3, label');
+    headers.forEach(header => {
+        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
+            header.style.setProperty('margin-bottom', '0', 'important'); // Remove the bottom margin
+            header.style.setProperty('display', 'flex', 'important');
+            header.style.setProperty('align-items', 'center', 'important');
+            header.style.setProperty('height', '32px', 'important'); // Match button height
+        }
+    });
+}
+
+// Run immediately and monitor
+window.addEventListener('DOMContentLoaded', fixAlignment);
+setInterval(fixAlignment, 1000);
+        /**
  * LSH NAVIGATION OVERRIDE
  * Makes the main tab buttons bigger, bolder, and high-contrast.
  */
