@@ -692,6 +692,7 @@
         function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
         window.onload = renderRepo;
     </script>
+    <script>
     /**
  * LSH MASTER STYLER - THE NUCLEAR OVERRIDE 
  * Forces Blue Titles and Arial 12pt Bold Black Content
