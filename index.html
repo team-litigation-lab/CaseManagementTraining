@@ -364,12 +364,29 @@
                 </div>
             </div>
 
-            <div class="pdf-card border-l-4 border-orange-400 shadow-sm bg-orange-50/30">
-                <h3 class="text-[11px] font-black text-orange-500 uppercase mb-4 border-b pb-2 tracking-widest">Emergency Contact</h3>
-                <div class="mb-4">
-                    <label>Full Name</label>
-                    <div contenteditable="true" class="text-sm font-bold">Name</div>
-                </div>
+           <div class="pdf-card border-l-4 border-orange-500 shadow-sm bg-orange-50/30">
+    <h3 class="text-[11px] font-black text-orange-600 uppercase mb-4 border-b pb-2 tracking-widest">Emergency Contact</h3>
+    <div class="grid grid-cols-1 gap-4">
+        <div>
+            <label>Full Name</label>
+            <div contenteditable="true" class="text-sm font-bold bg-white border border-slate-200 rounded p-2">Name</div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label>Primary Phone</label>
+                <div contenteditable="true" class="text-sm font-black text-slate-700 bg-white border border-slate-200 rounded p-2">(000) 000-0000</div>
+            </div>
+            <div>
+                <label>Relationship</label>
+                <div contenteditable="true" class="text-sm bg-white border border-slate-200 rounded p-2">e.g. Spouse / Parent</div>
+            </div>
+        </div>
+        <div>
+            <label>Alternate Contact Info / Email</label>
+            <div contenteditable="true" class="text-xs bg-white border border-slate-200 rounded p-2">Additional details...</div>
+        </div>
+    </div>
+</div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label>Phone</label>
@@ -803,15 +820,45 @@
         }
 
         function addPassenger() {
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
-                <div class="grid grid-cols-4 gap-6">
-                    <div><label>Full Name</label><div contenteditable="true"></div></div>
-                    <div><label>DOB</label><div contenteditable="true"></div></div>
-                    <div><label>Contact Info</label><div contenteditable="true"></div></div>
-                    <div><label>Injury Sustained</label><div contenteditable="true"></div></div>
-                </div>`;
-            document.getElementById('passenger-container').appendChild(div);
+    const div = document.createElement('div'); 
+    div.className = "pdf-card border-l-4 border-slate-900 relative bg-white p-6 mb-4 shadow-md transition-all hover:shadow-lg";
+    div.innerHTML = `
+        <button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-red-400 hover:text-red-600 no-print font-bold text-lg">×</button>
+        <div class="flex items-center gap-2 mb-4">
+            <span class="bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-widest">Passenger Record</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+                <label>Full Name</label>
+                <div contenteditable="true" class="text-sm font-bold border-b border-slate-100 focus:border-orange-500 py-1">Enter Name</div>
+            </div>
+            <div>
+                <label>Date of Birth</label>
+                <div contenteditable="true" class="text-sm border-b border-slate-100 focus:border-orange-500 py-1">MM/DD/YYYY</div>
+            </div>
+            <div>
+                <label>Contact Info</label>
+                <div contenteditable="true" class="text-sm border-b border-slate-100 focus:border-orange-500 py-1">(000) 000-0000</div>
+            </div>
+            <div>
+                <label>Seat Position</label>
+                <select class="prof-input text-xs">
+                    <option>Front Passenger</option>
+                    <option>Rear Left</option>
+                    <option>Rear Center</option>
+                    <option>Rear Right</option>
+                    <option>Third Row</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-50">
+            <label class="text-orange-600">Injury Allegations & Complaints</label>
+            <div contenteditable="true" class="text-xs italic text-slate-600 min-h-[40px] bg-slate-50 p-2 rounded mt-1">
+                Describe injuries or "Uninjured" if applicable...
+            </div>
+        </div>`;
+    document.getElementById('passenger-container').appendChild(div);
+}
         }
 
         function addDocument(label) { const tr = document.createElement('tr'); tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="text-xs italic text-slate-500">Summary...</div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`; document.getElementById('doc-body').appendChild(tr); }
