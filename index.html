@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSH Master Build | Definitive Master 2026</title>
+    <title>LSH Training Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -132,7 +132,7 @@
 
         /* 4. UI COMPONENTS */
         .pdf-card { 
-            background: white; 
+            background: gray; 
             border: 1px solid #e2e8f0; 
             border-radius: 12px; 
             padding: 24px; 
@@ -218,7 +218,6 @@
             position: relative !important; 
             color: white; 
         }
-
         @media print { 
             .no-print { display: none !important; }
             .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
@@ -226,6 +225,24 @@
         }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        /* Fix for Integrated Bar to prevent overlapping boxes */
+#lsh-integrated-bar {
+    display: flex !important;
+    flex-wrap: nowrap !important; /* Forces boxes to stay in one line */
+    align-items: center !important;
+    min-width: 1050px !important; /* Ensures bar is wide enough for PDF */
+}
+
+.bar-data-container {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 15px !important;
+}
+
+.bar-box {
+    width: 210px !important; /* Fixed width lock for white boxes */
+    flex-shrink: 0 !important;
+}
     </style>
 </head>
 <body>
@@ -334,7 +351,7 @@
                         </div>
                     </div>
                     <div class="space-y-6">
-                        <div class="pdf-card shadow-sm"><h3>Employment Details</h3>
+                        <div class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2>"pdf-card shadow-sm"><h3>Employment Details</h3>
                             <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option><option>Retired</option></select></div>
                             <div class="mb-4"><label>Employer Name</label><div contenteditable="true"></div></div>
                             <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true"></div></div>
@@ -689,8 +706,37 @@
         function deleteCase(id, e) { e.stopPropagation(); if(confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); renderRepo(); } }
         function exportRepo() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem(REPO_KEY)], {type:'application/json'})); a.download='LSH_Backup.json'; a.click(); }
         function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Data Imported"); }; r.readAsText(i.files[0]); }
-        function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
-        window.onload = renderRepo;
+        function downloadPDF() {
+    const element = document.getElementById('capture-area');
+    
+    // PDF Capture Settings
+    const opt = {
+        margin: [0.2, 0.2, 0.2, 0.2], // top, left, buttom, right
+        filename: 'LSH_Case_Summary.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true,
+            width: 1150, // Force capture width to include the right side
+            windowWidth: 1200 // Force virtual browser width
+        },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    // 1. Scroll to top to ensure capture starts at the beginning
+    window.scrollTo(0, 0);
+
+    // 2. Temporarily fix the element width to prevent clipping during capture
+    const originalWidth = element.style.width;
+    element.style.width = "1100px"; 
+
+    // 3. Execute Capture
+    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
+        // Reset original width after capture is finished
+        element.style.width = originalWidth;
+    }).save();
+}
     </script>
 </body>
 </html>
