@@ -1035,5 +1035,46 @@ function downloadPDF() {
     margin-bottom: 0 !important; /* Critical: remove margin that pushes table */
 }
     </Script>
+        <script>
+        <script>
+(function() {
+    const lockLayout = () => {
+        // 1. Target the specific containers for Notes and Tasks
+        const containers = document.querySelectorAll('#pane-notes .pdf-card, #pane-tasks .pdf-card');
+        
+        containers.forEach(card => {
+            // Force the card to be a flex column so items MUST stack vertically
+            card.style.setProperty('display', 'flex', 'important');
+            card.style.setProperty('flex-direction', 'column', 'important');
+
+            // Find the header row (the one the Master Engine is messing with)
+            const headerRow = card.querySelector('.lsh-row-lock, .lsh-power-bar, .flex.justify-between');
+            const table = card.querySelector('table');
+
+            if (headerRow && table) {
+                // Force the header row to stay at the top and stop floating
+                headerRow.style.setProperty('display', 'flex', 'important');
+                headerRow.style.setProperty('width', '100%', 'important');
+                headerRow.style.setProperty('margin-bottom', '20px', 'important');
+                headerRow.style.setProperty('grid-template-columns', 'none', 'important'); // Kill the grid
+
+                // Force the internal H3 to not take up 100% so the button fits
+                const h3 = headerRow.querySelector('h3, .lsh-main-header');
+                if (h3) {
+                    h3.style.setProperty('width', 'auto', 'important');
+                    h3.style.setProperty('flex-grow', '1', 'important');
+                }
+
+                // Force the table to start AFTER the header row
+                table.style.setProperty('margin-top', '10px', 'important');
+                table.style.setProperty('position', 'relative', 'important');
+            }
+        });
+    };
+
+    // Run every 100ms to stay ahead of the Master Engine loop
+    setInterval(lockLayout, 100);
+})();
+</script>
 </body>
 </html>
