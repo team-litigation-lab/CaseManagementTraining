@@ -694,15 +694,19 @@
     </script>
     <script>
     /**
- * LSH THEME OVERRIDE
- * Targets 16 specific elements to apply: 
- * Font: Arial, 12pt, Bold, Orange (#f97316)
- * Background: Black (#000000)
+ * LSH MASTER THEME OVERRIDE - V2026.4
+ * Forces specific headers to: Arial Bold Orange on Black
+ * Forces content to: Arial 12pt Bold Black
  */
-function applySpecificHeaderStyles() {
-    const targetTitles = [
+function applyLSHMasterStyles() {
+    // 1. LIST OF ALL 20 TARGET HEADERS
+    const targetHeaders = [
         "Identity", 
         "Employment Details", 
+        "Emergency Contact",
+        "Case Narrative",
+        "Passenger Records",
+        "Police Report Details",
         "Officer's Narrative Summary", 
         "Health Insurance", 
         "Independent Subrogation Card", 
@@ -719,40 +723,70 @@ function applySpecificHeaderStyles() {
         "Action Item Log"
     ];
 
-    // Find all potential title elements (h3 and labels)
-    const allHeaders = document.querySelectorAll('h3, label, span, div');
-
-    allHeaders.forEach(el => {
+    // 2. APPLY WHITE ON BLACK TO HEADERS
+    const allTextElements = document.querySelectorAll('h3, label, .text-white-600, .text-blue-600');
+    allTextElements.forEach(el => {
         const text = el.innerText.trim();
-        
-        // Check if this element matches one of our 16 targets
-        if (targetTitles.includes(text)) {
-            // Apply the "Nuclear" styling for the specific header look
+        // Case-insensitive match against our list
+        if (targetHeaders.some(h => h.toLowerCase() === text.toLowerCase())) {
             el.style.setProperty('background-color', '#000000', 'important');
             el.style.setProperty('color', '#f97316', 'important'); // Safety Orange
             el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-            el.style.setProperty('font-size', '14px', 'important'); // Slightly larger for visibility
+            el.style.setProperty('font-size', '13px', 'important');
             el.style.setProperty('font-weight', '900', 'important');
-            el.style.setProperty('padding', '8px 12px', 'important');
+            el.style.setProperty('padding', '6px 10px', 'important');
             el.style.setProperty('border-radius', '4px', 'important');
-            el.style.setProperty('display', 'inline-block', 'important');
+            el.style.setProperty('display', 'block', 'important');
             el.style.setProperty('width', '100%', 'important');
             el.style.setProperty('text-transform', 'uppercase', 'important');
-            el.style.setProperty('letter-spacing', '1px', 'important');
+            el.style.setProperty('margin-bottom', '10px', 'important');
+            el.style.setProperty('letter-spacing', '0.5px', 'important');
+        }
+    });
+
+    // 3. APPLY ARIAL 11PT BOLD BLACK TO CONTENT
+    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
+    contentFields.forEach(field => {
+        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        field.style.setProperty('font-size', '11px', 'important');
+        field.style.setProperty('font-weight', 'bold', 'important');
+        field.style.setProperty('color', '#000000', 'important');
+        field.style.setProperty('background-color', '#ffffff', 'important');
+    });
+}
+
+// 4. DATA SCRUBBER (KEEPS CLIENT NAME)
+function wipePlaceholders() {
+    const placeholders = [
+        "MM/DD/YYYY", "(000) 000-0000", "$ 0.00", "BATCH-2026-X", 
+        "Enter facts of loss...", "Type police summary here...", 
+        "Summary...", "...", "TYPE OTHER...", "Enter Name", 
+        "e.g., LAPD / Florida Highway Patrol", "Name & Badge #", "Street / Intersection"
+    ];
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+        if (placeholders.includes(el.innerText.trim())) {
+            el.innerHTML = "";
         }
     });
 }
 
-// 1. Run immediately
-applySpecificHeaderStyles();
-
-// 2. Run whenever the user clicks a tab or an "Add" button
-document.addEventListener('click', () => {
-    setTimeout(applySpecificHeaderStyles, 50);
+// 5. OBSERVER & EXECUTION
+const lshObserver = new MutationObserver(() => {
+    applyLSHMasterStyles();
 });
 
-// 3. Constant safety check (every 1.5 seconds)
-setInterval(applySpecificHeaderStyles, 1500);
+const targetArea = document.getElementById('capture-area');
+if (targetArea) {
+    lshObserver.observe(targetArea, { childList: true, subtree: true });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    wipePlaceholders();
+    applyLSHMasterStyles();
+});
+
+// Periodic enforcement (Every 1 second)
+setInterval(applyLSHMasterStyles, 1000);
 </script>
 </body>
 </html>
