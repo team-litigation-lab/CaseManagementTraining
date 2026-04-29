@@ -492,67 +492,75 @@
                 </div>
             </div>
 
-            <div id="pane-finance" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center mb-6">
-                        <div class="bg-slate-900 text-white black-[10px] px-10 py-2 rounded no-print font-bold" "flex justify-between items-center mb-6"><h3>Expenses</h3>
-                        <button onclick="addRow('fin-body')" class="bg-slate-950 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD ENTRY</button>
-                    </div>
-                    <table class="treat-table w-full">
-                        <thead>
-                            <tr>
-                                <th width="150">Date</th>
-                                <th width="200">Assigned To</th>
-                                <th>Expense ID / Description</th>
-                                <th width="150">Amount</th>
-                                <th width="40"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="fin-body"></tbody>
-                    </table>
-                </div>
-                <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center">
-                    <span class="font-black uppercase text-blue-700 text-xs">Consolidated File Expenses</span>
-                    <span id="exp-total" class="text-2xl font-black text-blue-700">$ 0.00</span>
-                </div>
-            </div>
+          <div id="pane-finance" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="font-black text-slate-400 uppercase text-[11px]">Expenses</h3>
+            <button onclick="addRow('fin-body')" class="bg-slate-950 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD ENTRY</button>
+        </div>
+        <table class="treat-table w-full">
+            <thead>
+                <tr>
+                    <th width="150">Date</th>
+                    <th width="200">Staff Member</th>
+                    <th>Expense ID / Description</th>
+                    <th width="150">Amount</th>
+                    <th width="40"></th>
+                </tr>
+            </thead>
+            <tbody id="fin-body"></tbody>
+        </table>
+    </div>
+    <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center">
+        <span class="font-black uppercase text-blue-700 text-xs">Consolidated File Expenses</span>
+        <span id="exp-total" class="text-2xl font-black text-blue-700">$ 0.00</span>
+    </div>
+</div>
 
-            <div id="pane-docs" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <h3 class="bg-slate-900 text-white black-[10px] px-4 py-2 rounded no-print font-bold" "flex justify-between items-center mb-6"><h3>Upload Portal</h3>
-                    <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
-                        <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
-                        <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
-                        <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
-                        <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
-                        <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
-                        <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
-                        <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
-                        <button onclick="addDocument('Others')" class="hub-btn">Others</button>
-                    </div>
-                    <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
-                </div>
-            </div>
+<div id="pane-docs" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="font-black text-slate-400 uppercase text-[11px]">Upload Portal</h3>
+        </div>
+        <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
+            <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
+            <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
+            <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
+            <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
+            <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
+            <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
+            <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
+            <button onclick="addDocument('Others')" class="hub-btn">Others</button>
+        </div>
+        <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
+    </div>
+</div>
 
-            <div id="pane-notes" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="bg-slate-900 text-white black-[10px] px-4 py-2 rounded no-print font-bold" "flex justify-between items-center mb-6"><h3>Case Chronology</h3><button onclick="addRow('note-body')" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD NOTE</button></div>
-                    <table class="treat-table w-full">
-                        <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
-                        <tbody id="note-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div id="pane-tasks" class="tab-pane">
-                <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="bg-slate-900 text-white black-[10px] px-4 py-2 rounded no-print font-bold" "flex justify-between items-center mb-6"><h3>Action Items</h3><button onclick="addRow('task-body')" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD TASK</button></div>
-                    <table class="treat-table w-full">
-                        <thead><tr><th width="150">Date</th><th width="200">Staff Assigned</th><th>Task Description</th><th width="40"></th></tr></thead>
-                        <tbody id="task-body"></tbody>
-                    </table>
-                </div>
-            </div>
+<div id="pane-notes" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="font-black text-slate-400 uppercase text-[11px]">Case Chronology</h3>
+            <button onclick="addRow('note-body')" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD NOTE</button>
+        </div>
+        <table class="treat-table w-full">
+            <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
+            <tbody id="note-body"></tbody>
+        </table>
+    </div>
+</div>
 
+<div id="pane-tasks" class="tab-pane">
+    <div class="pdf-card border-l-8 border-orange-500">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="font-black text-slate-400 uppercase text-[11px]">Action Items</h3>
+            <button onclick="addRow('task-body')" class="bg-orange-600 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD TASK</button>
+        </div>
+        <table class="treat-table w-full">
+            <thead><tr><th width="150">Date</th><th width="200">Staff Assigned</th><th>Task Description</th><th width="40"></th></tr></thead>
+            <tbody id="task-body"></tbody>
+        </table>
+    </div>
+</div>
         </div>
     </main>
 
