@@ -338,44 +338,54 @@
                 </div>
             </div>
 
-           <div id="pane-profile" class="tab-pane active">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <div class="space-y-6">
-            <div class="pdf-card shadow-sm border-t-4 border-slate-800">
-                <h3 class="text-[14px] font-orange text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">Demographics</h3>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label>DOB</label>
-                        <div contenteditable="true" class="text-sm font-semibold">MM/DD/YYYY</div>
-                    </div>
-                    <div>
-                        <label>SSN</label>
-                        <div contenteditable="true" class="text-sm font-semibold">000-00-0000</div>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <label>Email Address</label>
-                    <div contenteditable="true" class="text-sm">client@example.com</div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    
+    <div class="pdf-card shadow-sm border-t-4 border-slate-800 h-full">
+        <h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">Identity</h3>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <label>DOB</label>
+                <div contenteditable="true" class="text-sm font-semibold bg-white border border-slate-200 rounded p-2">MM/DD/YYYY</div>
+            </div>
+            <div>
+                <label>SSN</label>
+                <div contenteditable="true" class="text-sm font-semibold bg-white border border-slate-200 rounded p-2">000-00-0000</div>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label>Email Address</label>
+            <div contenteditable="true" class="text-sm bg-white border border-slate-200 rounded p-2">client@example.com</div>
+        </div>
+        <div>
+            <label>Home Address</label>
+            <div contenteditable="true" class="text-sm min-h-[40px] bg-white border border-slate-200 rounded p-2">123 Main St, City, State, Zip</div>
+        </div>
+    </div>
+
+    <div class="pdf-card border-2 border-orange-500 shadow-sm bg-orange-50/10 h-full">
+        <h3 class="text-[11px] font-black text-orange-600 uppercase mb-4 border-b pb-2 tracking-widest">Emergency Contact</h3>
+        <div class="space-y-4">
+            <div>
+                <label>Full Name</label>
+                <div contenteditable="true" class="text-sm font-bold bg-white border border-slate-200 rounded p-2">Name</div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label>Primary Phone</label>
+                    <div contenteditable="true" class="text-sm font-black text-slate-700 bg-white border border-slate-200 rounded p-2">(000) 000-0000</div>
                 </div>
                 <div>
-                    <label>Home Address</label>
-                    <div contenteditable="true" class="text-sm min-h-[60px]">123 Main St, City, State, Zip</div>
+                    <label>Relationship</label>
+                    <div contenteditable="true" class="text-sm bg-white border border-slate-200 rounded p-2">e.g. Spouse / Parent</div>
                 </div>
             </div>
-
-           <div class="pdf-card border-l-4 border-orange-500 shadow-sm bg-orange-50/30">
-    <h3 class="text-[11px] font-black text-orange-600 uppercase mb-4 border-b pb-2 tracking-widest">Emergency Contact</h3>
-    <div class="grid grid-cols-1 gap-4">
-        <div>
-            <label>Full Name</label>
-            <div contenteditable="true" class="text-sm font-bold bg-white border border-slate-200 rounded p-2">Name</div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
             <div>
-                <label>Primary Phone</label>
-                <div contenteditable="true" class="text-sm font-black text-slate-700 bg-white border border-slate-200 rounded p-2">(000) 000-0000</div>
+                <label>Alternate Contact Info / Email</label>
+                <div contenteditable="true" class="text-xs bg-white border border-slate-200 rounded p-2">Additional details...</div>
             </div>
+        </div>
+    </div>
+</div>
             <div>
                 <label>Relationship</label>
                 <div contenteditable="true" class="text-sm bg-white border border-slate-200 rounded p-2">e.g. Spouse / Parent</div>
