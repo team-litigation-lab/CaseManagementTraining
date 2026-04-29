@@ -791,6 +791,7 @@ function processUpload(input) {
         function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
         window.onload = renderRepo;
     </script>
+    <script>
     /**
  * LSH DEFINITIVE MASTER ENGINE - APRIL 2026
  * This script fixes alignment, colors, and upload logic automatically.
