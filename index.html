@@ -428,18 +428,76 @@
     </div>
 </div>
             <div id="pane-police" class="tab-pane">
-                <div class="pdf-card border-l-8 border-blue-500">
-                    <h3 class="font-black text-blue-600 text-[11px] mb-6 uppercase tracking-widest">Police Report Details</h3>
-                    <div class="grid grid-cols-3 gap-8 mb-8">
-                        <div><label>Responding Agency</label><div contenteditable="true"></div></div>
-                        <div><label>Report Number</label><div contenteditable="true"></div></div>
-                        <div><label>Reporting Officer</label><div contenteditable="true"></div></div>
-                    </div>
-                    <label>Officer's Narrative Summary</label>
-                    <div contenteditable="true" class="min-h-[450px] bg-slate-50 p-6 rounded text-sm italic leading-relaxed text-slate-700">Type police summary here...</div>
+    <div class="pdf-card border-l-8 border-blue-600 shadow-lg">
+        <h3 class="font-black text-blue-600 text-[11px] mb-6 uppercase tracking-widest border-b pb-2">Official Police Report Details</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div class="space-y-4">
+                <div>
+                    <label>Responding Agency</label>
+                    <div contenteditable="true" class="text-sm font-bold bg-white border border-slate-200 rounded p-2">e.g., LAPD / Florida Highway Patrol</div>
+                </div>
+                <div>
+                    <label>Report Number</label>
+                    <div contenteditable="true" class="text-sm font-black text-blue-700 bg-white border border-slate-200 rounded p-2">#</div>
                 </div>
             </div>
 
+            <div class="space-y-4">
+                <div>
+                    <label>Reporting Officer</label>
+                    <div contenteditable="true" class="text-sm font-bold bg-white border border-slate-200 rounded p-2">Name & Badge #</div>
+                </div>
+                <div>
+                    <label>Incident Location</label>
+                    <div contenteditable="true" class="text-sm bg-white border border-slate-200 rounded p-2">Street / Intersection</div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label>Date of Report</label>
+                        <div contenteditable="true" class="text-xs bg-white border border-slate-200 rounded p-2">MM/DD/YYYY</div>
+                    </div>
+                    <div>
+                        <label>Time of Report</label>
+                        <div contenteditable="true" class="text-xs bg-white border border-slate-200 rounded p-2">00:00 AM/PM</div>
+                    </div>
+                </div>
+                <div>
+                    <label>Violations Cited?</label>
+                    <select class="prof-input">
+                        <option>None</option>
+                        <option>Adverse Driver Cited</option>
+                        <option>Client Cited</option>
+                        <option>Both Parties Cited</option>
+                        <option>Criminal Charges Filed</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <label class="text-blue-600 font-black mb-2 uppercase text-[10px]">Officer's Narrative Summary & Liability Findings</label>
+            <div contenteditable="true" class="min-h-[450px] bg-slate-50 p-6 rounded-lg border-2 border-dashed border-slate-200 text-sm italic leading-relaxed text-slate-700">
+                Transcribe the officer's description of the accident here. 
+                Include point of impact, witness statements, and the officer's conclusion on fault...
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6 mt-8 no-print">
+            <div class="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                <label class="text-blue-800">Witnesses Identified</label>
+                <div contenteditable="true" class="text-xs min-h-[60px]">List names and phone numbers...</div>
+            </div>
+            <div class="p-4 bg-slate-100 border border-slate-200 rounded-lg">
+                <label class="text-slate-600">Evidence Collected</label>
+                <div contenteditable="true" class="text-xs min-h-[60px]">e.g., Photos, Dashcam, Bodycam, CCTV...</div>
+            </div>
+        </div>
+    </div>
+</div>
             <div id="pane-matrix" class="tab-pane">
                 <div class="space-y-8">
                     <div class="grid grid-cols-2 gap-8">
