@@ -692,5 +692,65 @@
         function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
         window.onload = renderRepo;
     </script>
+    /**
+ * LSH THEME OVERRIDE
+ * Targets 16 specific elements to apply: 
+ * Font: Arial, 12pt, Bold, Orange (#f97316)
+ * Background: Black (#000000)
+ */
+function applySpecificHeaderStyles() {
+    const targetTitles = [
+        "Identity", 
+        "Employment Details", 
+        "Officer's Narrative Summary", 
+        "Health Insurance", 
+        "Independent Subrogation Card", 
+        "Bodily Injury (BI) Policies", 
+        "PIP / UM / UIM Coverage Stack", 
+        "Outstanding Case Liens", 
+        "Provider Treatment Matrix",
+        "Client Vehicle", 
+        "Third Party Vehicle", 
+        "Discovery & Filing Tracker", 
+        "Finance Tracking", 
+        "Quick Label Portal",
+        "Case Chronology", 
+        "Action Item Log"
+    ];
+
+    // Find all potential title elements (h3 and labels)
+    const allHeaders = document.querySelectorAll('h3, label, span, div');
+
+    allHeaders.forEach(el => {
+        const text = el.innerText.trim();
+        
+        // Check if this element matches one of our 16 targets
+        if (targetTitles.includes(text)) {
+            // Apply the "Nuclear" styling for the specific header look
+            el.style.setProperty('background-color', '#000000', 'important');
+            el.style.setProperty('color', '#f97316', 'important'); // Safety Orange
+            el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            el.style.setProperty('font-size', '14px', 'important'); // Slightly larger for visibility
+            el.style.setProperty('font-weight', '900', 'important');
+            el.style.setProperty('padding', '8px 12px', 'important');
+            el.style.setProperty('border-radius', '4px', 'important');
+            el.style.setProperty('display', 'inline-block', 'important');
+            el.style.setProperty('width', '100%', 'important');
+            el.style.setProperty('text-transform', 'uppercase', 'important');
+            el.style.setProperty('letter-spacing', '1px', 'important');
+        }
+    });
+}
+
+// 1. Run immediately
+applySpecificHeaderStyles();
+
+// 2. Run whenever the user clicks a tab or an "Add" button
+document.addEventListener('click', () => {
+    setTimeout(applySpecificHeaderStyles, 50);
+});
+
+// 3. Constant safety check (every 1.5 seconds)
+setInterval(applySpecificHeaderStyles, 1500);
 </body>
 </html>
