@@ -6,125 +6,7 @@
     <title>LSH Master Build | Definitive Master 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-      <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-
-    /* 1. SIDEBAR LAYOUT LOCK */
-    html, body { height: 100vh !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
-    body { display: flex !important; flex-direction: row !important; font-family: 'Inter', sans-serif; }
-
-    aside { 
-        width: 280px !important; background: #05070a !important; height: 100vh !important; 
-        flex-shrink: 0 !important; display: flex !important; flex-direction: column !important; 
-        border-right: 1px solid #1e293b !important; z-index: 100 !important;
-    }
-
-    main { 
-        flex-grow: 1 !important; height: 100vh !important; display: flex !important; 
-        flex-direction: column !important; overflow: hidden !important; background: #f8fafc !important; 
-    }
-
-    /* 2. THE BLACK BAR HEADERS (Arial 11, White on Black, Bold 900) */
-    h3, .lsh-main-header, .lsh-header-style, #client-name-field {
-        background: #000000 !important;
-        color: #ffffff !important;
-        font-family: Arial, sans-serif !important;
-        font-size: 11px !important;
-        font-weight: 900 !important;
-        text-transform: uppercase !important;
-        padding: 8px 15px !important;
-        margin: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        border-radius: 4px !important;
-        height: 32px !important;
-        box-sizing: border-box !important;
-    }
-
-    /* Long bar for Client's Name */
-    #client-name-field { width: 450px !important; margin-bottom: 15px !important; display: inline-flex !important; }
-
-    /* 3. THE POWER BAR (Fuses Header + ADD Button) */
-    .lsh-power-bar, .lsh-row-lock {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: stretch !important;
-        width: 100% !important;
-        height: 32px !important;
-        margin-bottom: 12px !important;
-    }
-
-    .lsh-power-bar h3, .lsh-row-lock h3 {
-        border-radius: 4px 0 0 4px !important;
-        flex-grow: 1 !important;
-    }
-
-    .lsh-action-btn, .lsh-btn-style, .lsh-power-bar button:not(.hub-btn) {
-        background: #f97316 !important;
-        color: #000000 !important;
-        font-family: Arial !important;
-        font-weight: 900 !important;
-        font-size: 11px !important;
-        padding: 0 20px !important;
-        border-radius: 0 4px 4px 0 !important;
-        border: none !important;
-        cursor: pointer !important;
-        flex-shrink: 0 !important;
-        height: 32px !important;
-    }
-
-    /* 4. NAVY DATE BAR (Side-by-Side Boxes Fix) */
-    #lsh-integrated-bar { 
-        background: #0f172a !important; padding: 20px !important; border-radius: 10px !important; 
-        margin: 20px 0 !important; display: flex !important; flex-direction: row !important; 
-        align-items: center !important; gap: 20px !important; border-left: 6px solid #f97316 !important; 
-        min-height: 100px !important;
-    }
-
-    .bar-box { 
-        background: white !important; border-radius: 8px !important; padding: 10px 15px !important; 
-        width: 180px !important; height: 65px !important; display: flex !important; 
-        flex-direction: column !important; justify-content: center !important; flex-shrink: 0 !important;
-    }
-
-    .bar-box label { color: #64748b !important; font-family: Arial !important; font-size: 9px !important; font-weight: 900 !important; margin: 0 !important; background: transparent !important; }
-    .bar-box div { color: #000 !important; font-family: Arial !important; font-weight: 800 !important; font-size: 14px !important; }
-
-    /* 5. TABS & ORANGE HIGHLIGHT */
-    .tab-btn { color: #94a3b8 !important; font-family: Arial !important; font-weight: 900 !important; cursor: pointer !important; padding: 10px 15px !important; font-size: 11px !important; text-transform: uppercase !important; }
-    .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
-
-    /* 6. EDITABLE FONT LOCK (Arial Bold) */
-    [contenteditable="true"], input, select, .target-settlement-display {
-        font-family: Arial, sans-serif !important;
-        font-weight: 700 !important;
-        font-size: 13px !important;
-        color: #000 !important;
-        outline: none !important;
-    }
-
-    /* 7. HUB BUTTONS (Prevent Squashing) */
-    .hub-btn { 
-        background: #f97316 !important; color: #000 !important; font-family: Arial !important; 
-        font-weight: 900 !important; padding: 8px 15px !important; border-radius: 6px !important; 
-        font-size: 10px !important; margin: 4px !important; display: inline-block !important; 
-    }
-
-    /* 8. CARDS & OVERLAP PREVENTION */
-    .pdf-card { 
-        display: flex !important; flex-direction: column !important; 
-        padding: 24px !important; background: white !important; border: 1px solid #e2e8f0 !important; 
-        border-radius: 12px !important; margin-bottom: 20px !important; 
-    }
-    .tab-pane { padding-top: 0 !important; display: none; }
-    .tab-pane.active { display: block !important; }
-
-    @media print { .no-print { display: none !important; } .tab-pane { display: block !important; } }
-</style>
-</style>
-    </style>
-</head>
+    </head>
 <body>
     <input type="file" id="universal-uploader" class="hidden" onchange="processUpload(this)">
     <aside class="w-72 bg-[#05070a] text-white flex flex-col no-print shrink-0 border-r border-slate-900">
@@ -452,381 +334,103 @@
 
         </div>
     </main>
+<style>
+    /* 1. THE FOUNDATION: SIDEBAR VS CONTENT */
+    html, body { height: 100vh !important; margin: 0 !important; overflow: hidden !important; background: #f1f5f9 !important; }
+    body { display: flex !important; flex-direction: row !important; }
 
-    <script>
-        const REPO_KEY = 'LSH_ULTRALOCK_V2026_MASTER_DEEP_BUILD_FINAL';
-        
-        const staffOptions = `
-            <option>Lead Attorney</option>
-            <option>Associate Attorney</option>
-            <option>Paralegal</option>
-            <option>Case Manager</option>
-            <option>Demand Specialist</option>
-            <option>Records Specialist</option>
-            <option>PD Specialist</option>
-            <option>Lien Negotiator</option>
-            <option>Intake Specialist</option>
-        `;
-
-        function showTab(id) {
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            document.getElementById('pane-' + id).classList.add('active');
-            document.getElementById('tab-' + id).classList.add('active-tab');
-        }
-let currentUploadCategory = "";
-
-function triggerUpload(category) {
-    console.log("Triggering upload for:", category); // Debugging line
-    currentUploadCategory = category;
-    const fileInput = document.getElementById('universal-uploader');
-    if (fileInput) {
-        fileInput.click();
-    } else {
-        alert("Critical Error: Hidden Uploader Input is missing from HTML.");
+    aside { 
+        width: 280px !important; background: #05070a !important; height: 100vh !important; 
+        flex-shrink: 0 !important; display: flex !important; flex-direction: column !important; 
+        border-right: 1px solid #1e293b !important; z-index: 9999 !important;
     }
-}
 
-function processUpload(input) {
-    if (input.files && input.files[0]) {
-        const fileName = input.files[0].name;
-        const tr = document.createElement('tr');
-        
-        tr.innerHTML = `
-            <td width="200">
-                <div class="bg-black text-orange-500 p-2 rounded text-[10px] font-black border border-orange-500 text-center uppercase">
-                    ${currentUploadCategory}
-                </div>
-            </td>
-            <td>
-                <div contenteditable="true" class="text-xs font-bold text-black" style="font-family: Arial !important;">
-                    📎 ATTACHED: ${fileName}
-                </div>
-            </td>
-            <td width="40">
-                <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button>
-            </td>
-        `;
-        
-        document.getElementById('doc-body').appendChild(tr);
-        input.value = ""; // Reset for next upload
+    main { 
+        flex-grow: 1 !important; height: 100vh !important; display: flex !important; 
+        flex-direction: column !important; overflow-y: auto !important; background: #f8fafc !important; 
     }
-}
-        function updatePhaseDisplay(val) { 
-            document.getElementById('display-phase').innerText = val.toUpperCase(); 
-        }
 
-        function handleOtherSystem(selectId, otherInputId, revertId) {
-            const sel = document.getElementById(selectId);
-            const input = document.getElementById(otherInputId);
-            const rev = document.getElementById(revertId);
-            if (sel.value === "Others" || sel.value === "Other") {
-                sel.classList.add('hidden');
-                input.classList.remove('hidden');
-                rev.style.display = "inline-block";
-                input.focus();
-            }
-        }
+    /* 2. THE BLACK BARS & CLIENT NAME (Arial 11, White on Black) */
+    h3, .lsh-main-header, #client-name-field {
+        background: #000 !important; color: #fff !important; font-family: Arial, sans-serif !important;
+        font-size: 11px !important; font-weight: 900 !important; text-transform: uppercase !important;
+        padding: 8px 15px !important; margin: 0 !important; display: flex !important;
+        align-items: center !important; border-radius: 4px !important; height: 32px !important;
+    }
+    #client-name-field { width: 450px !important; margin-bottom: 12px !important; }
 
-        function revertOther(selectId, otherInputId, revertId) {
-            document.getElementById(selectId).classList.remove('hidden');
-            document.getElementById(selectId).selectedIndex = 0;
-            document.getElementById(otherInputId).classList.add('hidden');
-            document.getElementById(revertId).style.display = "none";
-        }
+    /* 3. THE NAVY INTEGRATED BAR (Side-by-Side Boxes Fix) */
+    #lsh-integrated-bar { 
+        background: #0f172a !important; padding: 20px !important; border-radius: 10px !important; 
+        margin: 20px 0 !important; display: flex !important; flex-direction: row !important; 
+        align-items: center !important; gap: 20px !important; border-left: 6px solid #f97316 !important; 
+        min-height: 100px !important; width: 100% !important; clear: both !important;
+    }
 
-        function addRow(id) {
-            const tr = document.createElement('tr');
-            const today = new Date().toLocaleDateString();
-            if(id === 'lit-body') {
-                tr.innerHTML = `<td><select class="prof-input text-xs"><option>Service</option><option>Complaint</option><option>Summons</option><option>Interrogatories</option><option>RFP</option><option>RFA</option><option>Deposition Notice</option><option>Subpoena</option><option>Motion</option></select></td><td><div contenteditable="true" class="text-xs">...</div></td><td><div contenteditable="true" class="text-xs">MM/DD/YYYY</div></td><td><select class="prof-input text-xs"><option>Pending</option><option>Responded</option><option>Completed</option></select></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
-            } else if(id === 'fin-body') {
-                tr.innerHTML = `<td><div contenteditable="true" class="text-xs">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs">...</div></td><td><div contenteditable="true" class="font-black exp-field text-xs text-blue-600">$ 0.00</div></td><td><button onclick="this.parentElement.parentElement.remove(); updateTotals();" class="text-red-500 font-bold">×</button></td>`;
-            } else if(id === 'note-body' || id === 'task-body') {
-                tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold text-slate-400">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs min-h-[40px] italic">...</div></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
-            }
-            document.getElementById(id).appendChild(tr);
-        }
+    .bar-data-container { display: flex !important; flex-direction: row !important; gap: 15px !important; }
+    
+    .bar-box { 
+        background: white !important; border-radius: 8px !important; padding: 10px 15px !important; 
+        width: 180px !important; height: 65px !important; display: flex !important; 
+        flex-direction: column !important; justify-content: center !important; flex-shrink: 0 !important;
+    }
 
-        function addBI() {
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-red-500 relative bg-white p-6 mb-4 shadow-sm";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
-                <div class="grid grid-cols-4 gap-6 mb-6">
-                    <div><label>Policy Holder</label><div contenteditable="true"></div></div>
-                    <div><label>Carrier</label><div contenteditable="true"></div></div>
-                    <div><label>Policy #</label><div contenteditable="true"></div></div>
-                    <div><label>Claim #</label><div contenteditable="true"></div></div>
-                </div>
-                <div class="grid grid-cols-3 gap-6">
-                    <div><label>Adjuster Name</label><div contenteditable="true"></div></div>
-                    <div><label>Liability Accepted?</label><select class="prof-input"><option>Pending</option><option>Yes</option><option>No</option></select></div>
-                    <div><label>Policy Limits</label><div contenteditable="true"></div></div>
-                </div>`;
-            document.getElementById('bi-container').appendChild(div);
-        }
+    /* 4. LABEL & FONT LOCK (Bold & Caps) */
+    label, th {
+        font-family: Arial !important; font-weight: 900 !important; font-size: 10px !important;
+        text-transform: uppercase !important; color: #64748b !important; margin-bottom: 4px !important;
+    }
 
-        function addPIPUM() {
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
-                <div class="grid grid-cols-4 gap-6 mb-6">
-                    <div><label>Coverage Type</label><select class="prof-input"><option>PIP</option><option>UM</option><option>UIM</option></select></div>
-                    <div><label>Policy Holder</label><div contenteditable="true"></div></div>
-                    <div><label>Insurance Carrier</label><div contenteditable="true"></div></div>
-                    <div><label>Policy #</label><div contenteditable="true"></div></div>
-                </div>
-                <div class="grid grid-cols-3 gap-6">
-                    <div><label>Claim Number</label><div contenteditable="true"></div></div>
-                    <div><label>Adjuster Contact</label><div contenteditable="true"></div></div>
-                    <div><label>Policy Limits</label><div contenteditable="true"></div></div>
-                </div>`;
-            document.getElementById('pip-um-container').appendChild(div);
-        }
+    [contenteditable="true"], input, select {
+        font-family: Arial !important; font-weight: 700 !important; font-size: 13px !important;
+        color: #000 !important; outline: none !important;
+    }
 
-        function addLien() {
-            const id = Date.now();
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-slate-900 relative bg-white p-6 mb-4 shadow-sm";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
-                <div class="grid grid-cols-4 gap-6">
-                    <div><label>Type of Lien</label><div class="flex items-center"><select id="l-sel-${id}" onchange="handleOtherSystem(this.id, 'l-oth-${id}', 'l-rev-${id}')" class="prof-input"><option>Prior Atty Lien</option><option>Medical Lien</option><option>HI Subro</option><option>Funding</option><option>Other</option></select><div id="l-oth-${id}" contenteditable="true" class="hidden text-xs font-bold px-2 py-1 bg-orange-50 border border-orange-200 min-w-[80px]">...</div><button id="l-rev-${id}" onclick="revertOther('l-sel-${id}', 'l-oth-${id}', this.id)" class="revert-btn">↺</button></div></div>
-                    <div><label>Lienholder Entity</label><div contenteditable="true"></div></div>
-                    <div><label>Claim / File #</label><div contenteditable="true"></div></div>
-                    <div><label>Lien Amount</label><div contenteditable="true" class="text-red-600 font-bold">$ 0.00</div></div>
-                </div>`;
-            document.getElementById('lien-container').appendChild(div);
-        }
+    /* 5. THE ORANGE "ADD" FUSION */
+    .lsh-power-bar, .flex.justify-between.items-center {
+        display: flex !important; flex-direction: row !important; height: 32px !important; margin-bottom: 15px !important;
+    }
 
-        function addFacility() {
-            const id = "fac-" + Date.now();
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
-            div.innerHTML = `<button onclick="this.parentElement.remove(); updateTotals();" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
-                <div class="grid grid-cols-4 gap-6">
-                    <div><label>Medical Facility</label><div contenteditable="true"></div></div>
-                    <div><label>Specialty Dropdown</label><div class="flex items-center"><select id="sel-${id}" onchange="handleOtherSystem(this.id, 'oth-${id}', 'rev-${id}')" class="prof-input"><option>Chiro</option><option>EMC</option><option>Ortho</option><option>Surgery</option><option>Anesthesia</option><option>Pain Management</option><option value="Other">Other</option></select><div id="oth-${id}" contenteditable="true" class="hidden text-xs px-2 py-1 bg-orange-50 border border-orange-200 min-w-[80px]">...</div><button id="rev-${id}" onclick="revertOther('sel-${id}', 'oth-${id}', this.id)" class="revert-btn">↺</button></div></div>
-                    <div><label>Dates of Treatment</label><div contenteditable="true"></div></div>
-                    <div><label>Invoiced Charges</label><div contenteditable="true" class="med-field font-black text-green-700">$ 0.00</div></div>
-                </div>`;
-            document.getElementById('facility-container').appendChild(div);
-        }
+    .lsh-power-bar h3, .flex.justify-between.items-center h3 { border-radius: 4px 0 0 4px !important; flex-grow: 1 !important; }
 
-        function addPassenger() {
-            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
-            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
-                <div class="grid grid-cols-4 gap-6">
-                    <div><label>Full Name</label><div contenteditable="true"></div></div>
-                    <div><label>DOB</label><div contenteditable="true"></div></div>
-                    <div><label>Contact Info</label><div contenteditable="true"></div></div>
-                    <div><label>Injury Sustained</label><div contenteditable="true"></div></div>
-                </div>`;
-            document.getElementById('passenger-container').appendChild(div);
-        }
+    button:not(.tab-btn):not(.hub-btn):not([onclick*="download"]) {
+        background: #f97316 !important; color: #fff !important; font-family: Arial !important; 
+        font-weight: 900 !important; font-size: 11px !important; padding: 0 25px !important;
+        border-radius: 0 4px 4px 0 !important; border: none !important; height: 32px !important;
+        cursor: pointer !important; text-transform: uppercase !important;
+    }
 
-        function addDocument(label) { const tr = document.createElement('tr'); tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="text-xs italic text-slate-500">Summary...</div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`; document.getElementById('doc-body').appendChild(tr); }
+    /* 6. SIDEBAR BUTTON FIX */
+    aside button { width: 90% !important; margin: 10px auto !important; height: auto !important; border-radius: 8px !important; padding: 12px !important; }
 
-        function updateTotals() { 
-            let med = 0; document.querySelectorAll('.med-field').forEach(el => med += parseFloat(el.innerText.replace(/[$,\s]/g, '')) || 0); 
-            document.getElementById('med-total').innerText = '$ ' + med.toLocaleString(undefined, {minimumFractionDigits: 2}); 
-            let exp = 0; document.querySelectorAll('.exp-field').forEach(el => exp += parseFloat(el.innerText.replace(/[$,\s]/g, '')) || 0); 
-            if(document.getElementById('exp-total')) document.getElementById('exp-total').innerText = '$ ' + exp.toLocaleString(undefined, {minimumFractionDigits: 2}); 
-        }
-        setInterval(updateTotals, 1000);
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block !important; }
+    .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
+</style>
 
-        function saveCase() { 
-            const name = document.getElementById('client-name-field').innerText.split('\n')[0].trim();
-            const data = { id: Date.now(), name: name, phase: document.getElementById('display-phase').innerText, html: { pass: document.getElementById('passenger-container').innerHTML, facs: document.getElementById('facility-container').innerHTML, fin: document.getElementById('fin-body').innerHTML, pipum: document.getElementById('pip-um-container').innerHTML, bi: document.getElementById('bi-container').innerHTML, docs: document.getElementById('doc-body').innerHTML, lit: document.getElementById('lit-body').innerHTML, liens: document.getElementById('lien-container').innerHTML, notes: document.getElementById('note-body').innerHTML, tasks: document.getElementById('task-body').innerHTML, police: document.getElementById('pane-police').innerHTML }, inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML), sels: Array.from(document.querySelectorAll('select')).map(el => el.value) }; 
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); repo.unshift(data); localStorage.setItem(REPO_KEY, JSON.stringify(repo)); renderRepo(); 
-        }
-        function renderRepo() { const list = document.getElementById('repo-list'); let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); list.innerHTML = repo.map(item => `<div onclick="loadCase(${item.id})" class="repo-card group p-3 rounded-lg"><span class="repo-name block font-bold text-xs mb-1">${item.name}</span><button onclick="deleteCase(${item.id}, event)" class="absolute top-1 right-2 text-slate-500">×</button></div>`).join(''); }
-        function loadCase(id) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); const data = repo.find(i => i.id === id); if (!data) return; document.getElementById('passenger-container').innerHTML = data.html.pass; document.getElementById('facility-container').innerHTML = data.html.facs; document.getElementById('fin-body').innerHTML = data.html.fin; document.getElementById('pip-um-container').innerHTML = data.html.pipum; document.getElementById('bi-container').innerHTML = data.html.bi; document.getElementById('doc-body').innerHTML = data.html.docs; document.getElementById('lit-body').innerHTML = data.html.lit; document.getElementById('lien-container').innerHTML = data.html.liens; document.getElementById('note-body').innerHTML = data.html.notes || ""; document.getElementById('task-body').innerHTML = data.html.tasks || ""; document.getElementById('pane-police').innerHTML = data.html.police; const edits = document.querySelectorAll('[contenteditable="true"]'); data.inputs.forEach((v, i) => { if(edits[i]) edits[i].innerHTML = v; }); const selects = document.querySelectorAll('select'); data.sels.forEach((v, i) => { if(selects[i]) selects[i].value = v; }); updateTotals(); showTab('profile'); }
-        function deleteCase(id, e) { e.stopPropagation(); if(confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); renderRepo(); } }
-        function exportRepo() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem(REPO_KEY)], {type:'application/json'})); a.download='LSH_Backup.json'; a.click(); }
-        function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Data Imported"); }; r.readAsText(i.files[0]); }
-        function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
-        window.onload = renderRepo;
-    </script>
-    <script>
+<script>
 (function() {
-    const injectStyles = () => {
-        const css = `
-            /* 1. SIDEBAR & MAIN FLEX LOCK */
-            body { display: flex !important; flex-direction: row !important; height: 100vh !important; overflow: hidden !important; margin: 0 !important; }
-            aside { width: 280px !important; background: #05070a !important; flex-shrink: 0 !important; display: flex !important; flex-direction: column !important; border-right: 1px solid #1e293b !important; }
-            main { flex-grow: 1 !important; display: flex !important; flex-direction: column !important; overflow-y: auto !important; background: #f8fafc !important; }
-
-            /* 2. THE NAVY BAR FIX (Date boxes) */
-            #lsh-integrated-bar { 
-                background: #0f172a !important; padding: 20px !important; border-radius: 10px !important; margin: 20px 0 !important; 
-                display: flex !important; flex-direction: row !important; align-items: center !important; 
-                min-height: 100px !important; border-left: 6px solid #f97316 !important; gap: 20px !important;
-            }
-            .bar-box { 
-                background: white !important; border-radius: 8px !important; padding: 10px 15px !important; 
-                width: 180px !important; height: 65px !important; display: flex !important; flex-direction: column !important; 
-                justify-content: center !important; flex-shrink: 0 !important;
-            }
-            .bar-box label { color: #64748b !important; font-family: Arial !important; font-size: 9px !important; font-weight: 900 !important; margin: 0 !important; }
-            .bar-box div { color: #000 !important; font-family: Arial !important; font-weight: 800 !important; font-size: 14px !important; }
-
-            /* 3. HEADERS & CLIENT NAME (Black Bar, White Arial 11) */
-            h3, .lsh-main-header, #client-name-field {
-                background: #000 !important; color: #fff !important; font-family: Arial !important; font-size: 11px !important;
-                font-weight: 900 !important; padding: 10px 15px !important; border-radius: 4px !important;
-                display: flex !important; align-items: center !important; text-transform: uppercase !important; margin-bottom: 15px !important;
-            }
-            #client-name-field { width: auto !important; min-width: 350px !important; display: inline-flex !important; }
-
-            /* 4. OVERLAP PREVENTION (Table stacking) */
-            .pdf-card { display: flex !important; flex-direction: column !important; background: white !important; padding: 24px !important; margin-bottom: 20px !important; border: 1px solid #e2e8f0 !important; }
-            .treat-table { width: 100% !important; margin-top: 10px !important; display: table !important; border-collapse: collapse !important; }
-            .lsh-power-bar { display: flex !important; flex-direction: row !important; height: 32px !important; margin-bottom: 15px !important; }
-            .lsh-power-bar h3 { margin-bottom: 0 !important; border-radius: 4px 0 0 4px !important; flex-grow: 1 !important; }
-            .lsh-action-btn { background: #f97316 !important; color: #000 !important; padding: 0 20px !important; border-radius: 0 4px 4px 0 !important; cursor: pointer !important; border: none !important; font-weight: 900 !important; height: 32px !important; }
-
-            /* 5. TABS & ORANGE COLOR */
-            .tab-btn { color: #94a3b8 !important; font-weight: 900 !important; font-family: Arial !important; padding: 10px 15px !important; cursor: pointer !important; text-transform: uppercase !important; font-size: 11px !important; }
-            .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
-        `;
-
-        // Inject the high-priority style block
-        if (!document.getElementById('nuclear-override')) {
-            const style = document.createElement('style');
-            style.id = 'nuclear-override';
-            style.innerHTML = css;
-            document.head.appendChild(style);
-        }
-
-        // Tab Management Loop
-        document.querySelectorAll('.tab-pane').forEach(pane => {
-            pane.style.setProperty('display', pane.classList.contains('active') ? 'block' : 'none', 'important');
+    function enforceLSH() {
+        // Fix Tab visibility
+        document.querySelectorAll('.tab-pane').forEach(p => {
+            p.style.display = p.classList.contains('active') ? 'block' : 'none';
         });
-    };
 
-    // Run immediately and then maintain every 50ms
-    setInterval(injectStyles, 50);
-})();
-</script>
- <script>
-/** * LSH DEFINITIVE 2026 MASTER OVERRIDE
- * Fixes: Horizontal Dates, Bold Labels, "ADD" Button Fusion, and Arial Font Lock.
- */
-(function() {
-    const enforceLSHMasterStyle = () => {
-        const css = `
-            /* 1. LAYOUT & SIDE-BY-SIDE DATES */
-            body { display: flex !important; flex-direction: row !important; }
-            #lsh-integrated-bar { 
-                display: flex !important; flex-direction: row !important; 
-                align-items: center !important; gap: 20px !important; 
-                background: #0f172a !important; padding: 20px !important; min-height: 100px !important;
-            }
-            .bar-data-container { display: flex !important; flex-direction: row !important; gap: 15px !important; }
-            .bar-box { 
-                display: flex !important; flex-direction: column !important; 
-                width: 180px !important; height: 65px !important; flex-shrink: 0 !important;
-            }
-
-            /* 2. LABEL LOCK: BOLD & CAPITALIZED */
-            label, .repo-name, th {
-                font-family: Arial, sans-serif !important;
-                font-weight: 900 !important;
-                font-size: 10px !important;
-                text-transform: uppercase !important;
-                color: #64748b !important;
-                display: block !important;
-                letter-spacing: 0.5px !important;
-            }
-
-            /* 3. INPUT & EDITABLE LOCK: ARIAL BOLD */
-            [contenteditable="true"], input, select, textarea, .prof-input {
-                font-family: Arial, sans-serif !important;
-                font-weight: 700 !important;
-                font-size: 13px !important;
-                color: #000 !important;
-                text-transform: none !important;
-                outline: none !important;
-            }
-
-            /* 4. THE "ADD" BUTTON FUSION (Orange BG, White Font, Fused to Header) */
-            /* This targets all action buttons in Notes, Tasks, Insurance, etc. */
-            .lsh-power-bar, .flex.justify-between.items-center, .pdf-card header {
-                display: flex !important; flex-direction: row !important;
-                align-items: stretch !important; height: 32px !important;
-                margin-bottom: 12px !important; background: transparent !important;
-            }
-
-            /* The Black Part of the header */
-            h3, .lsh-main-header {
-                background: #000 !important; color: #fff !important;
-                font-family: Arial !important; font-size: 11px !important;
-                font-weight: 900 !important; padding: 0 15px !important;
-                display: flex !important; align-items: center !important;
-                flex-grow: 1 !important; border-radius: 4px 0 0 4px !important;
-                margin: 0 !important; text-transform: uppercase !important;
-            }
-
-            /* The Orange "ADD" Part */
-            button:not(.tab-btn):not(.hub-btn):not([onclick*="download"]):not([onclick*="window.location"]) {
-                background: #f97316 !important;
-                color: #ffffff !important; /* White Font as requested */
-                font-family: Arial !important;
-                font-weight: 900 !important;
-                font-size: 11px !important;
-                padding: 0 25px !important;
-                border-radius: 0 4px 4px 0 !important;
-                border: none !important;
-                cursor: pointer !important;
-                height: 32px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                text-transform: uppercase !important;
-                flex-shrink: 0 !important;
-            }
-
-            /* 5. OVERLAP & SPACING FIX */
-            .pdf-card { display: flex !important; flex-direction: column !important; margin-bottom: 15px !important; padding: 24px !important; }
-            .tab-pane { padding-top: 0 !important; }
-            .treat-table { margin-top: 5px !important; width: 100% !important; border-collapse: collapse !important; }
-
-            /* 6. TAB BUTTONS */
-            .tab-btn { color: #94a3b8 !important; font-family: Arial !important; font-weight: 900 !important; font-size: 11px !important; }
-            .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
-        `;
-
-        if (!document.getElementById('master-lsh-override')) {
-            const style = document.createElement('style');
-            style.id = 'master-lsh-override';
-            style.innerHTML = css;
-            document.head.appendChild(style);
-        }
-
-        // Logic 1: Rename all action buttons to "ADD"
-        document.querySelectorAll('button:not(.tab-btn):not(.hub-btn):not([onclick*="download"]):not([onclick*="window.location"]):not([onclick*="Archive"])').forEach(btn => {
+        // Rename Buttons
+        document.querySelectorAll('button:not(.tab-btn):not(.hub-btn):not([onclick*="download"]):not([onclick*="location.reload"])').forEach(btn => {
             btn.innerText = "ADD";
-            
-            // Logic 2: Force Fusion with nearest Header if not already in Power Bar
-            const parent = btn.parentElement;
-            if (parent && !parent.classList.contains('lsh-power-bar') && parent.tagName !== 'TD') {
-                parent.style.display = "flex";
-                parent.style.flexDirection = "row";
-                parent.style.alignItems = "stretch";
-                parent.style.height = "32px";
-                
-                const header = parent.querySelector('h3, label');
-                if (header) {
-                    header.className = "lsh-main-header";
-                }
-            }
         });
 
-        // Tab Management
-        document.querySelectorAll('.tab-pane').forEach(pane => {
-            pane.style.display = pane.classList.contains('active') ? 'block' : 'none';
-        });
-    };
-
-    // Run the engine every 50ms to prevent browser-default overrides
-    setInterval(enforceLSHMasterStyle, 50);
+        // Ensure Horizontal Dates
+        const bar = document.getElementById('lsh-integrated-bar');
+        if (bar) {
+            bar.style.display = "flex";
+            bar.style.flexDirection = "row";
+        }
+    }
+    setInterval(enforceLSH, 50);
 })();
 </script>
+  
          </body>
 </html>
