@@ -979,5 +979,48 @@ function enhanceNavigation() {
 window.addEventListener('DOMContentLoaded', enhanceNavigation);
 setInterval(enhanceNavigation, 1000);
     </script>
+    /**
+ * LSH INTEGRATED BAR & TAB REPAIR
+ * Slims down the date boxes and aligns the Type selector to save space.
+ */
+function fixIntegratedBar() {
+    // 1. Slim down the bar boxes (Date of Loss / SOL)
+    const barBoxes = document.querySelectorAll('.bar-box');
+    barBoxes.forEach(box => {
+        box.style.setProperty('width', '140px', 'important'); // Reduced from 180px
+        box.style.setProperty('height', '45px', 'important'); // More compact
+        box.style.setProperty('padding', '5px 10px', 'important');
+    });
+
+    // 2. Adjust the Labels inside the bar
+    const barLabels = document.querySelectorAll('.bar-box label');
+    barLabels.forEach(lbl => {
+        lbl.style.setProperty('font-size', '8px', 'important');
+        lbl.style.setProperty('margin-bottom', '0px', 'important');
+    });
+
+    // 3. Fix the "TYPE" selector text and dropdown
+    const typeLabel = document.querySelector('span.text-orange-500.italic');
+    if (typeLabel) {
+        typeLabel.style.setProperty('font-size', '10px', 'important');
+    }
+
+    const typeSelect = document.getElementById('main-case-type');
+    if (typeSelect) {
+        typeSelect.style.setProperty('padding', '2px 5px', 'important');
+        typeSelect.style.setProperty('font-size', '10px', 'important');
+    }
+
+    // 4. Tab Container Fix - Ensure it doesn't wrap or hide
+    const tabContainer = document.querySelector('.flex.gap-6.mt-6.no-print');
+    if (tabContainer) {
+        tabContainer.style.setProperty('margin-top', '10px', 'important');
+        tabContainer.style.setProperty('gap', '2px', 'important'); // Tighter gap to fit more tabs
+    }
+}
+
+// Run and monitor
+window.addEventListener('DOMContentLoaded', fixIntegratedBar);
+setInterval(fixIntegratedBar, 1000);
 </body>
 </html>
