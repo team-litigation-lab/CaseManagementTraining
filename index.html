@@ -7,6 +7,51 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
+        /* THE POWER BAR CONTAINER */
+.lsh-power-bar {
+    display: flex !important;
+    align-items: stretch !important; /* Forces header and button to same height */
+    width: 100% !important;
+    margin-bottom: 15px !important;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+/* THE BLACK HEADER */
+.lsh-main-header {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    flex-grow: 1 !important; /* Makes it fill the left side */
+    height: 32px !important;
+    margin: 0 !important;
+    padding: 0 15px !important;
+    display: flex !important;
+    align-items: center !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    border-radius: 4px 0 0 4px !important; /* Rounds ONLY left corners */
+}
+
+/* THE ORANGE BUTTON */
+.lsh-action-btn {
+    background-color: #f97316 !important;
+    color: #000000 !important;
+    height: 32px !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+    border: none !important;
+    border-radius: 0 4px 4px 0 !important; /* Rounds ONLY right corners */
+    font-family: Arial, sans-serif !important;
+    font-weight: 900 !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    transition: background 0.2s;
+}
+
+.lsh-action-btn:hover {
+    background-color: #ea580c !important; /* Slightly darker orange on hover */
+}
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
         
         body { 
@@ -533,7 +578,10 @@
 
             <div id="pane-notes" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="flex justify-between items-center mb-6"><h3>Case Chronology</h3><button onclick="addRow('note-body')" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD NOTE</button></div>
+                    <div class="lsh-power-bar">
+    <h3 class="lsh-main-header">Case Chronology</h3>
+    <button onclick="addRow('chronologyTable')" class="lsh-action-btn">ADD</button>
+</div>
                     <table class="treat-table w-full">
                         <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
                         <tbody id="note-body"></tbody>
@@ -745,146 +793,24 @@ function processUpload(input) {
     </script>
     <script>
         /**
- * LSH FINAL ALIGNMENT LOCK
- * Forces the ADD button to sit flush against the Black Bar
- */
-function forceAbsoluteAlignment() {
-    const rowHeaders = ["CASE CHRONOLOGY", "ACTION ITEM LOG"];
-    
-    document.querySelectorAll('h3, label').forEach(el => {
-        const text = el.innerText.trim().toUpperCase();
-        
-        if (rowHeaders.includes(text)) {
-            const parent = el.parentElement;
-            const btn = parent ? parent.querySelector('button') : null;
-
-            if (parent && btn) {
-                // 1. Force the parent to be a rigid, gapless container
-                parent.style.setProperty('display', 'flex', 'important');
-                parent.style.setProperty('gap', '0px', 'important');
-                parent.style.setProperty('align-items', 'center', 'important');
-
-                // 2. The Black Bar: Round only the left side
-                el.style.setProperty('flex-grow', '1', 'important');
-                el.style.setProperty('margin-right', '-2px', 'important'); // PULLS BUTTON IN
-                el.style.setProperty('border-radius', '4px 0 0 4px', 'important');
-                el.style.setProperty('height', '32px', 'important');
-
-                // 3. The Orange Button: Round only the right side
-                btn.style.setProperty('margin-left', '0px', 'important');
-                btn.style.setProperty('border-radius', '0 4px 4px 0', 'important');
-                btn.style.setProperty('height', '32px', 'important');
-                btn.style.setProperty('border', 'none', 'important');
-                btn.style.setProperty('min-width', '60px', 'important');
-            }
-        }
-    });
-}
-
-// Execute immediately and monitor
-setInterval(forceAbsoluteAlignment, 500);
-/**
- * LSH MASTER OVERRIDE - V2026.DYNAMIC_FLEX
- * Fixes Upload Portal overflow while locking Chronology/Tasks.
- */
-
-// 1. INJECT GLOBAL CSS
-const lshStyles = document.createElement('style');
-lshStyles.innerHTML = `
-    /* standard grid for rows with a single ADD button */
-    .grid-lock-row {
-        display: grid !important;
-        grid-template-columns: 1fr auto !important;
-        align-items: center !important;
-        gap: 0px !important;
-        width: 100% !important;
-    }
-
-    /* flex wrap for the Upload Portal so buttons can go to next line */
-    .portal-wrap {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-        width: 100% !important;
-    }
-
-    h3, label { margin-bottom: 0px !important; }
-`;
-document.head.appendChild(lshStyles);
-
-// 2. JAVASCRIPT LOGIC
-function applyLSHFinalMaster() {
-    const targetHeaders = [
-        "Identity", "Demographics", "Employment Details", "Emergency Contact", "Case Narrative",
-        "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
-        "Health Insurance", "Independent Subrogation Card", "Bodily Injury (BI) Policies", 
-        "PIP / UM / UIM Coverage Stack", "Outstanding Case Liens", "Provider Treatment Matrix",
-        "Client Vehicle", "Third Party Vehicle", "Discovery & Filing Tracker", 
-        "Finance Tracking", "Quick Label Portal", "Upload Portal", "Case Chronology", "Action Item Log"
-    ];
-
-    document.querySelectorAll('h3, label').forEach(el => {
-        const text = el.innerText.trim().toUpperCase();
-        if (targetHeaders.some(h => h.toUpperCase() === text)) {
-            const parent = el.parentElement;
-            
-            // LOGIC: If it's the UPLOAD PORTAL, use flex-wrap. Otherwise, use GRID LOCK.
-            if (parent) {
-                if (text.includes("UPLOAD") || text.includes("QUICK LABEL")) {
-                    parent.classList.add('portal-wrap');
-                    parent.classList.remove('grid-lock-row');
-                    el.style.setProperty('width', '100%', 'important'); // Header takes full top row
-                } else if (parent.querySelector('button')) {
-                    parent.classList.add('grid-lock-row');
-                    parent.classList.remove('portal-wrap');
-                }
-            }
-
-            // Header Styles (White on Black)
-            el.style.setProperty('background-color', '#000000', 'important');
-            el.style.setProperty('color', '#ffffff', 'important');
-            el.style.setProperty('height', '32px', 'important');
-            el.style.setProperty('display', 'flex', 'important');
-            el.style.setProperty('align-items', 'center', 'important');
-            el.style.setProperty('padding', '0 15px', 'important');
-            el.style.setProperty('border-radius', '4px', 'important');
-            el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-            el.style.setProperty('font-size', '13px', 'important');
-            el.style.setProperty('font-weight', '900', 'important');
-            el.style.setProperty('text-transform', 'uppercase', 'important');
-        }
-    });
-
-    // Button Styles
-    document.querySelectorAll('button').forEach(btn => {
-        const onClick = btn.getAttribute('onclick') || "";
-        const isAction = onClick.includes('add') || onClick.includes('addRow') || onClick.includes('triggerUpload') || btn.classList.contains('hub-btn');
-
-        if (isAction) {
-            // Only rename the row-adders
-            if (!onClick.includes('triggerUpload') && !btn.classList.contains('hub-btn')) {
-                btn.innerText = "ADD";
-                btn.style.setProperty('border-radius', '0 4px 4px 0', 'important');
-            } else {
-                btn.style.setProperty('border-radius', '4px', 'important');
-            }
-            
-            btn.style.setProperty('background-color', '#f97316', 'important');
-            btn.style.setProperty('color', '#000000', 'important');
-            btn.style.setProperty('height', '32px', 'important');
-            btn.style.setProperty('font-weight', '900', 'important');
-            btn.style.setProperty('padding', '0 15px', 'important');
-            btn.style.setProperty('border', 'none', 'important');
-        }
-    });
-
-    // Dropdowns and Name Lock
-    document.querySelectorAll('select').forEach(s => s.style.setProperty('background-color', '#fff', 'important'));
+// This script now only handles text values and the specific Client Name ID
+function cleanUpMainBuild() {
+    // Lock the Client Name
     const nameField = document.getElementById('client-name-field');
-    if (nameField) nameField.style.setProperty('font-size', '36px', 'important');
+    if (nameField) {
+        nameField.style.setProperty('font-size', '36px', 'important');
+        nameField.style.setProperty('font-weight', '900', 'important');
+    }
+
+    // Ensure all dropdowns are white
+    document.querySelectorAll('select').forEach(s => {
+        s.style.setProperty('background-color', '#ffffff', 'important');
+        s.style.setProperty('color', '#000000', 'important');
+    });
 }
 
-setInterval(applyLSHFinalMaster, 500);
+// Run once on load
+window.addEventListener('DOMContentLoaded', cleanUpMainBuild);
 </script>
 </body>
 </html>
