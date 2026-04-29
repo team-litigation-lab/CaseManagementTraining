@@ -1113,5 +1113,56 @@ window.addEventListener('DOMContentLoaded', initUploadPortal);
 // Safety check for dynamic loading
 setInterval(initUploadPortal, 2000);
 </script>
+    <script>
+/**
+ * LSH SMART BUTTON OVERRIDE - V2026.5
+ * Maintains original button labels (Medical, Police, etc.) 
+ * while forcing the LSH Master Visual Identity.
+ */
+function enhanceQuickLabels() {
+    // Select all buttons within the Quick Label Portal and general Add buttons
+    const buttons = document.querySelectorAll('button');
+
+    buttons.forEach(btn => {
+        const btnText = btn.innerText.toUpperCase();
+        
+        // Target buttons that are meant to add/label items
+        if (btnText.includes("ADD") || btnText.includes("+") || 
+            btn.parentElement.classList.contains('grid-cols-4') || 
+            btn.classList.contains('hub-btn')) {
+
+            // 1. STYLE LOCK (Nuclear Visuals, but keeps btn.innerText)
+            btn.style.setProperty('background-color', '#f97316', 'important'); // Safety Orange
+            btn.style.setProperty('color', '#000000', 'important');           // Jet Black
+            btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            btn.style.setProperty('font-weight', '900', 'important');
+            btn.style.setProperty('font-size', '10px', 'important');
+            btn.style.setProperty('text-transform', 'uppercase', 'important');
+            btn.style.setProperty('letter-spacing', '0.5px', 'important');
+            
+            // 2. UNIFORM SHAPE
+            btn.style.setProperty('padding', '10px 12px', 'important');
+            btn.style.setProperty('border-radius', '6px', 'important');
+            btn.style.setProperty('border', 'none', 'important');
+            btn.style.setProperty('cursor', 'pointer', 'important');
+            btn.style.setProperty('box-shadow', '0 2px 4px rgba(0,0,0,0.1)', 'important');
+            
+            // 3. ALIGNMENT & SIZING
+            btn.style.setProperty('display', 'inline-flex', 'important');
+            btn.style.setProperty('align-items', 'center', 'important');
+            btn.style.setProperty('justify-content', 'center', 'important');
+            btn.style.setProperty('min-height', '32px', 'important');
+
+            // 4. PRESERVE LABELS
+            // We remove the line that was forcing btn.innerText = "ADD"
+            // This allows "Medical", "Police", "Invoices", etc., to stay visible.
+        }
+    });
+}
+
+// Execute immediately and keep enforcement active
+window.addEventListener('DOMContentLoaded', enhanceQuickLabels);
+setInterval(enhanceQuickLabels, 1000);
+</script>
 </body>
 </html>
