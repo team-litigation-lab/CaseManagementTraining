@@ -954,6 +954,56 @@ function enhanceNavigation() {
         container.style.setProperty('display', 'flex', 'important');
         container.style.setProperty('gap', '10px', 'important');
     }
+    /**
+ * LSH MASTER BUTTON & HEADER ALIGNMENT
+ * Snaps Black Headers and Orange ADD Buttons into a perfectly straight line.
+ */
+function fixAddButtonAlignment() {
+    // 1. Target the specific buttons
+    const addButtons = document.querySelectorAll('button[onclick*="add"], button[onclick*="addRow"]');
+
+    addButtons.forEach(btn => {
+        // Find the parent container (usually the flex div holding the h3 and button)
+        const parent = btn.parentElement;
+        
+        if (parent) {
+            // FORCE PARENT ALIGNMENT
+            parent.style.setProperty('display', 'flex', 'important');
+            parent.style.setProperty('align-items', 'center', 'important'); // This is the magic fix
+            parent.style.setProperty('gap', '10px', 'important');
+        }
+
+        // BUTTON STYLE LOCK
+        btn.innerText = "ADD";
+        btn.style.setProperty('background-color', '#f97316', 'important'); // Orange BG
+        btn.style.setProperty('color', '#000000', 'important');           // Black Text
+        btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        btn.style.setProperty('font-size', '10px', 'important');
+        btn.style.setProperty('font-weight', '900', 'important');
+        btn.style.setProperty('padding', '0 15px', 'important');         // No top/bottom padding
+        btn.style.setProperty('height', '26px', 'important');            // Explicit height
+        btn.style.setProperty('display', 'inline-flex', 'important');
+        btn.style.setProperty('align-items', 'center', 'important');
+        btn.style.setProperty('border', 'none', 'important');
+        btn.style.setProperty('border-radius', '4px', 'important');
+        btn.style.setProperty('margin', '0', 'important');               // Kill stray margins
+    });
+
+    // 2. Fix the Black Headers so they don't have bottom margins pushing the button down
+    const headers = document.querySelectorAll('h3, label');
+    headers.forEach(header => {
+        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
+            header.style.setProperty('margin', '0', 'important');
+            header.style.setProperty('height', '26px', 'important');     // Match button height exactly
+            header.style.setProperty('display', 'flex', 'important');
+            header.style.setProperty('align-items', 'center', 'important');
+        }
+    });
+}
+
+// Run immediately and every second
+window.addEventListener('DOMContentLoaded', fixAddButtonAlignment);
+setInterval(fixAddButtonAlignment, 1000);
 }
 
 // Execute and Loop
