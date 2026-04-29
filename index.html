@@ -745,12 +745,13 @@ function processUpload(input) {
     </script>
     <script>
 /**
- * LSH UNIFIED MASTER BUILD - V2026.FINAL
- * Replaces all previous styling and alignment scripts.
+ /**
+ * LSH MASTER OVERRIDE - V2026.GRID_LOCK_DROPDOWN
+ * Forces grid alignment and styles all dropdowns to be white/black bold.
  */
-function applyLSHMasterOverride() {
-    // 1. LIST OF MAJOR HEADERS (White on Black)
-    const majorHeaders = [
+function applyLSHFinalMaster() {
+    // 1. TARGET HEADERS
+    const targetHeaders = [
         "Identity", "Demographics", "Employment Details", "Emergency Contact", "Case Narrative",
         "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
         "Health Insurance", "Independent Subrogation Card", "Bodily Injury (BI) Policies", 
@@ -761,64 +762,68 @@ function applyLSHMasterOverride() {
 
     document.querySelectorAll('h3, label').forEach(el => {
         const text = el.innerText.trim().toUpperCase();
-        const parent = el.parentElement;
-        const btn = parent ? parent.querySelector('button') : null;
+        if (targetHeaders.some(h => h.toUpperCase() === text)) {
+            const parent = el.parentElement;
+            const btn = parent ? parent.querySelector('button') : null;
 
-        // SPECIFIC FIX: CHRONOLOGY & ACTION LOGS (Segmented Look)
-        if (text === "CASE CHRONOLOGY" || text === "ACTION ITEM LOG") {
+            // GRID LOCK: Forces bar and button to touch
             if (parent && btn) {
-                // Parent Container Fix
-                parent.style.setProperty('display', 'flex', 'important');
-                parent.style.setProperty('flex-direction', 'row', 'important');
-                parent.style.setProperty('align-items', 'stretch', 'important');
-                parent.style.setProperty('gap', '0', 'important');
+                parent.style.setProperty('display', 'grid', 'important');
+                parent.style.setProperty('grid-template-columns', '1fr auto', 'important');
+                parent.style.setProperty('align-items', 'center', 'important');
+                parent.style.setProperty('gap', '0px', 'important');
                 parent.style.setProperty('width', '100%', 'important');
-                parent.style.setProperty('margin-bottom', '12px', 'important');
-
-                // Black Bar Style (Round Left Only)
-                el.style.setProperty('background-color', '#000000', 'important');
-                el.style.setProperty('color', '#ffffff', 'important');
-                el.style.setProperty('flex-grow', '1', 'important');
-                el.style.setProperty('height', '32px', 'important');
-                el.style.setProperty('display', 'flex', 'important');
-                el.style.setProperty('align-items', 'center', 'important');
-                el.style.setProperty('padding', '0 15px', 'important');
-                el.style.setProperty('border-radius', '4px 0 0 4px', 'important');
-                el.style.setProperty('font-size', '13px', 'important');
-                el.style.setProperty('font-weight', '900', 'important');
-                el.style.setProperty('font-style', 'normal', 'important');
-                el.style.setProperty('text-transform', 'uppercase', 'important');
-
-                // Orange Button Style (Round Right Only)
-                btn.innerText = "ADD";
-                btn.style.setProperty('background-color', '#f97316', 'important');
-                btn.style.setProperty('color', '#000000', 'important');
-                btn.style.setProperty('height', '32px', 'important');
-                btn.style.setProperty('padding', '0 20px', 'important');
-                btn.style.setProperty('border-radius', '0 4px 4px 0', 'important');
-                btn.style.setProperty('font-weight', '900', 'important');
-                btn.style.setProperty('border', 'none', 'important');
-                btn.style.setProperty('display', 'flex', 'important');
-                btn.style.setProperty('align-items', 'center', 'important');
             }
-        } 
-        // GENERAL MAJOR HEADERS (Standard Full Width)
-        else if (majorHeaders.some(h => h.toUpperCase() === text)) {
+
             el.style.setProperty('background-color', '#000000', 'important');
             el.style.setProperty('color', '#ffffff', 'important');
+            el.style.setProperty('height', '32px', 'important');
             el.style.setProperty('display', 'flex', 'important');
             el.style.setProperty('align-items', 'center', 'important');
-            el.style.setProperty('width', '100%', 'important');
-            el.style.setProperty('height', '32px', 'important');
             el.style.setProperty('padding', '0 15px', 'important');
-            el.style.setProperty('border-radius', '4px', 'important');
+            el.style.setProperty('margin', '0', 'important');
+            el.style.setProperty('border-radius', '4px 0 0 4px', 'important');
+            el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            el.style.setProperty('font-size', '13px', 'important');
             el.style.setProperty('font-weight', '900', 'important');
             el.style.setProperty('text-transform', 'uppercase', 'important');
-            el.style.setProperty('margin-bottom', '10px', 'important');
         }
     });
 
-    // 2. CLIENT NAME PROTECTION (36px, No Blink)
+    // 2. ACTION BUTTONS (Orange on Black)
+    document.querySelectorAll('button').forEach(btn => {
+        const onClick = btn.getAttribute('onclick') || "";
+        const isAction = onClick.includes('add') || onClick.includes('addRow') || onClick.includes('triggerUpload') || btn.classList.contains('hub-btn');
+
+        if (isAction) {
+            if (!onClick.includes('triggerUpload') && !btn.classList.contains('hub-btn')) {
+                btn.innerText = "ADD";
+            }
+            btn.style.setProperty('background-color', '#f97316', 'important');
+            btn.style.setProperty('color', '#000000', 'important');
+            btn.style.setProperty('height', '32px', 'important');
+            btn.style.setProperty('border-radius', '0 4px 4px 0', 'important');
+            btn.style.setProperty('font-weight', '900', 'important');
+            btn.style.setProperty('padding', '0 20px', 'important');
+            btn.style.setProperty('border', 'none', 'important');
+            btn.style.setProperty('display', 'flex', 'important');
+            btn.style.setProperty('align-items', 'center', 'important');
+        }
+    });
+
+    // 3. DROPDOWN OVERRIDE (White Background, Black Bold Text)
+    document.querySelectorAll('select').forEach(select => {
+        select.style.setProperty('background-color', '#ffffff', 'important');
+        select.style.setProperty('color', '#000000', 'important');
+        select.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        select.style.setProperty('font-weight', 'bold', 'important');
+        select.style.setProperty('font-size', '12px', 'important');
+        select.style.setProperty('border', '1px solid #d1d5db', 'important');
+        select.style.setProperty('border-radius', '4px', 'important');
+        select.style.setProperty('padding', '4px', 'important');
+    });
+
+    // 4. CLIENT NAME PROTECTION
     const nameField = document.getElementById('client-name-field');
     if (nameField) {
         nameField.style.setProperty('font-size', '36px', 'important');
@@ -826,8 +831,8 @@ function applyLSHMasterOverride() {
         nameField.style.setProperty('color', '#000000', 'important');
     }
 
-    // 3. GLOBAL INPUT STYLING (Arial 12pt Bold Black)
-    document.querySelectorAll('[contenteditable="true"], select').forEach(field => {
+    // 5. GLOBAL CONTENT EDITABLE FIELDS
+    document.querySelectorAll('[contenteditable="true"]').forEach(field => {
         if (field.id !== 'client-name-field') {
             field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             field.style.setProperty('font-size', '12px', 'important');
@@ -837,8 +842,8 @@ function applyLSHMasterOverride() {
     });
 }
 
-// Start the loop
-setInterval(applyLSHMasterOverride, 500);
+// Set Interval to catch dynamically loaded content
+setInterval(applyLSHFinalMaster, 500);
 </script>
 </body>
 </html>
