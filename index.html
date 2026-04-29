@@ -788,5 +788,50 @@ window.addEventListener('DOMContentLoaded', () => {
 // Periodic enforcement (Every 1 second)
 setInterval(applyLSHMasterStyles, 1000);
 </script>
+    <script>
+        /**
+ * LSH IDENTITY HIGHLIGHTER
+ * Makes the Identity section pop with a glow, border, and shadow.
+ */
+function highlightIdentitySection() {
+    // 1. Identify the card containing the "Identity" header
+    const allCards = document.querySelectorAll('.pdf-card');
+    
+    allCards.forEach(card => {
+        if (card.innerText.toUpperCase().includes("IDENTITY")) {
+            // Apply High-Importance Highlight
+            card.style.setProperty('border', '3px solid #f97316', 'important'); // Safety Orange Border
+            card.style.setProperty('box-shadow', '0 0 20px rgba(249, 115, 22, 0.2)', 'important'); // Orange Glow
+            card.style.setProperty('transform', 'scale(1.01)', 'important'); // Subtle Zoom
+            card.style.setProperty('transition', 'all 0.3s ease', 'important');
+            card.style.setProperty('z-index', '10', 'important');
+            
+            // Optional: Add a "Primary" badge label if it doesn't exist
+            if (!card.querySelector('.importance-badge')) {
+                const badge = document.createElement('div');
+                badge.className = 'importance-badge';
+                badge.innerText = 'PRIMARY CASE SUBJECT';
+                badge.style.cssText = `
+                    position: absolute;
+                    top: -10px;
+                    right: 20px;
+                    background: #f97316;
+                    color: white;
+                    font-size: 8px;
+                    font-weight: 900;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    letter-spacing: 1px;
+                `;
+                card.appendChild(badge);
+            }
+        }
+    });
+}
+
+// Run on load and during safety check
+window.addEventListener('DOMContentLoaded', highlightIdentitySection);
+setInterval(highlightIdentitySection, 2000);
+    </script>
 </body>
 </html>
