@@ -745,402 +745,99 @@ function processUpload(input) {
     </script>
     <script>
     /**
- * LSH MASTER THEME OVERRIDE - V2026.4
- * Forces specific headers to: Arial Bold White on Black
- * Forces content to: Arial 10pt Bold Black
+ * LSH CONSOLIDATED FINAL OVERRIDE 2026
+ * Governs Headers, Buttons, Name Lock, and Upload Portal.
  */
-function applyLSHMasterStyles() {
-    // 1. LIST OF ALL 20 TARGET HEADERS
+function applyLSHFinalMaster() {
+    // 1. HEADERS: WHITE ON BLACK
     const targetHeaders = [
-        "Identity", 
-        "Employment Details", 
-        "Emergency Contact",
-        "Case Narrative",
-        "Passenger Records",
-        "Police Report Details",
-        "Officer's Narrative Summary", 
-        "Health Insurance", 
-        "Independent Subrogation Card", 
-        "Bodily Injury (BI) Policies", 
-        "PIP / UM / UIM Coverage Stack", 
-        "Outstanding Case Liens", 
-        "Provider Treatment Matrix",
-        "Client Vehicle", 
-        "Third Party Vehicle", 
-        "Discovery & Filing Tracker", 
-        "Finance Tracking", 
-        "Upload Portal",
-        "Case Chronology", 
-        "Action Item Log"
+        "Identity", "Employment Details", "Emergency Contact", "Case Narrative",
+        "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
+        "Health Insurance", "Independent Subrogation Card", "Bodily Injury (BI) Policies", 
+        "PIP / UM / UIM Coverage Stack", "Outstanding Case Liens", "Provider Treatment Matrix",
+        "Client Vehicle", "Third Party Vehicle", "Discovery & Filing Tracker", 
+        "Finance Tracking", "Quick Label Portal", "Upload Portal", "Case Chronology", "Action Item Log"
     ];
 
-    // 2. APPLY WHITE ON BLACK TO HEADERS
-    const allTextElements = document.querySelectorAll('h3, label, .text-white-600, .text-blue-600');
-    allTextElements.forEach(el => {
+    document.querySelectorAll('h3, label').forEach(el => {
         const text = el.innerText.trim();
-        // Case-insensitive match against our list
         if (targetHeaders.some(h => h.toLowerCase() === text.toLowerCase())) {
             el.style.setProperty('background-color', '#000000', 'important');
-            el.style.setProperty('color', '#f97316', 'important'); // Safety Orange
+            el.style.setProperty('color', '#ffffff', 'important'); // WHITE TEXT
             el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             el.style.setProperty('font-size', '13px', 'important');
             el.style.setProperty('font-weight', '900', 'important');
+            el.style.setProperty('font-style', 'normal', 'important');
             el.style.setProperty('padding', '6px 10px', 'important');
             el.style.setProperty('border-radius', '4px', 'important');
-            el.style.setProperty('display', 'block', 'important');
-            el.style.setProperty('width', '100%', 'important');
+            el.style.setProperty('display', 'flex', 'important');
+            el.style.setProperty('align-items', 'center', 'important');
+            el.style.setProperty('height', '32px', 'important');
+            el.style.setProperty('margin-bottom', '0px', 'important');
             el.style.setProperty('text-transform', 'uppercase', 'important');
-            el.style.setProperty('margin-bottom', '10px', 'important');
-            el.style.setProperty('letter-spacing', '0.5px', 'important');
         }
     });
 
-    // 3. APPLY ARIAL 10PT BOLD BLACK TO CONTENT
-    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
-    contentFields.forEach(field => {
-        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        field.style.setProperty('font-size', '10px', 'important');
-        field.style.setProperty('font-weight', 'bold', 'important');
-        field.style.setProperty('color', '#000000', 'important');
-        field.style.setProperty('background-color', '#ffffff', 'important');
-    });
-}
+    // 2. BUTTONS: ORANGE BG / BLACK TEXT
+    document.querySelectorAll('button').forEach(btn => {
+        const onClick = btn.getAttribute('onclick') || "";
+        const isUploadTrigger = onClick.includes('triggerUpload') || onClick.includes('addDocument');
+        const isStandardAdd = (onClick.includes('add') || onClick.includes('addRow')) && !isUploadTrigger;
 
-// 4. DATA SCRUBBER (KEEPS CLIENT NAME)
-function wipePlaceholders() {
-    const placeholders = [
-        "MM/DD/YYYY", "(000) 000-0000", "$ 0.00", "BATCH-2026-X", 
-        "Enter facts of loss...", "Type police summary here...", 
-        "Summary...", "...", "TYPE OTHER...", "Enter Name", 
-        "e.g., LAPD / Florida Highway Patrol", "Name & Badge #", "Street / Intersection"
-    ];
-    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
-        if (placeholders.includes(el.innerText.trim())) {
-            el.innerHTML = "";
-        }
-    });
-}
-
-// 5. OBSERVER & EXECUTION
-const lshObserver = new MutationObserver(() => {
-    applyLSHMasterStyles();
-});
-
-const targetArea = document.getElementById('capture-area');
-if (targetArea) {
-    lshObserver.observe(targetArea, { childList: true, subtree: true });
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    wipePlaceholders();
-    applyLSHMasterStyles();
-});
-
-// Periodic enforcement (Every 1 second)
-setInterval(applyLSHMasterStyles, 1000);
-</script>
-    <script>
-        /**
- * LSH IDENTITY HIGHLIGHTER
- * Makes the Identity section pop with a glow, border, and shadow.
- */
-function highlightIdentitySection() {
-    // 1. Identify the card containing the "Identity" header
-    const allCards = document.querySelectorAll('.pdf-card');
-    
-    allCards.forEach(card => {
-        if (card.innerText.toUpperCase().includes("IDENTITY")) {
-            // Apply High-Importance Highlight
-            card.style.setProperty('border', '3px solid #f97316', 'important'); // Safety Orange Border
-            card.style.setProperty('box-shadow', '0 0 20px rgba(249, 115, 22, 0.2)', 'important'); // Orange Glow
-            card.style.setProperty('transform', 'scale(1.01)', 'important'); // Subtle Zoom
-            card.style.setProperty('transition', 'all 0.3s ease', 'important');
-            card.style.setProperty('z-index', '10', 'important');
-            
-            }
-    });
-}
-        /**
- * LSH ROW ALIGNMENT OVERRIDE
- * Specifically fixes the 'staircase' look in Chronology and Action Item sections.
- */
-function fixStaircaseAlignment() {
-    // 1. Find all headers that have a button as a sibling
-    const headers = document.querySelectorAll('h3, label');
-
-    headers.forEach(header => {
-        // We only care about the Orange-on-Black headers
-        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
-            const parent = header.parentElement;
-            
-            // If the parent is a div that contains both the header and a button
-            if (parent && parent.querySelector('button')) {
-                // FORCE THE ROW LOCK
-                parent.style.setProperty('display', 'flex', 'important');
-                parent.style.setProperty('flex-direction', 'row', 'important');
-                parent.style.setProperty('align-items', 'center', 'important');
-                parent.style.setProperty('justify-content', 'space-between', 'important');
-                parent.style.setProperty('gap', '10px', 'important');
-                parent.style.setProperty('width', '100%', 'important');
-                
-                // Shrink the header width so it doesn't push the button to a new line
-                header.style.setProperty('flex-grow', '1', 'important');
-                header.style.setProperty('width', 'auto', 'important');
-                header.style.setProperty('margin-bottom', '0px', 'important');
-            }
-        }
-    });
-
-    // 2. Button Baseline Fix
-    const addButtons = document.querySelectorAll('button[onclick*="add"], button[onclick*="addRow"]');
-    addButtons.forEach(btn => {
-        btn.style.setProperty('margin-top', '0px', 'important');
-        btn.style.setProperty('flex-shrink', '0', 'important');
-    });
-}
-
-// Add to your existing loop
-setInterval(fixStaircaseAlignment, 500);
-
-// Run on load and during safety check
-window.addEventListener('DOMContentLoaded', highlightIdentitySection);
-setInterval(highlightIdentitySection, 2000);
-    </script>
-             <script>
-    /**
- * LSH CLIENT NAME NUCLEAR OVERRIDE
- * Forces the Client Name to stay 36px Black/Bold Arial and prevents shrinking.
- */
-/**
- * LSH MASTER THEME OVERRIDE - ANTI-BLINK VERSION
- */
-function applyLSHMasterStyles() {
-    // ... [Keep your Header Logic here] ...
-
-    // UPDATED: Content Styling with "Client Name" Protection
-    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
-    
-    contentFields.forEach(field => {
-        // IF THIS IS THE CLIENT NAME, DO NOT SHRINK IT
-        if (field.id === 'client-name-field') {
-            field.style.setProperty('font-size', '36px', 'important');
-            field.style.setProperty('font-weight', '900', 'important');
-        } else {
-            // ALL OTHER FIELDS GET THE STANDARD SIZE
-            field.style.setProperty('font-size', '12px', 'important');
-            field.style.setProperty('font-weight', 'bold', 'important');
-        }
-        
-        // General styles for everyone
-        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        field.style.setProperty('color', '#000000', 'important');
-        field.style.setProperty('background-color', '#ffffff', 'important');
-    });
-}
-
-// Run immediately and continuously to fight off other scripts
-window.addEventListener('DOMContentLoaded', lockClientNameStyle);
-setInterval(lockClientNameStyle, 500); // Check every half-second for maximum stability
-             </script>
-    <script>
-        /**
- * LSH UNIVERSAL BUTTON OVERRIDE
- * Targets all "Add" buttons, replaces text with "ADD", 
- * and forces Orange Background with Black Text.
- */
-function unifyAddButtons() {
-    // Select all buttons on the page
-    const buttons = document.querySelectorAll('button');
-
-    buttons.forEach(btn => {
-        const btnText = btn.innerText.toUpperCase();
-        
-        // If the button text contains "ADD", apply the master style
-        if (btnText.includes("ADD") || btnText.includes("+")) {
-            // 1. Uniform Text
-            btn.innerText = "ADD";
-
-            // 2. Nuclear Visual Override
-            btn.style.setProperty('background-color', '#f97316', 'important'); // Safety Orange
-            btn.style.setProperty('color', '#000000', 'important');           // Jet Black
+        // Apply orange theme to all Add/Upload buttons
+        if (isUploadTrigger || isStandardAdd || btn.classList.contains('hub-btn')) {
+            btn.style.setProperty('background-color', '#f97316', 'important'); 
+            btn.style.setProperty('color', '#000000', 'important');
             btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             btn.style.setProperty('font-weight', '900', 'important');
-            btn.style.setProperty('font-size', '10px', 'important');
-            btn.style.setProperty('text-transform', 'uppercase', 'important');
-            btn.style.setProperty('letter-spacing', '1px', 'important');
-            
-            // 3. Uniform Shape
-            btn.style.setProperty('padding', '8px 20px', 'important');
-            btn.style.setProperty('border-radius', '6px', 'important');
+            btn.style.setProperty('font-size', '11px', 'important');
             btn.style.setProperty('border', 'none', 'important');
+            btn.style.setProperty('border-radius', '4px', 'important');
+            btn.style.setProperty('padding', '4px 12px', 'important');
+            btn.style.setProperty('text-transform', 'uppercase', 'important');
             btn.style.setProperty('cursor', 'pointer', 'important');
-            btn.style.setProperty('box-shadow', '0 2px 4px rgba(0,0,0,0.1)', 'important');
-            
-            // 4. Ensure it doesn't shrink
-            btn.style.setProperty('min-width', '80px', 'important');
-            btn.style.setProperty('height', '32px', 'important');
-        }
-    });
-}
 
-// Run immediately and every second to catch dynamic buttons
-window.addEventListener('DOMContentLoaded', unifyAddButtons);
-setInterval(unifyAddButtons, 1000);
-    </script>
-    <script>
-                /**
-    });
-
-    // 2. Adjust the headers so they don't take up the whole line vertically
-    const headers = document.querySelectorAll('h3, label');
-    headers.forEach(header => {
-        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
-            header.style.setProperty('margin-bottom', '0', 'important'); // Remove the bottom margin
-            header.style.setProperty('display', 'flex', 'important');
-            header.style.setProperty('align-items', 'center', 'important');
-            header.style.setProperty('height', '32px', 'important'); // Match button height
-        }
-    });
-}
-
-// Run immediately and monitor
-window.addEventListener('DOMContentLoaded', fixAlignment);
-setInterval(fixAlignment, 1000);
-        /**
- * LSH NAVIGATION OVERRIDE
- * Makes the main tab buttons bigger, bolder, and high-contrast.
- */
-function enhanceNavigation() {
-    const tabs = document.querySelectorAll('.tab-btn');
-    
-    tabs.forEach(tab => {
-        // 1. Force Larger Text & Bold Arial
-        tab.style.setProperty('font-size', '14px', 'important');
-        tab.style.setProperty('font-weight', '900', 'important');
-        tab.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        
-        // 2. Increase Spacing & Hit-Area
-        tab.style.setProperty('padding', '12px 20px', 'important');
-        tab.style.setProperty('margin-right', '5px', 'important');
-        
-        // 3. Dynamic Styling based on state
-        if (tab.classList.contains('active-tab')) {
-            // Active Tab Style
-            tab.style.setProperty('color', '#f97316', 'important'); // Safety Orange
-            tab.style.setProperty('border-bottom', '4px solid #f97316', 'important');
-            tab.style.setProperty('background-color', '#0f172a', 'important'); // Dark Navy BG for active
-            tab.style.setProperty('border-radius', '6px 6px 0 0', 'important');
-        } else {
-            // Inactive Tab Style
-            tab.style.setProperty('color', '#64748b', 'important');
-            tab.style.setProperty('border-bottom', '4px solid transparent', 'important');
-            tab.style.setProperty('background-color', 'transparent', 'important');
+            if (isStandardAdd) {
+                btn.innerText = "ADD";
+                btn.style.setProperty('height', '26px', 'important'); // Match header bar height better
+            }
         }
     });
 
-    // Ensure the container allows for the bigger tabs without hiding them
-    const container = document.querySelector('.no-print.overflow-x-auto');
-    if (container) {
-        container.style.setProperty('padding-top', '10px', 'important');
-        container.style.setProperty('padding-bottom', '10px', 'important');
-        container.style.setProperty('display', 'flex', 'important');
-        container.style.setProperty('gap', '10px', 'important');
-    }
-    /**
- * LSH MASTER BUTTON & HEADER ALIGNMENT
- * Snaps Black Headers and Orange ADD Buttons into a perfectly straight line.
- */
-function fixAddButtonAlignment() {
-    // 1. Target the specific buttons
-    const addButtons = document.querySelectorAll('button[onclick*="add"], button[onclick*="addRow"]');
-
-    addButtons.forEach(btn => {
-        // Find the parent container (usually the flex div holding the h3 and button)
-        const parent = btn.parentElement;
-        
-        if (parent) {
-            // FORCE PARENT ALIGNMENT
+    // 3. THE "STAIRCASE" ALIGNMENT FIX
+    document.querySelectorAll('.flex.justify-between').forEach(parent => {
+        if (parent.querySelector('h3, label') && parent.querySelector('button')) {
             parent.style.setProperty('display', 'flex', 'important');
-            parent.style.setProperty('align-items', 'center', 'important'); // This is the magic fix
+            parent.style.setProperty('align-items', 'center', 'important');
             parent.style.setProperty('gap', '10px', 'important');
         }
-
-        // BUTTON STYLE LOCK
-        btn.innerText = "ADD";
-        btn.style.setProperty('background-color', '#f97316', 'important'); // Orange BG
-        btn.style.setProperty('color', '#000000', 'important');           // Black Text
-        btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        btn.style.setProperty('font-size', '10px', 'important');
-        btn.style.setProperty('font-weight', '900', 'important');
-        btn.style.setProperty('padding', '0 15px', 'important');         // No top/bottom padding
-        btn.style.setProperty('height', '26px', 'important');            // Explicit height
-        btn.style.setProperty('display', 'inline-flex', 'important');
-        btn.style.setProperty('align-items', 'center', 'important');
-        btn.style.setProperty('border', 'none', 'important');
-        btn.style.setProperty('border-radius', '4px', 'important');
-        btn.style.setProperty('margin', '0', 'important');               // Kill stray margins
     });
 
-    // 2. Fix the Black Headers so they don't have bottom margins pushing the button down
-    const headers = document.querySelectorAll('h3, label');
-    headers.forEach(header => {
-        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
-            header.style.setProperty('margin', '0', 'important');
-            header.style.setProperty('height', '26px', 'important');     // Match button height exactly
-            header.style.setProperty('display', 'flex', 'important');
-            header.style.setProperty('align-items', 'center', 'important');
+    // 4. CLIENT NAME LOCK (36px, No Blink)
+    const nameField = document.getElementById('client-name-field');
+    if (nameField) {
+        nameField.style.setProperty('font-size', '36px', 'important');
+        nameField.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        nameField.style.setProperty('font-weight', '900', 'important');
+        nameField.style.setProperty('color', '#000', 'important');
+        nameField.style.setProperty('flex-shrink', '0', 'important');
+    }
+
+    // 5. CONTENT FIELDS (Arial 12pt Bold Black)
+    document.querySelectorAll('[contenteditable="true"], select').forEach(field => {
+        if (field.id !== 'client-name-field') {
+            field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            field.style.setProperty('font-size', '12px', 'important');
+            field.style.setProperty('font-weight', 'bold', 'important');
+            field.style.setProperty('color', '#000', 'important');
+            field.style.setProperty('background-color', '#ffffff', 'important');
         }
     });
 }
 
-// Run immediately and every second
-window.addEventListener('DOMContentLoaded', fixAddButtonAlignment);
-setInterval(fixAddButtonAlignment, 1000);
-}
-
-// Execute and Loop
-window.addEventListener('DOMContentLoaded', enhanceNavigation);
-setInterval(enhanceNavigation, 1000);
-    </script>
-    <script>
-    let currentUploadCategory = "";
-
-function triggerUpload(category) {
-    console.log("Triggering upload for:", category); // Debugging line
-    currentUploadCategory = category;
-    const fileInput = document.getElementById('universal-uploader');
-    if (fileInput) {
-        fileInput.click();
-    } else {
-        alert("Critical Error: Hidden Uploader Input is missing from HTML.");
-    }
-}
-
-function processUpload(input) {
-    if (input.files && input.files[0]) {
-        const fileName = input.files[0].name;
-        const tr = document.createElement('tr');
-        
-        tr.innerHTML = `
-            <td width="200">
-                <div class="bg-black text-orange-500 p-2 rounded text-[10px] font-black border border-orange-500 text-center uppercase">
-                    ${currentUploadCategory}
-                </div>
-            </td>
-            <td>
-                <div contenteditable="true" class="text-xs font-bold text-black" style="font-family: Arial !important;">
-                    📎 ATTACHED: ${fileName}
-                </div>
-            </td>
-            <td width="40">
-                <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button>
-            </td>
-        `;
-        
-        document.getElementById('doc-body').appendChild(tr);
-        input.value = ""; // Reset for next upload
-    }
-}
+// Run immediately and every 500ms
+window.addEventListener('DOMContentLoaded', applyLSHFinalMaster);
+setInterval(applyLSHFinalMaster, 500);
 </script>
 </body>
 </html>
