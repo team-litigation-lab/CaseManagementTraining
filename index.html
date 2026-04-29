@@ -745,11 +745,12 @@ function processUpload(input) {
     </script>
     <script>
     /**
- * LSH MASTER OVERRIDE - V2026.FINAL.3
- * Fixed Demographics Bar and Field Label visibility.
+/**
+ * LSH MASTER OVERRIDE - V2026.FINAL.ULTRA
+ * Final Alignment Lock for Chronology and Task Logs
  */
 function applyLSHFinalMaster() {
-    // 1. ALL MAJOR HEADERS (White on Black + Full Width)
+    // 1. ALL MAJOR HEADERS (White on Black + Alignment Lock)
     const targetHeaders = [
         "Identity", "Demographics", "Employment Details", "Emergency Contact", "Case Narrative",
         "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
@@ -762,7 +763,6 @@ function applyLSHFinalMaster() {
     document.querySelectorAll('h3, label').forEach(el => {
         const text = el.innerText.trim();
         
-        // Check for Major Section Headers
         if (targetHeaders.some(h => h.toLowerCase() === text.toLowerCase())) {
             el.style.setProperty('background-color', '#000000', 'important');
             el.style.setProperty('color', '#ffffff', 'important');
@@ -770,28 +770,35 @@ function applyLSHFinalMaster() {
             el.style.setProperty('font-size', '13px', 'important');
             el.style.setProperty('font-weight', '900', 'important');
             el.style.setProperty('font-style', 'normal', 'important');
-            el.style.setProperty('padding', '6px 15px', 'important');
+            el.style.setProperty('padding', '0 15px', 'important'); // Balanced padding
             el.style.setProperty('border-radius', '4px', 'important');
             el.style.setProperty('display', 'flex', 'important');
             el.style.setProperty('flex-grow', '1', 'important'); 
             el.style.setProperty('width', '100%', 'important'); 
-            el.style.setProperty('align-items', 'center', 'important');
-            el.style.setProperty('height', '32px', 'important');
-            el.style.setProperty('margin-bottom', '10px', 'important');
+            el.style.setProperty('align-items', 'center', 'important'); // Vertical Center
+            el.style.setProperty('height', '32px', 'important'); // Locked height
+            el.style.setProperty('margin-bottom', '0px', 'important'); // Removed margin to keep flush
             el.style.setProperty('text-transform', 'uppercase', 'important');
         } 
-        // 2. TARGET SMALL FIELD LABELS (DOB, SSN, etc.)
         else if (text.length > 0 && text.length < 25) {
-            el.style.setProperty('color', '#000000', 'important'); // Force to Black
+            el.style.setProperty('color', '#000000', 'important');
             el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             el.style.setProperty('font-weight', '900', 'important');
             el.style.setProperty('font-size', '10px', 'important');
-            el.style.setProperty('background', 'transparent', 'important');
-            el.style.setProperty('margin-bottom', '4px', 'important');
         }
     });
 
-    // 3. BUTTONS & ALIGNMENT (Orange Action Buttons)
+    // 2. PARENT CONTAINER LOCK (The fix for the images you sent)
+    document.querySelectorAll('.flex.justify-between').forEach(parent => {
+        if (parent.querySelector('h3, label') && parent.querySelector('button')) {
+            parent.style.setProperty('display', 'flex', 'important');
+            parent.style.setProperty('align-items', 'center', 'important'); // Centers button with bar
+            parent.style.setProperty('gap', '0px', 'important'); // Makes them touch
+            parent.style.setProperty('margin-bottom', '10px', 'important');
+        }
+    });
+
+    // 3. BUTTONS (Orange Action Buttons)
     document.querySelectorAll('button').forEach(btn => {
         const onClick = btn.getAttribute('onclick') || "";
         const isUploadTrigger = onClick.includes('triggerUpload') || onClick.includes('addDocument');
@@ -802,31 +809,25 @@ function applyLSHFinalMaster() {
             btn.style.setProperty('color', '#000000', 'important');
             btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
             btn.style.setProperty('font-weight', '900', 'important');
-            btn.style.setProperty('height', '32px', 'important');
-            btn.style.setProperty('padding', '0 15px', 'important');
+            btn.style.setProperty('font-size', '11px', 'important');
+            btn.style.setProperty('height', '32px', 'important'); // Exact match to bar height
             btn.style.setProperty('border', 'none', 'important');
             btn.style.setProperty('border-radius', '4px', 'important');
+            btn.style.setProperty('display', 'inline-flex', 'important');
+            btn.style.setProperty('align-items', 'center', 'important');
+            btn.style.setProperty('justify-content', 'center', 'important');
             btn.style.setProperty('flex-shrink', '0', 'important');
+            
             if (isStandardAdd) { btn.innerText = "ADD"; }
         }
     });
 
-    // 4. CLIENT NAME & CONTENT (Arial 12pt Bold)
+    // 4. CLIENT NAME & CONTENT LOCKS
     const nameField = document.getElementById('client-name-field');
     if (nameField) {
         nameField.style.setProperty('font-size', '36px', 'important');
-        nameField.style.setProperty('font-weight', '900', 'important');
         nameField.style.setProperty('color', '#000000', 'important');
     }
-
-    document.querySelectorAll('[contenteditable="true"], select').forEach(field => {
-        if (field.id !== 'client-name-field') {
-            field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-            field.style.setProperty('font-size', '12px', 'important');
-            field.style.setProperty('font-weight', 'bold', 'important');
-            field.style.setProperty('color', '#000000', 'important');
-        }
-    });
 }
 
 setInterval(applyLSHFinalMaster, 500);
