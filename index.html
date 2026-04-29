@@ -6,7 +6,228 @@
     <title>LSH Master Build | Definitive Master 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    </head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+            color: #0f172a; 
+            height: 100vh; 
+            display: flex; 
+            overflow: hidden; 
+            margin: 0; 
+        }
+
+        /* 1. IDENTITY SYSTEM - PROFESSIONAL LOCK */
+        #client-name-field { 
+            font-size: 36px !important; 
+            font-weight: 900 !important; 
+            color: #000000 !important; 
+            text-transform: uppercase !important; 
+            line-height: 1 !important; 
+            outline: none !important; 
+            border: none !important; 
+            background: transparent !important; 
+            padding: 0 !important; 
+            min-width: 450px; 
+        }
+
+        .target-settlement-display { 
+            font-size: 24px !important; 
+            font-weight: 900 !important; 
+            color: #166534 !important; 
+            letter-spacing: -1px; 
+            background: #f0fdf4; 
+            padding: 4px 12px; 
+            border-radius: 8px; 
+            border: 1px solid #dcfce7; 
+        }
+
+        .sol-font-fix { 
+            color: #000000 !important; 
+            font-weight: 900 !important; 
+        }
+
+        /* 2. PDF FIX: STABLE INTEGRATED BAR */
+        #lsh-integrated-bar { 
+            background: #0f172a !important; 
+            color: white !important; 
+            padding: 14px 20px !important; 
+            border-radius: 10px !important; 
+            margin: 20px 0 !important; 
+            display: flex !important; 
+            flex-direction: row !important;
+            align-items: center !important; 
+            border-left: 6px solid #f97316 !important; 
+            gap: 20px !important;
+            min-height: 80px !important;
+        }
+
+        .bar-data-container {
+            display: flex !important;
+            gap: 15px !important;
+            flex-shrink: 0 !important;
+        }
+
+        .bar-box { 
+            background: white !important; 
+            border-radius: 8px !important; 
+            padding: 10px 15px !important; 
+            display: flex !important; 
+            flex-direction: column !important;
+            justify-content: center !important;
+            width: 180px !important; 
+            height: 55px !important;
+            flex-shrink: 0 !important;
+        }
+
+        .bar-box label { 
+            margin-bottom: 2px !important; 
+            color: #64748b !important; 
+            font-size: 9px !important; 
+            font-weight: 900 !important;
+            line-height: 1 !important;
+        }
+
+        .bar-box div { 
+            color: #0f172a !important; 
+            font-weight: 800 !important; 
+            font-size: 14px !important; 
+        }
+
+        .sol-box { 
+            background: #fee2e2 !important; 
+            border: 1px solid #fecaca !important; 
+        }
+
+        /* 3. NAVIGATION & TABS */
+        .tab-btn { 
+            cursor: pointer; 
+            color: #94a3b8; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            font-size: 10px; 
+            padding: 10px 0; 
+            transition: all 0.3s; 
+            border-bottom: 3px solid transparent; 
+            white-space: nowrap; 
+        }
+
+        .active-tab { 
+            border-bottom: 3px solid #f97316 !important; 
+            color: #f97316 !important; 
+        }
+
+        .tab-pane { 
+            display: none; 
+            height: 100%; 
+            overflow-y: auto; 
+            padding-bottom: 250px; 
+        }
+
+        .tab-pane.active { 
+            display: block; 
+        }
+
+        /* 4. UI COMPONENTS */
+        .pdf-card { 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            padding: 24px; 
+            margin-bottom: 20px; 
+            position: relative; 
+        }
+
+        [contenteditable="true"] { 
+            outline: none; 
+            background: #f8fafc; 
+            border-radius: 4px; 
+            padding: 8px 12px; 
+            border: 1px solid #f1f5f9; 
+            min-height: 38px; 
+            width: 100%; 
+        }
+
+        [contenteditable="true"]:focus { 
+            background: #ffffff; 
+            border-color: #f97316; 
+        }
+
+        label { 
+            font-size: 10px !important; 
+            font-weight: 900; 
+            color: #94a3b8; 
+            text-transform: uppercase; 
+            margin-bottom: 6px; 
+            display: block; 
+            letter-spacing: 0.05em; 
+        }
+        
+        select.prof-input { 
+            background: #f8fafc; 
+            border: 1px solid #f1f5f9; 
+            border-radius: 4px; 
+            padding: 8px 10px; 
+            font-size: 13px; 
+            font-weight: 700; 
+            outline: none; 
+            width: 100%; 
+            color: #0f172a; 
+            cursor: pointer; 
+        }
+
+        .treat-table { width: 100%; border-collapse: collapse; }
+        .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; }
+        .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+
+        .hub-btn { 
+            background: #fffaf0; 
+            border: 1px solid #ffedd5; 
+            color: #9a3412; 
+            font-size: 9px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            padding: 14px; 
+            border-radius: 8px; 
+            text-align: center; 
+            cursor: pointer; 
+        }
+        .hub-btn:hover { background: #f97316; color: white; border-color: #f97316; }
+
+        .revert-btn { 
+            background: #f97316; 
+            color: white; 
+            font-size: 12px; 
+            padding: 4px 8px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-left: 5px; 
+            display: none; 
+            font-weight: 900; 
+        }
+
+        .repo-card { 
+            background: #0f172a !important; 
+            border: 1px solid #1e293b !important; 
+            padding: 12px !important; 
+            border-radius: 10px !important; 
+            margin-bottom: 10px !important; 
+            cursor: pointer !important; 
+            position: relative !important; 
+            color: white; 
+        }
+
+        @media print { 
+            .no-print { display: none !important; }
+            .pdf-card { border: 2px solid #f97316 !important; break-inside: avoid; }
+            #lsh-integrated-bar { -webkit-print-color-adjust: exact; background-color: #0f172a !important; }
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
 <body>
     <input type="file" id="universal-uploader" class="hidden" onchange="processUpload(this)">
     <aside class="w-72 bg-[#05070a] text-white flex flex-col no-print shrink-0 border-r border-slate-900">
@@ -185,7 +406,7 @@
                 </div>
                 <div id="facility-container" class="space-y-4"></div>
                 <div class="pdf-card bg-green-50 mt-8 border-l-8 border-green-600 flex justify-between items-center">
-                    <span class="font-black uppercase text-green-700 text-sm tracking-widest">Total</span>
+                    <span class="font-black uppercase text-green-700 text-sm tracking-widest">Total Medical Specials (Auto-Calc)</span>
                     <span id="med-total" class="text-4xl font-black text-green-800">$ 0.00</span>
                 </div>
             </div>
@@ -312,10 +533,7 @@
 
             <div id="pane-notes" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="lsh-power-bar">
-    <h3 class="lsh-main-header">Case Chronology</h3>
-    <button onclick="addRow('chronologyTable')" class="lsh-action-btn">ADD</button>
-</div>
+                    <div class="flex justify-between items-center mb-6"><h3>Case Chronology</h3><button onclick="addRow('note-body')" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded no-print font-bold">+ ADD NOTE</button></div>
                     <table class="treat-table w-full">
                         <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
                         <tbody id="note-body"></tbody>
@@ -334,103 +552,554 @@
 
         </div>
     </main>
-<style>
-    /* 1. THE FOUNDATION: SIDEBAR VS CONTENT */
-    html, body { height: 100vh !important; margin: 0 !important; overflow: hidden !important; background: #f1f5f9 !important; }
-    body { display: flex !important; flex-direction: row !important; }
 
-    aside { 
-        width: 280px !important; background: #05070a !important; height: 100vh !important; 
-        flex-shrink: 0 !important; display: flex !important; flex-direction: column !important; 
-        border-right: 1px solid #1e293b !important; z-index: 9999 !important;
-    }
+    <script>
+        const REPO_KEY = 'LSH_ULTRALOCK_V2026_MASTER_DEEP_BUILD_FINAL';
+        
+        const staffOptions = `
+            <option>Lead Attorney</option>
+            <option>Associate Attorney</option>
+            <option>Paralegal</option>
+            <option>Case Manager</option>
+            <option>Demand Specialist</option>
+            <option>Records Specialist</option>
+            <option>PD Specialist</option>
+            <option>Lien Negotiator</option>
+            <option>Intake Specialist</option>
+        `;
 
-    main { 
-        flex-grow: 1 !important; height: 100vh !important; display: flex !important; 
-        flex-direction: column !important; overflow-y: auto !important; background: #f8fafc !important; 
-    }
-
-    /* 2. THE BLACK BARS & CLIENT NAME (Arial 11, White on Black) */
-    h3, .lsh-main-header, #client-name-field {
-        background: #000 !important; color: #fff !important; font-family: Arial, sans-serif !important;
-        font-size: 11px !important; font-weight: 900 !important; text-transform: uppercase !important;
-        padding: 8px 15px !important; margin: 0 !important; display: flex !important;
-        align-items: center !important; border-radius: 4px !important; height: 32px !important;
-    }
-    #client-name-field { width: 450px !important; margin-bottom: 12px !important; }
-
-    /* 3. THE NAVY INTEGRATED BAR (Side-by-Side Boxes Fix) */
-    #lsh-integrated-bar { 
-        background: #0f172a !important; padding: 20px !important; border-radius: 10px !important; 
-        margin: 20px 0 !important; display: flex !important; flex-direction: row !important; 
-        align-items: center !important; gap: 20px !important; border-left: 6px solid #f97316 !important; 
-        min-height: 100px !important; width: 100% !important; clear: both !important;
-    }
-
-    .bar-data-container { display: flex !important; flex-direction: row !important; gap: 15px !important; }
-    
-    .bar-box { 
-        background: white !important; border-radius: 8px !important; padding: 10px 15px !important; 
-        width: 180px !important; height: 65px !important; display: flex !important; 
-        flex-direction: column !important; justify-content: center !important; flex-shrink: 0 !important;
-    }
-
-    /* 4. LABEL & FONT LOCK (Bold & Caps) */
-    label, th {
-        font-family: Arial !important; font-weight: 900 !important; font-size: 10px !important;
-        text-transform: uppercase !important; color: #64748b !important; margin-bottom: 4px !important;
-    }
-
-    [contenteditable="true"], input, select {
-        font-family: Arial !important; font-weight: 700 !important; font-size: 13px !important;
-        color: #000 !important; outline: none !important;
-    }
-
-    /* 5. THE ORANGE "ADD" FUSION */
-    .lsh-power-bar, .flex.justify-between.items-center {
-        display: flex !important; flex-direction: row !important; height: 32px !important; margin-bottom: 15px !important;
-    }
-
-    .lsh-power-bar h3, .flex.justify-between.items-center h3 { border-radius: 4px 0 0 4px !important; flex-grow: 1 !important; }
-
-    button:not(.tab-btn):not(.hub-btn):not([onclick*="download"]) {
-        background: #f97316 !important; color: #fff !important; font-family: Arial !important; 
-        font-weight: 900 !important; font-size: 11px !important; padding: 0 25px !important;
-        border-radius: 0 4px 4px 0 !important; border: none !important; height: 32px !important;
-        cursor: pointer !important; text-transform: uppercase !important;
-    }
-
-    /* 6. SIDEBAR BUTTON FIX */
-    aside button { width: 90% !important; margin: 10px auto !important; height: auto !important; border-radius: 8px !important; padding: 12px !important; }
-
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block !important; }
-    .active-tab { color: #f97316 !important; border-bottom: 3px solid #f97316 !important; }
-</style>
-
-<script>
-(function() {
-    function enforceLSH() {
-        // Fix Tab visibility
-        document.querySelectorAll('.tab-pane').forEach(p => {
-            p.style.display = p.classList.contains('active') ? 'block' : 'none';
-        });
-
-        // Rename Buttons
-        document.querySelectorAll('button:not(.tab-btn):not(.hub-btn):not([onclick*="download"]):not([onclick*="location.reload"])').forEach(btn => {
-            btn.innerText = "ADD";
-        });
-
-        // Ensure Horizontal Dates
-        const bar = document.getElementById('lsh-integrated-bar');
-        if (bar) {
-            bar.style.display = "flex";
-            bar.style.flexDirection = "row";
+        function showTab(id) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById('pane-' + id).classList.add('active');
+            document.getElementById('tab-' + id).classList.add('active-tab');
         }
+let currentUploadCategory = "";
+
+function triggerUpload(category) {
+    console.log("Triggering upload for:", category); // Debugging line
+    currentUploadCategory = category;
+    const fileInput = document.getElementById('universal-uploader');
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        alert("Critical Error: Hidden Uploader Input is missing from HTML.");
     }
-    setInterval(enforceLSH, 50);
-})();
+}
+
+function processUpload(input) {
+    if (input.files && input.files[0]) {
+        const fileName = input.files[0].name;
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+            <td width="200">
+                <div class="bg-black text-orange-500 p-2 rounded text-[10px] font-black border border-orange-500 text-center uppercase">
+                    ${currentUploadCategory}
+                </div>
+            </td>
+            <td>
+                <div contenteditable="true" class="text-xs font-bold text-black" style="font-family: Arial !important;">
+                    📎 ATTACHED: ${fileName}
+                </div>
+            </td>
+            <td width="40">
+                <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button>
+            </td>
+        `;
+        
+        document.getElementById('doc-body').appendChild(tr);
+        input.value = ""; // Reset for next upload
+    }
+}
+        function updatePhaseDisplay(val) { 
+            document.getElementById('display-phase').innerText = val.toUpperCase(); 
+        }
+
+        function handleOtherSystem(selectId, otherInputId, revertId) {
+            const sel = document.getElementById(selectId);
+            const input = document.getElementById(otherInputId);
+            const rev = document.getElementById(revertId);
+            if (sel.value === "Others" || sel.value === "Other") {
+                sel.classList.add('hidden');
+                input.classList.remove('hidden');
+                rev.style.display = "inline-block";
+                input.focus();
+            }
+        }
+
+        function revertOther(selectId, otherInputId, revertId) {
+            document.getElementById(selectId).classList.remove('hidden');
+            document.getElementById(selectId).selectedIndex = 0;
+            document.getElementById(otherInputId).classList.add('hidden');
+            document.getElementById(revertId).style.display = "none";
+        }
+
+        function addRow(id) {
+            const tr = document.createElement('tr');
+            const today = new Date().toLocaleDateString();
+            if(id === 'lit-body') {
+                tr.innerHTML = `<td><select class="prof-input text-xs"><option>Service</option><option>Complaint</option><option>Summons</option><option>Interrogatories</option><option>RFP</option><option>RFA</option><option>Deposition Notice</option><option>Subpoena</option><option>Motion</option></select></td><td><div contenteditable="true" class="text-xs">...</div></td><td><div contenteditable="true" class="text-xs">MM/DD/YYYY</div></td><td><select class="prof-input text-xs"><option>Pending</option><option>Responded</option><option>Completed</option></select></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
+            } else if(id === 'fin-body') {
+                tr.innerHTML = `<td><div contenteditable="true" class="text-xs">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs">...</div></td><td><div contenteditable="true" class="font-black exp-field text-xs text-blue-600">$ 0.00</div></td><td><button onclick="this.parentElement.parentElement.remove(); updateTotals();" class="text-red-500 font-bold">×</button></td>`;
+            } else if(id === 'note-body' || id === 'task-body') {
+                tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold text-slate-400">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs min-h-[40px] italic">...</div></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
+            }
+            document.getElementById(id).appendChild(tr);
+        }
+
+        function addBI() {
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-red-500 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6 mb-6">
+                    <div><label>Policy Holder</label><div contenteditable="true"></div></div>
+                    <div><label>Carrier</label><div contenteditable="true"></div></div>
+                    <div><label>Policy #</label><div contenteditable="true"></div></div>
+                    <div><label>Claim #</label><div contenteditable="true"></div></div>
+                </div>
+                <div class="grid grid-cols-3 gap-6">
+                    <div><label>Adjuster Name</label><div contenteditable="true"></div></div>
+                    <div><label>Liability Accepted?</label><select class="prof-input"><option>Pending</option><option>Yes</option><option>No</option></select></div>
+                    <div><label>Policy Limits</label><div contenteditable="true"></div></div>
+                </div>`;
+            document.getElementById('bi-container').appendChild(div);
+        }
+
+        function addPIPUM() {
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6 mb-6">
+                    <div><label>Coverage Type</label><select class="prof-input"><option>PIP</option><option>UM</option><option>UIM</option></select></div>
+                    <div><label>Policy Holder</label><div contenteditable="true"></div></div>
+                    <div><label>Insurance Carrier</label><div contenteditable="true"></div></div>
+                    <div><label>Policy #</label><div contenteditable="true"></div></div>
+                </div>
+                <div class="grid grid-cols-3 gap-6">
+                    <div><label>Claim Number</label><div contenteditable="true"></div></div>
+                    <div><label>Adjuster Contact</label><div contenteditable="true"></div></div>
+                    <div><label>Policy Limits</label><div contenteditable="true"></div></div>
+                </div>`;
+            document.getElementById('pip-um-container').appendChild(div);
+        }
+
+        function addLien() {
+            const id = Date.now();
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-slate-900 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6">
+                    <div><label>Type of Lien</label><div class="flex items-center"><select id="l-sel-${id}" onchange="handleOtherSystem(this.id, 'l-oth-${id}', 'l-rev-${id}')" class="prof-input"><option>Prior Atty Lien</option><option>Medical Lien</option><option>HI Subro</option><option>Funding</option><option>Other</option></select><div id="l-oth-${id}" contenteditable="true" class="hidden text-xs font-bold px-2 py-1 bg-orange-50 border border-orange-200 min-w-[80px]">...</div><button id="l-rev-${id}" onclick="revertOther('l-sel-${id}', 'l-oth-${id}', this.id)" class="revert-btn">↺</button></div></div>
+                    <div><label>Lienholder Entity</label><div contenteditable="true"></div></div>
+                    <div><label>Claim / File #</label><div contenteditable="true"></div></div>
+                    <div><label>Lien Amount</label><div contenteditable="true" class="text-red-600 font-bold">$ 0.00</div></div>
+                </div>`;
+            document.getElementById('lien-container').appendChild(div);
+        }
+
+        function addFacility() {
+            const id = "fac-" + Date.now();
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove(); updateTotals();" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6">
+                    <div><label>Medical Facility</label><div contenteditable="true"></div></div>
+                    <div><label>Specialty Dropdown</label><div class="flex items-center"><select id="sel-${id}" onchange="handleOtherSystem(this.id, 'oth-${id}', 'rev-${id}')" class="prof-input"><option>Chiro</option><option>EMC</option><option>Ortho</option><option>Surgery</option><option>Anesthesia</option><option>Pain Management</option><option value="Other">Other</option></select><div id="oth-${id}" contenteditable="true" class="hidden text-xs px-2 py-1 bg-orange-50 border border-orange-200 min-w-[80px]">...</div><button id="rev-${id}" onclick="revertOther('sel-${id}', 'oth-${id}', this.id)" class="revert-btn">↺</button></div></div>
+                    <div><label>Dates of Treatment</label><div contenteditable="true"></div></div>
+                    <div><label>Invoiced Charges</label><div contenteditable="true" class="med-field font-black text-green-700">$ 0.00</div></div>
+                </div>`;
+            document.getElementById('facility-container').appendChild(div);
+        }
+
+        function addPassenger() {
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6">
+                    <div><label>Full Name</label><div contenteditable="true"></div></div>
+                    <div><label>DOB</label><div contenteditable="true"></div></div>
+                    <div><label>Contact Info</label><div contenteditable="true"></div></div>
+                    <div><label>Injury Sustained</label><div contenteditable="true"></div></div>
+                </div>`;
+            document.getElementById('passenger-container').appendChild(div);
+        }
+
+        function addDocument(label) { const tr = document.createElement('tr'); tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="text-xs italic text-slate-500">Summary...</div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`; document.getElementById('doc-body').appendChild(tr); }
+
+        function updateTotals() { 
+            let med = 0; document.querySelectorAll('.med-field').forEach(el => med += parseFloat(el.innerText.replace(/[$,\s]/g, '')) || 0); 
+            document.getElementById('med-total').innerText = '$ ' + med.toLocaleString(undefined, {minimumFractionDigits: 2}); 
+            let exp = 0; document.querySelectorAll('.exp-field').forEach(el => exp += parseFloat(el.innerText.replace(/[$,\s]/g, '')) || 0); 
+            if(document.getElementById('exp-total')) document.getElementById('exp-total').innerText = '$ ' + exp.toLocaleString(undefined, {minimumFractionDigits: 2}); 
+        }
+        setInterval(updateTotals, 1000);
+
+        function saveCase() { 
+            const name = document.getElementById('client-name-field').innerText.split('\n')[0].trim();
+            const data = { id: Date.now(), name: name, phase: document.getElementById('display-phase').innerText, html: { pass: document.getElementById('passenger-container').innerHTML, facs: document.getElementById('facility-container').innerHTML, fin: document.getElementById('fin-body').innerHTML, pipum: document.getElementById('pip-um-container').innerHTML, bi: document.getElementById('bi-container').innerHTML, docs: document.getElementById('doc-body').innerHTML, lit: document.getElementById('lit-body').innerHTML, liens: document.getElementById('lien-container').innerHTML, notes: document.getElementById('note-body').innerHTML, tasks: document.getElementById('task-body').innerHTML, police: document.getElementById('pane-police').innerHTML }, inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML), sels: Array.from(document.querySelectorAll('select')).map(el => el.value) }; 
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); repo.unshift(data); localStorage.setItem(REPO_KEY, JSON.stringify(repo)); renderRepo(); 
+        }
+        function renderRepo() { const list = document.getElementById('repo-list'); let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); list.innerHTML = repo.map(item => `<div onclick="loadCase(${item.id})" class="repo-card group p-3 rounded-lg"><span class="repo-name block font-bold text-xs mb-1">${item.name}</span><button onclick="deleteCase(${item.id}, event)" class="absolute top-1 right-2 text-slate-500">×</button></div>`).join(''); }
+        function loadCase(id) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); const data = repo.find(i => i.id === id); if (!data) return; document.getElementById('passenger-container').innerHTML = data.html.pass; document.getElementById('facility-container').innerHTML = data.html.facs; document.getElementById('fin-body').innerHTML = data.html.fin; document.getElementById('pip-um-container').innerHTML = data.html.pipum; document.getElementById('bi-container').innerHTML = data.html.bi; document.getElementById('doc-body').innerHTML = data.html.docs; document.getElementById('lit-body').innerHTML = data.html.lit; document.getElementById('lien-container').innerHTML = data.html.liens; document.getElementById('note-body').innerHTML = data.html.notes || ""; document.getElementById('task-body').innerHTML = data.html.tasks || ""; document.getElementById('pane-police').innerHTML = data.html.police; const edits = document.querySelectorAll('[contenteditable="true"]'); data.inputs.forEach((v, i) => { if(edits[i]) edits[i].innerHTML = v; }); const selects = document.querySelectorAll('select'); data.sels.forEach((v, i) => { if(selects[i]) selects[i].value = v; }); updateTotals(); showTab('profile'); }
+        function deleteCase(id, e) { e.stopPropagation(); if(confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); renderRepo(); } }
+        function exportRepo() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem(REPO_KEY)], {type:'application/json'})); a.download='LSH_Backup.json'; a.click(); }
+        function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Data Imported"); }; r.readAsText(i.files[0]); }
+        function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
+        window.onload = renderRepo;
+    </script>
+    <script>
+    /**
+ * LSH MASTER THEME OVERRIDE - V2026.4
+ * Forces specific headers to: Arial Bold White on Black
+ * Forces content to: Arial 10pt Bold Black
+ */
+function applyLSHMasterStyles() {
+    // 1. LIST OF ALL 20 TARGET HEADERS
+    const targetHeaders = [
+        "Identity", 
+        "Employment Details", 
+        "Emergency Contact",
+        "Case Narrative",
+        "Passenger Records",
+        "Police Report Details",
+        "Officer's Narrative Summary", 
+        "Health Insurance", 
+        "Independent Subrogation Card", 
+        "Bodily Injury (BI) Policies", 
+        "PIP / UM / UIM Coverage Stack", 
+        "Outstanding Case Liens", 
+        "Provider Treatment Matrix",
+        "Client Vehicle", 
+        "Third Party Vehicle", 
+        "Discovery & Filing Tracker", 
+        "Finance Tracking", 
+        "Quick Label Portal",
+        "Case Chronology", 
+        "Action Item Log"
+    ];
+
+    // 2. APPLY WHITE ON BLACK TO HEADERS
+    const allTextElements = document.querySelectorAll('h3, label, .text-white-600, .text-blue-600');
+    allTextElements.forEach(el => {
+        const text = el.innerText.trim();
+        // Case-insensitive match against our list
+        if (targetHeaders.some(h => h.toLowerCase() === text.toLowerCase())) {
+            el.style.setProperty('background-color', '#000000', 'important');
+            el.style.setProperty('color', '#f97316', 'important'); // Safety Orange
+            el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            el.style.setProperty('font-size', '13px', 'important');
+            el.style.setProperty('font-weight', '900', 'important');
+            el.style.setProperty('padding', '6px 10px', 'important');
+            el.style.setProperty('border-radius', '4px', 'important');
+            el.style.setProperty('display', 'block', 'important');
+            el.style.setProperty('width', '100%', 'important');
+            el.style.setProperty('text-transform', 'uppercase', 'important');
+            el.style.setProperty('margin-bottom', '10px', 'important');
+            el.style.setProperty('letter-spacing', '0.5px', 'important');
+        }
+    });
+
+    // 3. APPLY ARIAL 10PT BOLD BLACK TO CONTENT
+    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
+    contentFields.forEach(field => {
+        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        field.style.setProperty('font-size', '10px', 'important');
+        field.style.setProperty('font-weight', 'bold', 'important');
+        field.style.setProperty('color', '#000000', 'important');
+        field.style.setProperty('background-color', '#ffffff', 'important');
+    });
+}
+
+// 4. DATA SCRUBBER (KEEPS CLIENT NAME)
+function wipePlaceholders() {
+    const placeholders = [
+        "MM/DD/YYYY", "(000) 000-0000", "$ 0.00", "BATCH-2026-X", 
+        "Enter facts of loss...", "Type police summary here...", 
+        "Summary...", "...", "TYPE OTHER...", "Enter Name", 
+        "e.g., LAPD / Florida Highway Patrol", "Name & Badge #", "Street / Intersection"
+    ];
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+        if (placeholders.includes(el.innerText.trim())) {
+            el.innerHTML = "";
+        }
+    });
+}
+
+// 5. OBSERVER & EXECUTION
+const lshObserver = new MutationObserver(() => {
+    applyLSHMasterStyles();
+});
+
+const targetArea = document.getElementById('capture-area');
+if (targetArea) {
+    lshObserver.observe(targetArea, { childList: true, subtree: true });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    wipePlaceholders();
+    applyLSHMasterStyles();
+});
+
+// Periodic enforcement (Every 1 second)
+setInterval(applyLSHMasterStyles, 1000);
 </script>
-  
-         </body>
+    <script>
+        /**
+ * LSH IDENTITY HIGHLIGHTER
+ * Makes the Identity section pop with a glow, border, and shadow.
+ */
+function highlightIdentitySection() {
+    // 1. Identify the card containing the "Identity" header
+    const allCards = document.querySelectorAll('.pdf-card');
+    
+    allCards.forEach(card => {
+        if (card.innerText.toUpperCase().includes("IDENTITY")) {
+            // Apply High-Importance Highlight
+            card.style.setProperty('border', '3px solid #f97316', 'important'); // Safety Orange Border
+            card.style.setProperty('box-shadow', '0 0 20px rgba(249, 115, 22, 0.2)', 'important'); // Orange Glow
+            card.style.setProperty('transform', 'scale(1.01)', 'important'); // Subtle Zoom
+            card.style.setProperty('transition', 'all 0.3s ease', 'important');
+            card.style.setProperty('z-index', '10', 'important');
+            
+            }
+    });
+}
+
+// Run on load and during safety check
+window.addEventListener('DOMContentLoaded', highlightIdentitySection);
+setInterval(highlightIdentitySection, 2000);
+    </script>
+             <script>
+    /**
+ * LSH CLIENT NAME NUCLEAR OVERRIDE
+ * Forces the Client Name to stay 36px Black/Bold Arial and prevents shrinking.
+ */
+/**
+ * LSH MASTER THEME OVERRIDE - ANTI-BLINK VERSION
+ */
+function applyLSHMasterStyles() {
+    // ... [Keep your Header Logic here] ...
+
+    // UPDATED: Content Styling with "Client Name" Protection
+    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
+    
+    contentFields.forEach(field => {
+        // IF THIS IS THE CLIENT NAME, DO NOT SHRINK IT
+        if (field.id === 'client-name-field') {
+            field.style.setProperty('font-size', '36px', 'important');
+            field.style.setProperty('font-weight', '900', 'important');
+        } else {
+            // ALL OTHER FIELDS GET THE STANDARD SIZE
+            field.style.setProperty('font-size', '12px', 'important');
+            field.style.setProperty('font-weight', 'bold', 'important');
+        }
+        
+        // General styles for everyone
+        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        field.style.setProperty('color', '#000000', 'important');
+        field.style.setProperty('background-color', '#ffffff', 'important');
+    });
+}
+
+// Run immediately and continuously to fight off other scripts
+window.addEventListener('DOMContentLoaded', lockClientNameStyle);
+setInterval(lockClientNameStyle, 500); // Check every half-second for maximum stability
+             </script>
+    <script>
+        /**
+ * LSH UNIVERSAL BUTTON OVERRIDE
+ * Targets all "Add" buttons, replaces text with "ADD", 
+ * and forces Orange Background with Black Text.
+ */
+function unifyAddButtons() {
+    // Select all buttons on the page
+    const buttons = document.querySelectorAll('button');
+
+    buttons.forEach(btn => {
+        const btnText = btn.innerText.toUpperCase();
+        
+        // If the button text contains "ADD", apply the master style
+        if (btnText.includes("ADD") || btnText.includes("+")) {
+            // 1. Uniform Text
+            btn.innerText = "ADD";
+
+            // 2. Nuclear Visual Override
+            btn.style.setProperty('background-color', '#f97316', 'important'); // Safety Orange
+            btn.style.setProperty('color', '#000000', 'important');           // Jet Black
+            btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+            btn.style.setProperty('font-weight', '900', 'important');
+            btn.style.setProperty('font-size', '10px', 'important');
+            btn.style.setProperty('text-transform', 'uppercase', 'important');
+            btn.style.setProperty('letter-spacing', '1px', 'important');
+            
+            // 3. Uniform Shape
+            btn.style.setProperty('padding', '8px 20px', 'important');
+            btn.style.setProperty('border-radius', '6px', 'important');
+            btn.style.setProperty('border', 'none', 'important');
+            btn.style.setProperty('cursor', 'pointer', 'important');
+            btn.style.setProperty('box-shadow', '0 2px 4px rgba(0,0,0,0.1)', 'important');
+            
+            // 4. Ensure it doesn't shrink
+            btn.style.setProperty('min-width', '80px', 'important');
+            btn.style.setProperty('height', '32px', 'important');
+        }
+    });
+}
+
+// Run immediately and every second to catch dynamic buttons
+window.addEventListener('DOMContentLoaded', unifyAddButtons);
+setInterval(unifyAddButtons, 1000);
+    </script>
+    <script>
+                /**
+    });
+
+    // 2. Adjust the headers so they don't take up the whole line vertically
+    const headers = document.querySelectorAll('h3, label');
+    headers.forEach(header => {
+        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
+            header.style.setProperty('margin-bottom', '0', 'important'); // Remove the bottom margin
+            header.style.setProperty('display', 'flex', 'important');
+            header.style.setProperty('align-items', 'center', 'important');
+            header.style.setProperty('height', '32px', 'important'); // Match button height
+        }
+    });
+}
+
+// Run immediately and monitor
+window.addEventListener('DOMContentLoaded', fixAlignment);
+setInterval(fixAlignment, 1000);
+        /**
+ * LSH NAVIGATION OVERRIDE
+ * Makes the main tab buttons bigger, bolder, and high-contrast.
+ */
+function enhanceNavigation() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    
+    tabs.forEach(tab => {
+        // 1. Force Larger Text & Bold Arial
+        tab.style.setProperty('font-size', '14px', 'important');
+        tab.style.setProperty('font-weight', '900', 'important');
+        tab.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        
+        // 2. Increase Spacing & Hit-Area
+        tab.style.setProperty('padding', '12px 20px', 'important');
+        tab.style.setProperty('margin-right', '5px', 'important');
+        
+        // 3. Dynamic Styling based on state
+        if (tab.classList.contains('active-tab')) {
+            // Active Tab Style
+            tab.style.setProperty('color', '#f97316', 'important'); // Safety Orange
+            tab.style.setProperty('border-bottom', '4px solid #f97316', 'important');
+            tab.style.setProperty('background-color', '#0f172a', 'important'); // Dark Navy BG for active
+            tab.style.setProperty('border-radius', '6px 6px 0 0', 'important');
+        } else {
+            // Inactive Tab Style
+            tab.style.setProperty('color', '#64748b', 'important');
+            tab.style.setProperty('border-bottom', '4px solid transparent', 'important');
+            tab.style.setProperty('background-color', 'transparent', 'important');
+        }
+    });
+
+    // Ensure the container allows for the bigger tabs without hiding them
+    const container = document.querySelector('.no-print.overflow-x-auto');
+    if (container) {
+        container.style.setProperty('padding-top', '10px', 'important');
+        container.style.setProperty('padding-bottom', '10px', 'important');
+        container.style.setProperty('display', 'flex', 'important');
+        container.style.setProperty('gap', '10px', 'important');
+    }
+    /**
+ * LSH MASTER BUTTON & HEADER ALIGNMENT
+ * Snaps Black Headers and Orange ADD Buttons into a perfectly straight line.
+ */
+function fixAddButtonAlignment() {
+    // 1. Target the specific buttons
+    const addButtons = document.querySelectorAll('button[onclick*="add"], button[onclick*="addRow"]');
+
+    addButtons.forEach(btn => {
+        // Find the parent container (usually the flex div holding the h3 and button)
+        const parent = btn.parentElement;
+        
+        if (parent) {
+            // FORCE PARENT ALIGNMENT
+            parent.style.setProperty('display', 'flex', 'important');
+            parent.style.setProperty('align-items', 'center', 'important'); // This is the magic fix
+            parent.style.setProperty('gap', '10px', 'important');
+        }
+
+        // BUTTON STYLE LOCK
+        btn.innerText = "ADD";
+        btn.style.setProperty('background-color', '#f97316', 'important'); // Orange BG
+        btn.style.setProperty('color', '#000000', 'important');           // Black Text
+        btn.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        btn.style.setProperty('font-size', '10px', 'important');
+        btn.style.setProperty('font-weight', '900', 'important');
+        btn.style.setProperty('padding', '0 15px', 'important');         // No top/bottom padding
+        btn.style.setProperty('height', '26px', 'important');            // Explicit height
+        btn.style.setProperty('display', 'inline-flex', 'important');
+        btn.style.setProperty('align-items', 'center', 'important');
+        btn.style.setProperty('border', 'none', 'important');
+        btn.style.setProperty('border-radius', '4px', 'important');
+        btn.style.setProperty('margin', '0', 'important');               // Kill stray margins
+    });
+
+    // 2. Fix the Black Headers so they don't have bottom margins pushing the button down
+    const headers = document.querySelectorAll('h3, label');
+    headers.forEach(header => {
+        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
+            header.style.setProperty('margin', '0', 'important');
+            header.style.setProperty('height', '26px', 'important');     // Match button height exactly
+            header.style.setProperty('display', 'flex', 'important');
+            header.style.setProperty('align-items', 'center', 'important');
+        }
+    });
+}
+
+// Run immediately and every second
+window.addEventListener('DOMContentLoaded', fixAddButtonAlignment);
+setInterval(fixAddButtonAlignment, 1000);
+}
+
+// Execute and Loop
+window.addEventListener('DOMContentLoaded', enhanceNavigation);
+setInterval(enhanceNavigation, 1000);
+    </script>
+    <script>
+    let currentUploadCategory = "";
+
+function triggerUpload(category) {
+    console.log("Triggering upload for:", category); // Debugging line
+    currentUploadCategory = category;
+    const fileInput = document.getElementById('universal-uploader');
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        alert("Critical Error: Hidden Uploader Input is missing from HTML.");
+    }
+}
+
+function processUpload(input) {
+    if (input.files && input.files[0]) {
+        const fileName = input.files[0].name;
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+            <td width="200">
+                <div class="bg-black text-orange-500 p-2 rounded text-[10px] font-black border border-orange-500 text-center uppercase">
+                    ${currentUploadCategory}
+                </div>
+            </td>
+            <td>
+                <div contenteditable="true" class="text-xs font-bold text-black" style="font-family: Arial !important;">
+                    📎 ATTACHED: ${fileName}
+                </div>
+            </td>
+            <td width="40">
+                <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button>
+            </td>
+        `;
+        
+        document.getElementById('doc-body').appendChild(tr);
+        input.value = ""; // Reset for next upload
+    }
+}
+</script>
+</body>
 </html>
