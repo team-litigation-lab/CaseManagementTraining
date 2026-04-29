@@ -229,7 +229,7 @@
     </style>
 </head>
 <body>
-
+    <input type="file" id="universal-uploader" class="hidden" onchange="processUpload(this)">
     <aside class="w-72 bg-[#05070a] text-white flex flex-col no-print shrink-0 border-r border-slate-900">
         <div class="p-8 border-b border-slate-900">
             <h1 class="text-lg font-black text-white leading-tight uppercase tracking-tight">Legal Support Help<br><span class="text-orange-500">Training Interface</span></h1>
@@ -574,7 +574,44 @@
             document.getElementById('pane-' + id).classList.add('active');
             document.getElementById('tab-' + id).classList.add('active-tab');
         }
+let currentUploadCategory = "";
 
+function triggerUpload(category) {
+    console.log("Triggering upload for:", category); // Debugging line
+    currentUploadCategory = category;
+    const fileInput = document.getElementById('universal-uploader');
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        alert("Critical Error: Hidden Uploader Input is missing from HTML.");
+    }
+}
+
+function processUpload(input) {
+    if (input.files && input.files[0]) {
+        const fileName = input.files[0].name;
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+            <td width="200">
+                <div class="bg-black text-orange-500 p-2 rounded text-[10px] font-black border border-orange-500 text-center uppercase">
+                    ${currentUploadCategory}
+                </div>
+            </td>
+            <td>
+                <div contenteditable="true" class="text-xs font-bold text-black" style="font-family: Arial !important;">
+                    📎 ATTACHED: ${fileName}
+                </div>
+            </td>
+            <td width="40">
+                <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button>
+            </td>
+        `;
+        
+        document.getElementById('doc-body').appendChild(tr);
+        input.value = ""; // Reset for next upload
+    }
+}
         function updatePhaseDisplay(val) { 
             document.getElementById('display-phase').innerText = val.toUpperCase(); 
         }
@@ -1024,5 +1061,45 @@ setInterval(fixAddButtonAlignment, 1000);
 window.addEventListener('DOMContentLoaded', enhanceNavigation);
 setInterval(enhanceNavigation, 1000);
     </script>
+    <script>
+    let currentUploadCategory = "";
+
+function triggerUpload(category) {
+    console.log("Triggering upload for:", category); // Debugging line
+    currentUploadCategory = category;
+    const fileInput = document.getElementById('universal-uploader');
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        alert("Critical Error: Hidden Uploader Input is missing from HTML.");
+    }
+}
+
+function processUpload(input) {
+    if (input.files && input.files[0]) {
+        const fileName = input.files[0].name;
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+            <td width="200">
+                <div class="bg-black text-orange-500 p-2 rounded text-[10px] font-black border border-orange-500 text-center uppercase">
+                    ${currentUploadCategory}
+                </div>
+            </td>
+            <td>
+                <div contenteditable="true" class="text-xs font-bold text-black" style="font-family: Arial !important;">
+                    📎 ATTACHED: ${fileName}
+                </div>
+            </td>
+            <td width="40">
+                <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button>
+            </td>
+        `;
+        
+        document.getElementById('doc-body').appendChild(tr);
+        input.value = ""; // Reset for next upload
+    }
+}
+</script>
 </body>
 </html>
