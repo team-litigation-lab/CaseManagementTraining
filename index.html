@@ -744,6 +744,45 @@ function processUpload(input) {
         window.onload = renderRepo;
     </script>
     <script>
+        /**
+ * LSH FINAL ALIGNMENT LOCK
+ * Forces the ADD button to sit flush against the Black Bar
+ */
+function forceAbsoluteAlignment() {
+    const rowHeaders = ["CASE CHRONOLOGY", "ACTION ITEM LOG"];
+    
+    document.querySelectorAll('h3, label').forEach(el => {
+        const text = el.innerText.trim().toUpperCase();
+        
+        if (rowHeaders.includes(text)) {
+            const parent = el.parentElement;
+            const btn = parent ? parent.querySelector('button') : null;
+
+            if (parent && btn) {
+                // 1. Force the parent to be a rigid, gapless container
+                parent.style.setProperty('display', 'flex', 'important');
+                parent.style.setProperty('gap', '0px', 'important');
+                parent.style.setProperty('align-items', 'center', 'important');
+
+                // 2. The Black Bar: Round only the left side
+                el.style.setProperty('flex-grow', '1', 'important');
+                el.style.setProperty('margin-right', '-2px', 'important'); // PULLS BUTTON IN
+                el.style.setProperty('border-radius', '4px 0 0 4px', 'important');
+                el.style.setProperty('height', '32px', 'important');
+
+                // 3. The Orange Button: Round only the right side
+                btn.style.setProperty('margin-left', '0px', 'important');
+                btn.style.setProperty('border-radius', '0 4px 4px 0', 'important');
+                btn.style.setProperty('height', '32px', 'important');
+                btn.style.setProperty('border', 'none', 'important');
+                btn.style.setProperty('min-width', '60px', 'important');
+            }
+        }
+    });
+}
+
+// Execute immediately and monitor
+setInterval(forceAbsoluteAlignment, 500);
 /**
  * LSH MASTER OVERRIDE - V2026.DYNAMIC_FLEX
  * Fixes Upload Portal overflow while locking Chronology/Tasks.
