@@ -819,28 +819,31 @@ setInterval(highlightIdentitySection, 2000);
  * LSH CLIENT NAME NUCLEAR OVERRIDE
  * Forces the Client Name to stay 36px Black/Bold Arial and prevents shrinking.
  */
-function lockClientNameStyle() {
-    const nameField = document.getElementById('client-name-field');
+/**
+ * LSH MASTER THEME OVERRIDE - ANTI-BLINK VERSION
+ */
+function applyLSHMasterStyles() {
+    // ... [Keep your Header Logic here] ...
+
+    // UPDATED: Content Styling with "Client Name" Protection
+    const contentFields = document.querySelectorAll('[contenteditable="true"], select, .sol-font-fix');
     
-    if (nameField) {
-        // Force the massive 36px font size
-        nameField.style.setProperty('font-size', '36px', 'important');
+    contentFields.forEach(field => {
+        // IF THIS IS THE CLIENT NAME, DO NOT SHRINK IT
+        if (field.id === 'client-name-field') {
+            field.style.setProperty('font-size', '36px', 'important');
+            field.style.setProperty('font-weight', '900', 'important');
+        } else {
+            // ALL OTHER FIELDS GET THE STANDARD SIZE
+            field.style.setProperty('font-size', '12px', 'important');
+            field.style.setProperty('font-weight', 'bold', 'important');
+        }
         
-        // Force Arial Black Bold look
-        nameField.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        nameField.style.setProperty('font-weight', '900', 'important');
-        nameField.style.setProperty('color', '#000000', 'important');
-        
-        // Prevent layout compression
-        nameField.style.setProperty('min-width', '600px', 'important');
-        nameField.style.setProperty('display', 'block', 'important');
-        nameField.style.setProperty('flex-shrink', '0', 'important');
-        nameField.style.setProperty('white-space', 'nowrap', 'important');
-        
-        // Clean up any stray background colors or transforms
-        nameField.style.setProperty('background', 'transparent', 'important');
-        nameField.style.setProperty('transform', 'none', 'important');
-    }
+        // General styles for everyone
+        field.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        field.style.setProperty('color', '#000000', 'important');
+        field.style.setProperty('background-color', '#ffffff', 'important');
+    });
 }
 
 // Run immediately and continuously to fight off other scripts
