@@ -860,6 +860,47 @@ function highlightIdentitySection() {
             }
     });
 }
+        /**
+ * LSH ROW ALIGNMENT OVERRIDE
+ * Specifically fixes the 'staircase' look in Chronology and Action Item sections.
+ */
+function fixStaircaseAlignment() {
+    // 1. Find all headers that have a button as a sibling
+    const headers = document.querySelectorAll('h3, label');
+
+    headers.forEach(header => {
+        // We only care about the Orange-on-Black headers
+        if (header.style.backgroundColor === 'rgb(0, 0, 0)' || header.style.backgroundColor === 'black') {
+            const parent = header.parentElement;
+            
+            // If the parent is a div that contains both the header and a button
+            if (parent && parent.querySelector('button')) {
+                // FORCE THE ROW LOCK
+                parent.style.setProperty('display', 'flex', 'important');
+                parent.style.setProperty('flex-direction', 'row', 'important');
+                parent.style.setProperty('align-items', 'center', 'important');
+                parent.style.setProperty('justify-content', 'space-between', 'important');
+                parent.style.setProperty('gap', '10px', 'important');
+                parent.style.setProperty('width', '100%', 'important');
+                
+                // Shrink the header width so it doesn't push the button to a new line
+                header.style.setProperty('flex-grow', '1', 'important');
+                header.style.setProperty('width', 'auto', 'important');
+                header.style.setProperty('margin-bottom', '0px', 'important');
+            }
+        }
+    });
+
+    // 2. Button Baseline Fix
+    const addButtons = document.querySelectorAll('button[onclick*="add"], button[onclick*="addRow"]');
+    addButtons.forEach(btn => {
+        btn.style.setProperty('margin-top', '0px', 'important');
+        btn.style.setProperty('flex-shrink', '0', 'important');
+    });
+}
+
+// Add to your existing loop
+setInterval(fixStaircaseAlignment, 500);
 
 // Run on load and during safety check
 window.addEventListener('DOMContentLoaded', highlightIdentitySection);
