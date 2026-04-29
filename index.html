@@ -815,5 +815,39 @@ function highlightIdentitySection() {
 window.addEventListener('DOMContentLoaded', highlightIdentitySection);
 setInterval(highlightIdentitySection, 2000);
     </script>
+      
+       <script>
+    /**
+ * LSH CLIENT NAME NUCLEAR OVERRIDE
+ * Forces the Client Name to stay 36px Black/Bold Arial and prevents shrinking.
+ */
+function lockClientNameStyle() {
+    const nameField = document.getElementById('client-name-field');
+    
+    if (nameField) {
+        // Force the massive 36px font size
+        nameField.style.setProperty('font-size', '36px', 'important');
+        
+        // Force Arial Black Bold look
+        nameField.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        nameField.style.setProperty('font-weight', '900', 'important');
+        nameField.style.setProperty('color', '#000000', 'important');
+        
+        // Prevent layout compression
+        nameField.style.setProperty('min-width', '600px', 'important');
+        nameField.style.setProperty('display', 'block', 'important');
+        nameField.style.setProperty('flex-shrink', '0', 'important');
+        nameField.style.setProperty('white-space', 'nowrap', 'important');
+        
+        // Clean up any stray background colors or transforms
+        nameField.style.setProperty('background', 'transparent', 'important');
+        nameField.style.setProperty('transform', 'none', 'important');
+    }
+}
+
+// Run immediately and continuously to fight off other scripts
+window.addEventListener('DOMContentLoaded', lockClientNameStyle);
+setInterval(lockClientNameStyle, 500); // Check every half-second for maximum stability
+             </script>
 </body>
 </html>
