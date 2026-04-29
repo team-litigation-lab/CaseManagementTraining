@@ -706,10 +706,8 @@
         function deleteCase(id, e) { e.stopPropagation(); if(confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); renderRepo(); } }
         function exportRepo() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem(REPO_KEY)], {type:'application/json'})); a.download='LSH_Backup.json'; a.click(); }
         function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Data Imported"); }; r.readAsText(i.files[0]); }
-        function downloadPDF() {
-    const element = document.getElementById('capture-area');
-    
-    // PDF Capture Settings
+        function downloadPDF() {const element = document.getElementById('capture-area');
+        // PDF Capture Settings
     const opt = {
         margin: [0.2, 0.2, 0.2, 0.2], // top, left, buttom, right
         filename: 'LSH_Case_Summary.pdf',
@@ -723,7 +721,6 @@
         },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
-
     // 1. Scroll to top to ensure capture starts at the beginning
     window.scrollTo(0, 0);
 
