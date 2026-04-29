@@ -727,83 +727,59 @@ function processUpload(input) {
     document.head.appendChild(style);
 
     // 2. THE MAIN ENGINE (Runs every 500ms to keep things locked)
-    function applyMasterStyles() {
-        const headers = [
-            "Identity", "Demographics", "Employment Details", "Emergency Contact", "Case Narrative",
-            "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
-            "Health Insurance", "Independent Subrogation Card", "Bodily Injury (BI) Policies", 
-            "PIP / UM / UIM Coverage Stack", "Outstanding Case Liens", "Provider Treatment Matrix",
-            "Client Vehicle", "Third Party Vehicle", "Discovery & Filing Tracker", 
-            "Finance Tracking", "Quick Label Portal", "Upload Portal", "Case Chronology", "Action Item Log"
-        ];
+   function applyMasterStyles() {
+    const headers = [
+        "Identity", "Demographics", "Employment Details", "Emergency Contact", "Case Narrative",
+        "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
+        "Health Insurance", "Independent Subrogation Card", "Bodily Injury (BI) Policies", 
+        "PIP / UM / UIM Coverage Stack", "Outstanding Case Liens", "Provider Treatment Matrix",
+        "Client Vehicle", "Third Party Vehicle", "Discovery & Filing Tracker", 
+        "Finance Tracking", "Quick Label Portal", "Upload Portal", "Case Chronology", "Action Item Log"
+    ];
 
-        document.querySelectorAll('h3, label').forEach(el => {
-            const text = el.innerText.trim().toUpperCase();
-            const parent = el.parentElement;
-            const btn = parent ? parent.querySelector('button') : null;
+    document.querySelectorAll('h3, label').forEach(el => {
+        const text = el.innerText.trim().toUpperCase();
+        const parent = el.parentElement;
+        const btn = parent ? parent.querySelector('button') : null;
 
-            if (headers.some(h => h.toUpperCase() === text)) {
-                
-                // PORTAL LOGIC (Upload / Quick Label)
-                if (text.includes("PORTAL")) {
-                    parent.classList.add('lsh-portal-wrap');
-                    el.classList.add('lsh-header-style');
-                    el.style.setProperty('width', '100%', 'important');
-                    el.style.setProperty('border-radius', '4px', 'important');
-                } 
-                // CHRONOLOGY / ACTION LOGIC (Snap together)
-                else if (btn) {
+        if (headers.some(h => h.toUpperCase() === text)) {
+            // Check if this is a portal (Doc Hub)
+            if (text.includes("PORTAL")) {
+                parent.classList.add('lsh-portal-wrap');
+                el.classList.add('lsh-header-style');
+                el.style.setProperty('width', '100%', 'important');
+            } 
+            // Check if there is an ADD button
+            else if (btn) {
+                // Ensure the parent is the row lock
+                if (!parent.classList.contains('lsh-row-lock')) {
                     parent.classList.add('lsh-row-lock');
-                    el.classList.add('lsh-header-style');
-                    btn.classList.add('lsh-btn-style');
-                    if (!btn.getAttribute('onclick').includes('triggerUpload')) {
-                        btn.innerText = "ADD";
-                    }
-                } 
-                // STANDARD HEADER LOGIC
-                else {
-                    el.classList.add('lsh-header-style');
-                    el.style.setProperty('width', '100%', 'important');
-                    el.style.setProperty('border-radius', '4px', 'important');
                 }
+                el.classList.add('lsh-header-style');
+                btn.classList.add('lsh-btn-style');
+                if (!btn.getAttribute('onclick').includes('triggerUpload')) {
+                    btn.innerText = "ADD";
+                }
+            } 
+            // Standard Header
+            else {
+                el.classList.add('lsh-header-style');
+                el.style.setProperty('width', '100%', 'important');
             }
-        });
-
-        // Lock Client Name and Dropdowns
-        const nameField = document.getElementById('client-name-field');
-        if (nameField) {
-            nameField.style.setProperty('font-size', '36px', 'important');
-            nameField.style.setProperty('font-weight', '900', 'important');
         }
-        document.querySelectorAll('select').forEach(s => s.style.setProperty('background', '#fff', 'important'));
-    }
+    });
 
-    // 3. UPLOAD PORTAL LOGIC (Works automatically)
-    window.triggerUpload = function(category) {
-        window.activeCategory = category;
-        let uploader = document.getElementById('hidden-uploader');
-        if (!uploader) {
-            uploader = document.createElement('input');
-            uploader.type = 'file';
-            uploader.id = 'hidden-uploader';
-            uploader.style.display = 'none';
-            uploader.onchange = function() {
-                if (this.files[0]) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td width="180"><div style="background:#000; color:#f97316; padding:4px; border-radius:4px; text-align:center; font-weight:900; font-size:10px;">${window.activeCategory}</div></td>
-                        <td><div contenteditable="true" style="font-family:Arial; font-weight:bold; font-size:12px;">📎 ATTACHED: ${this.files[0].name}</div></td>
-                        <td><button onclick="this.closest('tr').remove()" style="color:red; font-weight:bold;">×</button></td>
-                    `;
-                    document.getElementById('doc-body').appendChild(row);
-                }
-            };
-            document.body.appendChild(uploader);
+    // CRITICAL: Prevent the engine from overriding the Hidden/Visible state of tabs
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        if (!pane.classList.contains('active')) {
+            // If it's not the active tab, ensure it stays hidden in the browser
+            pane.style.setProperty('display', 'none', 'important');
+        } else {
+            // If it IS active, show it
+            pane.style.setProperty('display', 'block', 'important');
         }
-        uploader.click();
-    };
-
-    setInterval(applyMasterStyles, 500);
+    });
+}
 })();
 </script>
     <script>
