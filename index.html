@@ -791,26 +791,144 @@ function processUpload(input) {
         function downloadPDF() { window.scrollTo(0,0); const area = document.getElementById('capture-area'); html2pdf().set({ margin: 0.3, filename: 'LSH_Summary.pdf', image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } }).from(area).save(); }
         window.onload = renderRepo;
     </script>
-    <script>
-        /**
-// This script now only handles text values and the specific Client Name ID
-function cleanUpMainBuild() {
-    // Lock the Client Name
-    const nameField = document.getElementById('client-name-field');
-    if (nameField) {
-        nameField.style.setProperty('font-size', '36px', 'important');
-        nameField.style.setProperty('font-weight', '900', 'important');
+    /**
+ * LSH DEFINITIVE MASTER ENGINE - APRIL 2026
+ * This script fixes alignment, colors, and upload logic automatically.
+ */
+
+(function() {
+    // 1. INJECT "NUCLEAR" CSS (This forces the layout even if the HTML is messy)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        /* Force Power-Bar Alignment */
+        .lsh-row-lock {
+            display: grid !important;
+            grid-template-columns: 1fr auto !important;
+            align-items: center !important;
+            gap: 0px !important;
+            width: 100% !important;
+            margin-bottom: 12px !important;
+        }
+
+        /* Styling for the Black Header Bar */
+        .lsh-header-style {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            height: 32px !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 15px !important;
+            margin: 0 !important;
+            border-radius: 4px 0 0 4px !important;
+            font-family: Arial, sans-serif !important;
+            font-size: 13px !important;
+            font-weight: 900 !important;
+            text-transform: uppercase !important;
+        }
+
+        /* Styling for the Orange Add Button */
+        .lsh-btn-style {
+            background-color: #f97316 !important;
+            color: #000000 !important;
+            height: 32px !important;
+            padding: 0 20px !important;
+            border: none !important;
+            border-radius: 0 4px 4px 0 !important;
+            font-weight: 900 !important;
+            font-family: Arial, sans-serif !important;
+            display: flex !important;
+            align-items: center !important;
+            cursor: pointer !important;
+        }
+
+        /* Upload Portal Wrapping (Prevents Squashing) */
+        .lsh-portal-wrap {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+            width: 100% !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 2. THE MAIN ENGINE (Runs every 500ms to keep things locked)
+    function applyMasterStyles() {
+        const headers = [
+            "Identity", "Demographics", "Employment Details", "Emergency Contact", "Case Narrative",
+            "Passenger Records", "Police Report Details", "Officer's Narrative Summary", 
+            "Health Insurance", "Independent Subrogation Card", "Bodily Injury (BI) Policies", 
+            "PIP / UM / UIM Coverage Stack", "Outstanding Case Liens", "Provider Treatment Matrix",
+            "Client Vehicle", "Third Party Vehicle", "Discovery & Filing Tracker", 
+            "Finance Tracking", "Quick Label Portal", "Upload Portal", "Case Chronology", "Action Item Log"
+        ];
+
+        document.querySelectorAll('h3, label').forEach(el => {
+            const text = el.innerText.trim().toUpperCase();
+            const parent = el.parentElement;
+            const btn = parent ? parent.querySelector('button') : null;
+
+            if (headers.some(h => h.toUpperCase() === text)) {
+                
+                // PORTAL LOGIC (Upload / Quick Label)
+                if (text.includes("PORTAL")) {
+                    parent.classList.add('lsh-portal-wrap');
+                    el.classList.add('lsh-header-style');
+                    el.style.setProperty('width', '100%', 'important');
+                    el.style.setProperty('border-radius', '4px', 'important');
+                } 
+                // CHRONOLOGY / ACTION LOGIC (Snap together)
+                else if (btn) {
+                    parent.classList.add('lsh-row-lock');
+                    el.classList.add('lsh-header-style');
+                    btn.classList.add('lsh-btn-style');
+                    if (!btn.getAttribute('onclick').includes('triggerUpload')) {
+                        btn.innerText = "ADD";
+                    }
+                } 
+                // STANDARD HEADER LOGIC
+                else {
+                    el.classList.add('lsh-header-style');
+                    el.style.setProperty('width', '100%', 'important');
+                    el.style.setProperty('border-radius', '4px', 'important');
+                }
+            }
+        });
+
+        // Lock Client Name and Dropdowns
+        const nameField = document.getElementById('client-name-field');
+        if (nameField) {
+            nameField.style.setProperty('font-size', '36px', 'important');
+            nameField.style.setProperty('font-weight', '900', 'important');
+        }
+        document.querySelectorAll('select').forEach(s => s.style.setProperty('background', '#fff', 'important'));
     }
 
-    // Ensure all dropdowns are white
-    document.querySelectorAll('select').forEach(s => {
-        s.style.setProperty('background-color', '#ffffff', 'important');
-        s.style.setProperty('color', '#000000', 'important');
-    });
-}
+    // 3. UPLOAD PORTAL LOGIC (Works automatically)
+    window.triggerUpload = function(category) {
+        window.activeCategory = category;
+        let uploader = document.getElementById('hidden-uploader');
+        if (!uploader) {
+            uploader = document.createElement('input');
+            uploader.type = 'file';
+            uploader.id = 'hidden-uploader';
+            uploader.style.display = 'none';
+            uploader.onchange = function() {
+                if (this.files[0]) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td width="180"><div style="background:#000; color:#f97316; padding:4px; border-radius:4px; text-align:center; font-weight:900; font-size:10px;">${window.activeCategory}</div></td>
+                        <td><div contenteditable="true" style="font-family:Arial; font-weight:bold; font-size:12px;">📎 ATTACHED: ${this.files[0].name}</div></td>
+                        <td><button onclick="this.closest('tr').remove()" style="color:red; font-weight:bold;">×</button></td>
+                    `;
+                    document.getElementById('doc-body').appendChild(row);
+                }
+            };
+            document.body.appendChild(uploader);
+        }
+        uploader.click();
+    };
 
-// Run once on load
-window.addEventListener('DOMContentLoaded', cleanUpMainBuild);
-</script>
+    setInterval(applyMasterStyles, 500);
+})();
 </body>
 </html>
