@@ -338,33 +338,95 @@
                 </div>
             </div>
 
-            <div id="pane-profile" class="tab-pane active">
-                <div class="grid grid-cols-3 gap-8">
-                    <div class="space-y-6">
-                        <div class="pdf-card shadow-sm"><h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2">Identity</h3>
-                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true"></div></div><div><label>SSN</label><div contenteditable="true"></div></div></div>
-                            <div class="mb-4"><label>Email Address</label><div contenteditable="true"></div></div><div><label>Home Address</label><div contenteditable="true"></div></div>
-                        </div>
-                        <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><h3 class="text-[11px] font-black text-orange-400 uppercase mb-4 border-b pb-2">Emergency Contact</h3>
-                            <div class="mb-4"><label>Full Name</label><div contenteditable="true"></div></div>
-                            <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true"></div></div><div><label>Relationship</label><div contenteditable="true"></div></div></div>
-                        </div>
+           <div id="pane-profile" class="tab-pane active">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="space-y-6">
+            <div class="pdf-card shadow-sm border-t-4 border-slate-800">
+                <h3 class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2 tracking-widest">Demographics</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label>DOB</label>
+                        <div contenteditable="true" class="text-sm font-semibold">MM/DD/YYYY</div>
                     </div>
-                    <div class="space-y-6">
-                        <div class="text-[11px] font-black text-slate-400 uppercase mb-4 border-b pb-2>"pdf-card shadow-sm"><h3>Employment Details</h3>
-                            <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option><option>Retired</option></select></div>
-                            <div class="mb-4"><label>Employer Name</label><div contenteditable="true"></div></div>
-                            <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true"></div></div>
-                        </div>
+                    <div>
+                        <label>SSN</label>
+                        <div contenteditable="true" class="text-sm font-semibold">000-00-0000</div>
                     </div>
-                    <div class="pdf-card shadow-sm"><h3 class="text-orange-500 font-black uppercase text-[11px] mb-4 border-b pb-2">Case Narrative</h3><div contenteditable="true" class="min-h-[440px] text-sm italic leading-relaxed text-slate-600">Enter facts of loss...</div></div>
                 </div>
-                <div class="mt-6">
-                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase">Passenger Records</label><button onclick="addPassenger()" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded no-print hover:bg-orange-600 transition-all font-bold">+ ADD PASSENGER</button></div>
-                    <div id="passenger-container" class="space-y-4"></div>
+                <div class="mb-4">
+                    <label>Email Address</label>
+                    <div contenteditable="true" class="text-sm">client@example.com</div>
+                </div>
+                <div>
+                    <label>Home Address</label>
+                    <div contenteditable="true" class="text-sm min-h-[60px]">123 Main St, City, State, Zip</div>
                 </div>
             </div>
 
+            <div class="pdf-card border-l-4 border-orange-400 shadow-sm bg-orange-50/30">
+                <h3 class="text-[11px] font-black text-orange-500 uppercase mb-4 border-b pb-2 tracking-widest">Emergency Contact</h3>
+                <div class="mb-4">
+                    <label>Full Name</label>
+                    <div contenteditable="true" class="text-sm font-bold">Name</div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label>Phone</label>
+                        <div contenteditable="true" class="text-sm font-bold">(000) 000-0000</div>
+                    </div>
+                    <div>
+                        <label>Relationship</label>
+                        <div contenteditable="true" class="text-sm">Spouse/Parent</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="pdf-card shadow-sm border-t-4 border-blue-600">
+                <h3 class="text-[11px] font-black text-blue-600 uppercase mb-4 border-b pb-2 tracking-widest">Employment Details</h3>
+                <div class="mb-4">
+                    <label>Status</label>
+                    <select class="prof-input">
+                        <option>Employed</option>
+                        <option>Unemployed</option>
+                        <option>Self-Employed</option>
+                        <option>Retired</option>
+                        <option>Disabled</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label>Employer Name</label>
+                    <div contenteditable="true" class="text-sm">Company Name</div>
+                </div>
+                <div class="mb-4">
+                    <label>Job Position / Title</label>
+                    <div contenteditable="true" class="text-sm italic">Manager / Laborer</div>
+                </div>
+                <div>
+                    <label>Work Address / Phone</label>
+                    <div contenteditable="true" class="text-sm min-h-[60px]">Details...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pdf-card shadow-sm border-t-4 border-orange-500">
+            <h3 class="text-orange-500 font-black uppercase text-[11px] mb-4 border-b pb-2 tracking-widest">Case Narrative</h3>
+            <div contenteditable="true" class="min-h-[440px] text-sm italic leading-relaxed text-slate-600 bg-slate-50/50 p-4 rounded border border-dashed border-slate-200">
+                Enter facts of loss and client injury allegations here...
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-8">
+        <div class="flex justify-between items-center mb-4">
+            <label class="text-orange-600 font-black text-sm uppercase tracking-tighter">Passenger Records</label>
+            <button onclick="addPassenger()" class="bg-slate-900 text-white text-[10px] px-4 py-2 rounded no-print hover:bg-orange-600 transition-all font-bold tracking-widest shadow-md">+ ADD PASSENGER</button>
+        </div>
+        <div id="passenger-container" class="space-y-4"></div>
+    </div>
+</div>
             <div id="pane-police" class="tab-pane">
                 <div class="pdf-card border-l-8 border-blue-500">
                     <h3 class="font-black text-blue-600 text-[11px] mb-6 uppercase tracking-widest">Police Report Details</h3>
