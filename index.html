@@ -932,5 +932,108 @@ function processUpload(input) {
     setInterval(applyMasterStyles, 500);
 })();
 </script>
+    <script>
+function downloadPDF() {
+    // 1. SELECT THE AREA
+    const element = document.getElementById('capture-area');
+    
+    // 2. TEMPORARILY FORCE "PDF MODE" STYLES
+    const styleOverride = document.createElement('style');
+    styleOverride.id = 'pdf-override-styles';
+    styleOverride.innerHTML = `
+        /* Force tabs to be visible for the PDF engine */
+        .tab-pane { display: block !important; opacity: 1 !important; height: auto !important; overflow: visible !important; }
+        
+        /* Prevent overlapping headers and buttons */
+        .lsh-row-lock, .lsh-power-bar { 
+            display: block !important; 
+            width: 100% !important; 
+            margin-bottom: 20px !important; 
+        }
+        
+        /* Ensure headers take full width and don't float */
+        .lsh-main-header, .lsh-header-style { 
+            width: 100% !important; 
+            border-radius: 4px !important;
+            margin-bottom: 5px !important;
+        }
+
+        /* Prevent button from floating next to header in PDF */
+        .lsh-action-btn, .lsh-btn-style { display: none !important; } 
+
+        /* Page Break Logic: Prevents tables from splitting mid-row */
+        .pdf-card { 
+            page-break-inside: avoid !important; 
+            break-inside: avoid !important; 
+            margin-bottom: 30px !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+
+        table { page-break-inside: auto !important; width: 100% !important; }
+        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+        
+        /* Remove Scrollbars in PDF */
+        ::-webkit-scrollbar { display: none; }
+    `;
+    document.head.appendChild(styleOverride);
+
+    // 3. EXECUTE THE DOWNLOAD
+    const opt = {
+        margin: [0.5, 0.5],
+        filename: `LSH_MASTER_${new Date().toISOString().slice(0,10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true 
+        },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    html2pdf().set(opt).from(element).toPdf().get('pdf').save().then(() => {
+        // 4. CLEAN UP: Remove the override styles after the PDF is generated
+        const styleToRem = document.getElementById('pdf-override-styles');
+        if (styleToRem) styleToRem.remove();
+        
+        // Return view to current active tab
+        const activeTabId = document.querySelector('.active-tab').id.replace('tab-', '');
+        showTab(activeTabId);
+    });
+}
+</script>
+ 
+    <script>
+        /* 1. RESET THE ROW LOCK to prevent overlap */
+.lsh-row-lock {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    margin-bottom: 0px !important; /* Remove bottom margin here */
+    position: relative !important;
+    z-index: 10;
+}
+
+/* 2. FORCE THE TABLE CONTAINER TO CLEAR */
+#pane-notes .pdf-card, #pane-tasks .pdf-card {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* 3. ENSURE THE TABLE ALWAYS STARTS BELOW THE HEADER */
+.treat-table {
+    margin-top: 15px !important;
+    clear: both !important;
+    width: 100% !important;
+    position: relative !important;
+}
+
+/* 4. FIX THE POWER BAR HEIGHT */
+.lsh-header-style {
+    flex-grow: 1 !important;
+    margin-bottom: 0 !important; /* Critical: remove margin that pushes table */
+}
+    </Script>
 </body>
 </html>
