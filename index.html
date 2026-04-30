@@ -1216,50 +1216,6 @@ function stabilizeLSH() {
 // Run the stabilizer once the page is fully loaded
 window.addEventListener('load', stabilizeLSH);
 </script>
-    <script>
-/**
- * LSH COLOR SCHEME OVERRIDE
- * Forces all Safety Orange text on Black Backgrounds to turn PURE WHITE.
- */
-function forceWhiteTextOnBlack() {
-    // 1. Target all headers and labels
-    const headers = document.querySelectorAll('h3, label, div, span');
-
-    headers.forEach(el => {
-        // Check if the element has a black background (either via inline style or computed style)
-        const bgColor = window.getComputedStyle(el).backgroundColor;
-        
-        if (bgColor === 'rgb(0, 0, 0)' || bgColor === 'black' || el.style.backgroundColor === 'black') {
-            // Force the font color to White
-            el.style.setProperty('color', '#ffffff', 'important');
-            
-            // Optional: Ensure the border matches the new clean look
-            if (el.style.borderLeft) {
-                el.style.setProperty('border-left-color', '#ffffff', 'important');
-            }
-        }
-    });
-
-    // 2. Specific fix for the Integrated Top Bar labels
-    const barLabels = document.querySelectorAll('.bar-box label');
-    barLabels.forEach(label => {
-        label.style.setProperty('color', '#64748b', 'important'); // Keep meta-labels slate for readability
-    });
-
-    // 3. Fix the "Document Ingest" and "Identity" orange highlights to white
-    const orangeSpecialElements = document.querySelectorAll('.text-orange-500, .text-orange-600');
-    orangeSpecialElements.forEach(el => {
-        // Only change if they are inside a black container
-        if (el.closest('.bg-black') || el.closest('[style*="background-color: black"]')) {
-            el.style.setProperty('color', '#ffffff', 'important');
-        }
-    });
-}
-
-// Run immediately and then on a stable loop
-window.addEventListener('DOMContentLoaded', forceWhiteTextOnBlack);
-setInterval(forceWhiteTextOnBlack, 1000); 
-</script>
 </script>
 </body>
 </html>
