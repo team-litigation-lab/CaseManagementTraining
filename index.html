@@ -1172,6 +1172,50 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 setInterval(initDocumentInterface, 1500);
 </script>
+    <script>
+/**
+ * LSH TIMER KILL-SWITCH & STABILIZER
+ * This script disables all competing intervals to stop the flickering.
+ */
+
+function stabilizeLSH() {
+    // 1. Kill all active intervals currently running on the page
+    // This stops the "war" between different style scripts
+    for (let i = 1; i < 9999; i++) {
+        window.clearInterval(i);
+    }
+
+    console.log("LSH Stability System: All competing timers disabled.");
+
+    // 2. Re-enable the Document Interface (Cleanly)
+    if (typeof initDocumentInterface === "function") {
+        initDocumentInterface();
+    }
+
+    // 3. Start ONE single, stable loop for styles
+    // 2000ms (2 seconds) is slow enough to prevent flickering but fast enough to keep styles locked
+    setInterval(() => {
+        if (typeof applyLSHMasterStyles === "function") {
+            applyLSHMasterStyles();
+        }
+        if (typeof highlightIdentitySection === "function") {
+            highlightIdentitySection();
+        }
+        if (typeof unifyAddButtons === "function") {
+            unifyAddButtons();
+        }
+        if (typeof fixAddButtonAlignment === "function") {
+            fixAddButtonAlignment();
+        }
+    }, 2000); 
+
+    // 4. Force a one-time update for immediate results
+    applyLSHMasterStyles();
+}
+
+// Run the stabilizer once the page is fully loaded
+window.addEventListener('load', stabilizeLSH);
+</script>
 </script>
 </body>
 </html>
