@@ -1073,45 +1073,6 @@ function processFileUpload(input) {
     }
 }
 
-/**
- * 2. UI INITIALIZATION
- * Injects the Upload Portal into the Doc Hub pane on load
- */
-function initUploadPortal() {
-    const docPane = document.getElementById('pane-docs');
-    if (!docPane) return;
-
-    // Check if portal already exists to prevent duplicates
-    if (document.getElementById('lsh-upload-portal')) return;
-
-    const portalHtml = `
-        <div id="lsh-upload-portal" class="pdf-card bg-slate-50 border-dashed border-2 border-slate-300 mb-6 no-print">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="bg-black p-3 rounded-lg">
-                        <span class="text-orange-500 text-xl">📁</span>
-                    </div>
-                    <div>
-                        <h4 class="text-[10px] font-black text-black uppercase tracking-widest">Document Ingest Portal</h4>
-                        <p class="text-[9px] text-slate-500 font-bold italic">Upload PDFs, Images, or Discovery Files (Session Only)</p>
-                    </div>
-                </div>
-                <label class="bg-[#f97316] hover:bg-orange-600 text-black font-black text-[10px] px-8 py-3 rounded shadow-md cursor-pointer transition-all border border-black/10">
-                    SELECT FILE TO ATTACH
-                    <input type="file" id="lsh-file-upload" class="hidden" onchange="processFileUpload(this)">
-                </label>
-            </div>
-        </div>
-    `;
-
-    // Insert portal at the top of the Document Pane
-    docPane.insertAdjacentHTML('afterbegin', portalHtml);
-}
-
-// Run Ingest Initalization
-window.addEventListener('DOMContentLoaded', initUploadPortal);
-// Safety check for dynamic loading
-setInterval(initUploadPortal, 2000);
 </script>
     <script>
 /**
