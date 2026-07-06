@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSH Case Management System | Restricted Access</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+    :root{
+        --navy:#0f2148;
+        --navy-deep:#081226;
+        --navy-mid:#132a5c;
+        --orange:#f97316;
+        --slate:#64748b;
+        --paper:#f8fafc;
+        --classified-red:#b91c1c;
+        --success:#166534;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: 'IBM Plex Sans', Arial, Helvetica, sans-serif;
+        background-color: var(--paper);
+        color: var(--navy);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        margin: 0;
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+
+    .serif { font-family: 'IBM Plex Sans', Arial, Helvetica, sans-serif; font-weight: 700; }
+    .mono { font-family: 'IBM Plex Mono', 'Courier New', monospace; }
+
+    /* ===== CLASSIFICATION BANNER ===== */
+    #classification-bar {
+        height: 38px;
+        flex-shrink: 0;
+        background: var(--navy-deep);
+        border-bottom: 2px solid var(--orange);
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 18px;
+        color: #f8fafc;
+        font-family: 'IBM Plex Mono', 'Courier New', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        z-index: 200;
+    }
+    #classification-bar .cls-label {
+        background: var(--orange);
+        color: #0f2148;
+        padding: 3px 10px;
+        border-radius: 3px;
+        font-weight: 900;
+        letter-spacing: 1.5px;
+    }
+    .cls-left { display: flex; align-items: center; gap: 10px; flex-shrink: 0; white-space: nowrap; }
+    .cls-left #portal-title { font-size: 10px; color: #cbd5e1; letter-spacing: 0.5px; }
+
+    .announcement-ticker { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; height: 100%; }
+    .announcement-tag { flex-shrink: 0; font-weight: 900; font-size: 10px; letter-spacing: 1.5px; color: var(--orange); }
+    .announcement-ticker.is-alert .announcement-tag { color: #fca5a5; }
+    .ticker-viewport { flex: 1 1 auto; min-width: 0; overflow: hidden; height: 100%; display: flex; align-items: center; position: relative; }
+    .ticker-track { display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker-scroll 22s linear infinite; font-size: 11px; font-weight: 600; color: #e2e8f0; }
+    .ticker-track.paused { animation-play-state: paused; }
+    .announcement-ticker.is-alert .ticker-track { color: #fecaca; font-weight: 800; }
+    @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+    #classification-bar .clock-widget {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    #classification-bar select {
+        background: #0f172a;
+        color: #f97316;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 6px;
+        outline: none;
+    }
+
+    #app-shell { flex: 1; display: flex; overflow: hidden; }
+
+    /* watermark */
+    #capture-area {
+        position: relative;
+        background-image: radial-gradient(circle, rgba(15,33,72,0.06) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+    #capture-area::before {
+        content: "CONFIDENTIAL — LSH INTERNAL RECORD";
+        position: fixed;
+        top: 45%;
+        left: 50%;
+        transform: translate(-50%,-50%) rotate(-28deg);
+        font-family: 'IBM Plex Mono', 'Courier New', monospace;
+        font-size: 46px;
+        font-weight: 800;
+        color: rgba(15,23,42,0.035);
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* 1. IDENTITY SYSTEM */
+    #client-name-field {
+        font-family: 'IBM Plex Sans', Arial, Helvetica, sans-serif;
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #000000 !important;
+        text-transform: uppercase !important;
+        line-height: 1.1 !important;
+        outline: none !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        min-width: 420px;
+    }
+
+    .target-settlement-display {
+        font-size: 20px !important;
+        font-weight: 900 !important;
+        color: #166534 !important;
+        letter-spacing: -0.5px;
+        background: #f0fdf4;
+        padding: 4px 12px;
+        border-radius: 6px;
+        border: 1px solid #dcfce7;
+    }
+
+    .sol-font-fix { color: #000000 !important; font-weight: 900 !important; }
+
+    /* placeholders — single, non-flickering, CSS-driven */
+    [contenteditable="true"]:empty:before {
+        content: attr(data-ph);
+        color: #94a3b8;
+        font-style: italic;
+        font-weight: 400;
+    }
+
+    /* 2. INTEGRATED CASE BAR */
+    #lsh-integrated-bar {
+        background: var(--navy) !important;
+        padding: 14px 20px !important;
+        border-radius: 8px !important;
+        margin: 18px 0 !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        border-left: 6px solid var(--orange) !important;
+        gap: 20px !important;
+        min-height: 78px !important;
+    }
+    .bar-data-container { display: flex !important; gap: 14px !important; flex-shrink: 0 !important; }
+    .bar-box {
+        background: white !important;
+        border-radius: 6px !important;
+        padding: 8px 14px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        width: 170px !important;
+        height: 52px !important;
+        flex-shrink: 0 !important;
+    }
+    .bar-box label { margin-bottom: 2px !important; color: #64748b !important; font-size: 9px !important; font-weight: 900 !important; line-height: 1 !important; }
+    .bar-box div { color: #0f172a !important; font-weight: 800 !important; font-size: 13px !important; font-family: 'IBM Plex Mono', 'Courier New', monospace; }
+    .sol-box { }
+
+    /* 3. NAVIGATION */
+    .tab-btn {
+        cursor: pointer;
+        color: #94a3b8;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+        padding: 9px 4px;
+        transition: color .15s, border-color .15s;
+        border-bottom: 3px solid transparent;
+        white-space: nowrap;
+    }
+    .active-tab { border-bottom: 3px solid var(--orange) !important; color: var(--orange) !important; }
+    .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 220px; position: relative; z-index: 1; }
+    .tab-pane.active { display: block; }
+
+    /* 4. COMPONENTS */
+    .pdf-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 22px;
+        margin-bottom: 18px;
+        position: relative;
+    }
+    .section-head {
+        background: var(--navy);
+        color: var(--orange);
+        font-family: 'IBM Plex Mono', 'Courier New', monospace;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 7px 12px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        min-height: 30px;
+    }
+
+    [contenteditable="true"] {
+        outline: none;
+        background: #f8fafc;
+        border-radius: 4px;
+        padding: 8px 12px;
+        border: 1px solid #eef2f7;
+        min-height: 38px;
+        width: 100%;
+    }
+    [contenteditable="true"]:focus { background: #ffffff; border-color: var(--orange); box-shadow: 0 0 0 2px rgba(249,115,22,0.12); }
+
+    label { font-size: 10px !important; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.05em; }
+
+    /* "Contact" label: darker navy blue by default; shifts to a lighter blue for contrast if a background photo is active */
+    .contact-label { color: var(--navy-deep) !important; }
+    body.bg-photo-active .contact-label { color: #60a5fa !important; }
+
+    select.prof-input { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 4px; padding: 8px 10px; font-size: 13px; font-weight: 700; outline: none; width: 100%; color: #0f172a; cursor: pointer; }
+
+    .treat-table { width: 100%; border-collapse: collapse; }
+    .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; letter-spacing:0.04em; }
+    .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+
+    .hub-btn { background: #fffaf0; border: 1px solid #ffedd5; color: #9a3412; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 14px; border-radius: 8px; text-align: center; cursor: pointer; }
+    .hub-btn:hover { background: var(--orange); color: white; border-color: var(--orange); }
+
+    .add-btn {
+        background: var(--orange) !important;
+        color: #000 !important;
+        font-family: 'IBM Plex Mono', 'Courier New', monospace;
+        font-weight: 900 !important;
+        font-size: 10px !important;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 7px 16px !important;
+        border-radius: 5px !important;
+        border: none !important;
+        cursor: pointer;
+    }
+    .add-btn:hover { background: #0f172a !important; color: var(--orange) !important; }
+
+    .revert-btn { background: var(--orange); color: white; font-size: 12px; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-left: 5px; display: none; font-weight: 900; }
+
+    .repo-card { background: var(--navy) !important; border: 1px solid #1e293b !important; padding: 12px !important; border-radius: 8px !important; margin-bottom: 10px !important; cursor: pointer !important; position: relative !important; color: white; }
+    .repo-card:hover { border-color: var(--orange) !important; }
+
+    /* ===== SIDEBAR ===== */
+    #sidebar {
+        width: 280px;
+        background: var(--navy-deep);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        border-right: 1px solid #0d1c3d;
+        position: relative;
+    }
+    #sidebar-header {
+        padding: 24px 26px 22px;
+        border-bottom: 1px solid #0d1c3d;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        align-items: center;
+        text-align: center;
+    }
+    #agency-seal {
+        width: 88px; height: 88px; aspect-ratio: 1 / 1; border-radius: 10px;
+        border: 2px solid var(--orange);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0; overflow: hidden; background:#0f172a;
+    }
+    #agency-seal span { font-size: 40px !important; }
+    #agency-seal img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1 / 1; }
+
+    .session-btn {
+        width: 100%;
+        background: transparent;
+        border: 1px solid #334155;
+        color: #64748b;
+        font-family: 'IBM Plex Mono', 'Courier New', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+    .session-btn:hover { border-color: var(--orange); color: var(--orange); }
+    .session-btn.active-admin { border-color: var(--success); color: #4ade80; background: rgba(22,101,52,0.15); }
+    .session-btn.logout-btn { border-color: #7f1d1d; color: #fca5a5; }
+    .session-btn.logout-btn:hover { border-color: var(--classified-red); background: rgba(185,28,28,0.12); }
+    .session-user-tag { text-align:center; font-size:9.5px; color:#64748b; margin-bottom:8px; font-family:'IBM Plex Mono','Courier New',monospace; }
+    .session-user-tag b { color:#cbd5e1; }
+
+    /* ===== MODALS ===== */
+    .modal-overlay {
+        position: fixed; inset: 0; background: rgba(5,7,10,0.82);
+        display: none; align-items: center; justify-content: center;
+        z-index: 900; backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+        background: white; border-radius: 10px; width: 380px; max-width: 90vw;
+        padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        border-top: 6px solid var(--orange);
+    }
+    .modal-box.wide { width: 560px; }
+    .modal-box h2 { font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:19px; font-weight:800; margin:0 0 4px; }
+    .modal-box .sub { font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:18px; }
+    .modal-box input[type=text], .modal-box input[type=password] {
+        width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:6px;
+        font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:13px; margin-bottom:12px; outline:none;
+    }
+    .modal-box input:focus { border-color: var(--orange); }
+    .modal-btn-row { display:flex; gap:8px; margin-top:16px; }
+    .modal-btn-row button {
+        flex:1; padding:10px; border-radius:6px; font-weight:800; font-size:11px;
+        text-transform:uppercase; letter-spacing:0.04em; cursor:pointer; border:none;
+    }
+    .btn-primary { background: var(--navy); color: var(--orange); }
+    .btn-primary:hover { background: var(--navy-deep); }
+    .btn-ghost { background: #f1f5f9; color:#64748b; }
+    .btn-ghost:hover { background:#e2e8f0; }
+    #admin-error { color:var(--classified-red); font-size:11px; font-weight:700; margin-bottom:8px; display:none; }
+
+    .admin-panel-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px; }
+    .admin-tile { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; }
+    .admin-tile h4 { font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; font-weight:800; margin:0 0 10px; }
+    .admin-stat { font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:22px; font-weight:800; color:var(--navy); }
+    .admin-stat-label { font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; }
+
+    /* ===== AUTH GATE (Login / Register) ===== */
+    #auth-gate {
+        position: fixed; inset: 0; z-index: 2000; display: none;
+        align-items: center; justify-content: center;
+        --auth-accent: #f97316;
+        --auth-accent-hover: #fb923c;
+        --auth-glow: var(--navy-mid);
+        background: radial-gradient(circle at 30% 20%, var(--auth-glow), var(--navy-deep) 70%);
+        color: white; padding: 20px;
+        transition: background 0.4s ease;
+    }
+    #auth-gate.open { display: flex; }
+    #auth-gate.mode-admin {
+        --auth-accent: #ef4444;
+        --auth-accent-hover: #f87171;
+        --auth-glow: #3b0d0d;
+    }
+    .auth-box {
+        width: 420px; max-width: 100%;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid #1e2c4d;
+        border-top: 3px solid var(--auth-accent);
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+        transition: border-top-color 0.4s ease;
+    }
+    .auth-box .auth-brand { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+    .auth-box .auth-brand h1 { font-size:16px; font-weight:900; text-transform:uppercase; margin:0; letter-spacing:0.04em; }
+    .auth-box .auth-brand span { display:block; font-size:10px; color: var(--auth-accent); font-weight:700; letter-spacing:0.06em; transition: color 0.4s ease; }
+    #auth-seal { border-color: var(--auth-accent) !important; transition: border-color 0.4s ease; }
+    .portal-tabs { display:flex; gap:6px; margin-bottom:20px; background:#0d1c3d; border-radius:8px; padding:4px; }
+    .portal-tab {
+        flex:1; text-align:center; padding:9px 6px; border-radius:6px; cursor:pointer;
+        font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;
+        transition: background 0.25s ease, color 0.25s ease;
+    }
+    .portal-tab.active { background: var(--auth-accent); color:#0f2148; }
+    .auth-field { margin-bottom:12px; }
+    .auth-field label { color:#94a3b8; font-size:9.5px; }
+    .auth-field input, .auth-field select {
+        width:100%; padding:10px 12px; border-radius:6px; border:1px solid #1e2c4d;
+        background:#0d1c3d; color:white; font-family:'IBM Plex Mono','Courier New',monospace; font-size:13px; outline:none;
+    }
+    .auth-field input:focus, .auth-field select:focus { border-color: var(--auth-accent); }
+    .auth-submit {
+        width:100%; padding:11px; border-radius:6px; border:none; background: var(--auth-accent); color:#0f2148;
+        font-weight:900; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; margin-top:6px;
+        transition: background 0.25s ease;
+    }
+    .auth-submit:hover { background: var(--auth-accent-hover); }
+    .auth-switch { text-align:center; margin-top:16px; font-size:11px; color:#94a3b8; }
+    .auth-switch a { color: var(--auth-accent); cursor:pointer; font-weight:700; text-decoration:underline; }
+    .auth-msg { font-size:11px; font-weight:700; margin-bottom:12px; padding:9px 12px; border-radius:6px; display:none; }
+    .auth-msg.error { background:rgba(185,28,28,0.15); color:#fca5a5; display:block; }
+    .auth-msg.success { background:rgba(22,101,52,0.2); color:#86efac; display:block; }
+    .auth-msg.info { background:rgba(249,115,22,0.15); color:#fdba74; display:block; }
+
+    /* ===== ADMIN DASHBOARD (Master Control) ===== */
+    #admin-dashboard-overlay {
+        position: fixed; inset:0; z-index: 1500; display:none;
+        background: rgba(5,7,10,0.88); align-items:center; justify-content:center; padding:24px;
+    }
+    #admin-dashboard-overlay.open { display:flex; }
+    .admin-dash {
+        width: 920px; max-width: 100%; height: 82vh; max-height: 720px;
+        background: white; border-radius: 14px; overflow: hidden;
+        display:flex; flex-direction:column; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    }
+    .admin-dash-header {
+        background: var(--navy); color:white; padding:18px 24px;
+        display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+    }
+    .admin-dash-header h2 { margin:0; font-size:16px; font-weight:800; }
+    .admin-dash-header .sub { font-size:10px; color: var(--orange); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+    .admin-dash-tabs { display:flex; gap:2px; background:#f1f5f9; padding:0 16px; flex-shrink:0; overflow-x:auto; }
+    .admin-dash-tab {
+        padding:12px 16px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;
+        color:#64748b; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap;
+    }
+    .admin-dash-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+    .admin-dash-body { flex:1; overflow-y:auto; padding:22px 24px; background:#f8fafc; }
+    .admin-dash-pane { display:none; }
+    .admin-dash-pane.active { display:block; }
+    .reg-row {
+        display:flex; align-items:center; justify-content:space-between; gap:12px;
+        background:white; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin-bottom:10px;
+    }
+    .reg-row .reg-info { font-size:12px; }
+    .reg-row .reg-info b { display:block; font-size:13px; }
+    .reg-row .reg-meta { font-size:10px; color:#64748b; font-family:'IBM Plex Mono','Courier New',monospace; }
+    .status-pill { font-size:9px; font-weight:900; text-transform:uppercase; padding:3px 8px; border-radius:20px; letter-spacing:0.04em; }
+    .status-pending { background:#fff7ed; color:#c2410c; }
+    .status-approved { background:#f0fdf4; color:#166534; }
+    .status-rejected { background:#fef2f2; color:#b91c1c; }
+    .mini-btn { font-size:10px; font-weight:800; text-transform:uppercase; padding:6px 12px; border-radius:5px; cursor:pointer; border:none; }
+    .mini-btn.approve { background:#166534; color:white; }
+    .mini-btn.reject { background:#b91c1c; color:white; }
+    .mini-btn.revoke { background:#64748b; color:white; }
+
+    #lock-overlay {
+        position: fixed; inset:0; background: var(--navy-deep);
+        z-index: 1000; display:none; align-items:center; justify-content:center; flex-direction:column;
+        color:white; text-align:center;
+    }
+    #lock-overlay.open { display:flex; }
+
+    @media print {
+        .no-print { display: none !important; }
+        .pdf-card { border: 2px solid var(--orange) !important; break-inside: avoid; }
+        #lsh-integrated-bar { -webkit-print-color-adjust: exact; background-color: var(--navy) !important; }
+        #capture-area::before { display:none; }
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+    <!-- CLASSIFICATION / TIME BAR -->
+    <div id="classification-bar" class="no-print">
+        <div class="cls-left">
+            <span class="cls-label">LSH</span>
+            <span id="portal-title">LEGAL SUPPORT HELP TRAINING INTERFACE</span>
+        </div>
+        <div class="announcement-ticker" id="announcement-ticker">
+            <span class="announcement-tag" id="announcement-tag">ANNOUNCEMENT:</span>
+            <div class="ticker-viewport">
+                <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
+            </div>
+        </div>
+        <div class="clock-widget">
+            <span id="live-clock">--:--:--</span>
+            <select id="tz-select" onchange="refreshClock()" style="max-width:220px;">
+                <option value="Asia/Manila">Manila (PHT)</option>
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">New York (ET)</option>
+                <option value="America/Chicago">Chicago (CT)</option>
+                <option value="America/Denver">Denver (MT)</option>
+                <option value="America/Los_Angeles">Los Angeles (PT)</option>
+                <option value="Europe/London">London (GMT/BST)</option>
+                <option value="Asia/Tokyo">Tokyo (JST)</option>
+                <option value="Australia/Sydney">Sydney (AEST)</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="app-shell">
+    <aside id="sidebar" class="no-print custom-scrollbar">
+        <div id="sidebar-header">
+            <div id="agency-seal"><span>⚖</span></div>
+            <div>
+                <h1 class="font-black text-white leading-tight uppercase tracking-tight serif" style="font-size:22px; margin:0;">Legal Support Help</h1>
+                <div class="text-orange-500 mono" style="font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-top:4px;">Case Management System</div>
+            </div>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto custom-scrollbar" id="sidebar-actions" style="flex:1;">
+            <button onclick="requestDownload()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download Case Summary (PDF)</button>
+            <button onclick="if(confirm('Reset current work? Unsaved entries will be lost.')) window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Reset Screen</button>
+
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Repository</p>
+            <input type="text" id="repo-search" oninput="renderRepo()" placeholder="Search by client name..." style="width:100%; padding:8px 10px; margin-bottom:10px; border-radius:6px; border:1px solid #1e2c4d; background:#0d1c3d; color:white; font-size:11px; outline:none;">
+            <div id="repo-list" class="space-y-3 mb-2"></div>
+            <div id="repo-count-note" style="font-size:9.5px; color:#64748b; margin-bottom:8px;"></div>
+            <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">View All Files</button>
+
+            <button onclick="saveCase()" class="w-full bg-[#10b981] hover:bg-emerald-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Archive Case (Save as New)</button>
+            <button onclick="updateCase()" class="w-full bg-[#2563eb] hover:bg-blue-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Update Saved Case</button>
+            <div id="autosave-indicator" style="font-size:9.5px; color:#64748b; text-align:center; margin-bottom:12px; opacity:0.55; transition:opacity 0.3s;">Autosave active — drafts only, not final</div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="exportRepo()" class="w-full h-9 flex items-center justify-center bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-black rounded uppercase leading-none" style="box-sizing:border-box;">Export</button>
+                <label class="w-full h-9 flex items-center justify-center bg-[#374151] hover:bg-slate-600 text-white text-[10px] font-black rounded uppercase leading-none cursor-pointer" style="box-sizing:border-box;">
+                    Import<input type="file" onchange="importRepo(this)" class="hidden">
+                </label>
+            </div>
+        </div>
+        <div id="session-footer" style="margin:16px;"></div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar" id="capture-area">
+
+            <div class="pdf-card header-card shadow-lg border-2 border-orange-500">
+                <div class="flex justify-between items-start">
+                    <div class="space-y-1">
+                        <div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div>
+                        <div class="flex items-center gap-6">
+                            <div class="flex items-center gap-2"><label class="mb-0 contact-label">Contact:</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" style="min-width:140px" class="text-xs font-bold text-slate-700"></div></div>
+                            <div class="flex items-center gap-2"><label class="mb-0 text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" style="min-width:120px" class="target-settlement-display"></div></div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="flex items-center gap-3 mb-2 justify-end"><label class="mb-0">Case ID:</label><div id="case-id-field" contenteditable="false" class="text-xs font-bold text-slate-500 min-w-[160px] bg-slate-100 px-2 py-0.5 rounded mono">LSH-----</div></div>
+                        <div class="flex items-center gap-2">
+                            <select id="phase-selector" onchange="updatePhaseDisplay(this.value)" class="bg-orange-50 text-orange-700 text-[10px] font-black uppercase px-2 py-1 rounded border border-orange-100 cursor-pointer">
+                                <option value="Intake">Intake</option><option value="Investigation">Investigation</option><option value="Treatment">Treatment</option><option value="Demand Review">Demand Review</option><option value="Bi Demand">Bi Demand</option><option value="BI Settlement Nego">BI Settlement Nego</option><option value="UM Demand">UM Demand</option><option value="UM settlement">UM settlement</option><option value="Lien Negotiations">Lien Negotiations</option><option value="Disbursement">Disbursement</option><option value="Litigation">Litigation</option>
+                            </select>
+                            <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic leading-none min-w-[280px] serif">INTAKE</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="lsh-integrated-bar">
+                    <div class="bar-data-container">
+                        <div class="bar-box">
+                            <label>DATE OF LOSS</label>
+                            <div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div>
+                        </div>
+                        <div class="bar-box sol-box">
+                            <label>STATUTE (SOL)</label>
+                            <div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div>
+                        </div>
+                    </div>
+
+                    <div class="ml-auto flex items-center">
+                        <span class="text-[10px] font-black text-orange-500 italic uppercase mr-3">Type:</span>
+                        <div class="flex items-center bg-[#1f2937] rounded-lg border border-slate-700 p-1">
+                            <select id="main-case-type" onchange="handleOtherSystem(this.id, 'main-case-other', 'main-revert'); generateCaseId(false);" class="bg-transparent text-blue-400 font-black text-[11px] px-4 outline-none cursor-pointer uppercase">
+                                <option value="MVA">MVA</option>
+                                <option value="Slip and Fall">Slip and Fall</option>
+                                <option value="Dog Bite">Dog Bite</option>
+                                <option value="Premise Liability">Premise Liability</option>
+                                <option value="Others">Others</option>
+                            </select>
+                            <div id="main-case-other" contenteditable="true" data-ph="TYPE OTHER..." oninput="generateCaseId(false);" class="hidden text-white text-[11px] px-2 min-w-[120px] outline-none"></div>
+                            <button id="main-revert" onclick="revertOther('main-case-type', 'main-case-other', 'main-revert')" class="revert-btn">↺</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-6 mt-6 no-print overflow-x-auto pb-2">
+                    <div onclick="showTab('profile')" id="tab-profile" class="tab-btn active-tab">Profile</div>
+                    <div onclick="showTab('police')" id="tab-police" class="tab-btn">Police Report</div>
+                    <div onclick="showTab('matrix')" id="tab-matrix" class="tab-btn">Insurance</div>
+                    <div onclick="showTab('liens')" id="tab-liens" class="tab-btn">Liens</div>
+                    <div onclick="showTab('medical')" id="tab-medical" class="tab-btn">Treatment</div>
+                    <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Property Damage</div>
+                    <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
+                    <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Finance</div>
+                    <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
+                    <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
+                    <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
+                </div>
+            </div>
+
+            <div id="pane-profile" class="tab-pane active">
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><div class="section-head">Identity</div>
+                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
+                            <div class="mb-4"><label>Email Address</label><div contenteditable="true" data-ph="name@example.com" data-fmt="email"></div></div><div><label>Home Address</label><div contenteditable="true" data-ph="Street, City, State, ZIP"></div></div>
+                        </div>
+                        <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><div class="section-head" style="background:#fff7ed;color:#c2410c;">Emergency Contact</div>
+                            <div class="mb-4"><label>Full Name</label><div contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
+                            <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div><div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse"></div></div></div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><div class="section-head">Employment Details</div>
+                            <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option><option>Retired</option></select></div>
+                            <div class="mb-4"><label>Employer Name</label><div contenteditable="true" data-ph="Enter employer" data-fmt="name"></div></div>
+                            <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true" data-ph="Enter title"></div></div>
+                        </div>
+                    </div>
+                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div></div>
+                </div>
+                <div class="mt-6">
+                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase mb-0">Passenger Records</label><button onclick="addPassenger()" class="add-btn no-print">+ Add Passenger</button></div>
+                    <div id="passenger-container" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <div id="pane-police" class="tab-pane">
+                <div class="pdf-card border-l-8 border-blue-500">
+                    <div class="section-head" style="background:#0f172a;color:#60a5fa;">Police Report Details</div>
+                    <div class="grid grid-cols-3 gap-8 mb-8">
+                        <div><label>Responding Agency</label><div contenteditable="true" data-ph="e.g. State Highway Patrol"></div></div>
+                        <div><label>Report Number</label><div contenteditable="true" data-ph="Enter report #"></div></div>
+                        <div><label>Reporting Officer</label><div contenteditable="true" data-ph="Name & Badge #"></div></div>
+                    </div>
+                    <label>Officer's Narrative Summary</label>
+                    <div contenteditable="true" data-ph="Type police summary here..." class="multiline-field min-h-[420px] bg-slate-50 p-6 rounded text-sm italic leading-relaxed text-slate-700"></div>
+                </div>
+            </div>
+
+            <div id="pane-matrix" class="tab-pane">
+                <div class="space-y-8">
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="pdf-card border-l-4 border-blue-500 shadow-sm">
+                            <div class="section-head" style="background:#eff6ff;color:#1d4ed8;">Health Insurance</div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Carrier</label><div contenteditable="true" data-ph="Enter carrier" data-fmt="name"></div></div>
+                                <div><label>Member ID</label><div contenteditable="true" data-ph="Enter member ID"></div></div>
+                                <div class="col-span-2"><label>Group Number</label><div contenteditable="true" data-ph="Enter group #"></div></div>
+                            </div>
+                        </div>
+                        <div class="pdf-card border-l-4 border-blue-900 shadow-sm">
+                            <div class="section-head" style="background:#eef2ff;color:#1e3a8a;">Independent Subrogation Card</div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Subro Agency</label><div contenteditable="true" data-ph="Enter agency" data-fmt="name"></div></div>
+                                <div><label>Lien Holder</label><div contenteditable="true" data-ph="Enter lien holder" data-fmt="name"></div></div>
+                                <div><label>Claim #</label><div contenteditable="true" data-ph="Enter claim #"></div></div>
+                                <div><label>Lien Amount</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="font-bold text-red-600"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center"><label class="font-black text-red-600 text-sm uppercase mb-0">Bodily Injury (BI) Policies</label><button onclick="addBI()" class="add-btn no-print">+ Add BI Policy</button></div>
+                    <div id="bi-container" class="space-y-4"></div>
+
+                    <div class="flex justify-between items-center"><label class="font-black text-orange-600 text-sm uppercase mb-0">PIP / UM/UIM Coverage Stack</label><button onclick="addPIPUM()" class="add-btn no-print">+ Add Coverage</button></div>
+                    <div id="pip-um-container" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <div id="pane-liens" class="tab-pane">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="section-head" style="margin-bottom:0;">Outstanding Case Liens</div>
+                    <button onclick="addLien()" class="add-btn no-print">+ Add Lien Entry</button>
+                </div>
+                <div id="lien-container" class="space-y-4"></div>
+            </div>
+
+            <div id="pane-medical" class="tab-pane">
+                <div class="pdf-card mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Medical Chronology</div>
+                        <button onclick="addChronology()" class="add-btn no-print">+ Add Chronology Entry</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead>
+                            <tr>
+                                <th width="210">Date of Service</th>
+                                <th width="190">Medical Facility</th>
+                                <th width="160">Next Appointment Schedule</th>
+                                <th>Notes</th>
+                                <th width="30"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="chrono-container"></tbody>
+                    </table>
+                </div>
+                <div class="pdf-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Provider Treatment Matrix</div>
+                        <button onclick="addFacility()" class="add-btn no-print">+ Add Medical Facility</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead>
+                            <tr>
+                                <th width="190">Medical Facility</th>
+                                <th width="170">Specialty</th>
+                                <th width="180">Provider Contact</th>
+                                <th width="170">Dates of Treatment</th>
+                                <th width="150">Treatment Status</th>
+                                <th width="140">Invoiced Charges</th>
+                                <th width="30"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="facility-container"></tbody>
+                    </table>
+                </div>
+                <div class="pdf-card bg-green-50 mt-4 border-l-8 border-green-600 flex justify-between items-center">
+                    <span class="font-black uppercase text-green-700 text-sm tracking-widest">Total Medical Specials (Auto-Calc)</span>
+                    <span id="med-total" class="text-4xl font-black text-green-800 mono">$ 0.00</span>
+                </div>
+                <div class="pdf-card mt-4">
+                    <div class="section-head">Treatment Notes</div>
+                    <div contenteditable="true" data-ph="Enter treatment notes, gaps in care, referrals, or other clinical observations..." class="multiline-field min-h-[160px] text-sm italic leading-relaxed text-slate-600"></div>
+                </div>
+            </div>
+
+            <div id="pane-pd" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500 mb-8">
+                    <div class="section-head">Client Vehicle</div>
+                    <div class="grid grid-cols-4 gap-6 mb-8">
+                        <div><label>Year</label><div contenteditable="true" data-ph="YYYY" data-fmt="year"></div></div>
+                        <div><label>Make</label><div contenteditable="true" data-ph="Enter make"></div></div>
+                        <div><label>Model</label><div contenteditable="true" data-ph="Enter model"></div></div>
+                        <div><label>License Plate No.</label><div contenteditable="true" data-ph="Enter plate number" data-fmt="upper" class="mono"></div></div>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-lg">
+                        <div class="grid grid-cols-2 gap-8">
+                            <div><label>Registered Owner</label><div contenteditable="true" data-ph="Enter owner" data-fmt="name"></div></div>
+                            <div><label>Driver's Name</label><div contenteditable="true" data-ph="Enter driver" data-fmt="name"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pdf-card border-l-8 border-slate-400">
+                    <div class="section-head" style="background:#334155;">Third Party Vehicle</div>
+                    <div class="grid grid-cols-4 gap-6 mb-8">
+                        <div><label>Year</label><div contenteditable="true" data-ph="YYYY" data-fmt="year"></div></div>
+                        <div><label>Make</label><div contenteditable="true" data-ph="Enter make"></div></div>
+                        <div><label>Model</label><div contenteditable="true" data-ph="Enter model"></div></div>
+                        <div><label>License Plate No.</label><div contenteditable="true" data-ph="Enter plate number" data-fmt="upper" class="mono"></div></div>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-lg">
+                        <div class="grid grid-cols-2 gap-8 mb-2">
+                            <div><label>Registered Owner</label><div id="tp-owner" contenteditable="true" data-ph="Enter owner" data-fmt="name"></div></div>
+                            <div><label>Driver's Name</label><div id="tp-driver" contenteditable="true" data-ph="Enter driver" data-fmt="name"></div></div>
+                        </div>
+
+                        <div id="tp-owner-extra" class="hidden grid grid-cols-2 gap-8 mb-6 mt-2 pt-4 border-t border-slate-200">
+                            <div>
+                                <label class="text-orange-600">Vehicle Owner's Contact Number <span class="normal-case font-normal text-slate-400">(owner differs from driver)</span></label>
+                                <div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div>
+                            </div>
+                            <div>
+                                <label class="text-orange-600">Vehicle Owner's Policy Information</label>
+                                <div contenteditable="true" data-ph="Enter owner's insurance carrier & policy #"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-8 mt-6">
+                            <div><label>Driver Insured?</label><select id="tp-driver-insured" onchange="toggleDriverInsuredExtra()" class="prof-input"><option>Select</option><option>Yes</option><option>No</option></select></div>
+                            <div><label>Carrier / Policy Details</label><div contenteditable="true" data-ph="Enter carrier & policy"></div></div>
+                        </div>
+
+                        <div id="tp-driver-extra" class="hidden grid grid-cols-2 gap-8 mt-6 pt-4 border-t border-slate-200">
+                            <div>
+                                <label class="text-orange-600">Driver's Contact Number</label>
+                                <div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div>
+                            </div>
+                            <div>
+                                <label class="text-orange-600">Driver's Insurance Company</label>
+                                <div contenteditable="true" data-ph="Enter insurance company" data-fmt="name"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-litigation" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500 mb-6">
+                    <div class="grid grid-cols-4 gap-8">
+                        <div><label>Statute (SOL)</label><div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        <div><label>Complaint Filed</label><div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        <div><label>Discovery Cut-off</label><div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        <div><label>Trial Date</label><div contenteditable="true" class="sol-font-fix text-orange-600" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                    </div>
+                </div>
+                <div class="pdf-card shadow-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Discovery & Filing Tracker</div>
+                        <button onclick="addRow('lit-body')" class="add-btn no-print">+ Add Task</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="200">Task Type</th><th width="200">Party Involved</th><th width="150">Due Date</th><th width="150">Status</th><th width="40"></th></tr></thead>
+                        <tbody id="lit-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="pane-finance" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Finance Tracking</div>
+                        <button onclick="addRow('fin-body')" class="add-btn no-print">+ Add Entry</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Assigned To</th><th>Expense ID / Description</th><th width="150">Amount</th><th width="40"></th></tr></thead>
+                        <tbody id="fin-body"></tbody>
+                    </table>
+                </div>
+                <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center">
+                    <span class="font-black uppercase text-blue-700 text-xs">Consolidated File Expenses</span>
+                    <span id="exp-total" class="text-2xl font-black text-blue-700 mono">$ 0.00</span>
+                </div>
+            </div>
+
+            <div id="pane-docs" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="section-head">Quick Label Portal</div>
+                    <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
+                        <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
+                        <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
+                        <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
+                        <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
+                        <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
+                        <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
+                        <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
+                        <button onclick="addDocument('Others')" class="hub-btn">Others</button>
+                    </div>
+                    <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
+                </div>
+            </div>
+
+            <div id="pane-notes" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6"><div class="section-head" style="margin-bottom:0;">Case Chronology</div><button onclick="addRow('note-body')" class="add-btn no-print">+ Add Note</button></div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
+                        <tbody id="note-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="pane-tasks" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6"><div class="section-head" style="margin-bottom:0;">Action Item Log</div><button onclick="addRow('task-body')" class="add-btn no-print">+ Add Task</button></div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Staff Assigned</th><th>Task Description</th><th width="40"></th></tr></thead>
+                        <tbody id="task-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    </div>
+
+    <!-- ===== AUTH GATE: LOGIN / REGISTER ===== -->
+    <div id="auth-gate" class="no-print">
+        <div class="auth-box">
+            <div class="auth-brand">
+                <div id="auth-seal" style="width:38px;height:38px;border-radius:6px;border:2px solid var(--orange);overflow:hidden;flex-shrink:0;"></div>
+                <div>
+                    <h1>Legal Support Help</h1>
+                    <span>Training Interface Access</span>
+                </div>
+            </div>
+
+            <!-- LOGIN VIEW -->
+            <div id="auth-login-view">
+                <div class="portal-tabs">
+                    <div class="portal-tab active" id="portal-tab-trainee" onclick="switchPortalTab('Trainee')">Trainee Portal</div>
+                    <div class="portal-tab" id="portal-tab-admin" onclick="switchPortalTab('Admin')">Admin Portal</div>
+                </div>
+                <div id="auth-login-msg" class="auth-msg"></div>
+                <div class="auth-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" placeholder="Enter your username"></div>
+                <div class="auth-field"><label>Password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter your password"></div>
+                <button class="auth-submit" onclick="attemptLogin()">Log In</button>
+                <div class="auth-switch">No account yet? <a onclick="showRegisterView()">Register here</a></div>
+            </div>
+
+            <!-- REGISTER VIEW -->
+            <div id="auth-register-view" class="hidden">
+                <div id="auth-register-msg" class="auth-msg"></div>
+                <div class="auth-field" style="display:grid; grid-template-columns: 2fr 0.7fr; gap:8px;">
+                    <div><label>First Name</label><input type="text" id="reg-firstname" autocomplete="off" data-allow="name" placeholder="e.g., Juan"></div>
+                    <div><label>M.I.</label><input type="text" id="reg-middlename" autocomplete="off" maxlength="2" data-allow="alnum-upper" placeholder="M.I."></div>
+                </div>
+                <div class="auth-field" style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                    <div><label>Last Name</label><input type="text" id="reg-lastname" autocomplete="off" data-allow="name" placeholder="e.g., Dela Cruz"></div>
+                    <div><label>Suffix <span style="text-transform:none;">(optional)</span></label><input type="text" id="reg-suffix" autocomplete="off" placeholder="Jr., III..."></div>
+                </div>
+                <div class="auth-field"><label>Gmail</label><input type="email" id="reg-gmail" placeholder="name@gmail.com" autocomplete="off" data-allow="email"></div>
+                <div class="auth-field"><label>Type of User</label>
+                    <select id="reg-usertype" onchange="onRegUserTypeChange()">
+                        <option value="Trainee">Trainee</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" data-allow="alnum-upper" placeholder="Enter your batch ID"></div>
+                <div class="auth-field"><label>Username</label><input type="text" id="reg-username" autocomplete="off" data-allow="alnum-underscore" placeholder="Choose a username"></div>
+                <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="off" placeholder="Create a password"></div>
+                <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="off" placeholder="Retype your password"></div>
+                <button class="auth-submit" onclick="submitRegistration()">Submit Registration</button>
+                <div class="auth-switch">Already have an account? <a onclick="showLoginView()">Back to log in</a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ADMIN DASHBOARD (Master Control) ===== -->
+    <div id="admin-dashboard-overlay" class="no-print">
+        <div class="admin-dash">
+            <div class="admin-dash-header">
+                <div>
+                    <h2>Master Control</h2>
+                    <div class="sub" id="admin-dash-session">Administrator Session</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;" onclick="closeAdminDashboard()">Close</button>
+                    <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:8px 14px;" onclick="logoutSession()">Log Out</button>
+                </div>
+            </div>
+            <div class="admin-dash-tabs">
+                <div class="admin-dash-tab active" onclick="showAdminDashTab('overview')">Overview</div>
+                <div class="admin-dash-tab" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></div>
+                <div class="admin-dash-tab" onclick="showAdminDashTab('announce')">Announcements</div>
+                <div class="admin-dash-tab" onclick="showAdminDashTab('branding')">Branding</div>
+                <div class="admin-dash-tab" onclick="showAdminDashTab('access')">Access Control</div>
+            </div>
+            <div class="admin-dash-body">
+                <div class="admin-dash-pane active" id="admin-dash-overview">
+                    <div class="admin-panel-grid">
+                        <div class="admin-tile">
+                            <h4>Archived Cases</h4>
+                            <div class="admin-stat" id="admin-stat-cases">0</div>
+                            <div class="admin-stat-label">Records in Repository</div>
+                        </div>
+                        <div class="admin-tile">
+                            <h4>Current Case</h4>
+                            <div class="admin-stat" id="admin-stat-name" style="font-size:14px;">—</div>
+                            <div class="admin-stat-label" id="admin-stat-phase">No active phase</div>
+                        </div>
+                        <div class="admin-tile">
+                            <h4>Medical Specials On Screen</h4>
+                            <div class="admin-stat" id="admin-stat-med">$0.00</div>
+                            <div class="admin-stat-label">Auto-calculated</div>
+                        </div>
+                        <div class="admin-tile">
+                            <h4>Pending Registrations</h4>
+                            <div class="admin-stat" id="admin-stat-pending">0</div>
+                            <div class="admin-stat-label">Awaiting review</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-dash-pane" id="admin-dash-registrations">
+                    <p style="font-size:11px;color:#64748b;margin-bottom:14px;">All registrations submitted from the login screen appear here for review.</p>
+                    <div id="registrations-list"></div>
+                </div>
+
+                <div class="admin-dash-pane" id="admin-dash-announce">
+                    <div class="admin-tile">
+                        <h4>Current Ticker Message</h4>
+                        <p id="announce-current-preview" style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">Welcome to the LSH Training Interface.</p>
+                        <textarea id="announce-text-input" placeholder="Type the message to broadcast..." style="width:100%;min-height:80px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin-bottom:12px;"></textarea>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAnnouncement()">📢 Make an Announcement</button>
+                            <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAlert()">⚠ Make an Alert</button>
+                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" id="pause-ticker-btn" onclick="togglePauseTicker()">⏸ Pause</button>
+                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="clearAnnouncement()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-dash-pane" id="admin-dash-branding">
+                    <div class="admin-tile" style="margin-bottom:14px;">
+                        <h4>Agency Logo / Seal</h4>
+                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Displayed as a 1×1 square tile. Any image is automatically cropped to fit.</p>
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <label class="btn-primary" style="cursor:pointer; text-align:center; padding:10px 16px; border-radius:6px; font-size:11px; font-weight:800; text-transform:uppercase;">
+                                Upload / Change Logo
+                                <input type="file" accept="image/*" class="hidden" onchange="changeLogo(this)">
+                            </label>
+                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="resetLogo()">Reset to Default</button>
+                        </div>
+                    </div>
+                    <div class="admin-tile">
+                        <h4>Interface Background Image</h4>
+                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Uploaded photos sit behind the interface color, which is automatically applied on top at 65% strength so text stays readable.</p>
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <label class="btn-primary" style="cursor:pointer; text-align:center; padding:10px 16px; border-radius:6px; font-size:11px; font-weight:800; text-transform:uppercase;">
+                                Upload Background Photo
+                                <input type="file" accept="image/*" class="hidden" onchange="setBackgroundImage(this)">
+                            </label>
+                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="resetBackgroundImage()">Remove Background</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-dash-pane" id="admin-dash-access">
+                    <div class="admin-tile">
+                        <h4>Page Access Control</h4>
+                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Locking the page blocks all editing until an administrator unlocks it again.</p>
+                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="lockPage()">Lock This Page</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LOCK SCREEN ===== -->
+    <div id="lock-overlay">
+        <div style="font-size:40px;">🔒</div>
+        <h2 class="serif" style="margin:14px 0 4px;">Page Locked by Administrator</h2>
+        <p class="mono" style="font-size:11px; color:#94a3b8; margin-bottom:20px;">Enter administrator credentials to resume access.</p>
+        <div style="width:300px;">
+            <input type="text" id="unlock-user" placeholder="Username" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;">
+            <input type="password" id="unlock-pass" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;">
+            <div id="unlock-error" style="display:none;color:#f87171;font-size:11px;margin-bottom:8px;">Invalid credentials.</div>
+            <button class="btn-primary" style="width:100%;padding:10px;border-radius:6px;" onclick="attemptUnlock()">Unlock Page</button>
+        </div>
+    </div>
+
+    <!-- ===== AUTO-ARCHIVE (INACTIVITY) MODAL ===== -->
+    <div class="modal-overlay no-print" id="auto-archive-modal" style="z-index:2500;">
+        <div class="modal-box">
+            <h2 class="serif">⚠ Inactivity Detected</h2>
+            <div class="sub mono">Data Protection Safeguard</div>
+            <p style="font-size:12px; color:#475569; margin-bottom:14px; line-height:1.5;">
+                No activity has been detected on this case for 5 minutes. To prevent losing your work, this case will be automatically archived to the Case Repository as a draft.
+            </p>
+            <p style="font-size:12px; color:#0f2148; font-weight:800; margin-bottom:16px;">
+                Archiving in <span id="auto-archive-countdown" style="color:var(--classified-red); font-family:'IBM Plex Mono','Courier New',monospace; font-size:16px;">10</span> seconds if no response...
+            </p>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="cancelAutoArchive()">Cancel</button>
+                <button class="btn-primary" onclick="performAutoArchive()">Archive Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ALL CASES MODAL ===== -->
+    <div class="modal-overlay no-print" id="all-cases-modal">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif">All Archived Cases</h2>
+            <div class="sub mono">Full Case Repository</div>
+            <input type="text" id="all-cases-search" oninput="renderAllCasesModal()" placeholder="Search by client name..." style="width:100%; padding:9px 12px; margin-bottom:12px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
+            <div id="all-cases-list" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeAllCasesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== DOWNLOAD CONFIRMATION MODAL ===== -->
+    <div class="modal-overlay no-print" id="download-confirm-modal">
+        <div class="modal-box">
+            <h2 class="serif">Confirm Copy Production</h2>
+            <div class="sub mono">Type your name to verify you are producing this copy</div>
+            <div id="download-confirm-error" style="display:none;color:var(--classified-red);font-size:11px;font-weight:700;margin-bottom:8px;">Please complete both fields.</div>
+            <label>Full Name</label>
+            <input type="text" id="dl-fullname" autocomplete="off" placeholder="Type your full name as registered" data-allow="name">
+            <label>Batch ID</label>
+            <input type="text" id="dl-batchid" autocomplete="off" placeholder="Enter your batch ID" data-allow="alnum-upper" class="mono">
+            <p style="font-size:10px;color:#94a3b8;margin:6px 0 0;">Date &amp; time this copy is produced (auto-generated): <b id="dl-date-preview" class="mono"></b></p>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeDownloadConfirm()">Cancel</button>
+                <button class="btn-primary" onclick="confirmDownload()">Confirm & Download</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================================
+           LSH CASE MANAGEMENT SYSTEM — CORE SCRIPT
+           Consolidated, de-duplicated, and cleaned up.
+           ========================================================= */
+        const REPO_KEY = 'LSH_ULTRALOCK_V2026_MASTER_DEEP_BUILD_FINAL';
+        let currentCaseId = null; // tracks which saved case (if any) is currently loaded, for Update Case
+        const ADMIN_USER = 'LSHADMIN123';
+        const ADMIN_PASS = 'LSHADMINPASS123';
+        const LOGO_KEY = 'LSH_LOGO_DATAURL';
+        const BG_KEY = 'LSH_BG_DATAURL';
+        const LOCK_KEY = 'LSH_PAGE_LOCKED';
+        const USERS_KEY = 'LSH_USERS_V1';
+        const SESSION_KEY = 'LSH_SESSION_V1';
+        const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
+        const ADMIN_BATCH_COUNTER_KEY = 'LSH_ADMIN_BATCH_COUNTER_V1';
+        const TRAINEE_BATCH_COUNTER_KEY = 'LSH_TRAINEE_BATCH_COUNTER_V1';
+        const SEED_ADMIN = { fullName: 'System Administrator', gmail: '-', batchId: 'ADMIN', userType: 'Admin', username: ADMIN_USER, password: ADMIN_PASS, status: 'approved' };
+        const DEFAULT_LOGO = "data:image/png;base64,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";
+
+
+        const staffOptions = `
+            <option>Lead Attorney</option>
+            <option>Associate Attorney</option>
+            <option>Paralegal</option>
+            <option>Case Manager</option>
+            <option>Demand Specialist</option>
+            <option>Records Specialist</option>
+            <option>PD Specialist</option>
+            <option>Lien Negotiator</option>
+            <option>Intake Specialist</option>
+        `;
+
+        /* ---------- Tabs ---------- */
+        function showTab(id) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById('pane-' + id).classList.add('active');
+            document.getElementById('tab-' + id).classList.add('active-tab');
+        }
+
+        function updatePhaseDisplay(val) {
+            document.getElementById('display-phase').innerText = val.toUpperCase();
+        }
+
+        function handleOtherSystem(selectId, otherInputId, revertId) {
+            const sel = document.getElementById(selectId);
+            const input = document.getElementById(otherInputId);
+            const rev = document.getElementById(revertId);
+            if (sel.value === "Others" || sel.value === "Other") {
+                sel.classList.add('hidden');
+                input.classList.remove('hidden');
+                rev.style.display = "inline-block";
+                input.focus();
+            }
+        }
+
+        function revertOther(selectId, otherInputId, revertId) {
+            document.getElementById(selectId).classList.remove('hidden');
+            document.getElementById(selectId).selectedIndex = 0;
+            document.getElementById(otherInputId).classList.add('hidden');
+            document.getElementById(revertId).style.display = "none";
+        }
+
+        /* ---------- Third Party Vehicle: conditional owner/driver sections ---------- */
+        function toggleOwnerExtra() {
+            const owner = document.getElementById('tp-owner').innerText.trim().toLowerCase();
+            const driver = document.getElementById('tp-driver').innerText.trim().toLowerCase();
+            const extra = document.getElementById('tp-owner-extra');
+            if (owner && driver && owner !== driver) extra.classList.remove('hidden');
+            else extra.classList.add('hidden');
+        }
+        function toggleDriverInsuredExtra() {
+            const val = document.getElementById('tp-driver-insured').value;
+            const extra = document.getElementById('tp-driver-extra');
+            if (val === 'Yes') extra.classList.remove('hidden');
+            else extra.classList.add('hidden');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const owner = document.getElementById('tp-owner');
+            const driver = document.getElementById('tp-driver');
+            if (owner && driver) {
+                owner.addEventListener('input', toggleOwnerExtra);
+                driver.addEventListener('input', toggleOwnerExtra);
+                owner.addEventListener('focusout', toggleOwnerExtra);
+                driver.addEventListener('focusout', toggleOwnerExtra);
+            }
+        });
+
+        /* ---------- Placeholder auto-labeling (runs once per insertion, no polling) ---------- */
+        function applyPlaceholders(scope) {
+            const root = scope || document;
+            root.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                if (el.hasAttribute('data-ph')) return;
+                const wrap = el.closest('div');
+                const lbl = wrap ? wrap.querySelector('label') : null;
+                el.setAttribute('data-ph', lbl ? ('Enter ' + lbl.innerText.trim()) : 'Enter details');
+            });
+        }
+
+        /* ---------- Dynamic row/card builders ---------- */
+        function addRow(id) {
+            const tr = document.createElement('tr');
+            const today = new Date().toLocaleDateString();
+            if (id === 'lit-body') {
+                tr.innerHTML = `<td><select class="prof-input text-xs"><option>Service</option><option>Complaint</option><option>Summons</option><option>Interrogatories</option><option>RFP</option><option>RFA</option><option>Deposition Notice</option><option>Subpoena</option><option>Motion</option></select></td><td><div contenteditable="true" class="text-xs" data-ph="Enter party"></div></td><td><div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY" data-fmt="date"></div></td><td><select class="prof-input text-xs"><option>Pending</option><option>Responded</option><option>Completed</option></select></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
+            } else if (id === 'fin-body') {
+                tr.innerHTML = `<td><div contenteditable="true" class="text-xs">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs" data-ph="Enter description"></div></td><td><div contenteditable="true" class="font-black exp-field text-xs text-blue-600" data-ph="$ 0.00" data-fmt="currency"></div></td><td><button onclick="this.parentElement.parentElement.remove(); updateTotals();" class="text-red-500 font-bold">×</button></td>`;
+            } else if (id === 'note-body' || id === 'task-body') {
+                tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold text-slate-400">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="multiline-field text-xs min-h-[40px] italic" data-ph="Enter details"></div></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
+            }
+            document.getElementById(id).appendChild(tr);
+            applyPlaceholders(tr);
+        }
+
+        /* ---------- Case ID auto-generation: LSH-<Year>-<Type>-<XXXXXX> ---------- */
+        const TYPE_CODES = { 'MVA': 'MVA', 'Slip and Fall': 'SNF', 'Dog Bite': 'DOG', 'Premise Liability': 'PRL' };
+        function currentTypeCode() {
+            const sel = document.getElementById('main-case-type');
+            if (sel.value === 'Others') {
+                const other = document.getElementById('main-case-other').innerText.trim();
+                return other ? other.replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 4) || 'OTH' : 'OTH';
+            }
+            return TYPE_CODES[sel.value] || sel.value.replace(/\s+/g, '').toUpperCase().substring(0, 3);
+        }
+        function nextSeriesNumber() {
+            let n = parseInt(localStorage.getItem('LSH_CASE_SERIES_COUNTER') || '0', 10) + 1;
+            localStorage.setItem('LSH_CASE_SERIES_COUNTER', String(n));
+            return String(n).padStart(6, '0');
+        }
+        function generateCaseId(forceNewSeries) {
+            const year = new Date().getFullYear();
+            const typeCode = currentTypeCode();
+            const field = document.getElementById('case-id-field');
+            let series = field.dataset.series;
+            if (!series || forceNewSeries) {
+                series = nextSeriesNumber();
+                field.dataset.series = series;
+            }
+            field.innerText = `LSH-${year}-${typeCode}-${series}`;
+        }
+
+        function addBI() {
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-red-500 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6 mb-6">
+                    <div><label>Policy Holder</label><div contenteditable="true" data-ph="Enter policy holder" data-fmt="name"></div></div>
+                    <div><label>Carrier</label><div contenteditable="true" data-ph="Enter carrier" data-fmt="name"></div></div>
+                    <div><label>Policy #</label><div contenteditable="true" data-ph="Enter policy #"></div></div>
+                    <div><label>Claim #</label><div contenteditable="true" data-ph="Enter claim #"></div></div>
+                </div>
+                <div class="grid grid-cols-4 gap-6">
+                    <div><label>Adjuster Name</label><div contenteditable="true" data-ph="Enter adjuster name" data-fmt="name"></div></div>
+                    <div><label>Adjuster Contact</label><div contenteditable="true" data-ph="Enter adjuster contact"></div></div>
+                    <div><label>Liability Accepted?</label><select class="prof-input"><option>Pending</option><option>Yes</option><option>No</option></select></div>
+                    <div><label>Policy Limits</label><div contenteditable="true" data-ph="Enter limits"></div></div>
+                </div>`;
+            document.getElementById('bi-container').appendChild(div);
+        }
+
+        function addPIPUM() {
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6 mb-6">
+                    <div><label>Coverage Type</label><select class="prof-input"><option>PIP</option><option>UM/UIM</option></select></div>
+                    <div><label>Policy Holder</label><div contenteditable="true" data-ph="Enter policy holder" data-fmt="name"></div></div>
+                    <div><label>Insurance Carrier</label><div contenteditable="true" data-ph="Enter carrier" data-fmt="name"></div></div>
+                    <div><label>Policy #</label><div contenteditable="true" data-ph="Enter policy #"></div></div>
+                </div>
+                <div class="grid grid-cols-4 gap-6">
+                    <div><label>Claim Number</label><div contenteditable="true" data-ph="Enter claim #"></div></div>
+                    <div><label>Adjuster Name</label><div contenteditable="true" data-ph="Enter adjuster name" data-fmt="name"></div></div>
+                    <div><label>Adjuster Contact</label><div contenteditable="true" data-ph="Enter adjuster contact"></div></div>
+                    <div><label>Policy Limits</label><div contenteditable="true" data-ph="Enter limits"></div></div>
+                </div>`;
+            document.getElementById('pip-um-container').appendChild(div);
+        }
+
+        function addLien() {
+            const id = Date.now();
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-slate-900 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6">
+                    <div><label>Type of Lien</label><div class="flex items-center"><select id="l-sel-${id}" onchange="handleOtherSystem(this.id, 'l-oth-${id}', 'l-rev-${id}')" class="prof-input"><option>Prior Atty Lien</option><option>Medical Lien</option><option>HI Subro</option><option>Funding</option><option>Other</option></select><div id="l-oth-${id}" contenteditable="true" data-ph="Specify type" class="hidden text-xs font-bold px-2 py-1 bg-orange-50 border border-orange-200 min-w-[80px]"></div><button id="l-rev-${id}" onclick="revertOther('l-sel-${id}', 'l-oth-${id}', this.id)" class="revert-btn">↺</button></div></div>
+                    <div><label>Lienholder Entity</label><div contenteditable="true" data-ph="Enter entity" data-fmt="name"></div></div>
+                    <div><label>Claim / File #</label><div contenteditable="true" data-ph="Enter claim / file #"></div></div>
+                    <div><label>Lien Amount</label><div contenteditable="true" class="text-red-600 font-bold" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                </div>`;
+            document.getElementById('lien-container').appendChild(div);
+        }
+
+        function addFacility() {
+            const id = "fac-" + Date.now();
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><div contenteditable="true" class="text-xs" data-ph="Enter facility name"></div></td>
+                <td>
+                    <div class="flex items-center gap-1">
+                        <select id="sel-${id}" onchange="handleOtherSystem(this.id, 'oth-${id}', 'rev-${id}')" class="prof-input text-xs"><option>Chiro</option><option>EMC</option><option>EMS</option><option>Emergency Hospital</option><option>Ortho</option><option>Surgery</option><option>Anesthesia</option><option>Pain Management</option><option value="Other">Other</option></select>
+                        <div id="oth-${id}" contenteditable="true" data-ph="Specify" class="hidden text-xs px-2 py-1 bg-orange-50 border border-orange-200 min-w-[70px]"></div>
+                        <button id="rev-${id}" onclick="revertOther('sel-${id}', 'oth-${id}', this.id)" class="revert-btn">↺</button>
+                    </div>
+                </td>
+                <td><div contenteditable="true" class="text-xs" data-ph="Phone / Email" data-fmt="phone"></div></td>
+                <td><div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY – MM/DD/YYYY"></div></td>
+                <td><select class="prof-input text-xs"><option>Ongoing</option><option>Discharged</option><option>Referred Out</option><option>Pending Records</option></select></td>
+                <td><div contenteditable="true" class="med-field font-black text-green-700 text-xs" data-ph="$ 0.00" data-fmt="currency"></div></td>
+                <td><button onclick="this.parentElement.parentElement.remove(); updateTotals();" class="text-red-500 font-bold">×</button></td>
+            `;
+            document.getElementById('facility-container').appendChild(tr);
+            applyPlaceholders(tr);
+        }
+
+        function addChronology() {
+            const rowId = "chrono-" + Date.now();
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <div class="chrono-dos-list" id="dos-${rowId}">
+                        <div class="flex items-center gap-1 mb-1">
+                            <div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY" data-fmt="date"></div>
+                        </div>
+                    </div>
+                    <button onclick="addChronoDate('dos-${rowId}')" class="add-btn no-print" style="margin-top:2px;">+ Add Date</button>
+                </td>
+                <td><div contenteditable="true" class="text-xs" data-ph="Enter facility name" data-fmt="name"></div></td>
+                <td><div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY" data-fmt="date"></div></td>
+                <td><div contenteditable="true" class="multiline-field text-xs italic" data-ph="Enter notes"></div></td>
+                <td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>
+            `;
+            document.getElementById('chrono-container').appendChild(tr);
+            applyPlaceholders(tr);
+        }
+        function addChronoDate(containerId) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = "flex items-center gap-1 mb-1";
+            div.innerHTML = `<div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY" data-fmt="date"></div><button onclick="this.parentElement.remove()" class="text-red-400 font-bold text-[10px]">×</button>`;
+            container.appendChild(div);
+            applyPlaceholders(div);
+        }
+
+        function addPassenger() {
+            const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-orange-500 relative bg-white p-6 mb-4 shadow-sm";
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
+                <div class="grid grid-cols-4 gap-6">
+                    <div><label>Full Name</label><div contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
+                    <div><label>DOB</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                    <div><label>Contact Info</label><div contenteditable="true" data-ph="Enter contact"></div></div>
+                    <div><label>Injury Sustained</label><div contenteditable="true" data-ph="Enter injury"></div></div>
+                </div>`;
+            document.getElementById('passenger-container').appendChild(div);
+        }
+
+        function addDocument(label) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
+            document.getElementById('doc-body').appendChild(tr);
+            applyPlaceholders(tr);
+        }
+
+        /* ---------- Totals ---------- */
+        function updateTotals() {
+            let med = 0; document.querySelectorAll('.med-field').forEach(el => med += parseFloat(el.innerText.replace(/[^0-9.-]/g, '')) || 0);
+            document.getElementById('med-total').innerText = '$ ' + med.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            let exp = 0; document.querySelectorAll('.exp-field').forEach(el => exp += parseFloat(el.innerText.replace(/[^0-9.-]/g, '')) || 0);
+            if (document.getElementById('exp-total')) document.getElementById('exp-total').innerText = '$ ' + exp.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        }
+        // Recalculate on input instead of aggressive polling — avoids flicker/lag.
+        document.addEventListener('input', (e) => {
+            if (e.target && (e.target.classList.contains('med-field') || e.target.classList.contains('exp-field'))) updateTotals();
+        });
+        setInterval(updateTotals, 4000); // light safety-net, not a UI repaint loop
+
+        /* ---------- Case repository ---------- */
+        // Single source of truth for what a "case snapshot" contains, so
+        // manual saves, updates, and autosave/auto-archive never drift apart.
+        function buildCaseSnapshot(id, extra) {
+            const name = (document.getElementById('client-name-field').innerText.split('\n')[0] || 'Unnamed Client').trim();
+            // Look up any existing record for this case so the original submitter's
+            // identity and the running download count are carried forward untouched —
+            // they must never be overwritten by a later save/update/autosave.
+            const repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            const existing = repo.find(i => i.id === id);
+            const session = getSession();
+            const submittedBy = (existing && existing.submittedBy) ? existing.submittedBy : (session ? session.fullName : 'Unknown');
+            const submittedByBatch = (existing && existing.submittedByBatch) ? existing.submittedByBatch : (session ? session.batchId : '—');
+            const submittedAt = (existing && existing.submittedAt) ? existing.submittedAt : new Date().toISOString();
+            const downloadCount = (existing && typeof existing.downloadCount === 'number') ? existing.downloadCount : 0;
+            return Object.assign({
+                id: id,
+                name: name,
+                phase: document.getElementById('display-phase').innerText,
+                caseId: document.getElementById('case-id-field').innerText,
+                submittedBy: submittedBy,
+                submittedByBatch: submittedByBatch,
+                submittedAt: submittedAt,
+                downloadCount: downloadCount,
+                html: { pass: document.getElementById('passenger-container').innerHTML, facs: document.getElementById('facility-container').innerHTML, chrono: document.getElementById('chrono-container').innerHTML, fin: document.getElementById('fin-body').innerHTML, pipum: document.getElementById('pip-um-container').innerHTML, bi: document.getElementById('bi-container').innerHTML, docs: document.getElementById('doc-body').innerHTML, lit: document.getElementById('lit-body').innerHTML, liens: document.getElementById('lien-container').innerHTML, notes: document.getElementById('note-body').innerHTML, tasks: document.getElementById('task-body').innerHTML, police: document.getElementById('pane-police').innerHTML },
+                inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
+                sels: Array.from(document.querySelectorAll('select')).map(el => el.value),
+                final: false, // nothing saved from this screen is ever "final" — always reopenable and editable
+                savedAt: new Date().toISOString()
+            }, extra || {});
+        }
+        function hasCaseContent() {
+            // Only a client name typed by the user counts as "real" case content.
+            // case-id-field is auto-generated by the system on every page load/reset,
+            // so it's never a reliable signal that the user has actually entered anything.
+            const name = document.getElementById('client-name-field').innerText.trim();
+            return !!name;
+        }
+        function saveCase() {
+            const data = buildCaseSnapshot(Date.now(), { draft: true });
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); repo.unshift(data); localStorage.setItem(REPO_KEY, JSON.stringify(repo)); renderRepo();
+            currentCaseId = data.id;
+        }
+        function updateCase() {
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            if (currentCaseId === null || !repo.some(i => i.id === currentCaseId)) {
+                alert("No saved case is currently open to update. Load a case from the repository first, or use \"Archive Case\" to save this as a new one.");
+                return;
+            }
+            const data = buildCaseSnapshot(currentCaseId, { draft: true });
+            repo = repo.map(i => i.id === currentCaseId ? data : i);
+            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            renderRepo();
+            alert("Saved case updated.");
+        }
+
+        /* ---------- Autosave (background, silent) ----------
+           Runs on an interval and also right before an inactivity auto-archive.
+           Always writes a draft (final: false) — archived/autosaved cases are
+           never locked and can always be reopened via loadCase() for editing. */
+        const AUTOSAVE_INTERVAL_MS = 60 * 1000; // every 60 seconds
+        function autoSaveProgress(reason) {
+            if (!hasCaseContent()) return false; // nothing meaningful to save yet
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            const targetId = (currentCaseId !== null && repo.some(i => i.id === currentCaseId)) ? currentCaseId : Date.now();
+            const data = buildCaseSnapshot(targetId, { draft: true, autoSaved: true, autoSaveReason: reason || 'interval' });
+            if (repo.some(i => i.id === targetId)) {
+                repo = repo.map(i => i.id === targetId ? data : i);
+            } else {
+                repo.unshift(data);
+            }
+            currentCaseId = targetId;
+            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            renderRepo();
+            flashAutoSaveIndicator();
+            return true;
+        }
+        function flashAutoSaveIndicator() {
+            const el = document.getElementById('autosave-indicator');
+            if (!el) return;
+            const stamp = new Date().toLocaleTimeString();
+            el.innerText = `Autosaved as draft · ${stamp}`;
+            el.style.opacity = '1';
+            clearTimeout(flashAutoSaveIndicator._t);
+            flashAutoSaveIndicator._t = setTimeout(() => { el.style.opacity = '0.55'; }, 4000);
+        }
+        setInterval(() => autoSaveProgress('interval'), AUTOSAVE_INTERVAL_MS);
+
+        function renderRepo() {
+            const list = document.getElementById('repo-list');
+            const countNote = document.getElementById('repo-count-note');
+            const searchEl = document.getElementById('repo-search');
+            const query = (searchEl ? searchEl.value : '').trim().toLowerCase();
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            if (query) repo = repo.filter(item => item.name.toLowerCase().includes(query));
+
+            const shown = repo.slice(0, 5);
+            list.innerHTML = shown.length ? shown.map(item => `<div onclick="loadCase(${item.id})" class="repo-card group p-3 rounded-lg"><span class="repo-name block font-bold text-xs mb-1">${item.name}${item.draft ? ' <span style="font-size:9px;font-weight:800;color:#f97316;border:1px solid #f97316;border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle;">DRAFT</span>' : ''}</span><button onclick="deleteCase(${item.id}, event)" class="absolute top-1 right-2 text-slate-500">×</button></div>`).join('') : '<p style="font-size:11px;color:#64748b;">No matching cases.</p>';
+
+            if (repo.length > 5) countNote.innerText = `Showing 5 of ${repo.length} matching cases.`;
+            else countNote.innerText = '';
+        }
+        function loadCase(id) {
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); const data = repo.find(i => i.id === id); if (!data) return;
+            document.getElementById('passenger-container').innerHTML = data.html.pass;
+            document.getElementById('facility-container').innerHTML = data.html.facs;
+            document.getElementById('chrono-container').innerHTML = data.html.chrono || "";
+            document.getElementById('fin-body').innerHTML = data.html.fin;
+            document.getElementById('pip-um-container').innerHTML = data.html.pipum;
+            document.getElementById('bi-container').innerHTML = data.html.bi;
+            document.getElementById('doc-body').innerHTML = data.html.docs;
+            document.getElementById('lit-body').innerHTML = data.html.lit;
+            document.getElementById('lien-container').innerHTML = data.html.liens;
+            document.getElementById('note-body').innerHTML = data.html.notes || "";
+            document.getElementById('task-body').innerHTML = data.html.tasks || "";
+            document.getElementById('pane-police').innerHTML = data.html.police;
+            if (data.caseId) document.getElementById('case-id-field').innerText = data.caseId;
+            const edits = document.querySelectorAll('[contenteditable="true"]'); data.inputs.forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
+            const selects = document.querySelectorAll('select'); data.sels.forEach((v, i) => { if (selects[i]) selects[i].value = v; });
+            updateTotals(); toggleOwnerExtra(); toggleDriverInsuredExtra(); showTab('profile');
+            currentCaseId = id;
+            closeAllCasesModal();
+        }
+        function deleteCase(id, e) { e.stopPropagation(); if (confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); if (currentCaseId === id) currentCaseId = null; renderRepo(); renderAllCasesModal(); } }
+
+        function openAllCasesModal() {
+            document.getElementById('all-cases-search').value = '';
+            renderAllCasesModal();
+            document.getElementById('all-cases-modal').classList.add('open');
+        }
+        function closeAllCasesModal() { document.getElementById('all-cases-modal').classList.remove('open'); }
+        function renderAllCasesModal() {
+            const query = document.getElementById('all-cases-search').value.trim().toLowerCase();
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            if (query) repo = repo.filter(item => item.name.toLowerCase().includes(query));
+            const list = document.getElementById('all-cases-list');
+            if (!repo.length) { list.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No matching cases.</p>'; return; }
+            list.innerHTML = repo.map(item => `
+                <div class="reg-row" style="cursor:pointer;" onclick="loadCase(${item.id})">
+                    <div class="reg-info">
+                        <b>${item.name}</b>
+                        <div class="reg-meta">${item.caseId || ''} ${item.phase ? '&middot; ' + item.phase : ''}</div>
+                    </div>
+                    <button class="mini-btn reject" onclick="deleteCase(${item.id}, event)">Delete</button>
+                </div>
+            `).join('');
+        }
+        function exportRepo() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem(REPO_KEY) || '[]'], { type: 'application/json' })); a.download = 'LSH_Backup.json'; a.click(); }
+        function importRepo(i) { const r = new FileReader(); r.onload = (e) => { localStorage.setItem(REPO_KEY, e.target.result); renderRepo(); alert("Data Imported"); }; r.readAsText(i.files[0]); }
+
+        /* ---------- PDF export ---------- */
+        function downloadPDF(info) {
+            info = info || {};
+            const virtualPage = document.createElement('div');
+            Object.assign(virtualPage.style, { padding: '46px', backgroundColor: '#ffffff', color: '#0f2148', fontFamily: "'IBM Plex Sans', Arial, sans-serif", lineHeight: '1.5' });
+
+            const clientName = document.getElementById('client-name-field').innerText.trim() || "UNNAMED CLIENT";
+            const phase = document.getElementById('display-phase').innerText;
+            const caseId = document.getElementById('case-id-field').innerText.trim() || '—';
+            const logoSrc = localStorage.getItem(LOGO_KEY) || DEFAULT_LOGO;
+
+            // Person who originally submitted / created this case record.
+            const subName = info.submittedBy || '—';
+            const subBatch = info.submittedByBatch || '—';
+            const subDate = info.submittedAt || '—';
+
+            // Person producing THIS particular downloaded copy (may be a different person).
+            const copyName = info.producedByName || '—';
+            const copyBatch = info.producedByBatch || '—';
+            const copyDate = info.producedAt || new Date().toLocaleString();
+
+            // How many times this case's file has been downloaded, per the database record.
+            const printSeq = (typeof info.printSequence === 'number') ? info.printSequence : 1;
+
+            virtualPage.innerHTML = `
+                <div style="display:flex; align-items:center; gap:14px; margin-bottom:18px;">
+                    <img src="${logoSrc}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:2px solid #f97316;" />
+                    <div>
+                        <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size:9px; font-weight:800; letter-spacing:1.5px; color:#64748b; text-transform:uppercase;">Legal Support Help &middot; Training Interface</div>
+                        <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size:9px; font-weight:900; letter-spacing:1.5px; color:#b91c1c; text-transform:uppercase;">Confidential — LSH Internal Record</div>
+                    </div>
+                </div>
+                <div style="border-bottom: 4px solid #0f2148; margin-bottom: 24px; padding-bottom: 14px;">
+                    <h1 style="margin:0; font-size: 26px; font-weight:800; text-transform: uppercase; letter-spacing:0.02em;">${clientName}</h1>
+                    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing:0.04em;">
+                        <span style="color: #f97316;">Case ID: ${caseId}</span>
+                        <span style="color: #f97316;">Phase: ${phase}</span>
+                        <span style="color: #64748b;">Printed: ${new Date().toLocaleString()}</span>
+                        <span style="color: #b91c1c;">Print Sequence: #${printSeq}</span>
+                    </div>
+                    <div style="margin-top:14px; display:flex; gap:12px;">
+                        <div style="flex:1; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-family:'IBM Plex Mono','Courier New',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:#0f2148;">
+                            <div style="color:#94a3b8; font-size:8px; margin-bottom:5px;">Submitted By (Case Originator)</div>
+                            <div>Name: ${subName}</div>
+                            <div>Batch ID: ${subBatch}</div>
+                            <div>Date of Submission: ${subDate}</div>
+                        </div>
+                        <div style="flex:1; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-family:'IBM Plex Mono','Courier New',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:#0f2148;">
+                            <div style="color:#94a3b8; font-size:8px; margin-bottom:5px;">Copy Produced By</div>
+                            <div>Name: ${copyName}</div>
+                            <div>Batch ID: ${copyBatch}</div>
+                            <div>Date &amp; Time Produced: ${copyDate}</div>
+                        </div>
+                    </div>
+                </div>`;
+
+            const cards = document.querySelectorAll('.pdf-card');
+            cards.forEach(card => {
+                const header = card.querySelector('.section-head, h3');
+                if (!header) return;
+                let sectionContent = "";
+                const inputs = card.querySelectorAll('[contenteditable="true"], select');
+                inputs.forEach(input => {
+                    const val = input.tagName === 'SELECT' ? input.value : input.innerText.trim();
+                    if (val) {
+                        let labelText = "Detail";
+                        if (input.previousElementSibling && input.previousElementSibling.tagName === "LABEL") {
+                            labelText = input.previousElementSibling.innerText;
+                        } else if (input.closest('div') && input.closest('div').querySelector('label')) {
+                            labelText = input.closest('div').querySelector('label').innerText;
+                        }
+                        sectionContent += `<div style="margin-bottom: 11px; padding-bottom: 6px; border-bottom: 1px solid #f1f5f9; break-inside: avoid;">
+                            <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing:0.04em;">${labelText}</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #0f2148; margin-top:2px;">${val}</div>
+                        </div>`;
+                    }
+                });
+                if (sectionContent) {
+                    virtualPage.innerHTML += `<div style="margin-bottom: 26px; break-inside: avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                        <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">${header.innerText}</div>
+                        <div style="padding: 16px 18px;">${sectionContent}</div>
+                    </div>`;
+                }
+            });
+
+            virtualPage.innerHTML += `
+                <div style="margin-top:30px; padding-top:12px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-family:'IBM Plex Mono','Courier New',monospace; font-size:8.5px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">
+                    <span>Generated via LSH Training Interface</span>
+                    <span>For internal training use only</span>
+                </div>`;
+
+            const exportOptions = { margin: [0.5, 0.5], filename: `LSH_SUMMARY_${clientName.replace(/\s+/g, '_')}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+            html2pdf().set(exportOptions).from(virtualPage).save().then(() => virtualPage.remove());
+        }
+
+        /* =========================================================
+           LIVE CLOCK + TIMEZONE
+           ========================================================= */
+        function populateTimezones() {
+            const select = document.getElementById('tz-select');
+            let zones = [];
+            try {
+                if (typeof Intl.supportedValuesOf === 'function') {
+                    zones = Intl.supportedValuesOf('timeZone');
+                }
+            } catch (e) { zones = []; }
+
+            if (!zones.length) return; // keep the built-in fallback list already in the HTML
+
+            const preferred = 'Asia/Manila';
+            const groups = {};
+            zones.forEach(z => {
+                const region = z.includes('/') ? z.split('/')[0] : 'Other';
+                if (!groups[region]) groups[region] = [];
+                groups[region].push(z);
+            });
+
+            select.innerHTML = '';
+            select.appendChild(new Option('UTC', 'UTC'));
+            Object.keys(groups).sort().forEach(region => {
+                const og = document.createElement('optgroup');
+                og.label = region.replace(/_/g, ' ');
+                groups[region].sort().forEach(z => {
+                    const label = z.split('/').slice(1).join(' / ').replace(/_/g, ' ') || z;
+                    og.appendChild(new Option(label, z));
+                });
+                select.appendChild(og);
+            });
+            select.value = preferred;
+        }
+
+        function refreshClock() {
+            const tz = document.getElementById('tz-select').value;
+            const now = new Date();
+            const formatted = new Intl.DateTimeFormat('en-US', {
+                year: 'numeric', month: 'short', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                timeZone: tz, hour12: true
+            }).format(now);
+            document.getElementById('live-clock').innerText = formatted;
+        }
+        setInterval(refreshClock, 1000);
+
+        /* =========================================================
+           AUTHENTICATION — Login / Register / Session
+           ========================================================= */
+        function getUsers() { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
+        function saveUsers(list) { localStorage.setItem(USERS_KEY, JSON.stringify(list)); }
+        function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
+        function setSession(user) { localStorage.setItem(SESSION_KEY, JSON.stringify({ fullName: user.fullName, batchId: user.batchId, userType: user.userType, username: user.username })); }
+        function clearSession() { localStorage.removeItem(SESSION_KEY); }
+
+        let currentPortalTab = 'Trainee';
+        function switchPortalTab(portal) {
+            currentPortalTab = portal;
+            document.getElementById('portal-tab-trainee').classList.toggle('active', portal === 'Trainee');
+            document.getElementById('portal-tab-admin').classList.toggle('active', portal === 'Admin');
+            document.getElementById('auth-gate').classList.toggle('mode-admin', portal === 'Admin');
+            document.getElementById('auth-login-msg').className = 'auth-msg';
+        }
+        function showLoginView() {
+            document.getElementById('auth-login-view').classList.remove('hidden');
+            document.getElementById('auth-register-view').classList.add('hidden');
+        }
+        function showRegisterView() {
+            document.getElementById('auth-login-view').classList.add('hidden');
+            document.getElementById('auth-register-view').classList.remove('hidden');
+            document.getElementById('reg-usertype').value = currentPortalTab;
+            onRegUserTypeChange();
+        }
+        function onRegUserTypeChange() {
+            const type = document.getElementById('reg-usertype').value;
+            const batchField = document.getElementById('reg-batchid');
+            if (type === 'Admin') {
+                batchField.value = previewAdminBatchId();
+                batchField.placeholder = '';
+                batchField.disabled = true;
+            } else if (type === 'Trainee') {
+                batchField.value = previewTraineeBatchId();
+                batchField.placeholder = '';
+                batchField.disabled = true;
+            } else {
+                batchField.value = '';
+                batchField.placeholder = 'Enter your batch ID';
+                batchField.disabled = false;
+            }
+        }
+
+        // Format: <YEAR>-LSHADMIN-<DDMMXXX> — DD/MM is the registration date,
+        // XXX is a chronological sequence number across all admin registrations.
+        function buildAdminBatchId(counter) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const xxx = String(counter).padStart(3, '0');
+            return `${year}-LSHADMIN-${dd}${mm}${xxx}`;
+        }
+        // Shows what the next admin Batch ID will be, without consuming the counter.
+        function previewAdminBatchId() {
+            const counter = parseInt(localStorage.getItem(ADMIN_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            return buildAdminBatchId(counter);
+        }
+        // Actually reserves and persists the next counter value on submission.
+        function generateAdminBatchId() {
+            const counter = parseInt(localStorage.getItem(ADMIN_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            localStorage.setItem(ADMIN_BATCH_COUNTER_KEY, String(counter));
+            return buildAdminBatchId(counter);
+        }
+
+        // Format: <YEAR>-LSHTRAINEE-<DDMMXXX> — DD/MM is the registration date,
+        // XXX is a chronological sequence number across all trainee registrations.
+        function buildTraineeBatchId(counter) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const xxx = String(counter).padStart(3, '0');
+            return `${year}-LSHTRAINEE-${dd}${mm}${xxx}`;
+        }
+        // Shows what the next trainee Batch ID will be, without consuming the counter.
+        function previewTraineeBatchId() {
+            const counter = parseInt(localStorage.getItem(TRAINEE_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            return buildTraineeBatchId(counter);
+        }
+        // Actually reserves and persists the next counter value on submission.
+        function generateTraineeBatchId() {
+            const counter = parseInt(localStorage.getItem(TRAINEE_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            localStorage.setItem(TRAINEE_BATCH_COUNTER_KEY, String(counter));
+            return buildTraineeBatchId(counter);
+        }
+
+        function authenticate(username, password, portal) {
+            if (portal === 'Admin' && username === SEED_ADMIN.username && password === SEED_ADMIN.password) {
+                return { ok: true, user: SEED_ADMIN };
+            }
+            const users = getUsers();
+            const match = users.find(u => u.username === username && u.password === password && u.userType === portal);
+            if (!match) return { ok: false, reason: 'invalid' };
+            if (match.status !== 'approved') return { ok: false, reason: match.status === 'rejected' ? 'rejected' : 'pending' };
+            return { ok: true, user: match };
+        }
+
+        function attemptLogin() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const msg = document.getElementById('auth-login-msg');
+            msg.className = 'auth-msg';
+            if (!u || !p) { msg.textContent = 'Log in error: please enter both your username and password.'; msg.classList.add('error'); return; }
+            const result = authenticate(u, p, currentPortalTab);
+            if (!result.ok) {
+                if (result.reason === 'pending') msg.textContent = 'Log in error: your registration is still pending admin approval. You will be able to log in once it is approved.';
+                else if (result.reason === 'rejected') msg.textContent = 'Log in error: this registration was rejected. Please contact an administrator for assistance.';
+                else msg.textContent = 'Log in error: incorrect username or password, or no ' + currentPortalTab.toLowerCase() + ' account is registered under that username.';
+                msg.classList.add('error');
+                return;
+            }
+            setSession(result.user);
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            msg.textContent = 'Login successful. Welcome back, ' + result.user.fullName + '.';
+            msg.classList.remove('error'); msg.classList.add('success');
+            // Give the user a moment to actually see the success message
+            // before the login overlay closes and the portal UI takes over.
+            setTimeout(applySessionUI, 900);
+        }
+
+        function submitRegistration() {
+            const msg = document.getElementById('auth-register-msg');
+            msg.className = 'auth-msg';
+            const firstName = document.getElementById('reg-firstname').value.trim();
+            const middleName = document.getElementById('reg-middlename').value.trim();
+            const lastName = document.getElementById('reg-lastname').value.trim();
+            const suffix = document.getElementById('reg-suffix').value.trim();
+            const gmail = document.getElementById('reg-gmail').value.trim();
+            const userType = document.getElementById('reg-usertype').value;
+            let batchId = document.getElementById('reg-batchid').value.trim();
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const password2 = document.getElementById('reg-password2').value;
+
+            if (!firstName || !lastName || !gmail || !username || !password || !password2) {
+                msg.textContent = 'Please fill in all required fields.'; msg.classList.add('error'); return;
+            }
+            if (!/^[^\s@]+@gmail\.com$/i.test(gmail)) {
+                msg.textContent = 'Please enter a valid Gmail address.'; msg.classList.add('error'); return;
+            }
+            if (password !== password2) {
+                msg.textContent = 'Passwords do not match.'; msg.classList.add('error'); return;
+            }
+            if (username === SEED_ADMIN.username) {
+                msg.textContent = 'That username is reserved.'; msg.classList.add('error'); return;
+            }
+            const users = getUsers();
+            if (users.some(u => u.username === username)) {
+                msg.textContent = 'That username is already taken.'; msg.classList.add('error'); return;
+            }
+
+            if (userType === 'Admin') batchId = generateAdminBatchId();
+            if (userType === 'Trainee') batchId = generateTraineeBatchId();
+
+            const fullName = [firstName, middleName ? middleName.replace(/\.$/, '') + '.' : '', lastName].filter(Boolean).join(' ') + (suffix ? ', ' + suffix : '');
+            users.push({ id: Date.now(), fullName, firstName, middleName, lastName, suffix, gmail, batchId, userType, username, password, status: 'pending', createdAt: new Date().toISOString() });
+            saveUsers(users);
+            msg.textContent = (userType === 'Admin' || userType === 'Trainee')
+                ? `Registration submitted. Your assigned Batch ID is ${batchId}. An administrator will review it shortly.`
+                : 'Registration submitted. An administrator will review it shortly.';
+            msg.classList.remove('error'); msg.classList.add('success');
+            document.getElementById('reg-firstname').value = '';
+            document.getElementById('reg-middlename').value = '';
+            document.getElementById('reg-lastname').value = '';
+            document.getElementById('reg-suffix').value = '';
+            document.getElementById('reg-gmail').value = '';
+            document.getElementById('reg-username').value = '';
+            document.getElementById('reg-password').value = '';
+            document.getElementById('reg-password2').value = '';
+            renderRegistrations();
+        }
+
+        function applySessionUI() {
+            const session = getSession();
+            const gate = document.getElementById('auth-gate');
+            const footer = document.getElementById('session-footer');
+            const portalTitle = document.getElementById('portal-title');
+
+            if (!session) {
+                gate.classList.add('open');
+                footer.innerHTML = '';
+                portalTitle.innerText = 'LEGAL SUPPORT HELP TRAINING INTERFACE';
+                return;
+            }
+            gate.classList.remove('open');
+            portalTitle.innerText = `LEGAL SUPPORT HELP TRAINING INTERFACE - ${session.userType.toUpperCase()} PORTAL`;
+
+            if (session.userType === 'Admin') {
+                footer.innerHTML = `
+                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: ${session.batchId}</div>
+                    <button class="session-btn active-admin" onclick="openAdminDashboard()">Admin Panel</button>
+                    <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
+                `;
+            } else {
+                footer.innerHTML = `
+                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: ${session.batchId}</div>
+                    <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
+                `;
+            }
+        }
+
+        function logoutSession() {
+            clearSession();
+            closeAdminDashboard();
+            applySessionUI();
+        }
+
+        /* ---------- Admin Dashboard (Master Control) ---------- */
+        function openAdminDashboard() {
+            const session = getSession();
+            if (!session || session.userType !== 'Admin') return;
+            document.getElementById('admin-dash-session').innerText = session.fullName + ' \u00B7 Batch ' + session.batchId;
+            document.getElementById('admin-stat-cases').innerText = (JSON.parse(localStorage.getItem(REPO_KEY) || '[]')).length;
+            document.getElementById('admin-stat-name').innerText = (document.getElementById('client-name-field').innerText.trim() || '\u2014');
+            document.getElementById('admin-stat-phase').innerText = 'Phase: ' + document.getElementById('display-phase').innerText;
+            document.getElementById('admin-stat-med').innerText = document.getElementById('med-total').innerText;
+            renderRegistrations();
+            document.getElementById('admin-dashboard-overlay').classList.add('open');
+        }
+        function closeAdminDashboard() { document.getElementById('admin-dashboard-overlay').classList.remove('open'); }
+        function showAdminDashTab(tab) {
+            const tabs = ['overview', 'registrations', 'announce', 'branding', 'access'];
+            document.querySelectorAll('.admin-dash-tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tab));
+            document.querySelectorAll('.admin-dash-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('admin-dash-' + tab).classList.add('active');
+        }
+
+        function renderRegistrations() {
+            const users = getUsers();
+            const list = document.getElementById('registrations-list');
+            const pending = users.filter(u => u.status === 'pending').length;
+            document.getElementById('admin-stat-pending').innerText = pending;
+            const badge = document.getElementById('reg-pending-badge');
+            if (badge) badge.innerText = pending > 0 ? ('(' + pending + ')') : '';
+
+            if (!users.length) { list.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No registrations submitted yet.</p>'; return; }
+            list.innerHTML = users.slice().reverse().map(function(u) {
+                return '<div class="reg-row">' +
+                    '<div class="reg-info">' +
+                        '<b>' + u.fullName + ' <span class="status-pill status-' + u.status + '">' + u.status + '</span></b>' +
+                        '<div class="reg-meta">' + u.userType + ' \u00B7 Batch ' + u.batchId + ' \u00B7 @' + u.username + ' \u00B7 ' + u.gmail + '</div>' +
+                    '</div>' +
+                    '<div style="display:flex; gap:6px;">' +
+                        (u.status !== 'approved' ? ('<button class="mini-btn approve" onclick="setRegistrationStatus(' + u.id + ',\'approved\')">Approve</button>') : '') +
+                        (u.status !== 'rejected' ? ('<button class="mini-btn reject" onclick="setRegistrationStatus(' + u.id + ',\'rejected\')">Reject</button>') : '') +
+                        (u.status === 'approved' ? ('<button class="mini-btn revoke" onclick="setRegistrationStatus(' + u.id + ',\'pending\')">Revoke</button>') : '') +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+        function setRegistrationStatus(id, status) {
+            const users = getUsers();
+            const u = users.find(x => x.id === id);
+            if (u) u.status = status;
+            saveUsers(users);
+            renderRegistrations();
+        }
+
+        /* =========================================================
+           ANNOUNCEMENTS / NEWS TICKER
+           ========================================================= */
+        function getAnnouncement() { try { return JSON.parse(localStorage.getItem(ANNOUNCE_KEY) || 'null'); } catch (e) { return null; } }
+        function saveAnnouncement(data) { localStorage.setItem(ANNOUNCE_KEY, JSON.stringify(data)); }
+        function applyAnnouncementUI() {
+            const data = getAnnouncement() || { text: 'Welcome to the LSH Training Interface.', type: 'announcement', paused: false };
+            document.getElementById('ticker-text').innerText = data.text;
+            document.getElementById('announce-current-preview').innerText = data.text;
+            const wrap = document.getElementById('announcement-ticker');
+            const tag = document.getElementById('announcement-tag');
+            const track = document.getElementById('ticker-track');
+            wrap.classList.toggle('is-alert', data.type === 'alert');
+            tag.innerText = data.type === 'alert' ? 'ALERT:' : 'ANNOUNCEMENT:';
+            track.classList.toggle('paused', !!data.paused);
+            const pauseBtn = document.getElementById('pause-ticker-btn');
+            if (pauseBtn) pauseBtn.innerText = data.paused ? 'Resume' : 'Pause';
+        }
+        function makeAnnouncement() {
+            const text = document.getElementById('announce-text-input').value.trim();
+            if (!text) return;
+            saveAnnouncement({ text: text, type: 'announcement', paused: false });
+            document.getElementById('announce-text-input').value = '';
+            applyAnnouncementUI();
+        }
+        function makeAlert() {
+            const text = document.getElementById('announce-text-input').value.trim();
+            if (!text) return;
+            saveAnnouncement({ text: text, type: 'alert', paused: false });
+            document.getElementById('announce-text-input').value = '';
+            applyAnnouncementUI();
+        }
+        function togglePauseTicker() {
+            const data = getAnnouncement() || { text: 'Welcome to the LSH Training Interface.', type: 'announcement', paused: false };
+            data.paused = !data.paused;
+            saveAnnouncement(data);
+            applyAnnouncementUI();
+        }
+        function clearAnnouncement() {
+            saveAnnouncement({ text: 'Welcome to the LSH Training Interface.', type: 'announcement', paused: false });
+            applyAnnouncementUI();
+        }
+
+        function changeLogo(input) {
+            const file = input.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                localStorage.setItem(LOGO_KEY, e.target.result);
+                applyLogo();
+            };
+            reader.readAsDataURL(file);
+        }
+        function resetLogo() { localStorage.removeItem(LOGO_KEY); applyLogo(); }
+        function applyLogo() {
+            const seal = document.getElementById('agency-seal');
+            // uses global DEFAULT_LOGO
+            const stored = localStorage.getItem(LOGO_KEY);
+            seal.innerHTML = '<img src="' + (stored || DEFAULT_LOGO) + '" alt="Agency Logo">';
+            const authSeal = document.getElementById('auth-seal');
+            if (authSeal) authSeal.innerHTML = '<img src="' + (stored || DEFAULT_LOGO) + '" alt="Agency Logo" style="width:100%;height:100%;object-fit:cover;">';
+        }
+
+        function setBackgroundImage(input) {
+            const file = input.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                localStorage.setItem(BG_KEY, e.target.result);
+                applyBackgroundImage();
+            };
+            reader.readAsDataURL(file);
+        }
+        function resetBackgroundImage() { localStorage.removeItem(BG_KEY); applyBackgroundImage(); }
+        function applyBackgroundImage() {
+            const stored = localStorage.getItem(BG_KEY);
+            if (stored) {
+                document.body.style.backgroundImage = "linear-gradient(rgba(15,33,72,0.65), rgba(15,33,72,0.65)), url('" + stored + "')";
+                document.body.classList.add('bg-photo-active');
+            } else {
+                document.body.style.backgroundImage = 'none';
+                document.body.classList.remove('bg-photo-active');
+            }
+        }
+
+        function lockPage() {
+            localStorage.setItem(LOCK_KEY, '1');
+            closeAdminDashboard();
+            document.getElementById('lock-overlay').classList.add('open');
+        }
+        function attemptUnlock() {
+            const u = document.getElementById('unlock-user').value.trim();
+            const p = document.getElementById('unlock-pass').value.trim();
+            const result = authenticate(u, p, 'Admin');
+            if (result.ok) {
+                localStorage.removeItem(LOCK_KEY);
+                document.getElementById('lock-overlay').classList.remove('open');
+                document.getElementById('unlock-error').style.display = 'none';
+                document.getElementById('unlock-user').value = '';
+                document.getElementById('unlock-pass').value = '';
+                setSession(result.user);
+                applySessionUI();
+            } else {
+                document.getElementById('unlock-error').style.display = 'block';
+            }
+        }
+
+        /* =========================================================
+           AUTO-ARCHIVE — triggered ONLY by user inactivity on the
+           case (never by technical errors/glitches). Threshold is
+           5 minutes of no detected activity. Once the threshold is
+           hit, the user gets a 10-second confirmation window before
+           the case is auto-archived as a draft to the repository.
+           Auto-archive applies to the CASE only — it does not log
+           the user out, lock the screen, or affect anything else.
+           ========================================================= */
+        const INACTIVITY_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+        let inactivityTimer = null;
+        let autoArchiveTimer = null;
+        let autoArchiveSecondsLeft = 10;
+        let autoArchivePromptOpen = false;
+
+        function resetInactivityTimer() {
+            if (autoArchivePromptOpen) return; // don't reset while the user is being asked to confirm
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(checkInactivityAndPrompt, INACTIVITY_THRESHOLD_MS);
+        }
+        function checkInactivityAndPrompt() {
+            // Only prompt if there's an actual case in progress worth protecting.
+            if (!hasCaseContent()) { resetInactivityTimer(); return; }
+            scheduleAutoArchivePrompt();
+        }
+        // Any real user activity resets the 5-minute inactivity clock.
+        ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'input'].forEach(evt => {
+            window.addEventListener(evt, resetInactivityTimer, { passive: true });
+        });
+        resetInactivityTimer();
+
+        function scheduleAutoArchivePrompt() {
+            if (autoArchivePromptOpen) return; // avoid stacking prompts
+            autoArchivePromptOpen = true;
+            autoArchiveSecondsLeft = 10;
+            const countdownEl = document.getElementById('auto-archive-countdown');
+            countdownEl.innerText = autoArchiveSecondsLeft;
+            document.getElementById('auto-archive-modal').classList.add('open');
+
+            autoArchiveTimer = setInterval(() => {
+                autoArchiveSecondsLeft -= 1;
+                countdownEl.innerText = Math.max(autoArchiveSecondsLeft, 0);
+                if (autoArchiveSecondsLeft <= 0) {
+                    performAutoArchive();
+                }
+            }, 1000);
+        }
+        function performAutoArchive() {
+            clearInterval(autoArchiveTimer);
+            autoArchiveTimer = null;
+            autoArchivePromptOpen = false;
+            document.getElementById('auto-archive-modal').classList.remove('open');
+            autoSaveProgress('inactivity-auto-archive'); // saved as a non-final draft; can be pulled up and edited later
+            resetInactivityTimer();
+        }
+        function cancelAutoArchive() {
+            clearInterval(autoArchiveTimer);
+            autoArchiveTimer = null;
+            autoArchivePromptOpen = false;
+            document.getElementById('auto-archive-modal').classList.remove('open');
+            resetInactivityTimer(); // give the user another full 5 minutes of activity
+        }
+
+        /* =========================================================
+           DOWNLOAD CONFIRMATION
+           ========================================================= */
+        function requestDownload() {
+            document.getElementById('dl-fullname').value = '';
+            document.getElementById('dl-batchid').value = '';
+            document.getElementById('dl-date-preview').innerText = new Date().toLocaleString();
+            document.getElementById('download-confirm-error').style.display = 'none';
+            document.getElementById('download-confirm-error').innerText = 'Please complete both fields.';
+            document.getElementById('download-confirm-modal').classList.add('open');
+            setTimeout(() => document.getElementById('dl-fullname').focus(), 50);
+        }
+        function closeDownloadConfirm() { document.getElementById('download-confirm-modal').classList.remove('open'); }
+        function confirmDownload() {
+            const fullName = document.getElementById('dl-fullname').value.trim();
+            const batchId = document.getElementById('dl-batchid').value.trim();
+            const errorEl = document.getElementById('download-confirm-error');
+            if (!fullName || !batchId) {
+                errorEl.innerText = 'Please complete both fields.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            const session = getSession();
+            if (!session) {
+                errorEl.innerText = 'Your session could not be verified. Please log in again.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            if (norm(fullName) !== norm(session.fullName)) {
+                errorEl.innerText = 'The name entered does not match the name on file for this account. Please type your own full name exactly as registered.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            if (norm(batchId) !== norm(session.batchId)) {
+                errorEl.innerText = 'The batch ID entered does not match the batch ID on file for this account.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            errorEl.style.display = 'none';
+            const producedAt = new Date().toLocaleString();
+
+            // Pull the case's original submitter info and bump its per-case
+            // Print Sequence counter in the database (repo). If this case has
+            // never been saved to the repository yet, this is its 1st copy.
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            const idx = repo.findIndex(i => i.id === currentCaseId);
+            let submittedBy, submittedByBatch, submittedAt, printSequence;
+            if (idx !== -1) {
+                const rec = repo[idx];
+                submittedBy = rec.submittedBy || session.fullName;
+                submittedByBatch = rec.submittedByBatch || session.batchId;
+                submittedAt = rec.submittedAt ? new Date(rec.submittedAt).toLocaleString() : producedAt;
+                rec.downloadCount = (typeof rec.downloadCount === 'number' ? rec.downloadCount : 0) + 1;
+                printSequence = rec.downloadCount;
+                repo[idx] = rec;
+                localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            } else {
+                submittedBy = session.fullName;
+                submittedByBatch = session.batchId;
+                submittedAt = producedAt;
+                printSequence = 1;
+            }
+
+            closeDownloadConfirm();
+            downloadPDF({
+                submittedBy: submittedBy,
+                submittedByBatch: submittedByBatch,
+                submittedAt: submittedAt,
+                producedByName: fullName,
+                producedByBatch: batchId,
+                producedAt: producedAt,
+                printSequence: printSequence
+            });
+        }
+
+
+        /* =========================================================
+           AUTO-FORMAT — masks field values to a consistent,
+           professional format live, as the user types.
+           ========================================================= */
+        function getCaretOffset(el) {
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return 0;
+            const range = sel.getRangeAt(0);
+            const pre = range.cloneRange();
+            pre.selectNodeContents(el);
+            pre.setEnd(range.endContainer, range.endOffset);
+            return pre.toString().length;
+        }
+        function setCaretOffset(el, offset) {
+            const sel = window.getSelection();
+            const node = el.firstChild;
+            if (!node || node.nodeType !== 3) { setCaretToEnd(el); return; }
+            const pos = Math.max(0, Math.min(offset, node.length));
+            const range = document.createRange();
+            range.setStart(node, pos);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        function setCaretToEnd(el) {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        // Live mask applied on every keystroke. Length-changing masks (phone/date/ssn/currency)
+        // move the caret to the end, which is the standard, predictable behavior for masked inputs.
+        // Case-only transforms (name/upper/email) preserve the caret's exact position.
+        function liveFormatField(el) {
+            const fmt = el.dataset.fmt;
+            if (!fmt) return;
+            const raw = el.innerText;
+            if (!raw) return;
+            let val = raw;
+            let preserveCaret = false;
+            const caretOffset = getCaretOffset(el);
+
+            switch (fmt) {
+                case 'phone': {
+                    if (raw.includes('@')) { preserveCaret = true; break; } // likely an email in a combined field
+                    const d = raw.replace(/\D/g, '').slice(0, 10);
+                    if (d.length > 6) val = `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+                    else if (d.length > 3) val = `(${d.slice(0,3)}) ${d.slice(3)}`;
+                    else if (d.length > 0) val = `(${d}`;
+                    else val = '';
+                    break;
+                }
+                case 'ssn': {
+                    const d = raw.replace(/\D/g, '').slice(0, 9);
+                    if (d.length > 5) val = `${d.slice(0,3)}-${d.slice(3,5)}-${d.slice(5)}`;
+                    else if (d.length > 3) val = `${d.slice(0,3)}-${d.slice(3)}`;
+                    else val = d;
+                    break;
+                }
+                case 'date': {
+                    const d = raw.replace(/\D/g, '').slice(0, 8);
+                    if (d.length > 4) val = `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`;
+                    else if (d.length > 2) val = `${d.slice(0,2)}/${d.slice(2)}`;
+                    else val = d;
+                    break;
+                }
+                case 'currency': {
+                    let clean = raw.replace(/[^0-9.]/g, '');
+                    const firstDot = clean.indexOf('.');
+                    if (firstDot !== -1) clean = clean.slice(0, firstDot + 1) + clean.slice(firstDot + 1).replace(/\./g, '');
+                    const parts = clean.split('.');
+                    let intPart = (parts[0] || '').replace(/^0+(?=\d)/, '');
+                    const decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+                    const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    val = raw.trim() ? '$ ' + (withCommas || '0') + decPart : '';
+                    break;
+                }
+                case 'email': {
+                    val = raw.toLowerCase().replace(/[^a-z0-9@._+\-]/g, '');
+                    preserveCaret = true;
+                    break;
+                }
+                case 'upper': {
+                    val = raw.toUpperCase().replace(/[^A-Z0-9\- ]/g, '');
+                    preserveCaret = true;
+                    break;
+                }
+                case 'name': {
+                    val = raw.replace(/[^a-zA-Z\s'\-.]/g, '');
+                    val = val.replace(/(^|\s)([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase());
+                    preserveCaret = true;
+                    break;
+                }
+                case 'year': {
+                    val = raw.replace(/\D/g, '').slice(0, 4);
+                    break;
+                }
+                case 'alnum': {
+                    val = raw.replace(/[^a-zA-Z0-9]/g, '');
+                    preserveCaret = true;
+                    break;
+                }
+            }
+
+            if (val !== raw) {
+                el.innerText = val;
+                if (preserveCaret) setCaretOffset(el, caretOffset);
+                else setCaretToEnd(el);
+            }
+        }
+
+        // Final cleanup pass on blur: pads decimals, resolves full dates typed/pasted in other forms, etc.
+        function finalizeFormatField(el) {
+            const fmt = el.dataset.fmt;
+            if (!fmt) return;
+            let val = el.innerText.trim();
+            if (!val) return;
+            if (fmt === 'currency') {
+                const n = parseFloat(val.replace(/[^0-9.\-]/g, ''));
+                if (!isNaN(n)) val = '$ ' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else if (fmt === 'date' && !/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+                const parsed = new Date(val);
+                if (!isNaN(parsed.getTime())) {
+                    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const dd = String(parsed.getDate()).padStart(2, '0');
+                    val = `${mm}/${dd}/${parsed.getFullYear()}`;
+                }
+            }
+            if (val !== el.innerText.trim()) el.innerText = val;
+        }
+
+        // Character-set restriction for plain <input> fields (registration, download confirmation, etc.)
+        // Keeps only characters valid for the field's declared type as the user types.
+        const ALLOW_PATTERNS = {
+            'name': /[^a-zA-Z\s'\-.]/g,
+            'alnum': /[^a-zA-Z0-9]/g,
+            'alnum-upper': /[^a-zA-Z0-9]/g,
+            'alnum-underscore': /[^a-zA-Z0-9_]/g,
+            'email': /[^a-zA-Z0-9@._+\-]/g,
+            'digits': /[^0-9]/g
+        };
+        document.addEventListener('input', (e) => {
+            const el = e.target;
+            if (!el || !el.matches || !el.matches('input[data-allow]')) return;
+            const type = el.dataset.allow;
+            const pattern = ALLOW_PATTERNS[type];
+            if (!pattern) return;
+            const start = el.selectionStart, end = el.selectionEnd;
+            let val = el.value.replace(pattern, '');
+            if (type === 'alnum-upper') val = val.toUpperCase();
+            if (val !== el.value) {
+                const removedBeforeCaret = el.value.slice(0, start).replace(pattern, '').length;
+                el.value = val;
+                el.setSelectionRange(removedBeforeCaret, removedBeforeCaret);
+            }
+        });
+
+        document.addEventListener('input', (e) => {
+            if (e.target && e.target.matches && e.target.matches('[contenteditable="true"][data-fmt]')) {
+                liveFormatField(e.target);
+            }
+        });
+        // focusout bubbles (unlike blur), so a single delegated listener covers every field, including dynamically added rows.
+        document.addEventListener('focusout', (e) => {
+            if (e.target && e.target.matches && e.target.matches('[contenteditable="true"][data-fmt]')) {
+                finalizeFormatField(e.target);
+            }
+        });
+
+        // Enter key: single-line fields commit the value instead of indenting/adding a new line.
+        // Genuinely multi-line fields (narratives, notes) get a clean line break instead of the
+        // browser's default nested <div>, which otherwise causes odd indentation/spacing.
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            const el = e.target.closest ? e.target.closest('[contenteditable="true"]') : null;
+            if (!el) return;
+            e.preventDefault();
+            if (el.classList.contains('multiline-field')) {
+                document.execCommand('insertLineBreak');
+            } else {
+                el.blur();
+            }
+        });
+
+        /* ---------- Init ---------- */
+        window.addEventListener('DOMContentLoaded', () => {
+            renderRepo();
+            applyPlaceholders();
+            applyLogo();
+            applyBackgroundImage();
+            generateCaseId(true);
+            populateTimezones();
+            refreshClock();
+            applySessionUI();
+            applyAnnouncementUI();
+            if (localStorage.getItem(LOCK_KEY) === '1') document.getElementById('lock-overlay').classList.add('open');
+        });
+    </script>
+</body>
+</html>
