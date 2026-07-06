@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LSH Case Management System | Restricted Access</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
@@ -2509,8 +2510,11 @@ function fetchMasterControlRegistrations() {
 
 // Make sure your existing showAdminDashTab function includes these execution triggers!
 function showAdminDashTab(tabName) {
-    // ... [KEEP YOUR ORIGINAL TAB TOGGLE SYSTEM VISIBILITY CODE HERE] ...
-    
+    const tabs = ['overview', 'registrations', 'announce', 'branding', 'access'];
+    document.querySelectorAll('.admin-dash-tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tabName));
+    document.querySelectorAll('.admin-dash-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('admin-dash-' + tabName).classList.add('active');
+
     // Drop this activation listener hook at the bottom of the function:
     if (tabName === 'registrations' || tabName === 'overview') {
         fetchMasterControlRegistrations();
