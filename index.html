@@ -2363,13 +2363,17 @@
             if (localStorage.getItem(LOCK_KEY) === '1') document.getElementById('lock-overlay').classList.add('open');
         });
     </script>
-    <script>
+  <script>
+// ==========================================
+// 1. PUBLIC PORTAL: REGISTRATION MANAGEMENT
+// ==========================================
+
 function submitRegistration() {
-    // 1. Get a reference to your message div to show status updates to the user
+    // Get a reference to your message div to show status updates to the user
     const msgDiv = document.getElementById('auth-register-msg');
     if (msgDiv) msgDiv.innerText = ""; // Clear any old messages
 
-    // 2. Grab the two password inputs and verify they match before sending to the server
+    // Grab the two password inputs and verify they match before sending to the server
     const password = document.getElementById('reg-password').value;
     const passwordRepeat = document.getElementById('reg-password2').value;
 
@@ -2381,7 +2385,7 @@ function submitRegistration() {
         return; // Stop the function here
     }
 
-    // 3. Map your exact HTML IDs to the payload data
+    // Map your exact HTML IDs to the payload data
     const payload = {
         firstName: document.getElementById('reg-firstname').value,
         mi: document.getElementById('reg-middlename').value,
@@ -2408,7 +2412,7 @@ function submitRegistration() {
         msgDiv.innerText = "Submitting registration...";
     }
 
-    // 4. Fire the data off to your Cloudflare API
+    // Fire the data off to your Cloudflare API
     fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -2441,6 +2445,84 @@ function submitRegistration() {
             msgDiv.innerText = "Network error. Failed to connect to server.";
         }
     });
+}
+
+// ==========================================
+// 2. MASTER CONTROL: ADMINISTRATIVE SYNC
+// ==========================================
+
+function fetchMasterControlRegistrations() {
+    const listContainer = document.getElementById('registrations-list');
+    const overviewStatTile = document.getElementById('admin-stat-pending');
+    const tabNotificationBadge = document.getElementById('reg-pending-badge');
+
+    // Contact the Cloudflare database retrieval endpoint to load data
+    fetch('/api/users')
+        .then(response => response.json())
+        .then(users => {
+            const registrationCount = users.length;
+            
+            // Dynamically update your total counts across the Admin panel
+            if (overviewStatTile) overviewStatTile.innerText = registrationCount;
+            if (tabNotificationBadge) {
+                tabNotificationBadge.innerText = registrationCount > 0 ? `(${registrationCount})` : "";
+                tabNotificationBadge.style.color = registrationCount > 0 ? "var(--classified-red)" : "inherit";
+            }
+
+            // Exit gracefully if no profiles exist yet
+            if (!listContainer) return;
+            if (registrationCount === 0) {
+                listContainer.innerHTML = `<p style="font-size:13px; color:#64748b; text-align:center; padding: 20px 0;">No pending registrations awaiting review.</p>`;
+                return;
+            }
+
+            // Clear original boilerplate text and render live user row list cards
+            listContainer.innerHTML = ""; 
+            
+            users.forEach(user => {
+                const card = document.createElement('div');
+                card.style.cssText = "background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; text-align: left;";
+                
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; margin-bottom: 6px;">
+                        <span style="font-weight: 700; font-size: 14px; color: #fff;">${user.first_name} ${user.mi ? user.mi + '.' : ''} ${user.last_name} ${user.suffix || ''}</span>
+                        <span style="font-size: 11px; background: rgba(249, 115, 22, 0.15); color: #f97316; padding: 2px 8px; border-radius: 12px; font-weight: 600;">${user.user_type}</span>
+                    </div>
+                    <div style="font-size: 12px; color: #94a3b8; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 4px;">
+                        <div><strong>Gmail:</strong> ${user.email}</div>
+                        <div><strong>Batch ID:</strong> ${user.batch_id || '—'}</div>
+                        <div><strong>Username:</strong> @${user.username}</div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        })
+        .catch(error => {
+            console.error("Master Control Sync Failure:", error);
+            if (listContainer) listContainer.innerHTML = `<p style="color:var(--classified-red); font-size:12px;">Failed to secure live data from Cloudflare edge network.</p>`;
+        });
+}
+
+// ==========================================
+// 3. EXTENSION: DASHBOARD VIEW ROUTING HOOKS
+// ==========================================
+
+// Make sure your existing showAdminDashTab function includes these execution triggers!
+function showAdminDashTab(tabName) {
+    // ... [KEEP YOUR ORIGINAL TAB TOGGLE SYSTEM VISIBILITY CODE HERE] ...
+    
+    // Drop this activation listener hook at the bottom of the function:
+    if (tabName === 'registrations' || tabName === 'overview') {
+        fetchMasterControlRegistrations();
+    }
+}
+
+// Make sure your existing open handler updates statistics layout blocks instantly upon login
+function openAdminDashboard() {
+    // ... [KEEP YOUR ORIGINAL OVERLAY LAYOUT SLIDE ACTION CODE HERE] ...
+    
+    // Fire our dashboard update command
+    fetchMasterControlRegistrations();
 }
 </script>
 </body>
