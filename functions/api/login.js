@@ -48,3 +48,9 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
   }
 }
+if (user.status === 'Revoked') {
+  return new Response(JSON.stringify({ error: "Your access authorization has been revoked by administration." }), {
+    status: 403,
+    headers: { "Content-Type": "application/json" }
+  });
+}
