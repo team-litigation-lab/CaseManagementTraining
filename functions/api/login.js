@@ -1,5 +1,3 @@
-// Shared helper — put this in a file like functions/_utils/crypto.js and import it
-// in both login.js and register.js so they always hash the exact same way.
 async function hashPassword(password, saltHex) {
   const enc = new TextEncoder();
   const saltBytes = saltHex
@@ -35,8 +33,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Verify password: re-hash the submitted password using the STORED salt,
-    // then compare the resulting hash to the STORED hash.
     const { hash } = await hashPassword(password, user.password_salt);
     if (hash !== user.password_hash) {
       return new Response(JSON.stringify({ error: "Invalid username or password." }), {
@@ -45,9 +41,12 @@ export async function onRequestPost(context) {
       });
     }
 
-    if (user.user_type !== portalMode) {
+    // Access rule:
+    // - Admin accounts may log into EITHER portal tab (Trainee or Admin).
+    // - Trainee accounts may ONLY log into the Trainee portal tab.
+    if (portalMode === 'Admin' && user.user_type !== 'Admin') {
       return new Response(JSON.stringify({
-        error: `This account is registered as a ${user.user_type}. Please use the correct Portal Tab.`
+        error: "This account is not authorized for Admin Portal access."
       }), {
         status: 403,
         headers: { "Content-Type": "application/json" }
@@ -61,7 +60,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // NEW: block login until an admin has approved the account.
     if (user.status === 'Pending') {
       return new Response(JSON.stringify({ error: "Your account is awaiting admin approval." }), {
         status: 403,
@@ -74,7 +72,7 @@ export async function onRequestPost(context) {
       user: {
         firstName: user.first_name,
         lastName: user.last_name,
-        userType: user.user_type
+        userType: portalMode
       }
     }), {
       headers: { "Content-Type": "application/json" }
