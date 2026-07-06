@@ -196,8 +196,8 @@
         white-space: nowrap;
     }
     .active-tab { border-bottom: 3px solid var(--orange) !important; color: var(--orange) !important; }
-    .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 220px; position: relative; z-index: 1; }
-    .tab-pane.active { display: block; }
+    .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 220px; position: relative; z-index: 1; opacity: 0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease; }
+    .tab-pane.active { opacity: 1; transform: translateY(0); }
 
     /* 4. COMPONENTS */
     .pdf-card {
@@ -323,8 +323,8 @@
     .session-btn.active-admin { border-color: var(--success); color: #4ade80; background: rgba(22,101,52,0.15); }
     .session-btn.logout-btn { border-color: #7f1d1d; color: #fca5a5; }
     .session-btn.logout-btn:hover { border-color: var(--classified-red); background: rgba(185,28,28,0.12); }
-    .session-user-tag { text-align:center; font-size:9.5px; color:#64748b; margin-bottom:8px; font-family:'IBM Plex Mono','Courier New',monospace; }
-    .session-user-tag b { color:#cbd5e1; }
+    .session-user-tag { text-align:center; font-size:13px; line-height:1.5; color:#94a3b8; margin-bottom:8px; font-family:'IBM Plex Mono','Courier New',monospace; }
+    .session-user-tag b { color:#cbd5e1; font-size:14px; }
 
     /* ===== MODALS ===== */
     .modal-overlay {
@@ -417,36 +417,62 @@
     .auth-switch { text-align:center; margin-top:16px; font-size:11px; color:#94a3b8; }
     .auth-switch a { color: var(--auth-accent); cursor:pointer; font-weight:700; text-decoration:underline; }
     .auth-msg { font-size:11px; font-weight:700; margin-bottom:12px; padding:9px 12px; border-radius:6px; display:none; }
-    .auth-msg.error { background:rgba(185,28,28,0.15); color:#fca5a5; display:block; }
-    .auth-msg.success { background:rgba(22,101,52,0.2); color:#86efac; display:block; }
-    .auth-msg.info { background:rgba(249,115,22,0.15); color:#fdba74; display:block; }
+    .auth-msg.error { background:rgba(185,28,28,0.15); color:#fca5a5; display:block; animation: msgPop .25s ease; }
+    .auth-msg.success { background:rgba(22,101,52,0.2); color:#86efac; display:block; animation: msgPop .25s ease; }
+    .auth-msg.info { background:rgba(249,115,22,0.15); color:#fdba74; display:block; animation: msgPop .25s ease; }
+    @keyframes msgPop {
+        from { opacity: 0; transform: translateY(-6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== TOAST NOTIFICATIONS ===== */
+    #toast-container {
+        position: fixed; top: 54px; right: 20px; z-index: 5000;
+        display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+    }
+    .toast {
+        min-width: 240px; max-width: 340px; padding: 12px 16px 12px 14px;
+        border-radius: 8px; font-size: 12px; font-weight: 700; color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3); border-left: 4px solid rgba(255,255,255,0.4);
+        opacity: 0; transform: translateX(40px); transition: opacity .3s ease, transform .3s ease;
+        pointer-events: auto; font-family: 'IBM Plex Sans', Arial, sans-serif;
+    }
+    .toast.show { opacity: 1; transform: translateX(0); }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--classified-red); }
+    .toast.info { background: var(--navy); }
+    .toast.alert { background: #7c2d12; }
 
     /* ===== ADMIN DASHBOARD (Master Control) ===== */
     #admin-dashboard-overlay {
         position: fixed; inset:0; z-index: 1500; display:none;
         background: rgba(5,7,10,0.88); align-items:center; justify-content:center; padding:24px;
+        opacity: 0; transition: opacity .2s ease;
     }
-    #admin-dashboard-overlay.open { display:flex; }
+    #admin-dashboard-overlay.open { display:flex; opacity: 1; }
     .admin-dash {
         width: 920px; max-width: 100%; height: 82vh; max-height: 720px;
         background: white; border-radius: 14px; overflow: hidden;
         display:flex; flex-direction:column; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+        transform: scale(0.97); transition: transform .2s ease;
     }
+    #admin-dashboard-overlay.open .admin-dash { transform: scale(1); }
     .admin-dash-header {
         background: var(--navy); color:white; padding:18px 24px;
         display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
     }
     .admin-dash-header h2 { margin:0; font-size:16px; font-weight:800; }
-    .admin-dash-header .sub { font-size:10px; color: var(--orange); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+    .admin-dash-header .sub { font-size:12px; color: var(--orange); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
     .admin-dash-tabs { display:flex; gap:2px; background:#f1f5f9; padding:0 16px; flex-shrink:0; overflow-x:auto; }
     .admin-dash-tab {
         padding:12px 16px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;
         color:#64748b; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap;
+        transition: color .2s ease, border-color .2s ease;
     }
     .admin-dash-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
     .admin-dash-body { flex:1; overflow-y:auto; padding:22px 24px; background:#f8fafc; }
-    .admin-dash-pane { display:none; }
-    .admin-dash-pane.active { display:block; }
+    .admin-dash-pane { display:none; opacity:0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease; }
+    .admin-dash-pane.active { opacity:1; transform: translateY(0); }
     .reg-row {
         display:flex; align-items:center; justify-content:space-between; gap:12px;
         background:white; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin-bottom:10px;
@@ -916,7 +942,7 @@
                         <option value="Admin">Admin</option>
                     </select>
                 </div>
-                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" data-allow="alnum-upper" placeholder="Enter your batch ID"></div>
+                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" placeholder="Auto-generated after submission" disabled style="opacity:0.6; cursor:not-allowed;"></div>
                 <div class="auth-field"><label>Username</label><input type="text" id="reg-username" autocomplete="off" data-allow="alnum-underscore" placeholder="Choose a username"></div>
                 <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="off" placeholder="Create a password"></div>
                 <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="off" placeholder="Retype your password"></div>
@@ -1095,6 +1121,60 @@
            Consolidated, de-duplicated, and cleaned up.
            ========================================================= */
         const REPO_KEY = 'LSH_ULTRALOCK_V2026_MASTER_DEEP_BUILD_FINAL';
+
+        /* ---------- Toast notifications + sound cues ---------- */
+        let _audioCtx = null;
+        function getAudioCtx() {
+            if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            return _audioCtx;
+        }
+        function playNotificationSound(type) {
+            try {
+                const ctx = getAudioCtx();
+                const now = ctx.currentTime;
+                const patterns = {
+                    success: [660, 880],
+                    error: [300, 210],
+                    info: [520, 660],
+                    alert: [440, 330, 440]
+                };
+                const notes = patterns[type] || patterns.info;
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    const t = now + i * 0.13;
+                    gain.gain.setValueAtTime(0.0001, t);
+                    gain.gain.exponentialRampToValueAtTime(0.22, t + 0.015);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.2);
+                });
+            } catch (e) { console.warn('Audio playback unavailable:', e); }
+        }
+        function showToast(message, type, duration) {
+            type = type || 'info';
+            duration = duration || 3500;
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = message;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            playNotificationSound(type);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
         let currentCaseId = null; // tracks which saved case (if any) is currently loaded, for Update Case
         const ADMIN_USER = 'LSHADMIN123';
         const ADMIN_PASS = 'LSHADMINPASS123';
@@ -1124,9 +1204,12 @@
 
         /* ---------- Tabs ---------- */
         function showTab(id) {
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            document.getElementById('pane-' + id).classList.add('active');
+            const pane = document.getElementById('pane-' + id);
+            pane.style.display = 'block';
+            void pane.offsetHeight; // force reflow so the fade-in transition actually plays
+            requestAnimationFrame(() => pane.classList.add('active'));
             document.getElementById('tab-' + id).classList.add('active-tab');
         }
 
@@ -1849,13 +1932,13 @@
 
             if (session.userType === 'Admin') {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: ${session.batchId}</div>
+                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: <b>${session.batchId}</b></div>
                     <button class="session-btn active-admin" onclick="openAdminDashboard()">Admin Panel</button>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             } else {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: ${session.batchId}</div>
+                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: <b>${session.batchId}</b></div>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             }
@@ -1879,7 +1962,11 @@
             renderRegistrations();
             document.getElementById('admin-dashboard-overlay').classList.add('open');
         }
-        function closeAdminDashboard() { document.getElementById('admin-dashboard-overlay').classList.remove('open'); }
+        function closeAdminDashboard() {
+            const overlay = document.getElementById('admin-dashboard-overlay');
+            overlay.classList.remove('open');
+            setTimeout(() => { overlay.style.display = 'none'; }, 200);
+        }
         function showAdminDashTab(tab) {
             const tabs = ['overview', 'registrations', 'announce', 'branding', 'access'];
             document.querySelectorAll('.admin-dash-tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tab));
@@ -1942,6 +2029,7 @@
             saveAnnouncement({ text: text, type: 'announcement', paused: false });
             document.getElementById('announce-text-input').value = '';
             applyAnnouncementUI();
+            showToast('Announcement broadcasted.', 'info');
         }
         function makeAlert() {
             const text = document.getElementById('announce-text-input').value.trim();
@@ -1949,6 +2037,7 @@
             saveAnnouncement({ text: text, type: 'alert', paused: false });
             document.getElementById('announce-text-input').value = '';
             applyAnnouncementUI();
+            showToast('Alert broadcasted.', 'alert');
         }
         function togglePauseTicker() {
             const data = getAnnouncement() || { text: 'Welcome to the LSH Training Interface.', type: 'announcement', paused: false };
@@ -2380,7 +2469,7 @@ function submitRegistration() {
 
     if (password !== passwordRepeat) {
         if (msgDiv) {
-            msgDiv.style.color = "red";
+            msgDiv.className = "auth-msg error";
             msgDiv.innerText = "Passwords do not match.";
         }
         return; // Stop the function here
@@ -2394,7 +2483,7 @@ function submitRegistration() {
         suffix: document.getElementById('reg-suffix').value,
         email: document.getElementById('reg-gmail').value,
         userType: document.getElementById('reg-usertype').value, 
-        batchId: document.getElementById('reg-batchid').value,
+        // batchId intentionally omitted — the server now generates a guaranteed-unique one
         username: document.getElementById('reg-username').value,
         password: password
     };
@@ -2402,14 +2491,14 @@ function submitRegistration() {
     // Quick validation for crucial fields
     if (!payload.username || !payload.password || !payload.email) {
         if (msgDiv) {
-            msgDiv.style.color = "red";
+            msgDiv.className = "auth-msg error";
             msgDiv.innerText = "Please fill out all required fields.";
         }
         return;
     }
 
     if (msgDiv) {
-        msgDiv.style.color = "orange";
+        msgDiv.className = "auth-msg info";
         msgDiv.innerText = "Submitting registration...";
     }
 
@@ -2425,26 +2514,31 @@ function submitRegistration() {
     .then(data => {
         if (data.success) {
             if (msgDiv) {
-                msgDiv.style.color = "green";
-                msgDiv.innerText = "Account created successfully! Redirecting...";
+                msgDiv.className = "auth-msg success";
+                msgDiv.innerText = data.batchId
+                    ? `Account created! Your Batch ID is ${data.batchId}. Redirecting...`
+                    : "Account created successfully! Redirecting...";
             }
+            showToast(data.batchId ? `Registered! Batch ID: ${data.batchId}` : "Registration submitted successfully!", 'success');
             // Automatically switch back to your login panel after a brief pause
             setTimeout(() => {
                 showLoginView();
-            }, 2000);
+            }, 3200);
         } else {
             if (msgDiv) {
-                msgDiv.style.color = "red";
+                msgDiv.className = "auth-msg error";
                 msgDiv.innerText = data.error || "Registration failed.";
             }
+            showToast(data.error || "Registration failed.", 'error');
         }
     })
     .catch(error => {
         console.error("Network error:", error);
         if (msgDiv) {
-            msgDiv.style.color = "red";
+            msgDiv.className = "auth-msg error";
             msgDiv.innerText = "Network error. Failed to connect to server.";
         }
+        showToast("Network error. Failed to connect to server.", 'error');
     });
 }
 
@@ -2512,8 +2606,13 @@ function fetchMasterControlRegistrations() {
 function showAdminDashTab(tabName) {
     const tabs = ['overview', 'registrations', 'announce', 'branding', 'access'];
     document.querySelectorAll('.admin-dash-tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tabName));
-    document.querySelectorAll('.admin-dash-pane').forEach(p => p.classList.remove('active'));
-    document.getElementById('admin-dash-' + tabName).classList.add('active');
+    document.querySelectorAll('.admin-dash-pane').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    const target = document.getElementById('admin-dash-' + tabName);
+    if (target) {
+        target.style.display = 'block';
+        void target.offsetHeight; // force reflow so the fade-in transition actually plays
+        requestAnimationFrame(() => target.classList.add('active'));
+    }
 
     // Drop this activation listener hook at the bottom of the function:
     if (tabName === 'registrations' || tabName === 'overview') {
@@ -2530,7 +2629,10 @@ function openAdminDashboard() {
     document.getElementById('admin-stat-name').innerText = (document.getElementById('client-name-field').innerText.trim() || '\u2014');
     document.getElementById('admin-stat-phase').innerText = 'Phase: ' + document.getElementById('display-phase').innerText;
     document.getElementById('admin-stat-med').innerText = document.getElementById('med-total').innerText;
-    document.getElementById('admin-dashboard-overlay').classList.add('open'); // <-- this actually opens the panel
+    const overlay = document.getElementById('admin-dashboard-overlay');
+    overlay.style.display = 'flex';
+    void overlay.offsetHeight; // force reflow so the fade-in transition actually plays
+    requestAnimationFrame(() => overlay.classList.add('open'));
 
     // Fire our dashboard update command
     fetchMasterControlRegistrations();
@@ -2604,6 +2706,7 @@ function attemptLogin() {
                 loginMsgDiv.className = "auth-msg success"; // Applies your green alert box CSS
                 loginMsgDiv.innerText = "Access granted! Redirecting...";
             }
+            showToast(`Access granted. Welcome back!`, 'success');
 
             // Normalize field names in case the API returns snake_case (e.g. user_type, first_name)
             // instead of the camelCase fields the rest of the app expects (userType, fullName).
@@ -2642,6 +2745,7 @@ function attemptLogin() {
                 loginMsgDiv.className = "auth-msg error";
                 loginMsgDiv.innerText = data.error || "Login unauthorized.";
             }
+            showToast(data.error || "Login unauthorized.", 'error');
         }
     })
     .catch(error => {
@@ -2650,6 +2754,7 @@ function attemptLogin() {
             loginMsgDiv.className = "auth-msg error";
             loginMsgDiv.innerText = "Network error. Failed to hit validation server.";
         }
+        showToast("Network error. Failed to hit validation server.", 'error');
     });
 }
       function fetchMasterControlRegistrations() {
@@ -2780,10 +2885,19 @@ function updateUserStatus(userId, newStatus) {
         body: JSON.stringify({ userId: userId, newStatus: newStatus })
     })
     .then(res => res.json())
-    .then(() => {
+    .then((data) => {
+        const labels = { Approved: 'User approved.', Rejected: 'Registration rejected.', Revoked: 'Access revoked.' };
+        if (data && data.success !== false) {
+            showToast(labels[newStatus] || `Status updated to ${newStatus}.`, 'success');
+        } else {
+            showToast((data && data.error) || 'Failed to update status.', 'error');
+        }
         fetchMasterControlRegistrations(); // Instantly update dashboard views on-screen!
     })
-    .catch(err => console.error("Status synchronization error:", err));
+    .catch(err => {
+        console.error("Status synchronization error:", err);
+        showToast('Network error. Failed to update status.', 'error');
+    });
 }
 </script>
 </body>
