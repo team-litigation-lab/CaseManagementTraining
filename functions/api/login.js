@@ -48,4 +48,4 @@ export async function onRequestPost(context) {
   } catch (err) {
     return new Response(JSON.stringify({ error: "Internal database verification failure" }), { status: 500 });
   }
-} // <--- This brace now safely wraps EVERYTHING inside the module function!
+}
