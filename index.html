@@ -2363,5 +2363,85 @@
             if (localStorage.getItem(LOCK_KEY) === '1') document.getElementById('lock-overlay').classList.add('open');
         });
     </script>
+    <script>
+function submitRegistration() {
+    // 1. Get a reference to your message div to show status updates to the user
+    const msgDiv = document.getElementById('auth-register-msg');
+    if (msgDiv) msgDiv.innerText = ""; // Clear any old messages
+
+    // 2. Grab the two password inputs and verify they match before sending to the server
+    const password = document.getElementById('reg-password').value;
+    const passwordRepeat = document.getElementById('reg-password2').value;
+
+    if (password !== passwordRepeat) {
+        if (msgDiv) {
+            msgDiv.style.color = "red";
+            msgDiv.innerText = "Passwords do not match.";
+        }
+        return; // Stop the function here
+    }
+
+    // 3. Map your exact HTML IDs to the payload data
+    const payload = {
+        firstName: document.getElementById('reg-firstname').value,
+        mi: document.getElementById('reg-middlename').value,
+        lastName: document.getElementById('reg-lastname').value,
+        suffix: document.getElementById('reg-suffix').value,
+        email: document.getElementById('reg-gmail').value,
+        userType: document.getElementById('reg-usertype').value, 
+        batchId: document.getElementById('reg-batchid').value,
+        username: document.getElementById('reg-username').value,
+        password: password
+    };
+
+    // Quick validation for crucial fields
+    if (!payload.username || !payload.password || !payload.email) {
+        if (msgDiv) {
+            msgDiv.style.color = "red";
+            msgDiv.innerText = "Please fill out all required fields.";
+        }
+        return;
+    }
+
+    if (msgDiv) {
+        msgDiv.style.color = "orange";
+        msgDiv.innerText = "Submitting registration...";
+    }
+
+    // 4. Fire the data off to your Cloudflare API
+    fetch('/api/register', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (msgDiv) {
+                msgDiv.style.color = "green";
+                msgDiv.innerText = "Account created successfully! Redirecting...";
+            }
+            // Automatically switch back to your login panel after a brief pause
+            setTimeout(() => {
+                showLoginView();
+            }, 2000);
+        } else {
+            if (msgDiv) {
+                msgDiv.style.color = "red";
+                msgDiv.innerText = data.error || "Registration failed.";
+            }
+        }
+    })
+    .catch(error => {
+        console.error("Network error:", error);
+        if (msgDiv) {
+            msgDiv.style.color = "red";
+            msgDiv.innerText = "Network error. Failed to connect to server.";
+        }
+    });
+}
+</script>
 </body>
 </html>
