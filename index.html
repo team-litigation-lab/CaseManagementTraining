@@ -2524,6 +2524,107 @@ function openAdminDashboard() {
     // Fire our dashboard update command
     fetchMasterControlRegistrations();
 }
+      // Keep track of the active portal mode globally in your script
+// (Make sure this matches whatever your existing switchPortalTab function updates!)
+let currentPortalMode = "Trainee"; 
+
+function switchPortalTab(mode) {
+    currentPortalMode = mode;
+    
+    // This maintains your active CSS states
+    const traineeTab = document.getElementById('portal-tab-trainee');
+    const adminTab = document.getElementById('portal-tab-admin');
+    const authGate = document.getElementById('auth-gate');
+    
+    if (mode === 'Admin') {
+        if (adminTab) adminTab.classList.add('active');
+        if (traineeTab) traineeTab.classList.remove('active');
+        if (authGate) authGate.classList.add('mode-admin'); // Triggers your red theme CSS
+    } else {
+        if (traineeTab) traineeTab.classList.add('active');
+        if (adminTab) adminTab.classList.remove('active');
+        if (authGate) authGate.classList.remove('mode-admin'); // Restores orange theme CSS
+    }
+}
+
+function attemptLogin() {
+    // 1. Target your exact alert element
+    const loginMsgDiv = document.getElementById('auth-login-msg');
+    
+    if (loginMsgDiv) {
+        loginMsgDiv.innerText = "";
+        loginMsgDiv.className = "auth-msg"; // Reset status classes
+        loginMsgDiv.style.display = "none";
+    }
+
+    // 2. Identify username and password field values
+    const usernameInput = document.getElementById('login-username')?.value || "";
+    const passwordInput = document.getElementById('login-password')?.value || "";
+
+    if (!usernameInput || !passwordInput) {
+        if (loginMsgDiv) {
+            loginMsgDiv.innerText = "Please fill out all fields.";
+            loginMsgDiv.className = "auth-msg error"; // Applies your red alert box CSS
+        }
+        return;
+    }
+
+    if (loginMsgDiv) {
+        loginMsgDiv.innerText = "Verifying credentials...";
+        loginMsgDiv.className = "auth-msg info"; // Applies your orange alert box CSS
+    }
+
+    // 3. Post data across your serverless Cloudflare pipeline
+    fetch('/api/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+            username: usernameInput, 
+            password: passwordInput,
+            portalMode: currentPortalMode // Sends whether they chose Admin or Trainee tab
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (loginMsgDiv) {
+                loginMsgDiv.className = "auth-msg success"; // Applies your green alert box CSS
+                loginMsgDiv.innerText = "Access granted! Redirecting...";
+            }
+
+            // 4. Role Mapping Authentication Routing
+            setTimeout(() => {
+                // Close login overlay wrapper if necessary
+                const authGate = document.getElementById('auth-gate');
+                if (authGate) authGate.classList.remove('open');
+                
+                if (data.user.userType === "Admin") {
+                    openAdminDashboard(); // Launches your Master Control layout!
+                } else {
+                    if (typeof showTraineeDashboard === "function") {
+                        showTraineeDashboard();
+                    } else {
+                        alert(`Welcome back, ${data.user.firstName}!`);
+                    }
+                }
+            }, 1200);
+        } else {
+            if (loginMsgDiv) {
+                loginMsgDiv.className = "auth-msg error";
+                loginMsgDiv.innerText = data.error || "Login unauthorized.";
+            }
+        }
+    })
+    .catch(error => {
+        console.error("Authentication connection failure:", error);
+        if (loginMsgDiv) {
+            loginMsgDiv.className = "auth-msg error";
+            loginMsgDiv.innerText = "Network error. Failed to hit validation server.";
+        }
+    });
+}
 </script>
 </body>
 </html>
