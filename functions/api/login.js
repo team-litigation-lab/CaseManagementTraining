@@ -72,7 +72,9 @@ export async function onRequestPost(context) {
       user: {
         firstName: user.first_name,
         lastName: user.last_name,
-        userType: portalMode
+        userType: portalMode,
+        batchId: user.batch_id,
+        username: user.username
       }
     }), {
       headers: { "Content-Type": "application/json" }
