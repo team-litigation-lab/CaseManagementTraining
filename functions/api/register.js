@@ -37,8 +37,8 @@ export async function onRequestPost(context) {
     const { hash, salt } = await hashPassword(password);
 
     await context.env.DB.prepare(`
-      INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, username, password_hash, password_salt, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
+      INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, username, password_hash, password_salt, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', datetime('now'))
     `).bind(firstName, mi, lastName, suffix, email, userType, username, hash, salt).run();
 
     return new Response(JSON.stringify({ success: true, message: "Registration complete!" }), {
