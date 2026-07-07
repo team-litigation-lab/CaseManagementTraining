@@ -1,86 +1,38 @@
-async function hashPassword(password, saltHex) {
-  const enc = new TextEncoder();
-  const saltBytes = saltHex
-    ? new Uint8Array(saltHex.match(/.{2}/g).map(b => parseInt(b, 16)))
-    : crypto.getRandomValues(new Uint8Array(16));
+import { json, logActivity } from '../_utils.js';
 
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]
-  );
-  const derivedBits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
-    keyMaterial,
-    256
-  );
+export async function onRequestPost({ request, env }) {
+    const db = env.DB;
+    let body;
+    try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
 
-  const hashHex = [...new Uint8Array(derivedBits)].map(b => b.toString(16).padStart(2, "0")).join("");
-  const saltOut = [...saltBytes].map(b => b.toString(16).padStart(2, "0")).join("");
-  return { hash: hashHex, salt: saltOut };
-}
+    const { username, password, portalMode } = body;
+    if (!username || !password) {
+        return json({ success: false, error: 'Please enter both username and password.' }, 400);
+    }
 
-export async function onRequestPost(context) {
-  try {
-    const { username, password, portalMode } = await context.request.json();
-
-    const user = await context.env.DB.prepare(
-      "SELECT * FROM users WHERE username = ?"
-    ).bind(username).first();
+    const user = await db.prepare(
+        `SELECT * FROM users WHERE username = ? AND password = ?`
+    ).bind(username, password).first();
 
     if (!user) {
-      return new Response(JSON.stringify({ error: "Invalid username or password." }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      });
+        return json({ success: false, error: 'Incorrect username or password.' }, 401);
     }
-
-    const { hash } = await hashPassword(password, user.password_salt);
-    if (hash !== user.password_hash) {
-      return new Response(JSON.stringify({ error: "Invalid username or password." }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      });
+    if (portalMode && user.user_type !== portalMode) {
+        return json({ success: false, error: `No ${portalMode.toLowerCase()} account is registered under that username.` }, 401);
     }
-
-    // Access rule:
-    // - Admin accounts may log into EITHER portal tab (Trainee or Admin).
-    // - Trainee accounts may ONLY log into the Trainee portal tab.
-    if (portalMode === 'Admin' && user.user_type !== 'Admin') {
-      return new Response(JSON.stringify({
-        error: "This account is not authorized for Admin Portal access."
-      }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    if (user.status === 'Revoked') {
-      return new Response(JSON.stringify({ error: "Your access authorization has been revoked by administration." }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
     if (user.status === 'Pending') {
-      return new Response(JSON.stringify({ error: "Your account is awaiting admin approval." }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" }
-      });
+        return json({ success: false, error: 'Your registration is still pending admin approval.' }, 403);
+    }
+    if (user.status === 'Rejected') {
+        return json({ success: false, error: 'This registration was rejected. Please contact an administrator.' }, 403);
+    }
+    if (user.status === 'Revoked') {
+        return json({ success: false, error: 'Your access has been revoked by an administrator.' }, 403);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      user: {
-        firstName: user.first_name,
-        lastName: user.last_name,
-        userType: portalMode,
-        batchId: user.batch_id,
-        username: user.username
-      }
-    }), {
-      headers: { "Content-Type": "application/json" }
-    });
+    await logActivity(db, user.username, user.batch_id, 'login', null);
 
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Internal database verification failure" }), { status: 500 });
-  }
+    // Never return the password hash/plaintext to the client.
+    const { password: _pw, ...safeUser } = user;
+    return json({ success: true, user: safeUser });
 }
