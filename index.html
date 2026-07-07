@@ -942,7 +942,7 @@
                         <option value="Admin">Admin</option>
                     </select>
                 </div>
-                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" placeholder="Auto-generated after submission" disabled style="opacity:0.6; cursor:not-allowed;"></div>
+                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" placeholder="Assigned upon approval" disabled style="opacity:0.6; cursor:not-allowed;"></div>
                 <div class="auth-field"><label>Username</label><input type="text" id="reg-username" autocomplete="off" data-allow="alnum-underscore" placeholder="Choose a username"></div>
                 <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="off" placeholder="Create a password"></div>
                 <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="off" placeholder="Retype your password"></div>
@@ -2515,15 +2515,13 @@ function submitRegistration() {
         if (data.success) {
             if (msgDiv) {
                 msgDiv.className = "auth-msg success";
-                msgDiv.innerText = data.batchId
-                    ? `Account created! Your Batch ID is ${data.batchId}. Redirecting...`
-                    : "Account created successfully! Redirecting...";
+                msgDiv.innerText = "Account created! Batch ID will be assigned upon the approval of registration.";
             }
-            showToast(data.batchId ? `Registered! Batch ID: ${data.batchId}` : "Registration submitted successfully!", 'success');
+            showToast("Registration submitted successfully!", 'success');
             // Automatically switch back to your login panel after a brief pause
             setTimeout(() => {
                 showLoginView();
-            }, 3200);
+            }, 2400);
         } else {
             if (msgDiv) {
                 msgDiv.className = "auth-msg error";
@@ -2888,7 +2886,10 @@ function updateUserStatus(userId, newStatus) {
     .then((data) => {
         const labels = { Approved: 'User approved.', Rejected: 'Registration rejected.', Revoked: 'Access revoked.' };
         if (data && data.success !== false) {
-            showToast(labels[newStatus] || `Status updated to ${newStatus}.`, 'success');
+            const msg = (newStatus === 'Approved' && data.batchId)
+                ? `User approved. Batch ID: ${data.batchId}`
+                : (labels[newStatus] || `Status updated to ${newStatus}.`);
+            showToast(msg, 'success');
         } else {
             showToast((data && data.error) || 'Failed to update status.', 'error');
         }
