@@ -1,54 +1,33 @@
-async function hashPassword(password) {
-  const enc = new TextEncoder();
-  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+import { json, logActivity } from '../_utils.js';
 
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]
-  );
-  const derivedBits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
-    keyMaterial,
-    256
-  );
+export async function onRequestPost({ request, env }) {
+    const db = env.DB;
+    let body;
+    try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
 
-  const hashHex = [...new Uint8Array(derivedBits)].map(b => b.toString(16).padStart(2, "0")).join("");
-  const saltOut = [...saltBytes].map(b => b.toString(16).padStart(2, "0")).join("");
-  return { hash: hashHex, salt: saltOut };
-}
+    const { firstName, mi, lastName, suffix, email, userType, username, password } = body;
 
-export async function onRequestPost(context) {
-  try {
-    const data = await context.request.json();
-
-    const {
-      firstName, mi, lastName, suffix,
-      email, userType, username, password
-    } = data;
-    // NOTE: batchId is intentionally NOT set here. It's assigned later, only once
-    // an admin approves the registration — see functions/api/update-status.js.
-
-    if (!username || !password || !email) {
-      return new Response(JSON.stringify({ error: "Required fields are missing." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
+    if (!firstName || !lastName || !email || !userType || !username || !password) {
+        return json({ success: false, error: 'Please fill out all required fields.' }, 400);
+    }
+    if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
+        return json({ success: false, error: 'Please enter a valid Gmail address.' }, 400);
+    }
+    if (!['Admin', 'Trainee'].includes(userType)) {
+        return json({ success: false, error: 'Invalid user type.' }, 400);
     }
 
-    const { hash, salt } = await hashPassword(password);
+    const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
+    if (existing) {
+        return json({ success: false, error: 'That username is already taken.' }, 409);
+    }
 
-    await context.env.DB.prepare(`
-      INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, username, password_hash, password_salt, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', datetime('now'))
-    `).bind(firstName, mi, lastName, suffix, email, userType, username, hash, salt).run();
+    await db.prepare(
+        `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Pending')`
+    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, password).run();
 
-    return new Response(JSON.stringify({ success: true, message: "Registration complete!" }), {
-      headers: { "Content-Type": "application/json" }
-    });
+    await logActivity(db, username, null, 'register', { userType });
 
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Username or Email already exists." }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
+    return json({ success: true });
 }
