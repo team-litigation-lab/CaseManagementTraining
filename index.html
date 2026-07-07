@@ -357,7 +357,7 @@
     .btn-ghost:hover { background:#e2e8f0; }
     #admin-error { color:var(--classified-red); font-size:11px; font-weight:700; margin-bottom:8px; display:none; }
 
-    .admin-panel-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px; }
+    .admin-panel-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:6px; }
     .admin-tile { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; }
     .admin-tile h4 { font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; font-weight:800; margin:0 0 10px; }
     .admin-stat { font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:22px; font-weight:800; color:var(--navy); }
@@ -443,35 +443,33 @@
     .toast.info { background: var(--navy); }
     .toast.alert { background: #7c2d12; }
 
-    /* ===== ADMIN DASHBOARD (Master Control) ===== */
+    /* ===== ADMIN DASHBOARD (Master Control) — now a full page, not a modal window ===== */
     #admin-dashboard-overlay {
         position: fixed; inset:0; z-index: 1500; display:none;
-        background: rgba(5,7,10,0.88); align-items:center; justify-content:center; padding:24px;
+        background: white; align-items:stretch; justify-content:stretch;
         opacity: 0; transition: opacity .2s ease;
     }
     #admin-dashboard-overlay.open { display:flex; opacity: 1; }
     .admin-dash {
-        width: 920px; max-width: 100%; height: 82vh; max-height: 720px;
-        background: white; border-radius: 14px; overflow: hidden;
-        display:flex; flex-direction:column; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
-        transform: scale(0.97); transition: transform .2s ease;
+        width: 100%; height: 100%;
+        background: white; overflow: hidden;
+        display:flex; flex-direction:column;
     }
-    #admin-dashboard-overlay.open .admin-dash { transform: scale(1); }
     .admin-dash-header {
-        background: var(--navy); color:white; padding:18px 24px;
+        background: var(--navy); color:white; padding:16px 28px;
         display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
     }
-    .admin-dash-header h2 { margin:0; font-size:16px; font-weight:800; }
+    .admin-dash-header h2 { margin:0; font-size:18px; font-weight:800; }
     .admin-dash-header .sub { font-size:12px; color: var(--orange); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
-    .admin-dash-tabs { display:flex; gap:2px; background:#f1f5f9; padding:0 16px; flex-shrink:0; overflow-x:auto; }
+    .admin-dash-tabs { display:flex; gap:2px; background:#f1f5f9; padding:0 28px; flex-shrink:0; overflow-x:auto; }
     .admin-dash-tab {
-        padding:12px 16px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;
+        padding:13px 18px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;
         color:#64748b; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap;
         transition: color .2s ease, border-color .2s ease;
     }
     .admin-dash-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
-    .admin-dash-body { flex:1; overflow-y:auto; padding:22px 24px; background:#f8fafc; }
-    .admin-dash-pane { display:none; opacity:0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease; }
+    .admin-dash-body { flex:1; overflow-y:auto; padding:26px 28px 60px; background:#f8fafc; }
+    .admin-dash-pane { display:none; opacity:0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease; max-width: 1180px; margin: 0 auto; }
     .admin-dash-pane.active { opacity:1; transform: translateY(0); }
     .reg-row {
         display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -489,12 +487,63 @@
     .mini-btn.reject { background:#b91c1c; color:white; }
     .mini-btn.revoke { background:#64748b; color:white; }
 
+    /* ===== SYSTEM LOCK SCREEN (highest layer — blocks everyone until an admin unlocks) ===== */
     #lock-overlay {
         position: fixed; inset:0; background: var(--navy-deep);
-        z-index: 1000; display:none; align-items:center; justify-content:center; flex-direction:column;
-        color:white; text-align:center;
+        z-index: 6000; display:none; align-items:center; justify-content:center; flex-direction:column;
+        color:white; text-align:center; padding: 24px;
     }
     #lock-overlay.open { display:flex; }
+    #lock-overlay .locked-by-tag {
+        font-family:'IBM Plex Mono','Courier New',monospace; font-size:12px; color: var(--orange);
+        background: rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.3);
+        padding:6px 14px; border-radius:20px; margin: 10px 0 22px; letter-spacing:0.04em;
+    }
+    #unlock-toggle-link { color:#94a3b8; font-size:11px; text-decoration:underline; cursor:pointer; margin-top:18px; }
+    #unlock-subform { display:none; width:300px; margin-top:16px; }
+    #unlock-subform.open { display:block; }
+
+    /* ===== SITE-WIDE ALERT (full screen, admin-broadcast) ===== */
+    #site-alert-overlay {
+        position: fixed; inset:0; z-index: 5900; display:none;
+        align-items:center; justify-content:center; padding:40px;
+        opacity:0; transition: opacity .25s ease;
+    }
+    #site-alert-overlay.open { display:flex; opacity:1; }
+    #site-alert-overlay .alert-content {
+        max-width: 640px; text-align:center; color:white;
+        font-family:'IBM Plex Sans',Arial,sans-serif;
+    }
+    #site-alert-overlay .alert-content img {
+        max-width: 100%; max-height: 260px; border-radius:10px; margin-bottom:22px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    }
+    #site-alert-overlay .alert-content .alert-text {
+        font-size:22px; font-weight:800; line-height:1.4; white-space:pre-wrap;
+    }
+    #site-alert-overlay .alert-icon { font-size:44px; margin-bottom:16px; }
+
+    /* ===== PAUSE OVERLAY (blocks interaction, does NOT log anyone out) ===== */
+    #pause-overlay {
+        position: fixed; inset:0; z-index: 1800; display:none;
+        background: rgba(15,23,42,0.82); backdrop-filter: blur(2px);
+        align-items:center; justify-content:center; flex-direction:column; text-align:center;
+        color:white; padding:24px; opacity:0; transition:opacity .25s ease;
+    }
+    #pause-overlay.open { display:flex; opacity:1; }
+    #pause-overlay .pause-icon { font-size:40px; margin-bottom:14px; }
+
+    /* ===== Shared small-form controls used by Alert/Lock/Unlock panels ===== */
+    .field-row { margin-bottom: 12px; }
+    .field-row label { display:block; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; margin-bottom:5px; }
+    .field-row input[type=text], .field-row input[type=password], .field-row input[type=number], .field-row textarea {
+        width:100%; padding:9px 11px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; font-family:'IBM Plex Sans',Arial,sans-serif;
+    }
+    .field-row input[type=color] { width:56px; height:34px; border:1px solid #e2e8f0; border-radius:6px; padding:2px; cursor:pointer; }
+    .field-row input[type=range] { width:100%; }
+    .presence-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; }
+    .presence-dot.online { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,0.2); }
+    .presence-dot.idle { background:#94a3b8; }
 
     @media print {
         .no-print { display: none !important; }
@@ -961,14 +1010,15 @@
                     <div class="sub" id="admin-dash-session">Administrator Session</div>
                 </div>
                 <div style="display:flex; gap:8px;">
-                    <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;" onclick="closeAdminDashboard()">Close</button>
+                    <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;" onclick="closeAdminDashboard()">↩ Back to Case Management</button>
                     <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:8px 14px;" onclick="logoutSession()">Log Out</button>
                 </div>
             </div>
             <div class="admin-dash-tabs">
                 <div class="admin-dash-tab active" onclick="showAdminDashTab('overview')">Overview</div>
                 <div class="admin-dash-tab" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></div>
-                <div class="admin-dash-tab" onclick="showAdminDashTab('announce')">Announcements</div>
+                <div class="admin-dash-tab" onclick="showAdminDashTab('users')">Users</div>
+                <div class="admin-dash-tab" onclick="showAdminDashTab('announce')">Broadcasts</div>
                 <div class="admin-dash-tab" onclick="showAdminDashTab('branding')">Branding</div>
                 <div class="admin-dash-tab" onclick="showAdminDashTab('access')">Access Control</div>
             </div>
@@ -995,24 +1045,65 @@
                             <div class="admin-stat" id="admin-stat-pending">0</div>
                             <div class="admin-stat-label">Awaiting review</div>
                         </div>
+                        <div class="admin-tile">
+                            <h4>Active Trainees</h4>
+                            <div class="admin-stat" id="admin-stat-active-trainees">0</div>
+                            <div class="admin-stat-label">Seen in the last 5 minutes</div>
+                        </div>
+                        <div class="admin-tile">
+                            <h4>Total Users</h4>
+                            <div class="admin-stat" id="admin-stat-total-users">0</div>
+                            <div class="admin-stat-label">Approved accounts, all types</div>
+                        </div>
+                    </div>
+                    <div class="admin-tile" style="margin-top:16px;">
+                        <h4>System Status</h4>
+                        <p style="font-size:12px;color:#475569;margin-top:8px;">
+                            Activity: <b id="overview-pause-state" style="color:#16a34a;">Running</b>
+                            &nbsp;·&nbsp; Access: <b id="overview-lock-state" style="color:#16a34a;">Unlocked</b>
+                            &nbsp;·&nbsp; Broadcast: <b id="overview-alert-state" style="color:#64748b;">None active</b>
+                        </p>
                     </div>
                 </div>
 
                 <div class="admin-dash-pane" id="admin-dash-registrations">
-                    <p style="font-size:11px;color:#64748b;margin-bottom:14px;">All registrations submitted from the login screen appear here for review.</p>
+                    <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Pending registrations submitted from the login screen appear here, grouped by user type and sorted by registration date (oldest first). Approve, reject, or leave pending.</p>
                     <div id="registrations-list"></div>
                 </div>
 
+                <div class="admin-dash-pane" id="admin-dash-users">
+                    <p style="font-size:11px;color:#64748b;margin-bottom:14px;">All approved and revoked accounts, grouped by user type and sorted by registration date (oldest first).</p>
+                    <input type="text" id="users-search" oninput="fetchMasterControlUsers()" placeholder="Search by name, username, or batch ID..." style="width:100%; padding:9px 12px; margin-bottom:14px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
+                    <div id="users-list"></div>
+                </div>
+
                 <div class="admin-dash-pane" id="admin-dash-announce">
-                    <div class="admin-tile">
-                        <h4>Current Ticker Message</h4>
-                        <p id="announce-current-preview" style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">Welcome to the LSH Training Interface.</p>
-                        <textarea id="announce-text-input" placeholder="Type the message to broadcast..." style="width:100%;min-height:80px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin-bottom:12px;"></textarea>
+                    <div class="admin-tile" style="margin-bottom:16px;">
+                        <h4>📢 Announcement <span style="font-weight:400;font-size:10.5px;color:#94a3b8;text-transform:none;">— shows in the ticker at the top of the screen</span></h4>
+                        <p id="announce-current-preview" style="font-size:13px;font-weight:700;color:var(--navy);margin:10px 0 14px;">Welcome to the LSH Training Interface.</p>
+                        <div class="field-row"><textarea id="announce-text-input" placeholder="Type the message to broadcast..." style="min-height:70px;"></textarea></div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAnnouncement()">📢 Make an Announcement</button>
-                            <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAlert()">⚠ Make an Alert</button>
-                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" id="pause-ticker-btn" onclick="togglePauseTicker()">⏸ Pause</button>
-                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="clearAnnouncement()">Clear</button>
+                            <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAnnouncement()">📢 Broadcast Announcement</button>
+                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="clearAnnouncement()">Clear Announcement</button>
+                        </div>
+                    </div>
+
+                    <div class="admin-tile" style="border:1px solid #fecaca;">
+                        <h4 style="color:#b91c1c;">⚠ Alert <span style="font-weight:400;font-size:10.5px;color:#94a3b8;text-transform:none;">— takes over the whole screen for every user until it ends</span></h4>
+                        <div class="field-row" style="margin-top:12px;"><label>Alert Text</label><textarea id="alert-text-input" placeholder="Type the alert message..." style="min-height:70px;"></textarea></div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+                            <div class="field-row"><label>Background Color</label><input type="color" id="alert-bg-color" value="#7c2d12"></div>
+                            <div class="field-row"><label>Background Opacity (55–75%)</label><input type="range" id="alert-opacity" min="0.55" max="0.75" step="0.01" value="0.65" oninput="document.getElementById('alert-opacity-val').innerText = Math.round(this.value*100)+'%'"><span id="alert-opacity-val" style="font-size:11px;color:#64748b;">65%</span></div>
+                            <div class="field-row"><label>Duration (seconds, 0 = until stopped)</label><input type="number" id="alert-duration" min="0" value="0" placeholder="0"></div>
+                        </div>
+                        <div class="field-row">
+                            <label>Attach Image <span style="font-weight:400;text-transform:none;">(optional — shown inside the alert, not as the background)</span></label>
+                            <input type="file" id="alert-image-input" accept="image/*" onchange="handleAlertImageUpload(this)">
+                            <div id="alert-image-preview" style="margin-top:8px;"></div>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                            <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="setSiteAlert()">⚠ Set Alert</button>
+                            <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="stopSiteAlert()">Stop / Cancel Alert</button>
                         </div>
                     </div>
                 </div>
@@ -1043,26 +1134,66 @@
                 </div>
 
                 <div class="admin-dash-pane" id="admin-dash-access">
-                    <div class="admin-tile">
-                        <h4>Page Access Control</h4>
-                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Locking the page blocks all editing until an administrator unlocks it again.</p>
-                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="lockPage()">Lock This Page</button>
+                    <div class="admin-tile" style="margin-bottom:16px;">
+                        <h4>⏸ Pause Activity</h4>
+                        <p style="font-size:11px; color:#64748b; margin:8px 0 12px;">Pausing blocks interaction for every user with an on-screen overlay, but keeps everyone logged in — nothing is lost, and Resume picks up right where they left off.</p>
+                        <button class="btn-primary" id="pause-toggle-btn" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="toggleSitePause()">⏸ Pause All Activity</button>
+                    </div>
+                    <div class="admin-tile" style="border:1px solid #fecaca;">
+                        <h4 style="color:#b91c1c;">🔒 Lock System</h4>
+                        <p style="font-size:11px; color:#64748b; margin:8px 0 12px;">Locking immediately signs out every user (including you) and blocks all access until an admin unlocks it again from the lock screen. Requires re-entering your Batch ID and password to confirm.</p>
+                        <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="openLockConfirm()">🔒 Lock This System</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== LOCK SCREEN ===== -->
+    <!-- ===== SYSTEM LOCK SCREEN ===== -->
     <div id="lock-overlay">
-        <div style="font-size:40px;">🔒</div>
-        <h2 class="serif" style="margin:14px 0 4px;">Page Locked by Administrator</h2>
-        <p class="mono" style="font-size:11px; color:#94a3b8; margin-bottom:20px;">Enter administrator credentials to resume access.</p>
-        <div style="width:300px;">
-            <input type="text" id="unlock-user" placeholder="Username" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;">
-            <input type="password" id="unlock-pass" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;">
-            <div id="unlock-error" style="display:none;color:#f87171;font-size:11px;margin-bottom:8px;">Invalid credentials.</div>
-            <button class="btn-primary" style="width:100%;padding:10px;border-radius:6px;" onclick="attemptUnlock()">Unlock Page</button>
+        <div style="font-size:44px;">🔒</div>
+        <h2 class="serif" style="margin:14px 0 4px;">System Locked by Administrator</h2>
+        <p class="mono" style="font-size:11px; color:#94a3b8;">All users have been signed out. Access is suspended until an admin unlocks the system.</p>
+        <div class="locked-by-tag" id="locked-by-tag">Locked By: Batch ID —</div>
+        <div id="unlock-toggle-link" onclick="document.getElementById('unlock-subform').classList.toggle('open')">Administrator Unlock ▾</div>
+        <div id="unlock-subform">
+            <div class="field-row" style="text-align:left;"><label style="color:#94a3b8;">Batch ID</label><input type="text" id="unlock-batchid" placeholder="Your Admin Batch ID"></div>
+            <div class="field-row" style="text-align:left;"><label style="color:#94a3b8;">Password</label><input type="password" id="unlock-password" placeholder="Your password"></div>
+            <div id="unlock-error" style="display:none;color:#f87171;font-size:11px;margin-bottom:8px;">Verification failed. Invalid Batch ID or password.</div>
+            <button class="btn-primary" style="width:100%;padding:10px;border-radius:6px;" onclick="attemptSystemUnlock()">Unlock System</button>
+        </div>
+    </div>
+
+    <!-- ===== SITE-WIDE ALERT (full screen broadcast) ===== -->
+    <div id="site-alert-overlay" class="no-print">
+        <div class="alert-content">
+            <div class="alert-icon">⚠️</div>
+            <img id="site-alert-image" src="" alt="" style="display:none;">
+            <div class="alert-text" id="site-alert-text"></div>
+        </div>
+    </div>
+
+    <!-- ===== PAUSE OVERLAY (blocks interaction, keeps everyone signed in) ===== -->
+    <div id="pause-overlay" class="no-print">
+        <div class="pause-icon">⏸</div>
+        <h2 class="serif" style="margin:0 0 6px;">Activity Paused</h2>
+        <p class="mono" style="font-size:11px; color:#cbd5e1;">Your trainer has paused activity. Please wait — nothing you've done has been lost.</p>
+        <button id="pause-overlay-resume-btn" class="btn-primary" style="display:none; margin-top:18px; border-radius:6px; padding:10px 18px;" onclick="toggleSitePause()">▶ Resume Activity</button>
+    </div>
+
+    <!-- ===== LOCK CONFIRMATION MODAL (re-verify admin before locking) ===== -->
+    <div class="modal-overlay no-print" id="lock-confirm-modal">
+        <div class="modal-box">
+            <h2 class="serif" style="color:var(--classified-red);">🔒 Confirm System Lock</h2>
+            <div class="sub mono">This will immediately sign out every user, including you.</div>
+            <p style="font-size:12px; color:#475569; margin:12px 0;">Re-enter your Batch ID and password to confirm.</p>
+            <div class="field-row"><label>Batch ID</label><input type="text" id="lock-confirm-batchid" placeholder="Your Admin Batch ID"></div>
+            <div class="field-row"><label>Password</label><input type="password" id="lock-confirm-password" placeholder="Your password"></div>
+            <div id="lock-confirm-error" style="display:none;color:#dc2626;font-size:11px;margin-bottom:8px;">Verification failed. Invalid Batch ID or password.</div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeLockConfirm()">Cancel</button>
+                <button class="btn-primary" style="background:var(--classified-red);color:white;" onclick="confirmSystemLock()">Confirm Lock</button>
+            </div>
         </div>
     </div>
 
@@ -1933,7 +2064,7 @@
             if (session.userType === 'Admin') {
                 footer.innerHTML = `
                     <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: <b>${session.batchId}</b></div>
-                    <button class="session-btn active-admin" onclick="openAdminDashboard()">Admin Panel</button>
+                    <button class="session-btn active-admin" onclick="openAdminDashboard()">🛠 Admin Portal</button>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             } else {
@@ -1968,7 +2099,7 @@
             setTimeout(() => { overlay.style.display = 'none'; }, 200);
         }
         function showAdminDashTab(tab) {
-            const tabs = ['overview', 'registrations', 'announce', 'branding', 'access'];
+            const tabs = ['overview', 'registrations', 'users', 'announce', 'branding', 'access'];
             document.querySelectorAll('.admin-dash-tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tab));
             document.querySelectorAll('.admin-dash-pane').forEach(p => p.classList.remove('active'));
             document.getElementById('admin-dash-' + tab).classList.add('active');
@@ -2006,48 +2137,162 @@
         }
 
         /* =========================================================
-           ANNOUNCEMENTS / NEWS TICKER
+           ANNOUNCEMENTS / ALERTS / PAUSE / LOCK — all synced via /api/site-state
+           so every user's browser sees the same broadcast state, not just this one.
            ========================================================= */
-        function getAnnouncement() { try { return JSON.parse(localStorage.getItem(ANNOUNCE_KEY) || 'null'); } catch (e) { return null; } }
-        function saveAnnouncement(data) { localStorage.setItem(ANNOUNCE_KEY, JSON.stringify(data)); }
-        function applyAnnouncementUI() {
-            const data = getAnnouncement() || { text: 'Welcome to the LSH Training Interface.', type: 'announcement', paused: false };
-            document.getElementById('ticker-text').innerText = data.text;
-            document.getElementById('announce-current-preview').innerText = data.text;
+        let _lastSeenAlertUpdatedAt = 0; // used so we don't re-trigger the sound every poll
+        let _isUnlockingInProgress = false;
+
+        let _lastKnownStateSignature = '';
+        function applySiteState(state) {
+            if (!state) return;
+
+            const isExpired = state.alert_expires_at && state.alert_expires_at > 0 && Date.now() > state.alert_expires_at;
+            const alertShouldShow = !!state.alert_active && !isExpired;
+            const signature = `${alertShouldShow}|${!!state.paused}|${!!state.locked}`;
+            if (_lastKnownStateSignature && signature !== _lastKnownStateSignature) {
+                const [wasAlert] = _lastKnownStateSignature.split('|');
+                if (alertShouldShow && wasAlert === 'false') playNotificationSound('alert');
+                else if (state.locked && !_lastKnownStateSignature.endsWith('true')) playNotificationSound('error');
+            }
+            _lastKnownStateSignature = signature;
+
+            // ----- Announcement ticker (upper part of the screen) -----
+            const tickerText = document.getElementById('ticker-text');
             const wrap = document.getElementById('announcement-ticker');
-            const tag = document.getElementById('announcement-tag');
-            const track = document.getElementById('ticker-track');
-            wrap.classList.toggle('is-alert', data.type === 'alert');
-            tag.innerText = data.type === 'alert' ? 'ALERT:' : 'ANNOUNCEMENT:';
-            track.classList.toggle('paused', !!data.paused);
-            const pauseBtn = document.getElementById('pause-ticker-btn');
-            if (pauseBtn) pauseBtn.innerText = data.paused ? 'Resume' : 'Pause';
+            if (tickerText && wrap) {
+                const text = state.announcement_active ? (state.announcement_text || '') : 'Welcome to the LSH Training Interface.';
+                tickerText.innerText = text;
+                wrap.classList.toggle('is-alert', false);
+                const preview = document.getElementById('announce-current-preview');
+                if (preview) preview.innerText = text;
+            }
+
+            // ----- Site-wide Alert (full screen) -----
+            const alertOverlay = document.getElementById('site-alert-overlay');
+            if (alertOverlay) {
+                alertOverlay.classList.toggle('open', alertShouldShow);
+                if (alertShouldShow) {
+                    document.getElementById('site-alert-text').innerText = state.alert_text || '';
+                    alertOverlay.style.background = hexToRgba(state.alert_bg_color || '#7c2d12', state.alert_opacity || 0.65);
+                    const img = document.getElementById('site-alert-image');
+                    if (state.alert_image) { img.src = state.alert_image; img.style.display = 'block'; }
+                    else { img.style.display = 'none'; }
+                }
+            }
+            const overviewAlertTile = document.getElementById('overview-alert-state');
+            if (overviewAlertTile) overviewAlertTile.innerText = alertShouldShow ? 'Active' : 'None active';
+
+            // ----- Pause (blocks interaction, keeps everyone signed in) -----
+            const session = getSession();
+            const inMasterControl = document.getElementById('admin-dashboard-overlay')?.classList.contains('open');
+            const pauseOverlay = document.getElementById('pause-overlay');
+            if (pauseOverlay) {
+                const showPause = !!state.paused && !inMasterControl;
+                pauseOverlay.classList.toggle('open', showPause);
+                const resumeBtn = document.getElementById('pause-overlay-resume-btn');
+                if (resumeBtn) resumeBtn.style.display = (session && session.userType === 'Admin') ? 'inline-block' : 'none';
+            }
+            const overviewPauseTile = document.getElementById('overview-pause-state');
+            if (overviewPauseTile) { overviewPauseTile.innerText = state.paused ? 'Paused' : 'Running'; overviewPauseTile.style.color = state.paused ? '#dc2626' : '#16a34a'; }
+            const pauseBtn = document.getElementById('pause-toggle-btn');
+            if (pauseBtn) pauseBtn.innerText = state.paused ? '▶ Resume All Activity' : '⏸ Pause All Activity';
+
+            // ----- Lock (force logout, blocks everyone until an admin unlocks) -----
+            const lockOverlay = document.getElementById('lock-overlay');
+            const overviewLockTile = document.getElementById('overview-lock-state');
+            if (overviewLockTile) { overviewLockTile.innerText = state.locked ? 'Locked' : 'Unlocked'; overviewLockTile.style.color = state.locked ? '#dc2626' : '#16a34a'; }
+            if (state.locked && !_isUnlockingInProgress) {
+                if (getSession()) { clearSession(); applySessionUI(); }
+                document.getElementById('locked-by-tag').innerText = `Locked By: Batch ID ${state.locked_by || '—'}`;
+                lockOverlay.classList.add('open');
+            } else if (!state.locked) {
+                lockOverlay.classList.remove('open');
+            }
         }
+
+        function hexToRgba(hex, alpha) {
+            const h = hex.replace('#', '');
+            const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function pollSiteState() {
+            fetch('/api/site-state')
+                .then(res => res.json())
+                .then(data => { if (data && data.state) applySiteState(data.state); })
+                .catch(err => console.error('Site state poll failed:', err));
+        }
+
+        function sendHeartbeat() {
+            const session = getSession();
+            if (!session || !session.username) return;
+            fetch('/api/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: session.username })
+            }).catch(() => {});
+        }
+
+        // Poll every 4s for broadcast state (announcement/alert/pause/lock) and heartbeat every 30s.
+        setInterval(pollSiteState, 4000);
+        setInterval(sendHeartbeat, 30000);
+
         function makeAnnouncement() {
             const text = document.getElementById('announce-text-input').value.trim();
             if (!text) return;
-            saveAnnouncement({ text: text, type: 'announcement', paused: false });
-            document.getElementById('announce-text-input').value = '';
-            applyAnnouncementUI();
-            showToast('Announcement broadcasted.', 'info');
-        }
-        function makeAlert() {
-            const text = document.getElementById('announce-text-input').value.trim();
-            if (!text) return;
-            saveAnnouncement({ text: text, type: 'alert', paused: false });
-            document.getElementById('announce-text-input').value = '';
-            applyAnnouncementUI();
-            showToast('Alert broadcasted.', 'alert');
-        }
-        function togglePauseTicker() {
-            const data = getAnnouncement() || { text: 'Welcome to the LSH Training Interface.', type: 'announcement', paused: false };
-            data.paused = !data.paused;
-            saveAnnouncement(data);
-            applyAnnouncementUI();
+            fetch('/api/site-state', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'announcement', text: text, active: true })
+            }).then(() => { pollSiteState(); showToast('Announcement broadcasted.', 'info'); })
+              .catch(() => showToast('Failed to broadcast announcement.', 'error'));
         }
         function clearAnnouncement() {
-            saveAnnouncement({ text: 'Welcome to the LSH Training Interface.', type: 'announcement', paused: false });
-            applyAnnouncementUI();
+            fetch('/api/site-state', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'announcement', text: '', active: false })
+            }).then(() => { pollSiteState(); showToast('Announcement cleared.', 'info'); })
+              .catch(() => showToast('Failed to clear announcement.', 'error'));
+        }
+
+        let _pendingAlertImage = '';
+        function handleAlertImageUpload(input) {
+            const file = input.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                _pendingAlertImage = e.target.result;
+                document.getElementById('alert-image-preview').innerHTML = `<img src="${_pendingAlertImage}" style="max-width:160px;max-height:100px;border-radius:6px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+        function setSiteAlert() {
+            const text = document.getElementById('alert-text-input').value.trim();
+            if (!text) { showToast('Alert text is required.', 'error'); return; }
+            const bgColor = document.getElementById('alert-bg-color').value;
+            const opacity = parseFloat(document.getElementById('alert-opacity').value);
+            const durationSeconds = parseInt(document.getElementById('alert-duration').value, 10) || 0;
+            fetch('/api/site-state', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'alert', text, bgColor, opacity, image: _pendingAlertImage, durationSeconds })
+            }).then(() => { pollSiteState(); showToast('Alert broadcasted to all users.', 'alert'); })
+              .catch(() => showToast('Failed to broadcast alert.', 'error'));
+        }
+        function stopSiteAlert() {
+            fetch('/api/site-state', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'clear-alert' })
+            }).then(() => { pollSiteState(); showToast('Alert stopped.', 'info'); })
+              .catch(() => showToast('Failed to stop alert.', 'error'));
+        }
+
+        function toggleSitePause() {
+            const overviewPauseTile = document.getElementById('overview-pause-state');
+            const isPaused = overviewPauseTile && overviewPauseTile.innerText === 'Paused';
+            fetch('/api/site-state', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: isPaused ? 'resume' : 'pause' })
+            }).then(() => { pollSiteState(); showToast(isPaused ? 'Activity resumed.' : 'Activity paused for all users.', 'info'); })
+              .catch(() => showToast('Failed to update pause state.', 'error'));
         }
 
         function changeLogo(input) {
@@ -2090,26 +2335,60 @@
             }
         }
 
-        function lockPage() {
-            localStorage.setItem(LOCK_KEY, '1');
-            closeAdminDashboard();
-            document.getElementById('lock-overlay').classList.add('open');
+        function openLockConfirm() { document.getElementById('lock-confirm-modal').classList.add('open'); }
+        function closeLockConfirm() {
+            document.getElementById('lock-confirm-modal').classList.remove('open');
+            document.getElementById('lock-confirm-batchid').value = '';
+            document.getElementById('lock-confirm-password').value = '';
+            document.getElementById('lock-confirm-error').style.display = 'none';
         }
-        function attemptUnlock() {
-            const u = document.getElementById('unlock-user').value.trim();
-            const p = document.getElementById('unlock-pass').value.trim();
-            const result = authenticate(u, p, 'Admin');
-            if (result.ok) {
-                localStorage.removeItem(LOCK_KEY);
-                document.getElementById('lock-overlay').classList.remove('open');
-                document.getElementById('unlock-error').style.display = 'none';
-                document.getElementById('unlock-user').value = '';
-                document.getElementById('unlock-pass').value = '';
-                setSession(result.user);
-                applySessionUI();
-            } else {
+        function confirmSystemLock() {
+            const batchId = document.getElementById('lock-confirm-batchid').value.trim();
+            const password = document.getElementById('lock-confirm-password').value;
+            fetch('/api/site-state', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'lock', batchId, password })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    closeLockConfirm();
+                    pollSiteState();
+                    showToast('System locked. All users have been signed out.', 'alert');
+                } else {
+                    document.getElementById('lock-confirm-error').innerText = data.error || 'Verification failed.';
+                    document.getElementById('lock-confirm-error').style.display = 'block';
+                }
+            }).catch(() => {
+                document.getElementById('lock-confirm-error').innerText = 'Network error. Please try again.';
+                document.getElementById('lock-confirm-error').style.display = 'block';
+            });
+        }
+
+        function attemptSystemUnlock() {
+            const batchId = document.getElementById('unlock-batchid').value.trim();
+            const password = document.getElementById('unlock-password').value;
+            _isUnlockingInProgress = true;
+            fetch('/api/site-state', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'unlock', batchId, password })
+            }).then(res => res.json()).then(data => {
+                _isUnlockingInProgress = false;
+                if (data.success) {
+                    document.getElementById('unlock-error').style.display = 'none';
+                    document.getElementById('unlock-batchid').value = '';
+                    document.getElementById('unlock-password').value = '';
+                    document.getElementById('unlock-subform').classList.remove('open');
+                    document.getElementById('lock-overlay').classList.remove('open');
+                    showLoginView();
+                    document.getElementById('auth-gate').classList.add('open');
+                    showToast('System unlocked. Please log in.', 'success');
+                    pollSiteState();
+                } else {
+                    document.getElementById('unlock-error').style.display = 'block';
+                }
+            }).catch(() => {
+                _isUnlockingInProgress = false;
                 document.getElementById('unlock-error').style.display = 'block';
-            }
+            });
         }
 
         /* =========================================================
@@ -2449,8 +2728,7 @@
             populateTimezones();
             refreshClock();
             applySessionUI();
-            applyAnnouncementUI();
-            if (localStorage.getItem(LOCK_KEY) === '1') document.getElementById('lock-overlay').classList.add('open');
+            pollSiteState(); // fetch announcement/alert/pause/lock state immediately, then every 4s via setInterval
         });
     </script>
   <script>
@@ -2602,7 +2880,7 @@ function fetchMasterControlRegistrations() {
 
 // Make sure your existing showAdminDashTab function includes these execution triggers!
 function showAdminDashTab(tabName) {
-    const tabs = ['overview', 'registrations', 'announce', 'branding', 'access'];
+    const tabs = ['overview', 'registrations', 'users', 'announce', 'branding', 'access'];
     document.querySelectorAll('.admin-dash-tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tabName));
     document.querySelectorAll('.admin-dash-pane').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
     const target = document.getElementById('admin-dash-' + tabName);
@@ -2615,6 +2893,9 @@ function showAdminDashTab(tabName) {
     // Drop this activation listener hook at the bottom of the function:
     if (tabName === 'registrations' || tabName === 'overview') {
         fetchMasterControlRegistrations();
+    }
+    if (tabName === 'users') {
+        fetchMasterControlUsers();
     }
 }
 
@@ -2763,59 +3044,86 @@ function attemptLogin() {
     fetch('/api/users')
         .then(response => response.json())
         .then(users => {
-            // Count ONLY the users who are still 'Pending' review
+            // Registrations tab shows ONLY pending applications now — approved/revoked
+            // users live in the separate Users tab (fetchMasterControlUsers below).
             const pendingUsers = users.filter(u => u.status === 'Pending' || !u.status);
             const registrationCount = pendingUsers.length;
-            
+
             if (overviewStatTile) overviewStatTile.innerText = registrationCount;
             if (tabNotificationBadge) {
                 tabNotificationBadge.innerText = registrationCount > 0 ? `(${registrationCount})` : "";
                 tabNotificationBadge.style.color = registrationCount > 0 ? "var(--classified-red)" : "inherit";
             }
+            const totalUsersTile = document.getElementById('admin-stat-total-users');
+            if (totalUsersTile) totalUsersTile.innerText = users.filter(u => u.status === 'Approved').length;
+            const activeTraineesTile = document.getElementById('admin-stat-active-trainees');
+            if (activeTraineesTile) {
+                const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+                activeTraineesTile.innerText = users.filter(u => u.last_seen && new Date(u.last_seen + 'Z').getTime() > fiveMinAgo).length;
+            }
 
             if (!listContainer) return;
-            if (users.length === 0) {
-                listContainer.innerHTML = `<p style="font-size:13px; color:#64748b; text-align:center; padding: 20px 0;">No system registrations found.</p>`;
+            if (registrationCount === 0) {
+                listContainer.innerHTML = `<p style="font-size:13px; color:#64748b; text-align:center; padding: 20px 0;">No pending registrations awaiting review.</p>`;
                 return;
             }
 
-            listContainer.innerHTML = ""; // Wipe original boilerplate content
-
-            // Create section titles inside your tab view pane
-            const pendingHeader = document.createElement('h3');
-            pendingHeader.innerHTML = `⚠️ Pending Approvals <span style="font-size:12px;color:#64748b;">(${registrationCount})</span>`;
-            pendingHeader.style.cssText = "color:#0f172a; font-size:14px; margin: 15px 0 10px 0; border-bottom:1px solid #e2e8f0; padding-bottom:4px;";
-            listContainer.appendChild(pendingHeader);
-
-            // 1. RENDER PENDING REGISTRATIONS
-            if (registrationCount === 0) {
-                listContainer.innerHTML += `<p style="font-size:12px; color:#64748b; padding-left:10px; margin-bottom:20px;">No pending applications.</p>`;
-            } else {
-                pendingUsers.forEach(user => {
-                    const card = createAdminUserCard(user, true);
-                    listContainer.appendChild(card);
-                });
-            }
-
-            // 2. RENDER ACTIVE ACCOUNT DIRECTORY (For Revocation Control)
-            const activeHeader = document.createElement('h3');
-            const activeUsers = users.filter(u => u.status === 'Approved' || u.status === 'Revoked');
-            activeHeader.innerHTML = `⚙️ Active Directory <span style="font-size:12px;color:#64748b;">(${activeUsers.length})</span>`;
-            activeHeader.style.cssText = "color:#0f172a; font-size:14px; margin: 25px 0 10px 0; border-bottom:1px solid #e2e8f0; padding-bottom:4px;";
-            listContainer.appendChild(activeHeader);
-
-            if (activeUsers.length === 0) {
-                listContainer.innerHTML += `<p style="font-size:12px; color:#64748b; padding-left:10px;">No verified active accounts in repository.</p>`;
-            } else {
-                activeUsers.forEach(user => {
-                    const card = createAdminUserCard(user, false);
-                    listContainer.appendChild(card);
-                });
-            }
+            listContainer.innerHTML = "";
+            renderUsersGroupedByType(listContainer, pendingUsers, true);
         })
         .catch(error => {
             console.error("Master Control Display Error:", error);
+            if (listContainer) listContainer.innerHTML = `<p style="color:var(--classified-red); font-size:12px;">Failed to load registrations.</p>`;
         });
+}
+
+function fetchMasterControlUsers() {
+    const listContainer = document.getElementById('users-list');
+    if (!listContainer) return;
+    const search = (document.getElementById('users-search')?.value || '').trim().toLowerCase();
+
+    fetch('/api/users')
+        .then(response => response.json())
+        .then(users => {
+            let activeUsers = users.filter(u => u.status === 'Approved' || u.status === 'Revoked');
+            if (search) {
+                activeUsers = activeUsers.filter(u =>
+                    `${u.first_name} ${u.last_name}`.toLowerCase().includes(search) ||
+                    (u.username || '').toLowerCase().includes(search) ||
+                    (u.batch_id || '').toLowerCase().includes(search)
+                );
+            }
+            if (activeUsers.length === 0) {
+                listContainer.innerHTML = `<p style="font-size:13px; color:#64748b; text-align:center; padding: 20px 0;">No matching users found.</p>`;
+                return;
+            }
+            listContainer.innerHTML = "";
+            renderUsersGroupedByType(listContainer, activeUsers, false);
+        })
+        .catch(error => {
+            console.error("Users Tab Load Error:", error);
+            listContainer.innerHTML = `<p style="color:var(--classified-red); font-size:12px;">Failed to load users.</p>`;
+        });
+}
+
+// Groups a user list by user_type (Admin / Trainee), preserving the ascending
+// registration-date order the API already returns them in.
+function renderUsersGroupedByType(container, users, isPending) {
+    const groups = {};
+    users.forEach(u => {
+        const key = u.user_type || 'Trainee';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(u);
+    });
+    Object.keys(groups).sort().forEach(type => {
+        const header = document.createElement('h3');
+        header.innerHTML = `${type === 'Admin' ? '🛡️' : '🎓'} ${type}s <span style="font-size:12px;color:#64748b;">(${groups[type].length})</span>`;
+        header.style.cssText = "color:#0f172a; font-size:14px; margin: 18px 0 10px 0; border-bottom:1px solid #e2e8f0; padding-bottom:4px;";
+        container.appendChild(header);
+        groups[type].forEach(user => {
+            container.appendChild(createAdminUserCard(user, isPending));
+        });
+    });
 }
 
 // Helper function to build beautiful custom action cards inside your grid panel
@@ -2824,19 +3132,27 @@ function createAdminUserCard(user, isPending) {
     card.style.cssText = "background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin-bottom: 10px; text-align: left;";
     
     // Status badges styling
+
     let statusBadge = `<span style="font-size: 10px; background: rgba(249, 115, 22, 0.15); color: #f97316; padding: 2px 8px; border-radius: 12px; font-weight: 700;">PENDING</span>`;
     if (user.status === 'Approved') statusBadge = `<span style="font-size: 10px; background: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 2px 8px; border-radius: 12px; font-weight: 700;">ACTIVE</span>`;
     if (user.status === 'Revoked') statusBadge = `<span style="font-size: 10px; background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 2px 8px; border-radius: 12px; font-weight: 700;">REVOKED</span>`;
 
+    const regDate = user.created_at ? new Date(user.created_at + 'Z').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+    const isOnline = user.last_seen && (Date.now() - new Date(user.last_seen + 'Z').getTime()) < 5 * 60 * 1000;
+    const presenceHtml = user.status === 'Approved'
+        ? `<span style="font-size:10.5px; color:${isOnline ? '#16a34a' : '#94a3b8'};"><span class="presence-dot ${isOnline ? 'online' : 'idle'}"></span>${isOnline ? 'Active now' : 'Offline'}</span>`
+        : '';
+
     card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 8px;">
             <span style="font-weight: 700; font-size: 13px; color: #0f172a;">${user.first_name} ${user.last_name} <span style="font-weight:400; font-size:11px; color:#64748b;">(${user.user_type})</span></span>
-            ${statusBadge}
+            <div style="display:flex; align-items:center; gap:10px;">${presenceHtml}${statusBadge}</div>
         </div>
         <div style="font-size: 11.5px; color: #475569; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 4px; margin-bottom:10px;">
             <div><strong>Email:</strong> ${user.email}</div>
             <div><strong>Batch ID:</strong> ${user.batch_id || '—'}</div>
             <div><strong>Username:</strong> @${user.username}</div>
+            <div><strong>Registered:</strong> ${regDate}</div>
         </div>
         <div style="display:flex; gap:8px; justify-content: flex-end;" class="card-actions"></div>
     `;
