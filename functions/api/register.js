@@ -24,8 +24,8 @@ export async function onRequestPost(context) {
       firstName, mi, lastName, suffix,
       email, userType, username, password
     } = data;
-    // NOTE: batchId is intentionally NOT accepted from the client anymore.
-    // It's generated below, server-side, after the row exists — see why underneath.
+    // NOTE: batchId is intentionally NOT set here. It's assigned later, only once
+    // an admin approves the registration — see functions/api/update-status.js.
 
     if (!username || !password || !email) {
       return new Response(JSON.stringify({ error: "Required fields are missing." }), {
@@ -36,28 +36,12 @@ export async function onRequestPost(context) {
 
     const { hash, salt } = await hashPassword(password);
 
-    // 1. Insert the user first, WITHOUT a batch_id yet.
-    // We need the row's own auto-increment id before we can build a batch ID from it.
-    const insertResult = await context.env.DB.prepare(`
+    await context.env.DB.prepare(`
       INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, username, password_hash, password_salt, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
     `).bind(firstName, mi, lastName, suffix, email, userType, username, hash, salt).run();
 
-    const newUserId = insertResult.meta.last_row_id;
-
-    // 2. Build a batch ID from that row's own unique id, e.g. 2026-LSHTRAINEE-0042.
-    // The database assigns this id atomically on insert, so it can never collide —
-    // even if two people submit registrations at the exact same moment.
-    const year = new Date().getFullYear();
-    const typeTag = (userType === 'Admin') ? 'LSHADMIN' : 'LSHTRAINEE';
-    const batchId = `${year}-${typeTag}-${String(newUserId).padStart(4, '0')}`;
-
-    // 3. Write the generated batch ID back onto that same row.
-    await context.env.DB.prepare(
-      "UPDATE users SET batch_id = ? WHERE id = ?"
-    ).bind(batchId, newUserId).run();
-
-    return new Response(JSON.stringify({ success: true, message: "Registration complete!", batchId: batchId }), {
+    return new Response(JSON.stringify({ success: true, message: "Registration complete!" }), {
       headers: { "Content-Type": "application/json" }
     });
 
