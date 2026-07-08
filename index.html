@@ -979,6 +979,7 @@
                         <option value="Admin">Admin</option>
                     </select>
                 </div>
+                <div class="auth-field" id="reg-training-date-wrap"><label>Start of Training Date</label><input type="date" id="reg-training-date" autocomplete="off" oninput="onRegUserTypeChange()"></div>
                 <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" placeholder="Assigned upon approval" disabled style="opacity:0.6; cursor:not-allowed;"></div>
                 <div class="auth-field"><label>Username</label><input type="text" id="reg-username" autocomplete="off" data-allow="alnum-underscore" placeholder="Choose a username"></div>
                 <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="off" placeholder="Create a password"></div>
@@ -2014,32 +2015,39 @@
         function onRegUserTypeChange() {
             const type = document.getElementById('reg-usertype').value;
             const batchField = document.getElementById('reg-batchid');
+            const trainingWrap = document.getElementById('reg-training-date-wrap');
             if (type === 'Admin') {
                 batchField.value = previewAdminBatchId();
                 batchField.placeholder = '';
                 batchField.disabled = true;
+                if (trainingWrap) trainingWrap.style.display = 'none';
             } else if (type === 'Trainee') {
                 batchField.value = previewTraineeBatchId();
                 batchField.placeholder = '';
                 batchField.disabled = true;
+                if (trainingWrap) trainingWrap.style.display = '';
             } else {
                 batchField.value = '';
                 batchField.placeholder = 'Enter your batch ID';
                 batchField.disabled = false;
+                if (trainingWrap) trainingWrap.style.display = 'none';
             }
         }
 
-        // Format: <YEAR>-LSHADMIN-<DDMMXXX> — DD/MM is the registration date,
-        // XXX is a chronological sequence number across all admin registrations.
+        // Format: B<DD><MM><YYYY>-LSHADMIN-<XXX> — DD/MM/YYYY is the admin's
+        // registration date, XXX is a chronological sequence number across all
+        // admin registrations. NOTE: this is a live preview only — the real
+        // Batch ID is generated server-side when an admin approves the
+        // registration (see nextBatchId() in _utils.js).
         function buildAdminBatchId(counter) {
             const now = new Date();
-            const year = now.getFullYear();
             const dd = String(now.getDate()).padStart(2, '0');
             const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yyyy = now.getFullYear();
             const xxx = String(counter).padStart(3, '0');
-            return `${year}-LSHADMIN-${dd}${mm}${xxx}`;
+            return `B${dd}${mm}${yyyy}-LSHADMIN-${xxx}`;
         }
-        // Shows what the next admin Batch ID will be, without consuming the counter.
+        // Shows what the next admin Batch ID will look like, without consuming the counter.
         function previewAdminBatchId() {
             const counter = parseInt(localStorage.getItem(ADMIN_BATCH_COUNTER_KEY) || '0', 10) + 1;
             return buildAdminBatchId(counter);
@@ -2051,26 +2059,31 @@
             return buildAdminBatchId(counter);
         }
 
-        // Format: <YEAR>-LSHTRAINEE-<DDMMXXX> — DD/MM is the registration date,
-        // XXX is a chronological sequence number across all trainee registrations.
-        function buildTraineeBatchId(counter) {
-            const now = new Date();
-            const year = now.getFullYear();
-            const dd = String(now.getDate()).padStart(2, '0');
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
+        // Format: B<DD><MM><YYYY>-LSHTRAINEE-<XXX> — DD/MM/YYYY is the
+        // trainee's start-of-training date (entered on this form), XXX is a
+        // chronological sequence number across all trainee registrations.
+        // NOTE: this is a live preview only — the real Batch ID is generated
+        // server-side when an admin approves the registration.
+        function buildTraineeBatchId(counter, dateStr) {
+            const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
             const xxx = String(counter).padStart(3, '0');
-            return `${year}-LSHTRAINEE-${dd}${mm}${xxx}`;
+            return `B${dd}${mm}${yyyy}-LSHTRAINEE-${xxx}`;
         }
-        // Shows what the next trainee Batch ID will be, without consuming the counter.
+        // Shows what the next trainee Batch ID will look like, without consuming the counter.
         function previewTraineeBatchId() {
             const counter = parseInt(localStorage.getItem(TRAINEE_BATCH_COUNTER_KEY) || '0', 10) + 1;
-            return buildTraineeBatchId(counter);
+            const dateInput = document.getElementById('reg-training-date');
+            return buildTraineeBatchId(counter, dateInput ? dateInput.value : '');
         }
         // Actually reserves and persists the next counter value on submission.
         function generateTraineeBatchId() {
             const counter = parseInt(localStorage.getItem(TRAINEE_BATCH_COUNTER_KEY) || '0', 10) + 1;
             localStorage.setItem(TRAINEE_BATCH_COUNTER_KEY, String(counter));
-            return buildTraineeBatchId(counter);
+            const dateInput = document.getElementById('reg-training-date');
+            return buildTraineeBatchId(counter, dateInput ? dateInput.value : '');
         }
 
         function authenticate(username, password, portal) {
@@ -2286,10 +2299,13 @@
             } else {
                 actions = '<button class="mini-btn revoke" onclick="updateUserStatus(' + u.id + ',\'Revoked\')">Revoke Access</button>';
             }
+            const userType = u.user_type || u.userType;
+            const trainingStart = u.training_start_date || u.trainingStartDate;
+            const trainingStartLabel = trainingStart ? (' \u00B7 Training Start ' + new Date(trainingStart + 'T00:00:00').toLocaleDateString()) : '';
             return '<div class="reg-row">' +
                     '<div class="reg-info">' +
                         '<b>' + fullName + ' <span class="status-pill ' + pillClass + '">' + status + '</span></b>' +
-                        '<div class="reg-meta">' + (u.user_type || u.userType) + ' \u00B7 Batch ' + (u.batch_id || u.batchId || '\u2014') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u.email || '') + ' \u00B7 Registered ' + createdLabel + '</div>' +
+                        '<div class="reg-meta">' + userType + ' \u00B7 Batch ' + (u.batch_id || u.batchId || '\u2014') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u.email || '') + ' \u00B7 Registered ' + createdLabel + (userType === 'Trainee' ? trainingStartLabel : '') + '</div>' +
                     '</div>' +
                     '<div style="display:flex; gap:6px;">' + actions + '</div>' +
                 '</div>';
@@ -3060,6 +3076,14 @@ function submitRegistration() {
         password: password
     };
 
+    if (payload.userType === 'Trainee') {
+        payload.trainingStartDate = document.getElementById('reg-training-date').value;
+        if (!payload.trainingStartDate) {
+            if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = "Please enter your start of training date."; }
+            return;
+        }
+    }
+
     if (!payload.username || !payload.password || !payload.email) {
         if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = "Please fill out all required fields."; }
         return;
@@ -3076,7 +3100,7 @@ function submitRegistration() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            if (msgDiv) { msgDiv.className = "auth-msg success"; msgDiv.innerText = "Account created! Batch ID will be assigned upon approval of your registration."; }
+            if (msgDiv) { msgDiv.className = "auth-msg success"; msgDiv.innerText = "Batch ID will be assigned upon the approval of registration."; }
             showToast("Registration submitted successfully!", 'success');
             setTimeout(() => { showLoginView(); }, 2400);
         } else {
