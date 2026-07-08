@@ -165,11 +165,17 @@ export async function upgradePasswordHash(db, userId, plainPassword) {
 /* =====================================================================
    BATCH ID / CREDENTIAL HELPERS
    ===================================================================== */
-export async function nextBatchId(db, userType) {
-    const now = new Date();
-    const year = now.getUTCFullYear();
-    const dd = String(now.getUTCDate()).padStart(2, '0');
-    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+// Batch ID format: B<DD><MM><YYYY>-LSH<TYPE>-<XXX>
+// For Admins, DD/MM/YYYY is their registration date (users.created_at).
+// For Trainees, DD/MM/YYYY is their start-of-training date, which they
+// supply at registration (users.training_start_date) — see register.js.
+// XXX is a three-digit sequence number, chronological per user type,
+// based on how many users of that type have already been approved.
+export async function nextBatchId(db, userType, referenceDate) {
+    const d = referenceDate ? new Date(referenceDate) : new Date();
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = d.getUTCFullYear();
     const prefix = userType === 'Admin' ? 'LSHADMIN' : 'LSHTRAINEE';
 
     const countRow = await db.prepare(
@@ -177,7 +183,7 @@ export async function nextBatchId(db, userType) {
     ).bind(userType).first();
     const seq = ((countRow && countRow.n) || 0) + 1;
     const xxx = String(seq).padStart(3, '0');
-    return `${year}-${prefix}-${dd}${mm}${xxx}`;
+    return `B${dd}${mm}${yyyy}-${prefix}-${xxx}`;
 }
 
 export async function verifyAdminCredentials(db, batchId, password) {
