@@ -4,5 +4,5 @@ pages_build_output_dir = "./"
 
 [[d1_databases]]
 binding = "DB" 
-database_name = "9b1afc1b-a26f-4fc2-aadf-acb9e704b75f"
+database_name = "lshcasemanagementtraining-trainingcrmlogins"
 database_id = "9b1afc1b-a26f-4fc2-aadf-acb9e704b75f"
