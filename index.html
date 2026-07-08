@@ -1415,6 +1415,9 @@
         const LOCK_KEY = 'LSH_PAGE_LOCKED';
         const USERS_KEY = 'LSH_USERS_V1';
         const SESSION_KEY = 'LSH_SESSION_V1';
+        const HEARTBEAT_INTERVAL_MS = 2000;
+        const HEARTBEAT_GRACE_MS = 6000;
+        const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes — adjust if needed
         const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
         const ADMIN_BATCH_COUNTER_KEY = 'LSH_ADMIN_BATCH_COUNTER_V1';
         const TRAINEE_BATCH_COUNTER_KEY = 'LSH_TRAINEE_BATCH_COUNTER_V1';
@@ -1990,9 +1993,32 @@
            ========================================================= */
         function getUsers() { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
         function saveUsers(list) { localStorage.setItem(USERS_KEY, JSON.stringify(list)); }
-        function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
-        function setSession(user) { localStorage.setItem(SESSION_KEY, JSON.stringify({ fullName: user.fullName, batchId: user.batchId, userType: user.userType, username: user.username })); }
-        function clearSession() { localStorage.removeItem(SESSION_KEY); }
+        function getSession() {
+            try {
+                let raw = sessionStorage.getItem(SESSION_KEY);
+                // One-time migration from the old localStorage session key.
+                if (raw === null) {
+                    raw = localStorage.getItem(SESSION_KEY);
+                    if (raw !== null) {
+                        sessionStorage.setItem(SESSION_KEY, raw);
+                        localStorage.removeItem(SESSION_KEY);
+                    }
+                }
+                return JSON.parse(raw || 'null');
+            } catch (e) { return null; }
+        }
+        function setSession(user) {
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+                fullName: user.fullName,
+                batchId: user.batchId,
+                userType: user.userType,
+                username: user.username
+            }));
+        }
+        function clearSession() {
+            sessionStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(SESSION_KEY);
+        }
 
         let currentPortalTab = 'Trainee';
         function switchPortalTab(portal) {
@@ -2206,11 +2232,24 @@
             }
         }
 
-        function logoutSession() {
+        function logoutSession(reason) {
+            stopHeartbeat();
+            stopIdleTracking();
             fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
             clearSession();
             exitMasterControl();
             applySessionUI();
+            if (reason) showToast(reason, 'info');
+        }
+
+        function handleSessionExpired(message) {
+            stopHeartbeat();
+            stopIdleTracking();
+            fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+            clearSession();
+            exitMasterControl();
+            applySessionUI();
+            if (message) showToast(message, 'info');
         }
 
         /* =========================================================
@@ -2347,7 +2386,7 @@
         }
         function renderMonitoringOnline(list) {
             const now = Date.now();
-            list.forEach(u => u._online = (now - new Date(u.last_seen).getTime()) < 60000);
+            list.forEach(u => u._online = (now - new Date(u.last_seen).getTime()) < HEARTBEAT_GRACE_MS * 2);
             const onlineCount = list.filter(u => u._online).length;
             const statTile = document.getElementById('admin-stat-online');
             if (statTile) statTile.innerText = onlineCount;
@@ -2382,10 +2421,12 @@
             )).join('');
         }
         let heartbeatTimer = null;
+        let idleTimer = null;
+
         function sendHeartbeat() {
             const session = getSession();
-            if (!session) return;
-            fetch('/api/heartbeat', {
+            if (!session) return Promise.resolve(false);
+            return fetch('/api/heartbeat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -2393,12 +2434,78 @@
                     fullName: session.fullName,
                     currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
                 })
-            }).catch(() => {});
+            })
+            .then(r => {
+                if (r.status === 401) {
+                    handleSessionExpired('Your session has expired. Please log in again.');
+                    return false;
+                }
+                return r.ok;
+            })
+            .catch(() => false);
         }
+
+        function stopHeartbeat() {
+            if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+            }
+        }
+
         function startHeartbeat() {
+            stopHeartbeat();
             sendHeartbeat();
-            if (heartbeatTimer) clearInterval(heartbeatTimer);
-            heartbeatTimer = setInterval(sendHeartbeat, 20000);
+            heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+        }
+
+        function onUserActivity() {
+            if (!getSession()) return;
+            resetIdleTimer();
+        }
+
+        function resetIdleTimer() {
+            if (!getSession()) return;
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(onIdleTimeout, IDLE_TIMEOUT_MS);
+        }
+
+        function onIdleTimeout() {
+            logoutSession('Logged out due to inactivity.');
+        }
+
+        function startIdleTracking() {
+            stopIdleTracking();
+            ['mousemove', 'keydown', 'click'].forEach(evt => {
+                document.addEventListener(evt, onUserActivity, { passive: true });
+            });
+            resetIdleTimer();
+        }
+
+        function stopIdleTracking() {
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+                idleTimer = null;
+            }
+            ['mousemove', 'keydown', 'click'].forEach(evt => {
+                document.removeEventListener(evt, onUserActivity);
+            });
+        }
+
+        function resumeSession() {
+            const session = getSession();
+            if (!session) {
+                applySessionUI();
+                return;
+            }
+            sendHeartbeat().then(alive => {
+                if (alive) {
+                    applySessionUI();
+                    startHeartbeat();
+                    startIdleTracking();
+                } else {
+                    applySessionUI();
+                }
+            });
         }
         function syncCaseSnapshot(reason) {
             const session = getSession();
@@ -2639,7 +2746,7 @@
                     document.getElementById('unlock-error').style.display = 'none';
                     document.getElementById('unlock-user').value = '';
                     document.getElementById('unlock-pass').value = '';
-                    if (data.user) { setSession(data.user); applySessionUI(); startHeartbeat(); }
+                    if (data.user) { setSession(data.user); applySessionUI(); startHeartbeat(); startIdleTracking(); }
                     refreshSiteState();
                 } else {
                     document.getElementById('unlock-error').innerText = data.error || 'Invalid credentials.';
@@ -3024,9 +3131,8 @@
             generateCaseId(true);
             populateTimezones();
             refreshClock();
-            applySessionUI();
+            resumeSession();
             refreshSiteState();
-            if (getSession()) startHeartbeat();
         });
     </script>
   <script>
@@ -3152,6 +3258,7 @@ function attemptLogin() {
             setSession(normalizedUser);
             applySessionUI();
             startHeartbeat();
+            startIdleTracking();
             refreshSiteState();
 
             setTimeout(() => {
