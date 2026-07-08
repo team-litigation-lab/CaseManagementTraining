@@ -1,4 +1,4 @@
-import { json, logActivity, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie } from '../_utils.js';
+import { json, logActivity, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat } from '../_utils.js';
 
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
@@ -36,7 +36,19 @@ export async function onRequestPost({ request, env }) {
 
     await logActivity(db, user.username, user.batch_id, 'login', null);
 
-    // This cookie — not anything the client stores in localStorage — is
+    const fullName = [user.first_name, user.mi ? user.mi.replace(/\.$/, '') + '.' : '', user.last_name].filter(Boolean).join(' ')
+        + (user.suffix ? ', ' + user.suffix : '');
+
+    // Seed the heartbeat row immediately so the first API call after login
+    // (and the first client ping) both pass the grace-window check.
+    await upsertSessionHeartbeat(db, {
+        username: user.username,
+        fullName,
+        batchId: user.batch_id,
+        userType: user.user_type
+    });
+
+    // This cookie — not anything the client stores in sessionStorage — is
     // what every other endpoint now checks to decide who you are.
     const token = await createSessionToken(
         { sub: user.id, username: user.username, batchId: user.batch_id, userType: user.user_type },
