@@ -1,4 +1,4 @@
-import { json, logActivity } from '../_utils.js';
+import { json, logActivity, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie } from '../_utils.js';
 
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
@@ -10,13 +10,17 @@ export async function onRequestPost({ request, env }) {
         return json({ success: false, error: 'Please enter both username and password.' }, 400);
     }
 
-    const user = await db.prepare(
-        `SELECT * FROM users WHERE username = ? AND password = ?`
-    ).bind(username, password).first();
-
-    if (!user) {
+    // Fetch by username only — password is checked in JS via verifyPassword()
+    // so we can support hashed rows (and transparently upgrade legacy
+    // plaintext rows) instead of comparing with `password = ?` in SQL.
+    const user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
+    if (!user || !(await verifyPassword(password, user.password))) {
         return json({ success: false, error: 'Incorrect username or password.' }, 401);
     }
+    if (isLegacyPlaintext(user.password)) {
+        await upgradePasswordHash(db, user.id, password);
+    }
+
     if (portalMode && user.user_type !== portalMode) {
         return json({ success: false, error: `No ${portalMode.toLowerCase()} account is registered under that username.` }, 401);
     }
@@ -32,7 +36,13 @@ export async function onRequestPost({ request, env }) {
 
     await logActivity(db, user.username, user.batch_id, 'login', null);
 
-    // Never return the password hash/plaintext to the client.
+    // This cookie — not anything the client stores in localStorage — is
+    // what every other endpoint now checks to decide who you are.
+    const token = await createSessionToken(
+        { sub: user.id, username: user.username, batchId: user.batch_id, userType: user.user_type },
+        env.SESSION_SECRET
+    );
+
     const { password: _pw, ...safeUser } = user;
-    return json({ success: true, user: safeUser });
+    return json({ success: true, user: safeUser }, 200, { 'Set-Cookie': sessionCookie(token, 43200) });
 }
