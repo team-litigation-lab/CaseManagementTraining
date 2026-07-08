@@ -1,4 +1,4 @@
-import { json, requireSession } from '../_utils.js';
+import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS } from '../_utils.js';
 
 export async function onRequestGet({ request, env }) {
     // Who's currently online, their real name, and which case they're
@@ -27,18 +27,13 @@ export async function onRequestPost({ request, env }) {
     // Identity comes from the verified session, not the request body —
     // otherwise anyone could POST a heartbeat claiming to be any username,
     // overwriting that user's "currently online" row.
-    const username = session.username;
-    const batchId = session.batchId;
-    const userType = session.userType;
+    await upsertSessionHeartbeat(db, {
+        username: session.username,
+        fullName: fullName || session.username,
+        batchId: session.batchId,
+        userType: session.userType,
+        currentCase: currentCase || null
+    });
 
-    await db.prepare(
-        `INSERT INTO heartbeats (username, full_name, batch_id, user_type, current_case, last_seen)
-         VALUES (?, ?, ?, ?, ?, datetime('now'))
-         ON CONFLICT(username) DO UPDATE SET
-           full_name = excluded.full_name, batch_id = excluded.batch_id,
-           user_type = excluded.user_type, current_case = excluded.current_case,
-           last_seen = excluded.last_seen`
-    ).bind(username, fullName || username, batchId || null, userType || null, currentCase || null).run();
-
-    return json({ success: true });
+    return json({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS });
 }
