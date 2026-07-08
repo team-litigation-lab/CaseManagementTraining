@@ -1,4 +1,4 @@
-import { json, logActivity } from '../_utils.js';
+import { json, logActivity, hashPassword } from '../_utils.js';
 
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
@@ -16,16 +16,21 @@ export async function onRequestPost({ request, env }) {
     if (!['Admin', 'Trainee'].includes(userType)) {
         return json({ success: false, error: 'Invalid user type.' }, 400);
     }
+    if (password.length < 8) {
+        return json({ success: false, error: 'Password must be at least 8 characters.' }, 400);
+    }
 
     const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
     if (existing) {
         return json({ success: false, error: 'That username is already taken.' }, 409);
     }
 
+    const hashedPassword = await hashPassword(password);
+
     await db.prepare(
         `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status)
          VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Pending')`
-    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, password).run();
+    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, hashedPassword).run();
 
     await logActivity(db, username, null, 'register', { userType });
 
