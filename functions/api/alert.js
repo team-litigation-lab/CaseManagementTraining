@@ -1,4 +1,4 @@
-import { json, logActivity } from '../_utils.js';
+import { json, logActivity, requireSession } from '../_utils.js';
 
 // Returns the currently-live alert (respecting schedule + duration), or null.
 async function getActiveAlert(db) {
@@ -10,7 +10,6 @@ async function getActiveAlert(db) {
     const startAt = new Date(alert.start_at).getTime();
     const now = Date.now();
     if (now < startAt) {
-        // Scheduled for the future — not live yet.
         return { pending: true, ...alert };
     }
     if (alert.duration_seconds && alert.duration_seconds > 0) {
@@ -35,13 +34,16 @@ export async function onRequestGet({ env }) {
 }
 
 export async function onRequestPost({ request, env }) {
+    const auth = await requireSession(request, env, { adminOnly: true });
+    if (!auth.ok) return auth.response;
+    const { session } = auth;
+
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const { text, bgColor, image, durationSeconds, startAt } = body;
     if (!text || !String(text).trim()) return json({ success: false, error: 'Alert text is required.' }, 400);
 
-    // Only one active alert at a time — stop any previous one.
     await db.prepare(`UPDATE alerts SET stopped = 1 WHERE stopped = 0`).run();
 
     await db.prepare(
@@ -55,13 +57,17 @@ export async function onRequestPost({ request, env }) {
         startAt || new Date().toISOString()
     ).run();
 
-    await logActivity(db, null, null, 'alert-set', { text, startAt, durationSeconds });
+    await logActivity(db, session.username, session.batchId, 'alert-set', { text, startAt, durationSeconds });
     return json({ success: true });
 }
 
-export async function onRequestDelete({ env }) {
+export async function onRequestDelete({ request, env }) {
+    const auth = await requireSession(request, env, { adminOnly: true });
+    if (!auth.ok) return auth.response;
+    const { session } = auth;
+
     const db = env.DB;
     await db.prepare(`UPDATE alerts SET stopped = 1 WHERE stopped = 0`).run();
-    await logActivity(db, null, null, 'alert-stop', null);
+    await logActivity(db, session.username, session.batchId, 'alert-stop', null);
     return json({ success: true });
 }
