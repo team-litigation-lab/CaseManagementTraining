@@ -2194,6 +2194,7 @@
         }
 
         function logoutSession() {
+            fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
             clearSession();
             exitMasterControl();
             applySessionUI();
