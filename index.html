@@ -2239,7 +2239,7 @@
            Both grouped by user type, sorted by registration date ascending.
            ========================================================= */
         function refreshUsersAndRegistrations() {
-            fetch('/api/users')
+            fetch('/api/users', { credentials: 'include' })
                 .then(r => r.json())
                 .then(users => {
                     users = Array.isArray(users) ? users : [];
@@ -2297,6 +2297,7 @@
             fetch('/api/update-status', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ userId: userId, newStatus: newStatus })
             })
             .then(res => res.json())
@@ -2318,11 +2319,11 @@
            recent case review, backed by /api/heartbeat and /api/cases
            ========================================================= */
         function refreshMonitoring() {
-            fetch('/api/heartbeat')
+            fetch('/api/heartbeat', { credentials: 'include' })
                 .then(r => r.json())
                 .then(list => renderMonitoringOnline(Array.isArray(list) ? list : []))
                 .catch(() => renderMonitoringOnline([]));
-            fetch('/api/cases')
+            fetch('/api/cases', { credentials: 'include' })
                 .then(r => r.json())
                 .then(list => renderMonitoringCases(Array.isArray(list) ? list : []))
                 .catch(() => renderMonitoringCases([]));
@@ -2370,8 +2371,9 @@
             fetch('/api/heartbeat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
-                    username: session.username, fullName: session.fullName, batchId: session.batchId, userType: session.userType,
+                    fullName: session.fullName,
                     currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
                 })
             }).catch(() => {});
@@ -2387,8 +2389,8 @@
             fetch('/api/cases', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
-                    username: session.username, batchId: session.batchId,
                     caseId: document.getElementById('case-id-field') ? document.getElementById('case-id-field').innerText.trim() : '',
                     clientName: document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '',
                     phase: document.getElementById('display-phase') ? document.getElementById('display-phase').innerText.trim() : '',
@@ -2436,7 +2438,7 @@
         function makeAnnouncement() {
             const text = document.getElementById('announce-text-input').value.trim();
             if (!text) return;
-            fetch('/api/announcement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+            fetch('/api/announcement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ text }) })
                 .then(r => r.json()).then(() => {
                     document.getElementById('announce-text-input').value = '';
                     showToast('Announcement broadcasted.', 'info');
@@ -2444,7 +2446,7 @@
                 }).catch(() => showToast('Network error broadcasting announcement.', 'error'));
         }
         function clearAnnouncement() {
-            fetch('/api/announcement', { method: 'DELETE' }).then(() => { showToast('Ticker cleared.', 'info'); refreshSiteState(); }).catch(() => {});
+            fetch('/api/announcement', { method: 'DELETE', credentials: 'include' }).then(() => { showToast('Ticker cleared.', 'info'); refreshSiteState(); }).catch(() => {});
         }
         function setAlert() {
             const text = document.getElementById('alert-text-input').value.trim();
@@ -2454,7 +2456,7 @@
             const scheduleRaw = document.getElementById('alert-schedule-input').value;
             const startAt = scheduleRaw ? new Date(scheduleRaw).toISOString() : new Date().toISOString();
             fetch('/api/alert', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
                 body: JSON.stringify({ text, bgColor, image: alertImageDataUrl, durationSeconds: duration, startAt })
             }).then(r => r.json()).then(() => {
                 showToast(scheduleRaw ? 'Alert scheduled.' : 'Alert is now live for all users.', 'alert');
@@ -2462,7 +2464,7 @@
             }).catch(() => showToast('Network error setting alert.', 'error'));
         }
         function stopAlert() {
-            fetch('/api/alert', { method: 'DELETE' }).then(() => { showToast('Alert stopped.', 'info'); dismissAlertLocally(); refreshSiteState(); }).catch(() => {});
+            fetch('/api/alert', { method: 'DELETE', credentials: 'include' }).then(() => { showToast('Alert stopped.', 'info'); dismissAlertLocally(); refreshSiteState(); }).catch(() => {});
         }
         function dismissAlertLocally() {
             document.getElementById('alert-overlay').classList.remove('open');
@@ -2571,7 +2573,7 @@
            PAUSE — freezes activity site-wide, no logout, resumable
            ========================================================= */
         function togglePause() {
-            fetch('/api/pause', { method: 'POST' })
+            fetch('/api/pause', { method: 'POST', credentials: 'include' })
                 .then(r => r.json())
                 .then(data => { showToast(data.paused ? 'Activity paused for all users.' : 'Activity resumed for all users.', 'info'); refreshSiteState(); })
                 .catch(() => showToast('Network error toggling pause.', 'error'));
@@ -2596,7 +2598,7 @@
             const password = document.getElementById('lock-confirm-password').value;
             if (!batchId || !password) { document.getElementById('lock-confirm-error').style.display = 'block'; return; }
             fetch('/api/lock', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
                 body: JSON.stringify({ action: 'lock', batchId, password })
             }).then(r => r.json()).then(data => {
                 if (data.success) {
@@ -2613,7 +2615,7 @@
             const u = document.getElementById('unlock-user').value.trim();
             const p = document.getElementById('unlock-pass').value.trim();
             fetch('/api/lock', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
                 body: JSON.stringify({ action: 'unlock', username: u, password: p })
             }).then(r => r.json()).then(data => {
                 if (data.success) {
@@ -3067,6 +3069,7 @@ function submitRegistration() {
     fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload)
     })
     .then(response => response.json())
@@ -3104,6 +3107,7 @@ function attemptLogin() {
     fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username: usernameInput, password: passwordInput, portalMode: currentPortalMode })
     })
     .then(response => response.json())
