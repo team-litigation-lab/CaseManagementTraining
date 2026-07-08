@@ -85,6 +85,34 @@ export function clearSessionCookie() {
     return `lsh_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 }
 
+/** Client heartbeat interval is 2s; grace window is 3× that. */
+export const HEARTBEAT_GRACE_SECONDS = 6;
+
+/**
+ * True when the user's heartbeats row was touched within the grace window.
+ * Sessions without a recent heartbeat are expired even if the signed cookie
+ * has not reached its Max-Age yet (tab/browser close, idle timeout, etc.).
+ */
+export async function isSessionHeartbeatAlive(db, username) {
+    const row = await db.prepare(
+        `SELECT 1 AS ok FROM heartbeats
+         WHERE username = ?
+         AND datetime(last_seen) >= datetime('now', ?)`
+    ).bind(username, `-${HEARTBEAT_GRACE_SECONDS} seconds`).first();
+    return !!row;
+}
+
+export async function upsertSessionHeartbeat(db, { username, fullName, batchId, userType, currentCase = null }) {
+    await db.prepare(
+        `INSERT INTO heartbeats (username, full_name, batch_id, user_type, current_case, last_seen)
+         VALUES (?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(username) DO UPDATE SET
+           full_name = excluded.full_name, batch_id = excluded.batch_id,
+           user_type = excluded.user_type, current_case = excluded.current_case,
+           last_seen = excluded.last_seen`
+    ).bind(username, fullName || username, batchId || null, userType || null, currentCase).run();
+}
+
 /**
  * Verifies the caller's session cookie. Use this at the top of any
  * endpoint that returns or mutates real data — never trust a
@@ -94,7 +122,11 @@ export async function requireSession(request, env, { adminOnly = false } = {}) {
     const token = getCookie(request, 'lsh_session');
     const payload = await verifySessionToken(token, env.SESSION_SECRET);
     if (!payload) {
-        return { ok: false, response: json({ success: false, error: 'Not authenticated.' }, 401) };
+        return { ok: false, response: json({ success: false, error: 'Not authenticated.', code: 'NOT_AUTHENTICATED' }, 401) };
+    }
+    const alive = await isSessionHeartbeatAlive(env.DB, payload.username);
+    if (!alive) {
+        return { ok: false, response: json({ success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' }, 401) };
     }
     if (adminOnly && payload.userType !== 'Admin') {
         return { ok: false, response: json({ success: false, error: 'Admin access required.' }, 403) };
