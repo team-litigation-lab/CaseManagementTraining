@@ -1,6 +1,10 @@
-import { json, nextBatchId, logActivity } from '../_utils.js';
+import { json, nextBatchId, logActivity, requireSession } from '../_utils.js';
 
 export async function onRequestPost({ request, env }) {
+    const auth = await requireSession(request, env, { adminOnly: true });
+    if (!auth.ok) return auth.response;
+    const { session } = auth;
+
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
@@ -22,7 +26,7 @@ export async function onRequestPost({ request, env }) {
         `UPDATE users SET status = ?, batch_id = ? WHERE id = ?`
     ).bind(newStatus, batchId, userId).run();
 
-    await logActivity(db, null, null, 'update-status', { userId, newStatus, batchId });
+    await logActivity(db, session.username, session.batchId, 'update-status', { userId, newStatus, batchId });
 
     return json({ success: true, batchId: newStatus === 'Approved' ? batchId : undefined });
 }
