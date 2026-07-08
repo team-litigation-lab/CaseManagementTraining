@@ -1,5 +1,7 @@
 import { json, logActivity, hashPassword } from '../_utils.js';
 
+const REG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,}$/;
+
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
@@ -16,8 +18,11 @@ export async function onRequestPost({ request, env }) {
     if (!['Admin', 'Trainee'].includes(userType)) {
         return json({ success: false, error: 'Invalid user type.' }, 400);
     }
-    if (password.length < 8) {
-        return json({ success: false, error: 'Password must be at least 8 characters.' }, 400);
+    if (!REG_PASSWORD_RE.test(password)) {
+        return json({
+            success: false,
+            error: 'Password must be at least 8 characters long and contain only letters and numbers (at least one letter and one number).'
+        }, 400);
     }
 
     let normalizedTrainingStartDate = null;
