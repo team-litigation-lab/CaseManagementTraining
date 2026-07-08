@@ -19,7 +19,8 @@ export async function onRequestPost({ request, env }) {
 
     let batchId = user.batch_id;
     if (newStatus === 'Approved' && !batchId) {
-        batchId = await nextBatchId(db, user.user_type);
+        const referenceDate = user.user_type === 'Admin' ? user.created_at : user.training_start_date;
+        batchId = await nextBatchId(db, user.user_type, referenceDate);
     }
 
     await db.prepare(
