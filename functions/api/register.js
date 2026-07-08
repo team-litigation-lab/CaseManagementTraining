@@ -5,7 +5,7 @@ export async function onRequestPost({ request, env }) {
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
 
-    const { firstName, mi, lastName, suffix, email, userType, username, password } = body;
+    const { firstName, mi, lastName, suffix, email, userType, username, password, trainingStartDate } = body;
 
     if (!firstName || !lastName || !email || !userType || !username || !password) {
         return json({ success: false, error: 'Please fill out all required fields.' }, 400);
@@ -20,6 +20,14 @@ export async function onRequestPost({ request, env }) {
         return json({ success: false, error: 'Password must be at least 8 characters.' }, 400);
     }
 
+    let normalizedTrainingStartDate = null;
+    if (userType === 'Trainee') {
+        if (!trainingStartDate || !/^\d{4}-\d{2}-\d{2}$/.test(trainingStartDate) || isNaN(new Date(trainingStartDate).getTime())) {
+            return json({ success: false, error: 'Please enter a valid start of training date.' }, 400);
+        }
+        normalizedTrainingStartDate = trainingStartDate;
+    }
+
     const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
     if (existing) {
         return json({ success: false, error: 'That username is already taken.' }, 409);
@@ -28,9 +36,9 @@ export async function onRequestPost({ request, env }) {
     const hashedPassword = await hashPassword(password);
 
     await db.prepare(
-        `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Pending')`
-    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, hashedPassword).run();
+        `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Pending', ?)`
+    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, hashedPassword, normalizedTrainingStartDate).run();
 
     await logActivity(db, username, null, 'register', { userType });
 
