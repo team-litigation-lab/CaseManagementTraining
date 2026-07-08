@@ -323,8 +323,8 @@
     .session-btn.active-admin { border-color: var(--success); color: #4ade80; background: rgba(22,101,52,0.15); }
     .session-btn.logout-btn { border-color: #7f1d1d; color: #fca5a5; }
     .session-btn.logout-btn:hover { border-color: var(--classified-red); background: rgba(185,28,28,0.12); }
-    .session-user-tag { text-align:center; font-size:13px; line-height:1.5; color:#94a3b8; margin-bottom:8px; font-family:'IBM Plex Mono','Courier New',monospace; }
-    .session-user-tag b { color:#cbd5e1; font-size:14px; }
+    .session-user-tag { text-align:center; font-size:10.5px; line-height:1.45; color:#94a3b8; margin-bottom:8px; font-family:'IBM Plex Mono','Courier New',monospace; }
+    .session-user-tag b { color:#cbd5e1; font-size:10.5px; font-weight:700; }
 
     /* ===== MODALS ===== */
     .modal-overlay {
@@ -408,6 +408,21 @@
         background:#0d1c3d; color:white; font-family:'IBM Plex Mono','Courier New',monospace; font-size:13px; outline:none;
     }
     .auth-field input:focus, .auth-field select:focus { border-color: var(--auth-accent); }
+    /* Keep browser autofill from flashing white over dark auth/repo inputs */
+    .auth-field input:-webkit-autofill,
+    .auth-field input:-webkit-autofill:hover,
+    .auth-field input:-webkit-autofill:focus,
+    .auth-field input:-webkit-autofill:active,
+    .repo-search-input:-webkit-autofill,
+    .repo-search-input:-webkit-autofill:hover,
+    .repo-search-input:-webkit-autofill:focus,
+    .repo-search-input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 1000px #0d1c3d inset !important;
+        box-shadow: 0 0 0 1000px #0d1c3d inset !important;
+        -webkit-text-fill-color: #fff !important;
+        caret-color: #fff;
+        transition: background-color 99999s ease-out 0s;
+    }
     .auth-submit {
         width:100%; padding:11px; border-radius:6px; border:none; background: var(--auth-accent); color:#0f2148;
         font-weight:900; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; margin-top:6px;
@@ -587,7 +602,9 @@
             <button onclick="if(confirm('Reset current work? Unsaved entries will be lost.')) window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Reset Screen</button>
 
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Repository</p>
-            <input type="text" id="repo-search" oninput="renderRepo()" placeholder="Search by client name..." style="width:100%; padding:8px 10px; margin-bottom:10px; border-radius:6px; border:1px solid #1e2c4d; background:#0d1c3d; color:white; font-size:11px; outline:none;">
+            <form autocomplete="off" onsubmit="return false;" style="margin:0;">
+                <input type="search" id="repo-search" class="repo-search-input" name="case-repo-filter-q" oninput="renderRepo()" placeholder="Search by client name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" style="width:100%; padding:8px 10px; margin-bottom:10px; border-radius:6px; border:1px solid #1e2c4d; background:#0d1c3d; color:white; font-size:11px; outline:none;">
+            </form>
             <div id="repo-list" class="space-y-3 mb-2"></div>
             <div id="repo-count-note" style="font-size:9.5px; color:#64748b; margin-bottom:8px;"></div>
             <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">View All Files</button>
@@ -979,11 +996,11 @@
                         <option value="Admin">Admin</option>
                     </select>
                 </div>
-                <div class="auth-field" id="reg-training-date-wrap"><label>Start of Training Date</label><input type="date" id="reg-training-date" autocomplete="off" oninput="onRegUserTypeChange()"></div>
-                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" placeholder="Assigned upon approval" disabled style="opacity:0.6; cursor:not-allowed;"></div>
+                <div class="auth-field" id="reg-training-date-wrap"><label>Start of Training Date</label><input type="date" id="reg-training-date" autocomplete="off"></div>
+                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" readonly placeholder="Batch ID will be assigned upon the approval of your registration." disabled style="opacity:0.6; cursor:not-allowed;"></div>
                 <div class="auth-field"><label>Username</label><input type="text" id="reg-username" autocomplete="off" data-allow="alnum-underscore" placeholder="Choose a username"></div>
-                <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="off" placeholder="Create a password"></div>
-                <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="off" placeholder="Retype your password"></div>
+                <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="new-password" placeholder="Create a password" minlength="8"><p style="font-size:11px;color:#64748b;margin:4px 0 0;line-height:1.4;">At least 8 characters, letters and numbers only (must include at least one of each).</p></div>
+                <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="new-password" placeholder="Retype your password" minlength="8"></div>
                 <button class="auth-submit" onclick="submitRegistration()">Submit Registration</button>
                 <div class="auth-switch">Already have an account? <a onclick="showLoginView()">Back to log in</a></div>
             </div>
@@ -2038,26 +2055,27 @@
             document.getElementById('reg-usertype').value = currentPortalTab;
             onRegUserTypeChange();
         }
+        const REG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,}$/;
+        function validateRegPassword(password) {
+            if (!password || password.length < 8) {
+                return 'Password must be at least 8 characters long.';
+            }
+            if (!REG_PASSWORD_RE.test(password)) {
+                return 'Password must contain only letters and numbers (no symbols or spaces), with at least one letter and one number.';
+            }
+            return null;
+        }
+
         function onRegUserTypeChange() {
             const type = document.getElementById('reg-usertype').value;
             const batchField = document.getElementById('reg-batchid');
             const trainingWrap = document.getElementById('reg-training-date-wrap');
-            if (type === 'Admin') {
-                batchField.value = previewAdminBatchId();
-                batchField.placeholder = '';
-                batchField.disabled = true;
-                if (trainingWrap) trainingWrap.style.display = 'none';
-            } else if (type === 'Trainee') {
-                batchField.value = previewTraineeBatchId();
-                batchField.placeholder = '';
-                batchField.disabled = true;
-                if (trainingWrap) trainingWrap.style.display = '';
-            } else {
+            if (batchField) {
                 batchField.value = '';
-                batchField.placeholder = 'Enter your batch ID';
-                batchField.disabled = false;
-                if (trainingWrap) trainingWrap.style.display = 'none';
+                batchField.placeholder = 'Batch ID will be assigned upon the approval of your registration.';
+                batchField.disabled = true;
             }
+            if (trainingWrap) trainingWrap.style.display = type === 'Trainee' ? '' : 'none';
         }
 
         // Format: B<DD><MM><YYYY>-LSHADMIN-<XXX> — DD/MM/YYYY is the admin's
@@ -2128,7 +2146,8 @@
             const p = document.getElementById('login-password').value.trim();
             const msg = document.getElementById('auth-login-msg');
             msg.className = 'auth-msg';
-            if (!u || !p) { msg.textContent = 'Log in error: please enter both your username and password.'; msg.classList.add('error'); return; }
+            if (!u) { msg.textContent = 'Username is required.'; msg.classList.add('error'); return; }
+            if (!p) { msg.textContent = 'Password is required.'; msg.classList.add('error'); return; }
             const result = authenticate(u, p, currentPortalTab);
             if (!result.ok) {
                 if (result.reason === 'pending') msg.textContent = 'Log in error: your registration is still pending admin approval. You will be able to log in once it is approved.';
@@ -2156,7 +2175,6 @@
             const suffix = document.getElementById('reg-suffix').value.trim();
             const gmail = document.getElementById('reg-gmail').value.trim();
             const userType = document.getElementById('reg-usertype').value;
-            let batchId = document.getElementById('reg-batchid').value.trim();
             const username = document.getElementById('reg-username').value.trim();
             const password = document.getElementById('reg-password').value;
             const password2 = document.getElementById('reg-password2').value;
@@ -2170,6 +2188,8 @@
             if (password !== password2) {
                 msg.textContent = 'Passwords do not match.'; msg.classList.add('error'); return;
             }
+            const pwErr = validateRegPassword(password);
+            if (pwErr) { msg.textContent = pwErr; msg.classList.add('error'); return; }
             if (username === SEED_ADMIN.username) {
                 msg.textContent = 'That username is reserved.'; msg.classList.add('error'); return;
             }
@@ -2178,15 +2198,10 @@
                 msg.textContent = 'That username is already taken.'; msg.classList.add('error'); return;
             }
 
-            if (userType === 'Admin') batchId = generateAdminBatchId();
-            if (userType === 'Trainee') batchId = generateTraineeBatchId();
-
             const fullName = [firstName, middleName ? middleName.replace(/\.$/, '') + '.' : '', lastName].filter(Boolean).join(' ') + (suffix ? ', ' + suffix : '');
-            users.push({ id: Date.now(), fullName, firstName, middleName, lastName, suffix, gmail, batchId, userType, username, password, status: 'pending', createdAt: new Date().toISOString() });
+            users.push({ id: Date.now(), fullName, firstName, middleName, lastName, suffix, gmail, batchId: null, userType, username, password, status: 'pending', createdAt: new Date().toISOString() });
             saveUsers(users);
-            msg.textContent = (userType === 'Admin' || userType === 'Trainee')
-                ? `Registration submitted. Your assigned Batch ID is ${batchId}. An administrator will review it shortly.`
-                : 'Registration submitted. An administrator will review it shortly.';
+            msg.textContent = 'Registration submitted. Batch ID will be assigned upon the approval of your registration.';
             msg.classList.remove('error'); msg.classList.add('success');
             document.getElementById('reg-firstname').value = '';
             document.getElementById('reg-middlename').value = '';
@@ -2220,13 +2235,13 @@
 
             if (session.userType === 'Admin') {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: <b>${session.batchId}</b></div>
+                    <div class="session-user-tag">Signed in as: <b>${session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
                     <button class="session-btn active-admin" onclick="openAdminDashboard()">⇄ Master Control</button>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             } else {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as <b>${session.fullName}</b><br>Batch: <b>${session.batchId}</b></div>
+                    <div class="session-user-tag">Signed in as: <b>${session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             }
@@ -3170,6 +3185,12 @@ function submitRegistration() {
         return;
     }
 
+    const pwErr = typeof validateRegPassword === 'function' ? validateRegPassword(password) : null;
+    if (pwErr) {
+        if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = pwErr; }
+        return;
+    }
+
     const payload = {
         firstName: document.getElementById('reg-firstname').value,
         mi: document.getElementById('reg-middlename').value,
@@ -3225,11 +3246,15 @@ function attemptLogin() {
     const loginMsgDiv = document.getElementById('auth-login-msg');
     if (loginMsgDiv) { loginMsgDiv.innerText = ""; loginMsgDiv.className = "auth-msg"; loginMsgDiv.style.display = "none"; }
 
-    const usernameInput = document.getElementById('login-username')?.value || "";
+    const usernameInput = document.getElementById('login-username')?.value?.trim() || "";
     const passwordInput = document.getElementById('login-password')?.value || "";
 
-    if (!usernameInput || !passwordInput) {
-        if (loginMsgDiv) { loginMsgDiv.innerText = "Please fill out all fields."; loginMsgDiv.className = "auth-msg error"; }
+    if (!usernameInput) {
+        if (loginMsgDiv) { loginMsgDiv.innerText = "Username is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
+        return;
+    }
+    if (!passwordInput) {
+        if (loginMsgDiv) { loginMsgDiv.innerText = "Password is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
         return;
     }
 
