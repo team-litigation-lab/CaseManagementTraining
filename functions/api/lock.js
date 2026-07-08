@@ -1,4 +1,4 @@
-import { json, verifyAdminCredentials, verifyUsernamePassword, logActivity } from '../_utils.js';
+import { json, verifyAdminCredentials, verifyUsernamePassword, logActivity, createSessionToken, sessionCookie } from '../_utils.js';
 
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
@@ -34,7 +34,14 @@ export async function onRequestPost({ request, env }) {
             `UPDATE site_state SET locked = 0, locked_by_batch = NULL, updated_at = datetime('now') WHERE id = 1`
         ).run();
         await logActivity(db, admin.username, admin.batch_id, 'unlock', null);
-        const { password: _pw, ...safeUser } = admin;
+
+        // Unlocking re-authenticates the admin, so give them a real session
+        // too — otherwise they'd be "unlocked" but still not logged in.
+        const token = await createSessionToken(
+            { sub: admin.id, username: admin.username, batchId: admin.batch_id, userType: admin.user_type },
+            env.SESSION_SECRET
+        );
+
         return json({
             success: true,
             user: {
@@ -43,7 +50,7 @@ export async function onRequestPost({ request, env }) {
                 userType: admin.user_type,
                 username: admin.username
             }
-        });
+        }, 200, { 'Set-Cookie': sessionCookie(token, 43200) });
     }
 
     return json({ success: false, error: 'Unknown lock action.' }, 400);
