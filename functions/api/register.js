@@ -1,3 +1,25 @@
+import { json, logActivity, hashPassword, isUsernameTombstoned } from '../_utils.js';
+// ...
+const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
+if (existing) {
+    return json({ success: false, error: 'That username is already taken.' }, 409);
+}
+if (await isUsernameTombstoned(db, username)) {
+    return json({ success: false, error: 'That username has been permanently retired and cannot be used again.' }, 409);
+}
+    
+    const hashedPassword = await hashPassword(password);
+
+    await db.prepare(
+        `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Pending', ?)`
+    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, hashedPassword, normalizedTrainingStartDate).run();
+
+    await logActivity(db, username, null, 'register', { userType });
+
+    return json({ success: true });
+}
+
 import { json, logActivity, hashPassword } from '../_utils.js';
 
 const REG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,}$/;
@@ -37,25 +59,3 @@ export async function onRequestPost({ request, env }) {
     if (existing) {
         return json({ success: false, error: 'That username is already taken.' }, 409);
     }
-
-import { json, logActivity, hashPassword, isUsernameTombstoned } from '../_utils.js';
-// ...
-const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
-if (existing) {
-    return json({ success: false, error: 'That username is already taken.' }, 409);
-}
-if (await isUsernameTombstoned(db, username)) {
-    return json({ success: false, error: 'That username has been permanently retired and cannot be used again.' }, 409);
-}
-    
-    const hashedPassword = await hashPassword(password);
-
-    await db.prepare(
-        `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Pending', ?)`
-    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, hashedPassword, normalizedTrainingStartDate).run();
-
-    await logActivity(db, username, null, 'register', { userType });
-
-    return json({ success: true });
-}
