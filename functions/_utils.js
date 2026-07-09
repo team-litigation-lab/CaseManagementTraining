@@ -218,6 +218,37 @@ export async function nextBatchId(db, userType, referenceDate) {
     return `B${dd}${mm}${yyyy}-${prefix}-${xxx}`;
 }
 
+/* =====================================================================
+   CASE ID GENERATION (server-enforced, cross-device unique)
+   Format: LSH-<Year>-<TypeCode>-<XXXXXX>
+
+   The XXXXXX sequence comes from a single-row counter table incremented
+   with `UPDATE ... RETURNING`. This is one atomic SQL statement — D1
+   executes each individual statement atomically even though it doesn't
+   support multi-statement BEGIN/COMMIT transactions — so two Save Case
+   requests arriving from different devices at the same moment can never
+   receive the same number.
+
+   Requires this table to exist (run once via wrangler d1 execute):
+     CREATE TABLE IF NOT EXISTS case_id_counter (
+       id INTEGER PRIMARY KEY CHECK (id = 1),
+       value INTEGER NOT NULL DEFAULT 0
+     );
+     INSERT OR IGNORE INTO case_id_counter (id, value) VALUES (1, 0);
+   ===================================================================== */
+export async function nextCaseId(db, typeCode) {
+    const row = await db.prepare(
+        `UPDATE case_id_counter SET value = value + 1 WHERE id = 1 RETURNING value`
+    ).first();
+    if (!row || typeof row.value !== 'number') {
+        throw new Error('case_id_counter is not set up — run the migration (see _utils.js nextCaseId comment) before issuing Case IDs.');
+    }
+    const year = new Date().getUTCFullYear();
+    const safeType = (typeCode || 'CASE').toString().replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 4) || 'CASE';
+    const xxx = String(row.value).padStart(6, '0');
+    return `LSH-${year}-${safeType}-${xxx}`;
+}
+
 export async function verifyAdminCredentials(db, batchId, password) {
     const user = await db.prepare(
         `SELECT * FROM users WHERE batch_id = ? AND user_type = 'Admin' AND status = 'Approved'`
