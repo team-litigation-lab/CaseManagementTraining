@@ -49,3 +49,13 @@ export async function onRequestPost({ request, env }) {
 
     return json({ success: true });
 }
+
+import { json, logActivity, hashPassword, isUsernameTombstoned } from '../_utils.js';
+// ...
+const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
+if (existing) {
+    return json({ success: false, error: 'That username is already taken.' }, 409);
+}
+if (await isUsernameTombstoned(db, username)) {
+    return json({ success: false, error: 'That username has been permanently retired and cannot be used again.' }, 409);
+}
