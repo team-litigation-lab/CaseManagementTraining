@@ -1086,7 +1086,7 @@
 
             <!-- USERS (approved / revoked, separated from registrations) -->
             <div class="mc-pane" id="admin-dash-users">
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">All approved accounts, grouped by user type and sorted by registration date (oldest first).</p>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Approved accounts, segregated by Admin / Trainee. Trainees are further grouped by Batch ID and sorted by sequence number; Admins are listed flat, sorted by sequence number.</p>
                 <div id="users-list"></div>
             </div>
 
@@ -2370,6 +2370,15 @@
             if (trainingWrap) trainingWrap.style.display = type === 'Trainee' ? '' : 'none';
         }
         
+        // Parses B<DDMMYYYY>-LSH<TYPE>-<XXX> into its date/type/sequence parts.
+        // Returns null for anything that doesn't match (e.g. no batch assigned yet).
+        function parseBatchId(batchId) {
+            if (!batchId) return null;
+            const m = /^B(\d{8})-LSH(ADMIN|TRAINEE)-(\d{3,})$/.exec(batchId);
+            if (!m) return null;
+            return { dateStr: m[1], type: m[2], seq: parseInt(m[3], 10) };
+        }  
+        
         function attemptLogin() {
             const u = document.getElementById('login-username').value.trim();
             const p = document.getElementById('login-password').value.trim();
@@ -2552,20 +2561,78 @@
                 .then(users => {
                     users = Array.isArray(users) ? users : [];
                     users.sort((a, b) => new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0));
-
+        
                     const pending = users.filter(u => (u.status || 'Pending') === 'Pending');
-                    const active = users.filter(u => u.status === 'Approved' || u.status === 'Revoked');
-
+                    // Revocation is now a permanent delete (see /api/revoke-user), so a
+                    // 'Revoked' status should never actually appear here anymore —
+                    // those rows are gone. Filtering to 'Approved' only is correct.
+                    const active = users.filter(u => u.status === 'Approved');
+        
                     document.getElementById('admin-stat-pending').innerText = pending.length;
                     const badge = document.getElementById('reg-pending-badge');
                     if (badge) { badge.innerText = pending.length > 0 ? ('(' + pending.length + ')') : ''; badge.style.color = pending.length > 0 ? 'var(--classified-red)' : 'inherit'; }
-
+        
                     renderGroupedUserList('registrations-list', pending, true, 'No pending registrations.');
-                    renderGroupedUserList('users-list', active, false, 'No approved users yet.');
+                    renderUsersList(active);
                 })
                 .catch(err => console.error('Failed to load users:', err));
         }
-        function renderGroupedUserList(containerId, list, isPending, emptyMsg) {
+                    function confirmRevokeUser(userId, fullName) {
+                if (!confirm('Permanently revoke access for ' + fullName + '? This deletes their account entirely — their saved cases will remain, but this action itself cannot be undone.')) return;
+                fetch('/api/revoke-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ userId: userId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success) {
+                        showToast('Access permanently revoked.', 'success');
+                    } else {
+                        showToast((data && data.error) || 'Failed to revoke access.', 'error');
+                    }
+                    refreshUsersAndRegistrations();
+                })
+                .catch(() => showToast('Network error. Failed to revoke access.', 'error'));
+            }
+            function renderUsersList(list) {
+            const container = document.getElementById('users-list');
+            if (!container) return;
+            if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No approved users yet.</p>'; return; }
+        
+            function seqOf(u) {
+                const p = parseBatchId(u.batch_id || u.batchId);
+                return p ? p.seq : Number.MAX_SAFE_INTEGER; // unparseable batch ids sort last, never crash
+            }
+        
+            const admins = list.filter(u => (u.user_type || u.userType) === 'Admin').sort((a, b) => seqOf(a) - seqOf(b));
+            const trainees = list.filter(u => (u.user_type || u.userType) === 'Trainee');
+        
+            let html = '<div class="group-heading">Admins &middot; ' + admins.length + '</div>';
+            html += admins.length
+                ? admins.map(u => renderUserRow(u, false)).join('')
+                : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No approved admins.</p>';
+        
+            html += '<div class="group-heading">Trainees &middot; ' + trainees.length + '</div>';
+            if (!trainees.length) {
+                html += '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No approved trainees.</p>';
+            } else {
+                const byBatchDate = {};
+                trainees.forEach(u => {
+                    const p = parseBatchId(u.batch_id || u.batchId);
+                    const key = p ? ('B' + p.dateStr) : 'Unassigned Batch';
+                    (byBatchDate[key] = byBatchDate[key] || []).push(u);
+                });
+                Object.keys(byBatchDate).sort().forEach(batchKey => {
+                    const members = byBatchDate[batchKey].sort((a, b) => seqOf(a) - seqOf(b));
+                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + batchKey + ' &middot; ' + members.length + ' trainee(s)</div>';
+                    html += members.map(u => renderUserRow(u, false)).join('');
+                });
+            }
+            container.innerHTML = html;
+        }
+            function renderGroupedUserList(containerId, list, isPending, emptyMsg) {
             const container = document.getElementById(containerId);
             if (!container) return;
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">' + emptyMsg + '</p>'; return; }
@@ -2584,16 +2651,25 @@
             const fullName = u.full_name || u.fullName || ((u.first_name || '') + ' ' + (u.last_name || '')).trim();
             const created = u.created_at || u.createdAt;
             const createdLabel = created ? new Date(created).toLocaleDateString() : '\u2014';
+            const userType = u.user_type || u.userType;
+        
             let actions = '';
             if (isPending) {
                 actions = '<button class="mini-btn approve" onclick="updateUserStatus(' + u.id + ',\'Approved\')">Approve</button>' +
                           '<button class="mini-btn reject" onclick="if(confirm(\'Permanently reject this registration?\'))updateUserStatus(' + u.id + ',\'Rejected\')">Reject</button>';
-            } else if (status === 'Revoked') {
-                actions = '<button class="mini-btn restore" onclick="updateUserStatus(' + u.id + ',\'Approved\')">Restore Access</button>';
             } else {
-                actions = '<button class="mini-btn revoke" onclick="updateUserStatus(' + u.id + ',\'Revoked\')">Revoke Access</button>';
+                const session = getSession();
+                const sessionIsMaster = !!(session && session.username === 'LSHADMIN123');
+                const targetIsMaster = u.username === 'LSHADMIN123';
+                if (targetIsMaster) {
+                    actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Master Account</span>';
+                } else if (userType === 'Admin' && !sessionIsMaster) {
+                    actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Only Master can revoke</span>';
+                } else {
+                    actions = '<button class="mini-btn reject" onclick="confirmRevokeUser(' + u.id + ', ' + JSON.stringify(fullName) + ')">Permanent Revocation</button>';
+                }
             }
-            const userType = u.user_type || u.userType;
+        
             const trainingStart = u.training_start_date || u.trainingStartDate;
             const trainingStartLabel = trainingStart ? (' \u00B7 Training Start ' + new Date(trainingStart + 'T00:00:00').toLocaleDateString()) : '';
             return '<div class="reg-row">' +
@@ -2601,7 +2677,7 @@
                         '<b>' + fullName + ' <span class="status-pill ' + pillClass + '">' + status + '</span></b>' +
                         '<div class="reg-meta">' + userType + ' \u00B7 Batch ' + (u.batch_id || u.batchId || '\u2014') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u.email || '') + ' \u00B7 Registered ' + createdLabel + (userType === 'Trainee' ? trainingStartLabel : '') + '</div>' +
                     '</div>' +
-                    '<div style="display:flex; gap:6px;">' + actions + '</div>' +
+                    '<div style="display:flex; gap:6px; align-items:center;">' + actions + '</div>' +
                 '</div>';
         }
         function updateUserStatus(userId, newStatus) {
