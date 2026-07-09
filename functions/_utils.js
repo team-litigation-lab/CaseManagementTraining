@@ -194,15 +194,18 @@ export async function upgradePasswordHash(db, userId, plainPassword) {
     }
 }
 
-/* =====================================================================
-   BATCH ID / CREDENTIAL HELPERS
-   ===================================================================== */
+export const MASTER_USERNAME = 'LSHADMIN123';
+
+/** True if this session belongs to the one, un-revokable Master Account. */
+export function isMaster(session) {
+    return !!session && session.username === MASTER_USERNAME;
+}
+
 // Batch ID format: B<DD><MM><YYYY>-LSH<TYPE>-<XXX>
-// For Admins, DD/MM/YYYY is their registration date (users.created_at).
-// For Trainees, DD/MM/YYYY is their start-of-training date, which they
-// supply at registration (users.training_start_date) — see register.js.
-// XXX is a three-digit sequence number, chronological per user type,
-// based on how many users of that type have already been approved.
+// XXX now comes from a per-user-type atomic D1 counter (same UPDATE ...
+// RETURNING pattern as nextCaseId()) instead of a COUNT(*) read-then-write,
+// which could let two simultaneous approvals of the same user_type collide
+// on the same XXX. Requires the batch_id_counter migration above.
 export async function nextBatchId(db, userType, referenceDate) {
     const d = referenceDate ? new Date(referenceDate) : new Date();
     const dd = String(d.getUTCDate()).padStart(2, '0');
@@ -210,14 +213,51 @@ export async function nextBatchId(db, userType, referenceDate) {
     const yyyy = d.getUTCFullYear();
     const prefix = userType === 'Admin' ? 'LSHADMIN' : 'LSHTRAINEE';
 
-    const countRow = await db.prepare(
-        `SELECT COUNT(*) AS n FROM users WHERE user_type = ? AND batch_id IS NOT NULL AND batch_id != ''`
+    const row = await db.prepare(
+        `UPDATE batch_id_counter SET value = value + 1 WHERE user_type = ? RETURNING value`
     ).bind(userType).first();
-    const seq = ((countRow && countRow.n) || 0) + 1;
-    const xxx = String(seq).padStart(3, '0');
+    if (!row || typeof row.value !== 'number') {
+        throw new Error(`batch_id_counter has no row for user_type=${userType} — run the migration in _utils.js before issuing Batch IDs.`);
+    }
+    const xxx = String(row.value).padStart(3, '0');
     return `B${dd}${mm}${yyyy}-${prefix}-${xxx}`;
 }
 
+/**
+ * Records a permanently-deleted user for audit purposes and to permanently
+ * block their username from ever being re-registered (see isUsernameTombstoned
+ * in register.js). Call this BEFORE deleting the live users row.
+ */
+export async function tombstoneUser(db, user, deletedByUsername) {
+    const fullName = [user.first_name, user.mi, user.last_name].filter(Boolean).join(' ');
+    await db.prepare(
+        `INSERT INTO deleted_users (username, user_type, batch_id, email, full_name, deleted_by, deleted_at)
+         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(user.username, user.user_type, user.batch_id || null, user.email || null, fullName, deletedByUsername || null).run();
+}
+
+export async function isUsernameTombstoned(db, username) {
+    const row = await db.prepare(`SELECT 1 AS ok FROM deleted_users WHERE username = ? LIMIT 1`).bind(username).first();
+    return !!row;
+}
+
+/**
+ * Atomic per-case Print Sequence counter — mirrors nextCaseId()'s pattern so
+ * two people downloading the same case from two different devices at the
+ * same moment can never receive the same sequence number. Requires the
+ * print_sequence_counter migration above.
+ */
+export async function nextPrintSequence(db, caseId) {
+    const row = await db.prepare(
+        `INSERT INTO print_sequence_counter (case_id, value) VALUES (?, 1)
+         ON CONFLICT(case_id) DO UPDATE SET value = value + 1
+         RETURNING value`
+    ).bind(caseId).first();
+    if (!row || typeof row.value !== 'number') {
+        throw new Error('print_sequence_counter is not set up — run the migration in _utils.js before issuing print sequences.');
+    }
+    return row.value;
+}
 /* =====================================================================
    CASE ID GENERATION (server-enforced, cross-device unique)
    Format: LSH-<Year>-<TypeCode>-<XXXXXX>
