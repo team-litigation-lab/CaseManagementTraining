@@ -607,9 +607,11 @@
             </form>
             <div id="repo-list" class="space-y-3 mb-2"></div>
             <div id="repo-count-note" style="font-size:9.5px; color:#64748b; margin-bottom:8px;"></div>
-            <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">View All Files</button>
+            <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-2">View All Files</button>
+            <button onclick="newCase()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">New Case</button>
 
-            <button onclick="saveCase()" class="w-full bg-[#10b981] hover:bg-emerald-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Archive Case (Save as New)</button>
+            <button onclick="saveCase()" class="w-full bg-[#10b981] hover:bg-emerald-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Save Case</button>
+            <button onclick="archiveCaseAsDraft()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Archive Case (Save as Draft)</button>
             <button onclick="updateCase()" class="w-full bg-[#2563eb] hover:bg-blue-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Update Saved Case</button>
             <div id="autosave-indicator" style="font-size:9.5px; color:#64748b; text-align:center; margin-bottom:12px; opacity:0.55; transition:opacity 0.3s;">Autosave active — drafts only, not final</div>
 
@@ -661,14 +663,14 @@
                     <div class="ml-auto flex items-center">
                         <span class="text-[10px] font-black text-orange-500 italic uppercase mr-3">Type:</span>
                         <div class="flex items-center bg-[#1f2937] rounded-lg border border-slate-700 p-1">
-                            <select id="main-case-type" onchange="handleOtherSystem(this.id, 'main-case-other', 'main-revert'); generateCaseId(false);" class="bg-transparent text-blue-400 font-black text-[11px] px-4 outline-none cursor-pointer uppercase">
+                            <select id="main-case-type" onchange="handleOtherSystem(this.id, 'main-case-other', 'main-revert'); generateCaseId();" class="bg-transparent text-blue-400 font-black text-[11px] px-4 outline-none cursor-pointer uppercase">
                                 <option value="MVA">MVA</option>
                                 <option value="Slip and Fall">Slip and Fall</option>
                                 <option value="Dog Bite">Dog Bite</option>
                                 <option value="Premise Liability">Premise Liability</option>
                                 <option value="Others">Others</option>
                             </select>
-                            <div id="main-case-other" contenteditable="true" data-ph="TYPE OTHER..." oninput="generateCaseId(false);" class="hidden text-white text-[11px] px-2 min-w-[120px] outline-none"></div>
+                            <div id="main-case-other" contenteditable="true" data-ph="TYPE OTHER..." oninput="generateCaseId();" class="hidden text-white text-[11px] px-2 min-w-[120px] outline-none"></div>
                             <button id="main-revert" onclick="revertOther('main-case-type', 'main-case-other', 'main-revert')" class="revert-btn">↺</button>
                         </div>
                     </div>
@@ -1345,6 +1347,7 @@
             const nameField = document.getElementById('client-name-field');
             if (nameField) nameField.innerText = '';
             currentCaseId = null;
+            currentCaseIsDraft = false;
         }
         /* ---------- Overlay integrity watchdog ----------
            DevTools lets someone disable a single CSS declaration (e.g.
@@ -1428,6 +1431,7 @@
         }
 
         let currentCaseId = null; // tracks which saved case (if any) is currently loaded, for Update Case
+        let currentCaseIsDraft = false; // true = loaded/created case has NO permanent Case ID yet (Archive Case (Save as Draft)); becomes false once "Save Case" assigns one
         const ADMIN_USER = 'LSHADMIN123';
         const ADMIN_PASS = 'LSHADMINPASS123';
         const LOGO_KEY = 'LSH_LOGO_DATAURL';
@@ -1552,36 +1556,49 @@
             }
             return TYPE_CODES[sel.value] || sel.value.replace(/\s+/g, '').toUpperCase().substring(0, 3);
         }
-        function nextSeriesNumber() {
-            let n = parseInt(localStorage.getItem('LSH_CASE_SERIES_COUNTER') || '0', 10) + 1;
-            localStorage.setItem('LSH_CASE_SERIES_COUNTER', String(n));
-            return String(n).padStart(6, '0');
-        }
-        // The active (in-progress) case's series number is persisted separately
-        // from the incrementing counter itself, so that a page refresh can
-        // restore the SAME number instead of minting a new one. A new number is
-        // only ever consumed (via nextSeriesNumber()) when a case is actually
-        // saved as new, or the very first time the app has ever run.
-        const ACTIVE_SERIES_KEY = 'LSH_ACTIVE_DRAFT_SERIES';
-        function generateCaseId(forceNewSeries) {
-            const year = new Date().getFullYear();
-            const typeCode = currentTypeCode();
-            const field = document.getElementById('case-id-field');
-            let series = field.dataset.series;
-            if (!series || forceNewSeries) {
-                if (forceNewSeries) {
-                    series = nextSeriesNumber(); // genuinely starting/saving a new case — consume a new number
-                } else {
-                    // Not forced: reuse whatever draft series is already active
-                    // (e.g. restoring after a refresh) rather than burning a new
-                    // one. Only fall back to minting a new one if none exists yet.
-                    series = localStorage.getItem(ACTIVE_SERIES_KEY) || nextSeriesNumber();
+        // Real Case IDs are now issued by the SERVER (POST /api/case-id), backed
+        // by an atomic D1 counter — this guarantees no two devices/users can
+        // ever be handed the same number. See functions/api/case-id.js and
+        // nextCaseId() in functions/_utils.js.
+        //
+        // requestCaseId() is called by saveCase() at the exact moment a case is
+        // finalized. It returns { ok: true, caseId } or { ok: false, error }.
+        async function requestCaseId() {
+            try {
+                const res = await fetch('/api/case-id', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ typeCode: currentTypeCode() })
+                });
+                let data;
+                try { data = await res.json(); } catch (e) { data = null; }
+                if (!res.ok || !data || !data.success || !data.caseId) {
+                    return { ok: false, error: (data && data.error) || 'The server could not assign a Case ID.' };
                 }
-                field.dataset.series = series;
-                localStorage.setItem(ACTIVE_SERIES_KEY, series);
+                return { ok: true, caseId: data.caseId };
+            } catch (e) {
+                return { ok: false, error: 'Could not reach the server to assign a Case ID. Check your connection and try again.' };
             }
-            field.innerText = `LSH-${year}-${typeCode}-${series}`;
         }
+        // Updates the on-screen Case ID field to reflect the current state:
+        //  - Already permanently saved case open -> show its real, fixed,
+        //    server-issued ID (never regenerated here).
+        //  - Draft open (Archive Case (Save as Draft), no ID yet) -> say so.
+        //  - Brand-new, never-saved case -> a real ID isn't reserved just for
+        //    viewing the form (that's what makes cross-device numbers collide-
+        //    free) — say it'll be assigned when you actually save.
+        function generateCaseId() {
+            const field = document.getElementById('case-id-field');
+            field.dataset.series = '';
+            if (currentCaseId !== null && !currentCaseIsDraft) {
+                return; // finalized case — its ID is fixed, never regenerated here
+            }
+            field.innerText = currentCaseIsDraft
+                ? 'DRAFT \u2014 ID assigned on Save Case'
+                : 'Will be assigned by the server on Save Case';
+        }
+
 
         function addBI() {
             const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-red-500 relative bg-white p-6 mb-4 shadow-sm";
@@ -1755,11 +1772,17 @@
             const submittedByBatch = (existing && existing.submittedByBatch) ? existing.submittedByBatch : (session ? session.batchId : '—');
             const submittedAt = (existing && existing.submittedAt) ? existing.submittedAt : new Date().toISOString();
             const downloadCount = (existing && typeof existing.downloadCount === 'number') ? existing.downloadCount : 0;
+            // Case ID is deliberately NOT read from the on-screen field here — that
+            // field may just be showing a live, non-reserved preview or a "DRAFT"
+            // placeholder, neither of which is real. The permanent Case ID is only
+            // ever set explicitly (via extra.caseId, from saveCase()) or carried
+            // forward from an existing record that was already finalized.
+            const carriedCaseId = (existing && existing.final && existing.caseId) ? existing.caseId : null;
             return Object.assign({
                 id: id,
                 name: name,
                 phase: document.getElementById('display-phase').innerText,
-                caseId: document.getElementById('case-id-field').innerText,
+                caseId: carriedCaseId,
                 submittedBy: submittedBy,
                 submittedByBatch: submittedByBatch,
                 submittedAt: submittedAt,
@@ -1767,7 +1790,7 @@
                 html: { pass: document.getElementById('passenger-container').innerHTML, facs: document.getElementById('facility-container').innerHTML, chrono: document.getElementById('chrono-container').innerHTML, fin: document.getElementById('fin-body').innerHTML, pipum: document.getElementById('pip-um-container').innerHTML, bi: document.getElementById('bi-container').innerHTML, docs: document.getElementById('doc-body').innerHTML, lit: document.getElementById('lit-body').innerHTML, liens: document.getElementById('lien-container').innerHTML, notes: document.getElementById('note-body').innerHTML, tasks: document.getElementById('task-body').innerHTML, police: document.getElementById('pane-police').innerHTML },
                 inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
                 sels: Array.from(document.querySelectorAll('select')).map(el => el.value),
-                final: false, // nothing saved from this screen is ever "final" — always reopenable and editable
+                final: existing ? existing.final : false, // stays true across autosaves/updates once Save Case has set it
                 savedAt: new Date().toISOString()
             }, extra || {});
         }
@@ -1778,23 +1801,94 @@
             const name = document.getElementById('client-name-field').innerText.trim();
             return !!name;
         }
-        function saveCase() {
-            const data = buildCaseSnapshot(Date.now(), { draft: true });
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); repo.unshift(data); localStorage.setItem(REPO_KEY, JSON.stringify(repo)); renderRepo();
-            currentCaseId = data.id;
+
+        /* ---------- New Case ---------- */
+        function newCase() {
+            if (hasCaseContent() && !confirm('Start a new case? Any unsaved progress on this case will be lost.')) return;
+            blankCaseEditorContent(); // wipes all case fields and sets currentCaseId = null
+            currentCaseIsDraft = false;
+            revertOther('main-case-type', 'main-case-other', 'main-revert'); // reset case type back to default
+            updatePhaseDisplay('INTAKE');
+            // Not saved yet, so no permanent number is consumed — this just
+            // shows a fresh live preview based on how many cases are actually
+            // saved so far.
+            generateCaseId();
+            showTab('profile');
+            renderRepo();
+        }
+
+        /* ---------- Save Case (permanent — assigns the real Case ID) ----------
+           If this case has never been permanently saved before (a brand-new
+           case, or a draft opened via "Archive Case (Save as Draft)"), a real
+           Case ID is minted right now, based on how many cases are already
+           permanently saved. If the case was already finalized, its existing
+           Case ID is kept and this just re-saves the latest content. */
+        async function saveCase() {
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            const targetId = (currentCaseId !== null) ? currentCaseId : Date.now();
+            const existing = repo.find(i => i.id === targetId);
+            const alreadyFinal = !!(existing && existing.final && existing.caseId);
+
+            let caseId = existing ? existing.caseId : null;
+            if (!alreadyFinal) {
+                // Not finalized yet — ask the server to atomically issue a real,
+                // cross-device-unique Case ID right now. Nothing is saved locally
+                // unless this succeeds, so a failed request never leaves a
+                // "final" case behind with a fake or missing ID.
+                const result = await requestCaseId();
+                if (!result.ok) {
+                    alert('Could not save: ' + result.error);
+                    return;
+                }
+                caseId = result.caseId;
+            }
+
+            const data = buildCaseSnapshot(targetId, { draft: false, final: true, caseId: caseId });
+            if (repo.some(i => i.id === targetId)) repo = repo.map(i => i.id === targetId ? data : i);
+            else repo.unshift(data);
+            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            renderRepo();
+            currentCaseId = targetId;
+            currentCaseIsDraft = false;
+            document.getElementById('case-id-field').innerText = caseId;
             if (typeof syncCaseSnapshot === 'function') syncCaseSnapshot('save');
-            // This case's Case ID is now locked into the saved record above.
-            // Only now — at the moment of saving — does a fresh Case ID get
-            // assigned for whatever work happens next.
-            generateCaseId(true);
+            alert(alreadyFinal ? 'Case saved.' : `Case saved. Case ID ${caseId} has been permanently assigned.`);
+        }
+
+        /* ---------- Archive Case (Save as Draft) ----------
+           Saves current progress WITHOUT assigning a permanent Case ID. Open
+           this draft later and click "Save Case" to finalize it and get its
+           real, permanent Case ID. */
+        function archiveCaseAsDraft() {
+            const targetId = (currentCaseId !== null && !currentCaseIsAlreadyFinal(currentCaseId)) ? currentCaseId : Date.now();
+            const data = buildCaseSnapshot(targetId, { draft: true, final: false, caseId: null });
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            if (repo.some(i => i.id === targetId)) repo = repo.map(i => i.id === targetId ? data : i);
+            else repo.unshift(data);
+            localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            renderRepo();
+            currentCaseId = targetId;
+            currentCaseIsDraft = true;
+            generateCaseId(); // shows the "DRAFT — ID assigned on Save Case" placeholder
+            if (typeof syncCaseSnapshot === 'function') syncCaseSnapshot('archive-draft');
+            alert('Case archived as a draft. No Case ID has been assigned yet — open this draft and use "Save Case" whenever you\'re ready to finalize it.');
+        }
+        function currentCaseIsAlreadyFinal(id) {
+            const repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            const rec = repo.find(i => i.id === id);
+            return !!(rec && rec.final);
         }
         function updateCase() {
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
             if (currentCaseId === null || !repo.some(i => i.id === currentCaseId)) {
-                alert("No saved case is currently open to update. Load a case from the repository first, or use \"Archive Case\" to save this as a new one.");
+                alert("No saved case is currently open to update. Load a case from the repository first, or use \"Archive Case (Save as Draft)\" / \"Save Case\" to save this as a new one.");
                 return;
             }
-            const data = buildCaseSnapshot(currentCaseId, { draft: true });
+            const existing = repo.find(i => i.id === currentCaseId);
+            const extra = existing && existing.final
+                ? { draft: false, final: true, caseId: existing.caseId } // already finalized — keep its real ID
+                : { draft: true, final: false, caseId: null };           // still a draft — stays a draft
+            const data = buildCaseSnapshot(currentCaseId, extra);
             repo = repo.map(i => i.id === currentCaseId ? data : i);
             localStorage.setItem(REPO_KEY, JSON.stringify(repo));
             renderRepo();
@@ -1852,7 +1946,7 @@
             if (query) repo = repo.filter(item => item.name.toLowerCase().includes(query));
 
             const shown = repo.slice(0, 5);
-            list.innerHTML = shown.length ? shown.map(item => `<div onclick="loadCase(${item.id})" class="repo-card group p-3 rounded-lg"><span class="repo-name block font-bold text-xs mb-1">${item.name}${item.draft ? ' <span style="font-size:9px;font-weight:800;color:#f97316;border:1px solid #f97316;border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle;">DRAFT</span>' : ''}</span><button onclick="deleteCase(${item.id}, event)" class="absolute top-1 right-2 text-slate-500">×</button></div>`).join('') : '<p style="font-size:11px;color:#64748b;">No matching cases.</p>';
+            list.innerHTML = shown.length ? shown.map(item => `<div onclick="loadCase(${item.id})" class="repo-card group p-3 rounded-lg"><span class="repo-name block font-bold text-xs mb-1">${item.name}${!item.final ? ' <span style="font-size:9px;font-weight:800;color:#f97316;border:1px solid #f97316;border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle;">DRAFT</span>' : ''}</span><button onclick="deleteCase(${item.id}, event)" class="absolute top-1 right-2 text-slate-500">×</button></div>`).join('') : '<p style="font-size:11px;color:#64748b;">No matching cases.</p>';
 
             if (repo.length > 5) countNote.innerText = `Showing 5 of ${repo.length} matching cases.`;
             else countNote.innerText = '';
@@ -1872,25 +1966,19 @@
             document.getElementById('note-body').innerHTML = data.html.notes || "";
             document.getElementById('task-body').innerHTML = data.html.tasks || "";
             document.getElementById('pane-police').innerHTML = data.html.police;
-            if (data.caseId) {
-                const idField = document.getElementById('case-id-field');
-                idField.innerText = data.caseId;
-                // Adopt this case's series as the active draft series too, so
-                // that refreshing while this case is open restores THIS id
-                // instead of whatever was active before it was loaded.
-                const seriesMatch = /-(\d+)$/.exec(data.caseId);
-                if (seriesMatch) {
-                    idField.dataset.series = seriesMatch[1];
-                    localStorage.setItem(ACTIVE_SERIES_KEY, seriesMatch[1]);
-                }
+            currentCaseId = id;
+            currentCaseIsDraft = !data.final;
+            if (data.final && data.caseId) {
+                document.getElementById('case-id-field').innerText = data.caseId; // real, fixed ID
+            } else {
+                generateCaseId(); // shows the "DRAFT — ID assigned on Save Case" placeholder
             }
             const edits = document.querySelectorAll('[contenteditable="true"]'); data.inputs.forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
             const selects = document.querySelectorAll('select'); data.sels.forEach((v, i) => { if (selects[i]) selects[i].value = v; });
             updateTotals(); toggleOwnerExtra(); toggleDriverInsuredExtra(); showTab('profile');
-            currentCaseId = id;
             closeAllCasesModal();
         }
-        function deleteCase(id, e) { e.stopPropagation(); if (confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); if (currentCaseId === id) currentCaseId = null; renderRepo(); renderAllCasesModal(); } }
+        function deleteCase(id, e) { e.stopPropagation(); if (confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); if (currentCaseId === id) { currentCaseId = null; currentCaseIsDraft = false; } renderRepo(); renderAllCasesModal(); } }
 
         function openAllCasesModal() {
             document.getElementById('all-cases-search').value = '';
@@ -1910,7 +1998,7 @@
                 <div class="reg-row" style="cursor:pointer;" onclick="loadCase(${item.id})">
                     <div class="reg-info">
                         <b>${item.name}</b>
-                        <div class="reg-meta">${item.caseId || ''} ${item.phase ? '&middot; ' + item.phase : ''}</div>
+                        <div class="reg-meta">${item.caseId || 'DRAFT — no Case ID yet'} ${item.phase ? '&middot; ' + item.phase : ''}</div>
                     </div>
                     <button class="mini-btn reject" onclick="deleteCase(${item.id}, event)">Delete</button>
                 </div>
@@ -2582,12 +2670,17 @@
         function syncCaseSnapshot(reason) {
             const session = getSession();
             if (!session) return;
+            // Only send the real, permanent Case ID — never the live preview
+            // text or the "DRAFT — ..." placeholder shown for unsaved cases.
+            const realCaseId = (currentCaseId !== null && !currentCaseIsDraft && document.getElementById('case-id-field'))
+                ? document.getElementById('case-id-field').innerText.trim()
+                : '';
             fetch('/api/cases', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
-                    caseId: document.getElementById('case-id-field') ? document.getElementById('case-id-field').innerText.trim() : '',
+                    caseId: realCaseId,
                     clientName: document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '',
                     phase: document.getElementById('display-phase') ? document.getElementById('display-phase').innerText.trim() : '',
                     medTotal: document.getElementById('med-total') ? document.getElementById('med-total').innerText.trim() : '',
@@ -2934,6 +3027,10 @@
            DOWNLOAD CONFIRMATION
            ========================================================= */
         function requestDownload() {
+            if (currentCaseIsDraft || currentCaseId === null) {
+                alert('This case doesn\'t have a permanent Case ID yet. Use "Save Case" to finalize it before downloading the summary.');
+                return;
+            }
             const session = getSession();
             const errorEl = document.getElementById('download-confirm-error');
             errorEl.style.display = 'none';
@@ -3197,9 +3294,9 @@
             applyPlaceholders();
             applyLogo();
             applyBackgroundImage();
-            // false = restore the already-active draft Case ID if one exists
-            // (e.g. after a refresh) instead of minting a new one every load.
-            generateCaseId(false);
+            // Shows a live preview of the next Case ID (derived from how many
+            // cases are actually saved) — never reserves/consumes a number.
+            generateCaseId();
             populateTimezones();
             refreshClock();
             resumeSession();
