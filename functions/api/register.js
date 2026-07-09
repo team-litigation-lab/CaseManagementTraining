@@ -18,7 +18,6 @@ if (await isUsernameTombstoned(db, username)) {
     await logActivity(db, username, null, 'register', { userType });
 
     return json({ success: true });
-}
 
 import { json, logActivity, hashPassword } from '../_utils.js';
 
