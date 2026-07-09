@@ -1086,7 +1086,7 @@
 
             <!-- USERS (approved / revoked, separated from registrations) -->
             <div class="mc-pane" id="admin-dash-users">
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Approved accounts, segregated by Admin / Trainee. Trainees are further grouped by Batch ID and sorted by sequence number; Admins are listed flat, sorted by sequence number.</p>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">All approved accounts, grouped by user type and sorted by registration date (oldest first).</p>
                 <div id="users-list"></div>
             </div>
 
@@ -1444,14 +1444,20 @@
 
         let currentCaseId = null; // tracks which saved case (if any) is currently loaded, for Update Case
         let currentCaseIsDraft = false; // true = loaded/created case has NO permanent Case ID yet (Archive Case (Save as Draft)); becomes false once "Save Case" assigns one
+        const ADMIN_USER = 'LSHADMIN123';
+        const ADMIN_PASS = 'LSHADMINPASS123';
         const LOGO_KEY = 'LSH_LOGO_DATAURL';
         const BG_KEY = 'LSH_BG_DATAURL';
         const LOCK_KEY = 'LSH_PAGE_LOCKED';
+        const USERS_KEY = 'LSH_USERS_V1';
         const SESSION_KEY = 'LSH_SESSION_V1';
         const HEARTBEAT_INTERVAL_MS = 2000;
         const HEARTBEAT_GRACE_MS = 6000;
         const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes — adjust if needed
         const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
+        const ADMIN_BATCH_COUNTER_KEY = 'LSH_ADMIN_BATCH_COUNTER_V1';
+        const TRAINEE_BATCH_COUNTER_KEY = 'LSH_TRAINEE_BATCH_COUNTER_V1';
+        const SEED_ADMIN = { fullName: 'System Administrator', gmail: '-', batchId: 'ADMIN', userType: 'Admin', username: ADMIN_USER, password: ADMIN_PASS, status: 'approved' };
         const DEFAULT_LOGO = "data:image/png;base64,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";
 
 
@@ -1601,8 +1607,8 @@
                 return; // finalized case — its ID is fixed, never regenerated here
             }
             field.innerText = currentCaseIsDraft
-                ? 'This is a DRAFT \u2014 Case ID will be assigned on upon saving the case'
-                : 'Will be assigned by the server upon saving the case';
+                ? 'DRAFT \u2014 ID assigned on Save Case'
+                : 'Will be assigned by the server on Save Case';
         }
 
 
@@ -2302,6 +2308,8 @@
         /* =========================================================
            AUTHENTICATION — Login / Register / Session
            ========================================================= */
+        function getUsers() { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
+        function saveUsers(list) { localStorage.setItem(USERS_KEY, JSON.stringify(list)); }
         function getSession() {
             try {
                 let raw = sessionStorage.getItem(SESSION_KEY);
@@ -2369,16 +2377,70 @@
             }
             if (trainingWrap) trainingWrap.style.display = type === 'Trainee' ? '' : 'none';
         }
-        
-        // Parses B<DDMMYYYY>-LSH<TYPE>-<XXX> into its date/type/sequence parts.
-        // Returns null for anything that doesn't match (e.g. no batch assigned yet).
-        function parseBatchId(batchId) {
-            if (!batchId) return null;
-            const m = /^B(\d{8})-LSH(ADMIN|TRAINEE)-(\d{3,})$/.exec(batchId);
-            if (!m) return null;
-            return { dateStr: m[1], type: m[2], seq: parseInt(m[3], 10) };
-        }  
-        
+
+        // Format: B<DD><MM><YYYY>-LSHADMIN-<XXX> — DD/MM/YYYY is the admin's
+        // registration date, XXX is a chronological sequence number across all
+        // admin registrations. NOTE: this is a live preview only — the real
+        // Batch ID is generated server-side when an admin approves the
+        // registration (see nextBatchId() in _utils.js).
+        function buildAdminBatchId(counter) {
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yyyy = now.getFullYear();
+            const xxx = String(counter).padStart(3, '0');
+            return `B${dd}${mm}${yyyy}-LSHADMIN-${xxx}`;
+        }
+        // Shows what the next admin Batch ID will look like, without consuming the counter.
+        function previewAdminBatchId() {
+            const counter = parseInt(localStorage.getItem(ADMIN_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            return buildAdminBatchId(counter);
+        }
+        // Actually reserves and persists the next counter value on submission.
+        function generateAdminBatchId() {
+            const counter = parseInt(localStorage.getItem(ADMIN_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            localStorage.setItem(ADMIN_BATCH_COUNTER_KEY, String(counter));
+            return buildAdminBatchId(counter);
+        }
+
+        // Format: B<DD><MM><YYYY>-LSHTRAINEE-<XXX> — DD/MM/YYYY is the
+        // trainee's start-of-training date (entered on this form), XXX is a
+        // chronological sequence number across all trainee registrations.
+        // NOTE: this is a live preview only — the real Batch ID is generated
+        // server-side when an admin approves the registration.
+        function buildTraineeBatchId(counter, dateStr) {
+            const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            const xxx = String(counter).padStart(3, '0');
+            return `B${dd}${mm}${yyyy}-LSHTRAINEE-${xxx}`;
+        }
+        // Shows what the next trainee Batch ID will look like, without consuming the counter.
+        function previewTraineeBatchId() {
+            const counter = parseInt(localStorage.getItem(TRAINEE_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            const dateInput = document.getElementById('reg-training-date');
+            return buildTraineeBatchId(counter, dateInput ? dateInput.value : '');
+        }
+        // Actually reserves and persists the next counter value on submission.
+        function generateTraineeBatchId() {
+            const counter = parseInt(localStorage.getItem(TRAINEE_BATCH_COUNTER_KEY) || '0', 10) + 1;
+            localStorage.setItem(TRAINEE_BATCH_COUNTER_KEY, String(counter));
+            const dateInput = document.getElementById('reg-training-date');
+            return buildTraineeBatchId(counter, dateInput ? dateInput.value : '');
+        }
+
+        function authenticate(username, password, portal) {
+            if (portal === 'Admin' && username === SEED_ADMIN.username && password === SEED_ADMIN.password) {
+                return { ok: true, user: SEED_ADMIN };
+            }
+            const users = getUsers();
+            const match = users.find(u => u.username === username && u.password === password && u.userType === portal);
+            if (!match) return { ok: false, reason: 'invalid' };
+            if (match.status !== 'approved') return { ok: false, reason: match.status === 'rejected' ? 'rejected' : 'pending' };
+            return { ok: true, user: match };
+        }
+
         function attemptLogin() {
             const u = document.getElementById('login-username').value.trim();
             const p = document.getElementById('login-password').value.trim();
@@ -2561,78 +2623,20 @@
                 .then(users => {
                     users = Array.isArray(users) ? users : [];
                     users.sort((a, b) => new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0));
-        
+
                     const pending = users.filter(u => (u.status || 'Pending') === 'Pending');
-                    // Revocation is now a permanent delete (see /api/revoke-user), so a
-                    // 'Revoked' status should never actually appear here anymore —
-                    // those rows are gone. Filtering to 'Approved' only is correct.
-                    const active = users.filter(u => u.status === 'Approved');
-        
+                    const active = users.filter(u => u.status === 'Approved' || u.status === 'Revoked');
+
                     document.getElementById('admin-stat-pending').innerText = pending.length;
                     const badge = document.getElementById('reg-pending-badge');
                     if (badge) { badge.innerText = pending.length > 0 ? ('(' + pending.length + ')') : ''; badge.style.color = pending.length > 0 ? 'var(--classified-red)' : 'inherit'; }
-        
+
                     renderGroupedUserList('registrations-list', pending, true, 'No pending registrations.');
-                    renderUsersList(active);
+                    renderGroupedUserList('users-list', active, false, 'No approved users yet.');
                 })
                 .catch(err => console.error('Failed to load users:', err));
         }
-                    function confirmRevokeUser(userId, fullName) {
-                if (!confirm('Permanently revoke access for ' + fullName + '? This deletes their account entirely — their saved cases will remain, but this action itself cannot be undone.')) return;
-                fetch('/api/revoke-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ userId: userId })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.success) {
-                        showToast('Access permanently revoked.', 'success');
-                    } else {
-                        showToast((data && data.error) || 'Failed to revoke access.', 'error');
-                    }
-                    refreshUsersAndRegistrations();
-                })
-                .catch(() => showToast('Network error. Failed to revoke access.', 'error'));
-            }
-            function renderUsersList(list) {
-            const container = document.getElementById('users-list');
-            if (!container) return;
-            if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No approved users yet.</p>'; return; }
-        
-            function seqOf(u) {
-                const p = parseBatchId(u.batch_id || u.batchId);
-                return p ? p.seq : Number.MAX_SAFE_INTEGER; // unparseable batch ids sort last, never crash
-            }
-        
-            const admins = list.filter(u => (u.user_type || u.userType) === 'Admin').sort((a, b) => seqOf(a) - seqOf(b));
-            const trainees = list.filter(u => (u.user_type || u.userType) === 'Trainee');
-        
-            let html = '<div class="group-heading">Admins &middot; ' + admins.length + '</div>';
-            html += admins.length
-                ? admins.map(u => renderUserRow(u, false)).join('')
-                : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No approved admins.</p>';
-        
-            html += '<div class="group-heading">Trainees &middot; ' + trainees.length + '</div>';
-            if (!trainees.length) {
-                html += '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No approved trainees.</p>';
-            } else {
-                const byBatchDate = {};
-                trainees.forEach(u => {
-                    const p = parseBatchId(u.batch_id || u.batchId);
-                    const key = p ? ('B' + p.dateStr) : 'Unassigned Batch';
-                    (byBatchDate[key] = byBatchDate[key] || []).push(u);
-                });
-                Object.keys(byBatchDate).sort().forEach(batchKey => {
-                    const members = byBatchDate[batchKey].sort((a, b) => seqOf(a) - seqOf(b));
-                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + batchKey + ' &middot; ' + members.length + ' trainee(s)</div>';
-                    html += members.map(u => renderUserRow(u, false)).join('');
-                });
-            }
-            container.innerHTML = html;
-        }
-            function renderGroupedUserList(containerId, list, isPending, emptyMsg) {
+        function renderGroupedUserList(containerId, list, isPending, emptyMsg) {
             const container = document.getElementById(containerId);
             if (!container) return;
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">' + emptyMsg + '</p>'; return; }
@@ -2651,25 +2655,16 @@
             const fullName = u.full_name || u.fullName || ((u.first_name || '') + ' ' + (u.last_name || '')).trim();
             const created = u.created_at || u.createdAt;
             const createdLabel = created ? new Date(created).toLocaleDateString() : '\u2014';
-            const userType = u.user_type || u.userType;
-        
             let actions = '';
             if (isPending) {
                 actions = '<button class="mini-btn approve" onclick="updateUserStatus(' + u.id + ',\'Approved\')">Approve</button>' +
                           '<button class="mini-btn reject" onclick="if(confirm(\'Permanently reject this registration?\'))updateUserStatus(' + u.id + ',\'Rejected\')">Reject</button>';
+            } else if (status === 'Revoked') {
+                actions = '<button class="mini-btn restore" onclick="updateUserStatus(' + u.id + ',\'Approved\')">Restore Access</button>';
             } else {
-                const session = getSession();
-                const sessionIsMaster = !!(session && session.username === 'LSHADMIN123');
-                const targetIsMaster = u.username === 'LSHADMIN123';
-                if (targetIsMaster) {
-                    actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Master Account</span>';
-                } else if (userType === 'Admin' && !sessionIsMaster) {
-                    actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Only Master can revoke</span>';
-                } else {
-                    actions = '<button class="mini-btn reject" onclick="confirmRevokeUser(' + u.id + ', ' + JSON.stringify(fullName) + ')">Permanent Revocation</button>';
-                }
+                actions = '<button class="mini-btn revoke" onclick="updateUserStatus(' + u.id + ',\'Revoked\')">Revoke Access</button>';
             }
-        
+            const userType = u.user_type || u.userType;
             const trainingStart = u.training_start_date || u.trainingStartDate;
             const trainingStartLabel = trainingStart ? (' \u00B7 Training Start ' + new Date(trainingStart + 'T00:00:00').toLocaleDateString()) : '';
             return '<div class="reg-row">' +
@@ -2677,7 +2672,7 @@
                         '<b>' + fullName + ' <span class="status-pill ' + pillClass + '">' + status + '</span></b>' +
                         '<div class="reg-meta">' + userType + ' \u00B7 Batch ' + (u.batch_id || u.batchId || '\u2014') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u.email || '') + ' \u00B7 Registered ' + createdLabel + (userType === 'Trainee' ? trainingStartLabel : '') + '</div>' +
                     '</div>' +
-                    '<div style="display:flex; gap:6px; align-items:center;">' + actions + '</div>' +
+                    '<div style="display:flex; gap:6px;">' + actions + '</div>' +
                 '</div>';
         }
         function updateUserStatus(userId, newStatus) {
@@ -3313,89 +3308,35 @@
             // Pull the case's original submitter info and bump its per-case
             // Print Sequence counter in the database (repo). If this case has
             // never been saved to the repository yet, this is its 1st copy.
-async function confirmDownload() {
-    const session = getSession();
-    const errorEl = document.getElementById('download-confirm-error');
-    if (!session) {
-        errorEl.innerText = 'Your session could not be verified. Please log in again.';
-        errorEl.style.display = 'block';
-        return;
-    }
-    const fullName = session.fullName;
-    const batchId = session.batchId;
-    errorEl.style.display = 'none';
-    const producedAt = new Date().toLocaleString();
+            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+            const idx = repo.findIndex(i => i.id === currentCaseId);
+            let submittedBy, submittedByBatch, submittedAt, printSequence;
+            if (idx !== -1) {
+                const rec = repo[idx];
+                submittedBy = rec.submittedBy || session.fullName;
+                submittedByBatch = rec.submittedByBatch || session.batchId;
+                submittedAt = rec.submittedAt ? new Date(rec.submittedAt).toLocaleString() : producedAt;
+                rec.downloadCount = (typeof rec.downloadCount === 'number' ? rec.downloadCount : 0) + 1;
+                printSequence = rec.downloadCount;
+                repo[idx] = rec;
+                localStorage.setItem(REPO_KEY, JSON.stringify(repo));
+            } else {
+                submittedBy = session.fullName;
+                submittedByBatch = session.batchId;
+                submittedAt = producedAt;
+                printSequence = 1;
+            }
 
-    let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-    const idx = repo.findIndex(i => i.id === currentCaseId);
-    const rec = idx !== -1 ? repo[idx] : null;
-    const submittedBy = (rec && rec.submittedBy) || session.fullName;
-    const submittedByBatch = (rec && rec.submittedByBatch) || session.batchId;
-    const submittedAt = (rec && rec.submittedAt) ? new Date(rec.submittedAt).toLocaleString() : producedAt;
-    const realCaseId = document.getElementById('case-id-field').innerText.trim();
-
-    // Print Sequence is now a real, atomic, server-issued counter keyed on
-    // this case's permanent Case ID — never a locally-guessed count, so two
-    // people downloading the same case from two different devices at the
-    // same moment can never get the same number.
-    async function confirmDownload() {
-    const session = getSession();
-    const errorEl = document.getElementById('download-confirm-error');
-    if (!session) {
-        errorEl.innerText = 'Your session could not be verified. Please log in again.';
-        errorEl.style.display = 'block';
-        return;
-    }
-    const fullName = session.fullName;
-    const batchId = session.batchId;
-    errorEl.style.display = 'none';
-    const producedAt = new Date().toLocaleString();
-
-    let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-    const idx = repo.findIndex(i => i.id === currentCaseId);
-    const rec = idx !== -1 ? repo[idx] : null;
-    const submittedBy = (rec && rec.submittedBy) || session.fullName;
-    const submittedByBatch = (rec && rec.submittedByBatch) || session.batchId;
-    const submittedAt = (rec && rec.submittedAt) ? new Date(rec.submittedAt).toLocaleString() : producedAt;
-    const realCaseId = document.getElementById('case-id-field').innerText.trim();
-
-    // Print Sequence is now a real, atomic, server-issued counter keyed on
-    // this case's permanent Case ID — never a locally-guessed count, so two
-    // people downloading the same case from two different devices at the
-    // same moment can never get the same number.
-    let printSequence = 1;
-    try {
-        const res = await fetch('/api/print-sequence', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ caseId: realCaseId })
-        });
-        const data = await res.json();
-        if (data && data.success) {
-            printSequence = data.printSequence;
-        } else {
-            errorEl.innerText = (data && data.error) || 'Could not assign a print sequence number.';
-            errorEl.style.display = 'block';
-            return;
-        }
-    } catch (e) {
-        errorEl.innerText = 'Network error assigning print sequence. Please try again.';
-        errorEl.style.display = 'block';
-        return;
-    }
-
-    closeDownloadConfirm();
-    downloadPDF({
-        submittedBy: submittedBy,
-        submittedByBatch: submittedByBatch,
-        submittedAt: submittedAt,
-        producedByName: fullName,
-        producedByBatch: batchId,
-        producedAt: producedAt,
-        printSequence: printSequence
-    });
-}
+            closeDownloadConfirm();
+            downloadPDF({
+                submittedBy: submittedBy,
+                submittedByBatch: submittedByBatch,
+                submittedAt: submittedAt,
+                producedByName: fullName,
+                producedByBatch: batchId,
+                producedAt: producedAt,
+                printSequence: printSequence
+            });
         }
 
 
