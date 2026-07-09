@@ -599,7 +599,7 @@
         </div>
         <div class="p-6 flex-1 overflow-y-auto custom-scrollbar" id="sidebar-actions" style="flex:1;">
             <button onclick="requestDownload()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download Case Summary (PDF)</button>
-            <button onclick="if(confirm('Reset current work? Unsaved entries will be lost.')) window.location.reload()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Reset Screen</button>
+            <button onclick="if(confirm('Reset current work? Unsaved entries will be lost.')) { try { localStorage.removeItem(CURRENT_DRAFT_KEY); } catch(e) {} window.location.reload(); }" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Reset Screen</button>
 
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Repository</p>
             <form autocomplete="off" onsubmit="return false;" style="margin:0;">
@@ -1340,8 +1340,20 @@
         function blankCaseEditorContent() {
             // Wipes any case content currently sitting in the DOM so a
             // hidden/removed overlay can't expose it.
+            //
+            // NOTE: 'pane-police' is intentionally NOT in this list. Unlike
+            // the other ids below (which are empty-by-default containers
+            // that dynamic add-row/add-card functions populate), pane-police
+            // is a static card with its own hardcoded labels/layout baked
+            // into the page HTML. Wiping its innerHTML doesn't just clear
+            // entered values — it permanently destroys the Police Report
+            // Details markup itself, and nothing ever rebuilds it, so the
+            // whole section disappears for the rest of the session. The
+            // contenteditable-clearing loop just below already blanks the
+            // actual field VALUES inside pane-police, which is all that's
+            // needed here.
             ['passenger-container','facility-container','chrono-container','fin-body','pip-um-container',
-             'bi-container','doc-body','lit-body','lien-container','note-body','task-body','pane-police'
+             'bi-container','doc-body','lit-body','lien-container','note-body','task-body'
             ].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
             document.querySelectorAll('[contenteditable="true"]').forEach(el => { el.innerHTML = ''; });
             const nameField = document.getElementById('client-name-field');
@@ -1802,10 +1814,147 @@
             return !!name;
         }
 
+        /* =========================================================
+           IN-PROGRESS EDITOR PERSISTENCE (survives a page refresh)
+
+           This is separate from both the saved-case Repository (REPO_KEY)
+           and the autosave-to-draft mechanism (autoSaveProgress, which
+           only fires every 60s and only once a client name exists). This
+           persists whatever is currently sitting in the editor — typed or
+           not yet named, finalized or not — under its own key, so an
+           accidental refresh/reload never loses in-progress work. It is
+           overwritten continuously while editing and cleared whenever the
+           user explicitly starts fresh (New Case / Reset Screen).
+           ========================================================= */
+        const CURRENT_DRAFT_KEY = 'LSH_CURRENT_EDITOR_DRAFT_V1';
+        let _draftRestoredThisLoad = false; // ensures restoreCurrentEditorState() only auto-runs once per page load
+
+        function persistCurrentEditorState() {
+            if (!hasAuthorizedAccess()) return; // never persist a blanked/unauthorized DOM over a real draft
+            try {
+                const snapshot = {
+                    currentCaseId,
+                    currentCaseIsDraft,
+                    caseType: document.getElementById('main-case-type') ? document.getElementById('main-case-type').value : null,
+                    caseTypeOther: document.getElementById('main-case-other') ? document.getElementById('main-case-other').innerHTML : '',
+                    caseTypeOtherVisible: !!(document.getElementById('main-case-other') && !document.getElementById('main-case-other').classList.contains('hidden')),
+                    phase: document.getElementById('display-phase') ? document.getElementById('display-phase').innerText : 'INTAKE',
+                    html: {
+                        pass: document.getElementById('passenger-container').innerHTML,
+                        facs: document.getElementById('facility-container').innerHTML,
+                        chrono: document.getElementById('chrono-container').innerHTML,
+                        fin: document.getElementById('fin-body').innerHTML,
+                        pipum: document.getElementById('pip-um-container').innerHTML,
+                        bi: document.getElementById('bi-container').innerHTML,
+                        docs: document.getElementById('doc-body').innerHTML,
+                        lit: document.getElementById('lit-body').innerHTML,
+                        liens: document.getElementById('lien-container').innerHTML,
+                        notes: document.getElementById('note-body').innerHTML,
+                        tasks: document.getElementById('task-body').innerHTML,
+                        police: document.getElementById('pane-police').innerHTML
+                    },
+                    inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
+                    sels: Array.from(document.querySelectorAll('select')).map(el => el.value),
+                    savedAt: new Date().toISOString()
+                };
+                localStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(snapshot));
+            } catch (e) { console.warn('Could not persist in-progress case:', e); }
+        }
+
+        let _persistDebounceTimer = null;
+        function schedulePersistCurrentEditorState() {
+            clearTimeout(_persistDebounceTimer);
+            _persistDebounceTimer = setTimeout(persistCurrentEditorState, 500);
+        }
+
+        function clearPersistedEditorState() {
+            try { localStorage.removeItem(CURRENT_DRAFT_KEY); } catch (e) {}
+        }
+
+        // Wires up listeners that keep CURRENT_DRAFT_KEY in sync with
+        // whatever is currently in the editor. Uses a MutationObserver (in
+        // addition to input/change) so dynamically added/removed rows,
+        // cards, and document uploads are captured too, not just typing.
+        function initEditorPersistence() {
+            const root = document.getElementById('capture-area');
+            if (!root) return;
+            root.addEventListener('input', schedulePersistCurrentEditorState);
+            root.addEventListener('change', schedulePersistCurrentEditorState);
+            const observer = new MutationObserver(schedulePersistCurrentEditorState);
+            observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'value'] });
+        }
+
+        // Restores whatever was last persisted. Only called once per page
+        // load, right after we've confirmed the session is authorized, so
+        // it never fires while the editor is being kept blank for a
+        // logged-out/locked-out viewer.
+        function restoreCurrentEditorState() {
+            if (!hasAuthorizedAccess()) return false;
+            let raw;
+            try { raw = localStorage.getItem(CURRENT_DRAFT_KEY); } catch (e) { return false; }
+            if (!raw) return false;
+            let data;
+            try { data = JSON.parse(raw); } catch (e) { return false; }
+            if (!data) return false;
+            try {
+                document.getElementById('passenger-container').innerHTML = (data.html && data.html.pass) || '';
+                document.getElementById('facility-container').innerHTML = (data.html && data.html.facs) || '';
+                document.getElementById('chrono-container').innerHTML = (data.html && data.html.chrono) || '';
+                document.getElementById('fin-body').innerHTML = (data.html && data.html.fin) || '';
+                document.getElementById('pip-um-container').innerHTML = (data.html && data.html.pipum) || '';
+                document.getElementById('bi-container').innerHTML = (data.html && data.html.bi) || '';
+                document.getElementById('doc-body').innerHTML = (data.html && data.html.docs) || '';
+                document.getElementById('lit-body').innerHTML = (data.html && data.html.lit) || '';
+                document.getElementById('lien-container').innerHTML = (data.html && data.html.liens) || '';
+                document.getElementById('note-body').innerHTML = (data.html && data.html.notes) || '';
+                document.getElementById('task-body').innerHTML = (data.html && data.html.tasks) || '';
+                if (data.html && data.html.police) document.getElementById('pane-police').innerHTML = data.html.police;
+
+                const edits = document.querySelectorAll('[contenteditable="true"]');
+                (data.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
+                const selects = document.querySelectorAll('select');
+                (data.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
+
+                if (data.caseTypeOtherVisible && document.getElementById('main-case-type') && document.getElementById('main-case-other')) {
+                    document.getElementById('main-case-type').classList.add('hidden');
+                    document.getElementById('main-case-other').classList.remove('hidden');
+                    document.getElementById('main-case-other').innerHTML = data.caseTypeOther || '';
+                    if (document.getElementById('main-revert')) document.getElementById('main-revert').style.display = 'inline-block';
+                } else if (data.caseType && document.getElementById('main-case-type')) {
+                    document.getElementById('main-case-type').value = data.caseType;
+                }
+
+                currentCaseId = (typeof data.currentCaseId === 'number') ? data.currentCaseId : null;
+                currentCaseIsDraft = !!data.currentCaseIsDraft;
+
+                if (currentCaseId !== null) {
+                    const repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+                    const existing = repo.find(i => i.id === currentCaseId);
+                    if (existing && existing.final && existing.caseId) {
+                        document.getElementById('case-id-field').innerText = existing.caseId;
+                    } else {
+                        generateCaseId();
+                    }
+                } else {
+                    generateCaseId();
+                }
+                if (data.phase) updatePhaseDisplay(data.phase);
+
+                if (typeof updateTotals === 'function') updateTotals();
+                toggleOwnerExtra();
+                toggleDriverInsuredExtra();
+                return true;
+            } catch (e) {
+                console.warn('Could not restore in-progress case:', e);
+                return false;
+            }
+        }
+
         /* ---------- New Case ---------- */
         function newCase() {
             if (hasCaseContent() && !confirm('Start a new case? Any unsaved progress on this case will be lost.')) return;
             blankCaseEditorContent(); // wipes all case fields and sets currentCaseId = null
+            clearPersistedEditorState(); // don't let a refresh bring back the case we just discarded
             currentCaseIsDraft = false;
             revertOther('main-case-type', 'main-case-other', 'main-revert'); // reset case type back to default
             updatePhaseDisplay('INTAKE');
@@ -1851,6 +2000,7 @@
             currentCaseId = targetId;
             currentCaseIsDraft = false;
             document.getElementById('case-id-field').innerText = caseId;
+            persistCurrentEditorState();
             if (typeof syncCaseSnapshot === 'function') syncCaseSnapshot('save');
             alert(alreadyFinal ? 'Case saved.' : `Case saved. Case ID ${caseId} has been permanently assigned.`);
         }
@@ -1870,6 +2020,7 @@
             currentCaseId = targetId;
             currentCaseIsDraft = true;
             generateCaseId(); // shows the "DRAFT — ID assigned on Save Case" placeholder
+            persistCurrentEditorState();
             if (typeof syncCaseSnapshot === 'function') syncCaseSnapshot('archive-draft');
             alert('Case archived as a draft. No Case ID has been assigned yet — open this draft and use "Save Case" whenever you\'re ready to finalize it.');
         }
@@ -1892,6 +2043,7 @@
             repo = repo.map(i => i.id === currentCaseId ? data : i);
             localStorage.setItem(REPO_KEY, JSON.stringify(repo));
             renderRepo();
+            persistCurrentEditorState();
             if (typeof syncCaseSnapshot === 'function') syncCaseSnapshot('update');
             alert("Saved case updated.");
         }
@@ -1914,6 +2066,7 @@
             currentCaseId = targetId;
             localStorage.setItem(REPO_KEY, JSON.stringify(repo));
             renderRepo();
+            persistCurrentEditorState();
             flashAutoSaveIndicator();
             if (typeof syncCaseSnapshot === 'function') syncCaseSnapshot('autosave:' + (reason || 'interval'));
             return true;
@@ -1977,6 +2130,7 @@
             const selects = document.querySelectorAll('select'); data.sels.forEach((v, i) => { if (selects[i]) selects[i].value = v; });
             updateTotals(); toggleOwnerExtra(); toggleDriverInsuredExtra(); showTab('profile');
             closeAllCasesModal();
+            persistCurrentEditorState(); // so a refresh resumes THIS case, not a stale earlier draft
         }
         function deleteCase(id, e) { e.stopPropagation(); if (confirm("Delete Case?")) { let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); localStorage.setItem(REPO_KEY, JSON.stringify(repo.filter(i => i.id !== id))); if (currentCaseId === id) { currentCaseId = null; currentCaseIsDraft = false; } renderRepo(); renderAllCasesModal(); } }
 
@@ -2377,6 +2531,17 @@
             gate.classList.remove('open');
             gate.style.removeProperty('display');
             portalTitle.innerText = `LEGAL SUPPORT HELP TRAINING INTERFACE - ${session.userType.toUpperCase()} PORTAL`;
+
+            // Restore in-progress editor content exactly once per page load
+            // (covers both "logged in already, hit refresh" and "just logged
+            // back in after being logged out mid-edit"). Guarded so later,
+            // unrelated calls to applySessionUI() during the same page life
+            // (e.g. after opening/closing Master Control) never stomp on
+            // whatever the user has typed since.
+            if (!_draftRestoredThisLoad) {
+                _draftRestoredThisLoad = true;
+                restoreCurrentEditorState();
+            }
 
             if (session.userType === 'Admin') {
                 footer.innerHTML = `
@@ -3299,7 +3464,8 @@
             generateCaseId();
             populateTimezones();
             refreshClock();
-            resumeSession();
+            initEditorPersistence(); // start listening for edits to autosave across refreshes
+            resumeSession(); // will call restoreCurrentEditorState() once authorized
             refreshSiteState();
         });
     </script>
