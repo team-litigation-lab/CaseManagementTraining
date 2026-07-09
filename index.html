@@ -599,7 +599,7 @@
         </div>
         <div class="p-6 flex-1 overflow-y-auto custom-scrollbar" id="sidebar-actions" style="flex:1;">
             <button onclick="requestDownload()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download Case Summary (PDF)</button>
-            <button onclick="if(confirm('Reset current work? Unsaved entries will be lost.')) { try { localStorage.removeItem(CURRENT_DRAFT_KEY); } catch(e) {} window.location.reload(); }" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Reset Screen</button>
+            <button onclick="newCase()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Start a New Case</button>
 
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Repository</p>
             <form autocomplete="off" onsubmit="return false;" style="margin:0;">
@@ -607,8 +607,7 @@
             </form>
             <div id="repo-list" class="space-y-3 mb-2"></div>
             <div id="repo-count-note" style="font-size:9.5px; color:#64748b; margin-bottom:8px;"></div>
-            <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-2">View All Files</button>
-            <button onclick="newCase()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">New Case</button>
+            <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">View All Files</button>
 
             <button onclick="saveCase()" class="w-full bg-[#10b981] hover:bg-emerald-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Save Case</button>
             <button onclick="archiveCaseAsDraft()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Archive Case (Save as Draft)</button>
@@ -1258,20 +1257,21 @@
         </div>
     </div>
 
-    <!-- ===== AUTO-ARCHIVE (INACTIVITY) MODAL ===== -->
+    <!-- ===== INACTIVITY REMINDER / AUTO-ARCHIVE MODAL ===== -->
     <div class="modal-overlay no-print" id="auto-archive-modal" style="z-index:2500;">
         <div class="modal-box">
-            <h2 class="serif">⚠ Inactivity Detected</h2>
+            <h2 class="serif">⚠ Still There?</h2>
             <div class="sub mono">Data Protection Safeguard</div>
             <p style="font-size:12px; color:#475569; margin-bottom:14px; line-height:1.5;">
-                No activity has been detected on this case for 5 minutes. To prevent losing your work, this case will be automatically archived to the Case Repository as a draft.
+                No activity has been detected on this case for 5 minutes. Let us know what you'd like to do — otherwise this case will be automatically archived to the Case Repository as a draft.
             </p>
             <p style="font-size:12px; color:#0f2148; font-weight:800; margin-bottom:16px;">
-                Archiving in <span id="auto-archive-countdown" style="color:var(--classified-red); font-family:'IBM Plex Mono','Courier New',monospace; font-size:16px;">10</span> seconds if no response...
+                Auto-archiving in <span id="auto-archive-countdown" style="color:var(--classified-red); font-family:'IBM Plex Mono','Courier New',monospace; font-size:16px;">30</span> seconds if no response...
             </p>
-            <div class="modal-btn-row">
-                <button class="btn-ghost" onclick="cancelAutoArchive()">Cancel</button>
-                <button class="btn-primary" onclick="performAutoArchive()">Archive Now</button>
+            <div class="modal-btn-row" style="flex-direction:column;">
+                <button class="btn-primary" onclick="continueEditing()">Continue</button>
+                <button class="btn-ghost" onclick="archiveFromInactivityPrompt()">Archive Case (Save as Draft)</button>
+                <button class="btn-ghost" style="color:var(--classified-red);" onclick="startNewCaseFromInactivityPrompt()">Start a New Case</button>
             </div>
         </div>
     </div>
@@ -1824,7 +1824,8 @@
            not yet named, finalized or not — under its own key, so an
            accidental refresh/reload never loses in-progress work. It is
            overwritten continuously while editing and cleared whenever the
-           user explicitly starts fresh (New Case / Reset Screen).
+           user explicitly starts fresh (Start a New Case), or when a case
+           is auto-archived/reassigned via the inactivity prompt.
            ========================================================= */
         const CURRENT_DRAFT_KEY = 'LSH_CURRENT_EDITOR_DRAFT_V1';
         let _draftRestoredThisLoad = false; // ensures restoreCurrentEditorState() only auto-runs once per page load
@@ -3126,29 +3127,32 @@
         }
 
         /* =========================================================
-           AUTO-ARCHIVE — triggered ONLY by user inactivity on the
-           case (never by technical errors/glitches). Threshold is
-           5 minutes of no detected activity. Once the threshold is
-           hit, the user gets a 10-second confirmation window before
-           the case is auto-archived as a draft to the repository.
-           Auto-archive applies to the CASE only — it does not log
-           the user out, lock the screen, or affect anything else.
+           INACTIVITY REMINDER — triggered by user inactivity on the
+           case (never by technical errors/glitches — see the
+           TECHNICAL-INTERRUPTION AUTO-ARCHIVE block below for that).
+           Threshold is 5 minutes of no detected activity. Once hit,
+           the user gets a 30-second window to choose Continue,
+           Archive Case (Save as Draft), or Start a New Case — if no
+           response, the case is silently auto-archived as a draft.
+           This applies to the CASE only — it does not log the user
+           out, lock the screen, or affect anything else.
            ========================================================= */
         const INACTIVITY_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+        const AUTO_ARCHIVE_COUNTDOWN_SECONDS = 30;
         let inactivityTimer = null;
         let autoArchiveTimer = null;
-        let autoArchiveSecondsLeft = 10;
+        let autoArchiveSecondsLeft = AUTO_ARCHIVE_COUNTDOWN_SECONDS;
         let autoArchivePromptOpen = false;
 
         function resetInactivityTimer() {
-            if (autoArchivePromptOpen) return; // don't reset while the user is being asked to confirm
+            if (autoArchivePromptOpen) return; // don't reset while the user is being asked to respond
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(checkInactivityAndPrompt, INACTIVITY_THRESHOLD_MS);
         }
         function checkInactivityAndPrompt() {
             // Only prompt if there's an actual case in progress worth protecting.
             if (!hasCaseContent()) { resetInactivityTimer(); return; }
-            scheduleAutoArchivePrompt();
+            scheduleInactivityPrompt();
         }
         // Any real user activity resets the 5-minute inactivity clock.
         ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'input'].forEach(evt => {
@@ -3156,10 +3160,10 @@
         });
         resetInactivityTimer();
 
-        function scheduleAutoArchivePrompt() {
+        function scheduleInactivityPrompt() {
             if (autoArchivePromptOpen) return; // avoid stacking prompts
             autoArchivePromptOpen = true;
-            autoArchiveSecondsLeft = 10;
+            autoArchiveSecondsLeft = AUTO_ARCHIVE_COUNTDOWN_SECONDS;
             const countdownEl = document.getElementById('auto-archive-countdown');
             countdownEl.innerText = autoArchiveSecondsLeft;
             document.getElementById('auto-archive-modal').classList.add('open');
@@ -3168,25 +3172,95 @@
                 autoArchiveSecondsLeft -= 1;
                 countdownEl.innerText = Math.max(autoArchiveSecondsLeft, 0);
                 if (autoArchiveSecondsLeft <= 0) {
-                    performAutoArchive();
+                    autoArchiveOnNoResponse();
                 }
             }, 1000);
         }
-        function performAutoArchive() {
+        function closeInactivityPrompt() {
             clearInterval(autoArchiveTimer);
             autoArchiveTimer = null;
             autoArchivePromptOpen = false;
             document.getElementById('auto-archive-modal').classList.remove('open');
-            autoSaveProgress('inactivity-auto-archive'); // saved as a non-final draft; can be pulled up and edited later
-            resetInactivityTimer();
         }
-        function cancelAutoArchive() {
-            clearInterval(autoArchiveTimer);
-            autoArchiveTimer = null;
-            autoArchivePromptOpen = false;
-            document.getElementById('auto-archive-modal').classList.remove('open');
+
+        // "Continue" — user is still there; resume exactly where they left off.
+        function continueEditing() {
+            closeInactivityPrompt();
             resetInactivityTimer(); // give the user another full 5 minutes of activity
         }
+
+        // "Archive Case (Save as Draft)" — an explicit user choice, so this
+        // reuses the exact same path as the sidebar button (no permanent
+        // Case ID is assigned; the usual confirmation is shown).
+        function archiveFromInactivityPrompt() {
+            closeInactivityPrompt();
+            archiveCaseAsDraft();
+            resetInactivityTimer();
+        }
+
+        // "Start a New Case" — an explicit user choice made via this
+        // prompt, so it skips newCase()'s own confirm() dialog (the prompt
+        // itself already serves as that confirmation). All progress is
+        // wiped and currentCaseId is cleared, freeing that case-id "slot"
+        // for the new, blank case — a real ID is only ever minted later,
+        // when this new case is actually saved.
+        function startNewCaseFromInactivityPrompt() {
+            closeInactivityPrompt();
+            blankCaseEditorContent();
+            clearPersistedEditorState();
+            currentCaseIsDraft = false;
+            revertOther('main-case-type', 'main-case-other', 'main-revert');
+            updatePhaseDisplay('INTAKE');
+            generateCaseId();
+            showTab('profile');
+            renderRepo();
+            showToast('Started a new case.', 'info');
+            resetInactivityTimer();
+        }
+
+        // No response within the countdown — silently archive as a draft
+        // so nothing is lost, then give the user a fresh 5-minute window.
+        // No alert() here: the user isn't there to dismiss one.
+        function autoArchiveOnNoResponse() {
+            closeInactivityPrompt();
+            autoSaveProgress('inactivity-timeout');
+            resetInactivityTimer();
+        }
+
+        /* =========================================================
+           TECHNICAL-INTERRUPTION AUTO-ARCHIVE — separate from the
+           inactivity prompt above. Covers cases where the user didn't
+           choose to leave: lost connectivity, the tab/browser closing,
+           the app going to the background, or an abrupt shutdown. All
+           of those are silently archived as a draft the instant any of
+           these signals fire — no modal, no countdown, since there's
+           no guarantee the user is present or that the page will stay
+           alive long enough to show one.
+
+           HONEST LIMITATION: none of these events can fire during a true
+           instantaneous power loss (a brownout that cuts power before the
+           browser gets to run any JS at all). The real safety net for
+           that scenario is persistCurrentEditorState()'s continuous,
+           synchronous localStorage writes (see IN-PROGRESS EDITOR
+           PERSISTENCE above) — since those happen the moment the DOM
+           changes rather than waiting for an unload-type event, the
+           in-progress work is already on disk before the crash and gets
+           restored automatically the next time the app loads.
+           ========================================================= */
+        let _lastTechnicalArchiveAt = 0;
+        function silentTechnicalArchive(reason) {
+            if (!hasCaseContent()) return; // nothing identifiable to archive yet
+            const now = Date.now();
+            if (now - _lastTechnicalArchiveAt < 2000) return; // multiple signals often fire together (e.g. pagehide + beforeunload on tab close) — only archive once
+            _lastTechnicalArchiveAt = now;
+            autoSaveProgress('technical-interruption:' + reason);
+        }
+        window.addEventListener('beforeunload', () => silentTechnicalArchive('unload'));
+        window.addEventListener('pagehide', () => silentTechnicalArchive('pagehide'));
+        window.addEventListener('offline', () => silentTechnicalArchive('offline'));
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') silentTechnicalArchive('visibility-hidden');
+        });
 
         /* =========================================================
            DOWNLOAD CONFIRMATION
