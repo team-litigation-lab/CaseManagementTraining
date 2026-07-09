@@ -927,7 +927,10 @@
                         <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
                         <button onclick="addDocument('Others')" class="hub-btn">Others</button>
                     </div>
-                    <table class="treat-table w-full"><tbody id="doc-body"></tbody></table>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="200">Category</th><th>Summary</th><th width="150" class="no-print">Attachment</th><th width="40"></th></tr></thead>
+                        <tbody id="doc-body"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -1288,12 +1291,12 @@
     <div class="modal-overlay no-print" id="download-confirm-modal">
         <div class="modal-box">
             <h2 class="serif">Confirm Copy Production</h2>
-            <div class="sub mono">Type your name to verify you are producing this copy</div>
+            <div class="sub mono">Detected from your logged-in account</div>
             <div id="download-confirm-error" style="display:none;color:var(--classified-red);font-size:11px;font-weight:700;margin-bottom:8px;">Please complete both fields.</div>
             <label>Full Name</label>
-            <input type="text" id="dl-fullname" autocomplete="off" placeholder="Type your full name as registered" data-allow="name">
+            <div id="dl-fullname" class="mono" style="font-weight:800;padding:8px 0 4px;">&mdash;</div>
             <label>Batch ID</label>
-            <input type="text" id="dl-batchid" autocomplete="off" placeholder="Enter your batch ID" data-allow="alnum-upper" class="mono">
+            <div id="dl-batchid" class="mono" style="font-weight:800;padding:8px 0 4px;">&mdash;</div>
             <p style="font-size:10px;color:#94a3b8;margin:6px 0 0;">Date &amp; time this copy is produced (auto-generated): <b id="dl-date-preview" class="mono"></b></p>
             <div class="modal-btn-row">
                 <button class="btn-ghost" onclick="closeDownloadConfirm()">Cancel</button>
@@ -1554,14 +1557,28 @@
             localStorage.setItem('LSH_CASE_SERIES_COUNTER', String(n));
             return String(n).padStart(6, '0');
         }
+        // The active (in-progress) case's series number is persisted separately
+        // from the incrementing counter itself, so that a page refresh can
+        // restore the SAME number instead of minting a new one. A new number is
+        // only ever consumed (via nextSeriesNumber()) when a case is actually
+        // saved as new, or the very first time the app has ever run.
+        const ACTIVE_SERIES_KEY = 'LSH_ACTIVE_DRAFT_SERIES';
         function generateCaseId(forceNewSeries) {
             const year = new Date().getFullYear();
             const typeCode = currentTypeCode();
             const field = document.getElementById('case-id-field');
             let series = field.dataset.series;
             if (!series || forceNewSeries) {
-                series = nextSeriesNumber();
+                if (forceNewSeries) {
+                    series = nextSeriesNumber(); // genuinely starting/saving a new case — consume a new number
+                } else {
+                    // Not forced: reuse whatever draft series is already active
+                    // (e.g. restoring after a refresh) rather than burning a new
+                    // one. Only fall back to minting a new one if none exists yet.
+                    series = localStorage.getItem(ACTIVE_SERIES_KEY) || nextSeriesNumber();
+                }
                 field.dataset.series = series;
+                localStorage.setItem(ACTIVE_SERIES_KEY, series);
             }
             field.innerText = `LSH-${year}-${typeCode}-${series}`;
         }
@@ -1680,9 +1697,34 @@
 
         function addDocument(label) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
+            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="150" class="no-print"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
             document.getElementById('doc-body').appendChild(tr);
             applyPlaceholders(tr);
+        }
+        // Files are attached client-side as data URLs directly inside the row
+        // (same as every other Doc Hub field), so they save/load/print along
+        // with the rest of the case automatically — no separate storage needed.
+        const DOC_UPLOAD_MAX_BYTES = 4 * 1024 * 1024; // 4MB safety cap (localStorage space is limited)
+        function handleDocUpload(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            if (file.size > DOC_UPLOAD_MAX_BYTES) {
+                alert('That file is too large to attach (max 4MB). Try a smaller file or a compressed copy.');
+                input.value = '';
+                return;
+            }
+            const row = input.closest('tr');
+            const holder = row ? row.querySelector('.doc-attachment') : null;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const safeName = file.name.replace(/"/g, '&quot;');
+                if (holder) {
+                    holder.innerHTML = `<a href="${reader.result}" download="${safeName}" class="doc-file-link" style="color:#2563eb;font-weight:700;">📎 ${safeName}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
+                }
+                input.value = '';
+            };
+            reader.onerror = () => { alert('Could not read that file. Please try again.'); input.value = ''; };
+            reader.readAsDataURL(file);
         }
 
         /* ---------- Totals ---------- */
@@ -1741,6 +1783,10 @@
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]'); repo.unshift(data); localStorage.setItem(REPO_KEY, JSON.stringify(repo)); renderRepo();
             currentCaseId = data.id;
             if (typeof syncCaseSnapshot === 'function') syncCaseSnapshot('save');
+            // This case's Case ID is now locked into the saved record above.
+            // Only now — at the moment of saving — does a fresh Case ID get
+            // assigned for whatever work happens next.
+            generateCaseId(true);
         }
         function updateCase() {
             let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
@@ -1826,7 +1872,18 @@
             document.getElementById('note-body').innerHTML = data.html.notes || "";
             document.getElementById('task-body').innerHTML = data.html.tasks || "";
             document.getElementById('pane-police').innerHTML = data.html.police;
-            if (data.caseId) document.getElementById('case-id-field').innerText = data.caseId;
+            if (data.caseId) {
+                const idField = document.getElementById('case-id-field');
+                idField.innerText = data.caseId;
+                // Adopt this case's series as the active draft series too, so
+                // that refreshing while this case is open restores THIS id
+                // instead of whatever was active before it was loaded.
+                const seriesMatch = /-(\d+)$/.exec(data.caseId);
+                if (seriesMatch) {
+                    idField.dataset.series = seriesMatch[1];
+                    localStorage.setItem(ACTIVE_SERIES_KEY, seriesMatch[1]);
+                }
+            }
             const edits = document.querySelectorAll('[contenteditable="true"]'); data.inputs.forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
             const selects = document.querySelectorAll('select'); data.sels.forEach((v, i) => { if (selects[i]) selects[i].value = v; });
             updateTotals(); toggleOwnerExtra(); toggleDriverInsuredExtra(); showTab('profile');
@@ -2877,41 +2934,38 @@
            DOWNLOAD CONFIRMATION
            ========================================================= */
         function requestDownload() {
-            document.getElementById('dl-fullname').value = '';
-            document.getElementById('dl-batchid').value = '';
+            const session = getSession();
+            const errorEl = document.getElementById('download-confirm-error');
+            errorEl.style.display = 'none';
+            if (!session) {
+                // No verified session to pull identity from — surface this
+                // instead of silently letting an unattributed copy through.
+                document.getElementById('dl-fullname').innerText = '\u2014';
+                document.getElementById('dl-batchid').innerText = '\u2014';
+                errorEl.innerText = 'Your session could not be verified. Please log in again.';
+                errorEl.style.display = 'block';
+            } else {
+                // Auto-filled from the logged-in account — no manual typing,
+                // so there's nothing here for the user to get wrong.
+                document.getElementById('dl-fullname').innerText = session.fullName;
+                document.getElementById('dl-batchid').innerText = session.batchId;
+            }
             document.getElementById('dl-date-preview').innerText = new Date().toLocaleString();
-            document.getElementById('download-confirm-error').style.display = 'none';
-            document.getElementById('download-confirm-error').innerText = 'Please complete both fields.';
             document.getElementById('download-confirm-modal').classList.add('open');
-            setTimeout(() => document.getElementById('dl-fullname').focus(), 50);
         }
         function closeDownloadConfirm() { document.getElementById('download-confirm-modal').classList.remove('open'); }
         function confirmDownload() {
-            const fullName = document.getElementById('dl-fullname').value.trim();
-            const batchId = document.getElementById('dl-batchid').value.trim();
-            const errorEl = document.getElementById('download-confirm-error');
-            if (!fullName || !batchId) {
-                errorEl.innerText = 'Please complete both fields.';
-                errorEl.style.display = 'block';
-                return;
-            }
             const session = getSession();
+            const errorEl = document.getElementById('download-confirm-error');
             if (!session) {
                 errorEl.innerText = 'Your session could not be verified. Please log in again.';
                 errorEl.style.display = 'block';
                 return;
             }
-            const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-            if (norm(fullName) !== norm(session.fullName)) {
-                errorEl.innerText = 'The name entered does not match the name on file for this account. Please type your own full name exactly as registered.';
-                errorEl.style.display = 'block';
-                return;
-            }
-            if (norm(batchId) !== norm(session.batchId)) {
-                errorEl.innerText = 'The batch ID entered does not match the batch ID on file for this account.';
-                errorEl.style.display = 'block';
-                return;
-            }
+            // Identity is taken straight from the verified session — the same
+            // source used everywhere else in the app — so it can't mismatch.
+            const fullName = session.fullName;
+            const batchId = session.batchId;
             errorEl.style.display = 'none';
             const producedAt = new Date().toLocaleString();
 
@@ -3143,7 +3197,9 @@
             applyPlaceholders();
             applyLogo();
             applyBackgroundImage();
-            generateCaseId(true);
+            // false = restore the already-active draft Case ID if one exists
+            // (e.g. after a refresh) instead of minting a new one every load.
+            generateCaseId(false);
             populateTimezones();
             refreshClock();
             resumeSession();
