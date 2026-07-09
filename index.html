@@ -3237,35 +3237,89 @@
             // Pull the case's original submitter info and bump its per-case
             // Print Sequence counter in the database (repo). If this case has
             // never been saved to the repository yet, this is its 1st copy.
-            let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
-            const idx = repo.findIndex(i => i.id === currentCaseId);
-            let submittedBy, submittedByBatch, submittedAt, printSequence;
-            if (idx !== -1) {
-                const rec = repo[idx];
-                submittedBy = rec.submittedBy || session.fullName;
-                submittedByBatch = rec.submittedByBatch || session.batchId;
-                submittedAt = rec.submittedAt ? new Date(rec.submittedAt).toLocaleString() : producedAt;
-                rec.downloadCount = (typeof rec.downloadCount === 'number' ? rec.downloadCount : 0) + 1;
-                printSequence = rec.downloadCount;
-                repo[idx] = rec;
-                localStorage.setItem(REPO_KEY, JSON.stringify(repo));
-            } else {
-                submittedBy = session.fullName;
-                submittedByBatch = session.batchId;
-                submittedAt = producedAt;
-                printSequence = 1;
-            }
+async function confirmDownload() {
+    const session = getSession();
+    const errorEl = document.getElementById('download-confirm-error');
+    if (!session) {
+        errorEl.innerText = 'Your session could not be verified. Please log in again.';
+        errorEl.style.display = 'block';
+        return;
+    }
+    const fullName = session.fullName;
+    const batchId = session.batchId;
+    errorEl.style.display = 'none';
+    const producedAt = new Date().toLocaleString();
 
-            closeDownloadConfirm();
-            downloadPDF({
-                submittedBy: submittedBy,
-                submittedByBatch: submittedByBatch,
-                submittedAt: submittedAt,
-                producedByName: fullName,
-                producedByBatch: batchId,
-                producedAt: producedAt,
-                printSequence: printSequence
-            });
+    let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+    const idx = repo.findIndex(i => i.id === currentCaseId);
+    const rec = idx !== -1 ? repo[idx] : null;
+    const submittedBy = (rec && rec.submittedBy) || session.fullName;
+    const submittedByBatch = (rec && rec.submittedByBatch) || session.batchId;
+    const submittedAt = (rec && rec.submittedAt) ? new Date(rec.submittedAt).toLocaleString() : producedAt;
+    const realCaseId = document.getElementById('case-id-field').innerText.trim();
+
+    // Print Sequence is now a real, atomic, server-issued counter keyed on
+    // this case's permanent Case ID — never a locally-guessed count, so two
+    // people downloading the same case from two different devices at the
+    // same moment can never get the same number.
+    async function confirmDownload() {
+    const session = getSession();
+    const errorEl = document.getElementById('download-confirm-error');
+    if (!session) {
+        errorEl.innerText = 'Your session could not be verified. Please log in again.';
+        errorEl.style.display = 'block';
+        return;
+    }
+    const fullName = session.fullName;
+    const batchId = session.batchId;
+    errorEl.style.display = 'none';
+    const producedAt = new Date().toLocaleString();
+
+    let repo = JSON.parse(localStorage.getItem(REPO_KEY) || '[]');
+    const idx = repo.findIndex(i => i.id === currentCaseId);
+    const rec = idx !== -1 ? repo[idx] : null;
+    const submittedBy = (rec && rec.submittedBy) || session.fullName;
+    const submittedByBatch = (rec && rec.submittedByBatch) || session.batchId;
+    const submittedAt = (rec && rec.submittedAt) ? new Date(rec.submittedAt).toLocaleString() : producedAt;
+    const realCaseId = document.getElementById('case-id-field').innerText.trim();
+
+    // Print Sequence is now a real, atomic, server-issued counter keyed on
+    // this case's permanent Case ID — never a locally-guessed count, so two
+    // people downloading the same case from two different devices at the
+    // same moment can never get the same number.
+    let printSequence = 1;
+    try {
+        const res = await fetch('/api/print-sequence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ caseId: realCaseId })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            printSequence = data.printSequence;
+        } else {
+            errorEl.innerText = (data && data.error) || 'Could not assign a print sequence number.';
+            errorEl.style.display = 'block';
+            return;
+        }
+    } catch (e) {
+        errorEl.innerText = 'Network error assigning print sequence. Please try again.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    closeDownloadConfirm();
+    downloadPDF({
+        submittedBy: submittedBy,
+        submittedByBatch: submittedByBatch,
+        submittedAt: submittedAt,
+        producedByName: fullName,
+        producedByBatch: batchId,
+        producedAt: producedAt,
+        printSequence: printSequence
+    });
+}
         }
 
 
