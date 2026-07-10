@@ -503,6 +503,9 @@
     .status-approved { background:#f0fdf4; color:#166534; }
     .status-rejected { background:#fef2f2; color:#b91c1c; }
     .status-revoked { background:#f1f5f9; color:#475569; }
+    .status-suspended { background:#fef9c3; color:#854d0e; }
+    .mini-btn.suspend { background:#d97706; color:white; }
+    .mini-btn.reinstate { background:#16a34a; color:white; }
     .mini-btn { font-size:10px; font-weight:800; text-transform:uppercase; padding:6px 12px; border-radius:5px; cursor:pointer; border:none; }
     .mini-btn.approve { background:#166534; color:white; }
     .mini-btn.reject { background:#b91c1c; color:white; }
@@ -2601,12 +2604,20 @@
                 const session = getSession();
                 const sessionIsMaster = !!(session && session.username === 'LSHADMIN123');
                 const targetIsMaster = u.username === 'LSHADMIN123';
+                const isSuspended = status === 'Suspended';
                 if (targetIsMaster) {
                     actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Master Account</span>';
                 } else if (userType === 'Admin' && !sessionIsMaster) {
-                    actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Only Master can revoke</span>';
+                    actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Only Master can ' + (isSuspended ? 'reinstate' : 'revoke') + '</span>';
+                } else if (isSuspended) {
+                    // Suspended (Temporary Revocation) accounts can be
+                    // reinstated, or escalated straight to Permanent
+                    // Revocation without needing to reinstate first.
+                    actions = '<button class="mini-btn reinstate" onclick="confirmReinstateUser(' + u.id + ', ' + escapeHtmlAttr(JSON.stringify(fullName)) + ')">Reinstate Access</button>' +
+                              '<button class="mini-btn reject" onclick="confirmRevokeUser(' + u.id + ', ' + escapeHtmlAttr(JSON.stringify(fullName)) + ')">Permanent Revocation</button>';
                 } else {
-                    actions = '<button class="mini-btn reject" onclick="confirmRevokeUser(' + u.id + ', ' + escapeHtmlAttr(JSON.stringify(fullName)) + ')">Permanent Revocation</button>';
+                    actions = '<button class="mini-btn suspend" onclick="confirmSuspendUser(' + u.id + ', ' + escapeHtmlAttr(JSON.stringify(fullName)) + ')">Temporary Revocation</button>' +
+                              '<button class="mini-btn reject" onclick="confirmRevokeUser(' + u.id + ', ' + escapeHtmlAttr(JSON.stringify(fullName)) + ')">Permanent Revocation</button>';
                 }
             }
 
@@ -2661,6 +2672,44 @@
                 refreshUsersAndRegistrations();
             })
             .catch(() => showToast('Network error. Failed to revoke access.', 'error'));
+        }
+        function confirmSuspendUser(userId, fullName) {
+            if (!confirm('Temporarily revoke access for ' + fullName + '? Their account and saved cases are kept — you can reinstate access later.')) return;
+            fetch('/api/suspend-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ userId: userId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    showToast('Access temporarily revoked.', 'success');
+                } else {
+                    showToast((data && data.error) || 'Failed to suspend access.', 'error');
+                }
+                refreshUsersAndRegistrations();
+            })
+            .catch(() => showToast('Network error. Failed to suspend access.', 'error'));
+        }
+        function confirmReinstateUser(userId, fullName) {
+            if (!confirm('Reinstate access for ' + fullName + '?')) return;
+            fetch('/api/reinstate-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ userId: userId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    showToast('Access reinstated.', 'success');
+                } else {
+                    showToast((data && data.error) || 'Failed to reinstate access.', 'error');
+                }
+                refreshUsersAndRegistrations();
+            })
+            .catch(() => showToast('Network error. Failed to reinstate access.', 'error'));
         }
 
         /* =========================================================
