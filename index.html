@@ -2568,6 +2568,18 @@
             }
             container.innerHTML = html;
         }
+        // Escapes a string so it's safe to embed inside a double-quoted
+        // HTML attribute (e.g. onclick="..."). Without this, any value
+        // containing a double quote — including anything wrapped by
+        // JSON.stringify(), which always adds surrounding quotes — will
+        // prematurely close the attribute and truncate the JS that follows.
+        function escapeHtmlAttr(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
         function renderUserRow(u, isPending) {
             const status = u.status || 'Pending';
             const pillClass = 'status-' + status.toLowerCase();
@@ -2594,7 +2606,7 @@
                 } else if (userType === 'Admin' && !sessionIsMaster) {
                     actions = '<span style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;">Only Master can revoke</span>';
                 } else {
-                    actions = '<button class="mini-btn reject" onclick="confirmRevokeUser(' + u.id + ', ' + JSON.stringify(fullName) + ')">Permanent Revocation</button>';
+                    actions = '<button class="mini-btn reject" onclick="confirmRevokeUser(' + u.id + ', ' + escapeHtmlAttr(JSON.stringify(fullName)) + ')">Permanent Revocation</button>';
                 }
             }
 
