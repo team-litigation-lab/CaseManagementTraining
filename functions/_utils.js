@@ -140,6 +140,21 @@ export async function getSiteState(db) {
 }
 
 /* =====================================================================
+   MASTER ACCOUNT
+   There is exactly one Master Account, identified by username. It has two
+   special properties enforced wherever revocation decisions are made
+   (see revoke-user.js):
+     1. It is the ONLY account allowed to revoke another Admin.
+     2. It can never itself be revoked, by anyone, including itself.
+   ===================================================================== */
+export const MASTER_USERNAME = 'LSHADMIN123';
+
+/** True if this session belongs to the one, un-revokable Master Account. */
+export function isMaster(session) {
+    return !!session && session.username === MASTER_USERNAME;
+}
+
+/* =====================================================================
    PASSWORD HASHING (PBKDF2-SHA256 via Web Crypto — no external deps
    needed, works in the Workers/Pages runtime).
 
@@ -194,18 +209,28 @@ export async function upgradePasswordHash(db, userId, plainPassword) {
     }
 }
 
-export const MASTER_USERNAME = 'LSHADMIN123';
-
-/** True if this session belongs to the one, un-revokable Master Account. */
-export function isMaster(session) {
-    return !!session && session.username === MASTER_USERNAME;
-}
-
+/* =====================================================================
+   BATCH ID / CREDENTIAL HELPERS
+   ===================================================================== */
 // Batch ID format: B<DD><MM><YYYY>-LSH<TYPE>-<XXX>
-// XXX now comes from a per-user-type atomic D1 counter (same UPDATE ...
-// RETURNING pattern as nextCaseId()) instead of a COUNT(*) read-then-write,
-// which could let two simultaneous approvals of the same user_type collide
-// on the same XXX. Requires the batch_id_counter migration above.
+// For Admins, DD/MM/YYYY is their registration date (users.created_at).
+// For Trainees, DD/MM/YYYY is their start-of-training date, which they
+// supply at registration (users.training_start_date) — see register.js.
+// XXX is a three-digit sequence number, chronological per user type.
+//
+// XXX comes from an atomic, per-user-type D1 counter (same UPDATE ...
+// RETURNING pattern as nextCaseId() below), rather than a COUNT(*)
+// read-then-write — the old approach could let two admins approving two
+// different users of the same type at nearly the same moment both read
+// the same count before either write landed, producing a collision.
+//
+// Requires this table to exist (run once via wrangler d1 execute):
+//   CREATE TABLE IF NOT EXISTS batch_id_counter (
+//     user_type TEXT PRIMARY KEY,
+//     value INTEGER NOT NULL DEFAULT 0
+//   );
+//   INSERT OR IGNORE INTO batch_id_counter (user_type, value) VALUES ('Admin', 0);
+//   INSERT OR IGNORE INTO batch_id_counter (user_type, value) VALUES ('Trainee', 0);
 export async function nextBatchId(db, userType, referenceDate) {
     const d = referenceDate ? new Date(referenceDate) : new Date();
     const dd = String(d.getUTCDate()).padStart(2, '0');
@@ -217,17 +242,34 @@ export async function nextBatchId(db, userType, referenceDate) {
         `UPDATE batch_id_counter SET value = value + 1 WHERE user_type = ? RETURNING value`
     ).bind(userType).first();
     if (!row || typeof row.value !== 'number') {
-        throw new Error(`batch_id_counter has no row for user_type=${userType} — run the migration in _utils.js before issuing Batch IDs.`);
+        throw new Error(`batch_id_counter has no row for user_type=${userType} — run the migration in _utils.js (see nextBatchId comment) before issuing Batch IDs.`);
     }
     const xxx = String(row.value).padStart(3, '0');
     return `B${dd}${mm}${yyyy}-${prefix}-${xxx}`;
 }
 
-/**
- * Records a permanently-deleted user for audit purposes and to permanently
- * block their username from ever being re-registered (see isUsernameTombstoned
- * in register.js). Call this BEFORE deleting the live users row.
- */
+/* =====================================================================
+   PERMANENT REVOCATION / TOMBSTONE
+   "Permanent Revocation" deletes the live users row entirely (disabling
+   login), while keeping that user's saved cases intact (cases are linked
+   by username, not by a foreign key to this row — see cases.js). To make
+   sure a brand-new registrant can never accidentally inherit a deleted
+   user's old cases by re-using their username, every deleted username is
+   recorded here and permanently blocked from re-registration (see
+   isUsernameTombstoned(), used by register.js).
+
+   Requires this table to exist (run once via wrangler d1 execute):
+     CREATE TABLE IF NOT EXISTS deleted_users (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       username TEXT NOT NULL,
+       user_type TEXT,
+       batch_id TEXT,
+       email TEXT,
+       full_name TEXT,
+       deleted_by TEXT,
+       deleted_at TEXT NOT NULL
+     );
+   ===================================================================== */
 export async function tombstoneUser(db, user, deletedByUsername) {
     const fullName = [user.first_name, user.mi, user.last_name].filter(Boolean).join(' ');
     await db.prepare(
@@ -241,23 +283,6 @@ export async function isUsernameTombstoned(db, username) {
     return !!row;
 }
 
-/**
- * Atomic per-case Print Sequence counter — mirrors nextCaseId()'s pattern so
- * two people downloading the same case from two different devices at the
- * same moment can never receive the same sequence number. Requires the
- * print_sequence_counter migration above.
- */
-export async function nextPrintSequence(db, caseId) {
-    const row = await db.prepare(
-        `INSERT INTO print_sequence_counter (case_id, value) VALUES (?, 1)
-         ON CONFLICT(case_id) DO UPDATE SET value = value + 1
-         RETURNING value`
-    ).bind(caseId).first();
-    if (!row || typeof row.value !== 'number') {
-        throw new Error('print_sequence_counter is not set up — run the migration in _utils.js before issuing print sequences.');
-    }
-    return row.value;
-}
 /* =====================================================================
    CASE ID GENERATION (server-enforced, cross-device unique)
    Format: LSH-<Year>-<TypeCode>-<XXXXXX>
@@ -287,6 +312,34 @@ export async function nextCaseId(db, typeCode) {
     const safeType = (typeCode || 'CASE').toString().replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 4) || 'CASE';
     const xxx = String(row.value).padStart(6, '0');
     return `LSH-${year}-${safeType}-${xxx}`;
+}
+
+/* =====================================================================
+   PRINT SEQUENCE GENERATION (server-enforced, cross-device unique)
+   Tracks how many times a given case's PDF summary has been downloaded,
+   as a real atomic per-case counter — mirrors nextCaseId()'s pattern, so
+   two people downloading the same case from two different devices at the
+   same moment can never receive the same sequence number. This replaces
+   an earlier implementation that tracked downloadCount purely in
+   client-side localStorage, which could not be kept unique across
+   devices/users at all.
+
+   Requires this table to exist (run once via wrangler d1 execute):
+     CREATE TABLE IF NOT EXISTS print_sequence_counter (
+       case_id TEXT PRIMARY KEY,
+       value INTEGER NOT NULL DEFAULT 0
+     );
+   ===================================================================== */
+export async function nextPrintSequence(db, caseId) {
+    const row = await db.prepare(
+        `INSERT INTO print_sequence_counter (case_id, value) VALUES (?, 1)
+         ON CONFLICT(case_id) DO UPDATE SET value = value + 1
+         RETURNING value`
+    ).bind(caseId).first();
+    if (!row || typeof row.value !== 'number') {
+        throw new Error('print_sequence_counter is not set up — run the migration (see _utils.js nextPrintSequence comment) before issuing print sequences.');
+    }
+    return row.value;
 }
 
 export async function verifyAdminCredentials(db, batchId, password) {
