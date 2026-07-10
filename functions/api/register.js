@@ -30,13 +30,14 @@ export async function onRequestPost({ request, env }) {
     const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
     if (existing) {
         return json({ success: false, error: 'That username is already taken.' }, 409);
-        const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
-if (existing) {
-    return json({ success: false, error: 'That username is already taken.' }, 409);
-}
-if (await isUsernameTombstoned(db, username)) {
-    return json({ success: false, error: 'That username has been permanently retired and cannot be used again.' }, 409);
-}
+    }
+    // A username that once belonged to a permanently-revoked account can
+    // never be re-registered — this closes off the risk of a new user
+    // inheriting an old (deleted) user's case visibility, since cases are
+    // linked by username rather than by a durable row id. See
+    // tombstoneUser()/isUsernameTombstoned() in _utils.js.
+    if (await isUsernameTombstoned(db, username)) {
+        return json({ success: false, error: 'That username has been permanently retired and cannot be used again.' }, 409);
     }
     const hashedPassword = await hashPassword(password);
     await db.prepare(
