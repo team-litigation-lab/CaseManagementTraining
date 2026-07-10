@@ -128,6 +128,16 @@ export async function requireSession(request, env, { adminOnly = false } = {}) {
     if (!alive) {
         return { ok: false, response: json({ success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' }, 401) };
     }
+    // Re-check the account's live status on every request, not just at
+    // login. A signed session token + a live heartbeat alone would
+    // otherwise keep working for up to 12h even after an admin suspends
+    // (see suspend-user.js) or permanently revokes (see revoke-user.js)
+    // the account — this is what makes both of those take effect against
+    // an already-open session immediately instead of on next login.
+    const liveUser = await env.DB.prepare(`SELECT status FROM users WHERE username = ?`).bind(payload.username).first();
+    if (!liveUser || liveUser.status !== 'Approved') {
+        return { ok: false, response: json({ success: false, error: 'Your access has been revoked.', code: 'ACCESS_REVOKED' }, 401) };
+    }
     if (adminOnly && payload.userType !== 'Admin') {
         return { ok: false, response: json({ success: false, error: 'Admin access required.' }, 403) };
     }
