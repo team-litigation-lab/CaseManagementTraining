@@ -240,7 +240,6 @@
 
     /* "Contact" label: darker navy blue by default; shifts to a lighter blue for contrast if a background photo is active */
     .contact-label { color: var(--navy-deep) !important; }
-    body.bg-photo-active .contact-label { color: #60a5fa !important; }
 
     select.prof-input { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 4px; padding: 8px 10px; font-size: 13px; font-weight: 700; outline: none; width: 100%; color: #0f172a; cursor: pointer; }
 
@@ -1033,7 +1032,6 @@
             <button class="mc-tab" onclick="showAdminDashTab('monitoring')">Monitoring</button>
             <button class="mc-tab" onclick="showAdminDashTab('announce')">Announcements &amp; Alerts</button>
             <button class="mc-tab" onclick="showAdminDashTab('access')">Access Control</button>
-            <button class="mc-tab" onclick="showAdminDashTab('branding')">Branding</button>
         </div>
         <div class="mc-body">
 
@@ -1177,32 +1175,6 @@
                     <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Locking immediately signs every user out and blocks the page entirely until an administrator unlocks it again. This requires Batch ID + password confirmation before it takes effect.</p>
                     <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="lock-state-label" style="color:#166534;">Unlocked</span></div>
                     <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="openLockConfirm()">🔒 Lock This Site</button>
-                </div>
-            </div>
-
-            <!-- BRANDING -->
-            <div class="mc-pane" id="admin-dash-branding">
-                <div class="admin-tile" style="margin-bottom:14px;">
-                    <h4>Agency Logo / Seal</h4>
-                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Displayed as a 1×1 square tile. Any image is automatically cropped to fit.</p>
-                    <div style="display:flex; align-items:center; gap:14px;">
-                        <label class="btn-primary" style="cursor:pointer; text-align:center; padding:10px 16px; border-radius:6px; font-size:11px; font-weight:800; text-transform:uppercase;">
-                            Upload / Change Logo
-                            <input type="file" accept="image/*" class="hidden" onchange="changeLogo(this)">
-                        </label>
-                        <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="resetLogo()">Reset to Default</button>
-                    </div>
-                </div>
-                <div class="admin-tile">
-                    <h4>Interface Background Image</h4>
-                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Uploaded photos sit behind the interface color, which is automatically applied on top at 65% strength so text stays readable.</p>
-                    <div style="display:flex; align-items:center; gap:14px;">
-                        <label class="btn-primary" style="cursor:pointer; text-align:center; padding:10px 16px; border-radius:6px; font-size:11px; font-weight:800; text-transform:uppercase;">
-                            Upload Background Photo
-                            <input type="file" accept="image/*" class="hidden" onchange="setBackgroundImage(this)">
-                        </label>
-                        <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="resetBackgroundImage()">Remove Background</button>
-                    </div>
                 </div>
             </div>
 
@@ -1447,15 +1419,13 @@
 
         let currentCaseId = null; // tracks which saved case (if any) is currently loaded, for Update Case
         let currentCaseIsDraft = false; // true = loaded/created case has NO permanent Case ID yet (Archive Case (Save as Draft)); becomes false once "Save Case" assigns one
-        const LOGO_KEY = 'LSH_LOGO_DATAURL';
-        const BG_KEY = 'LSH_BG_DATAURL';
         const LOCK_KEY = 'LSH_PAGE_LOCKED';
         const SESSION_KEY = 'LSH_SESSION_V1';
         const HEARTBEAT_INTERVAL_MS = 2000;
         const HEARTBEAT_GRACE_MS = 6000;
         const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes — adjust if needed
         const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
-        const DEFAULT_LOGO = "data:image/png;base64,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";
+        const AGENCY_LOGO = "data:image/png;base64,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";
 
 
         const staffOptions = `
@@ -2168,7 +2138,7 @@
             const clientName = document.getElementById('client-name-field').innerText.trim() || "UNNAMED CLIENT";
             const phase = document.getElementById('display-phase').innerText;
             const caseId = document.getElementById('case-id-field').innerText.trim() || '—';
-            const logoSrc = localStorage.getItem(LOGO_KEY) || DEFAULT_LOGO;
+            const logoSrc = AGENCY_LOGO;
 
             // Person who originally submitted / created this case record.
             const subName = info.submittedBy || '—';
@@ -2468,7 +2438,7 @@
         // Kept for backward compatibility with older markup/links.
         function closeAdminDashboard() { exitMasterControl(); }
 
-        const MC_TABS = ['overview', 'registrations', 'users', 'monitoring', 'announce', 'access', 'branding'];
+        const MC_TABS = ['overview', 'registrations', 'users', 'monitoring', 'announce', 'access'];
         function showAdminDashTab(tab) {
             document.querySelectorAll('.mc-tab').forEach((t, i) => t.classList.toggle('active', MC_TABS[i] === tab));
             document.querySelectorAll('.mc-pane').forEach(p => p.classList.remove('active'));
@@ -3102,44 +3072,15 @@
             }).catch(() => { document.getElementById('unlock-error').innerText = 'Network error.'; document.getElementById('unlock-error').style.display = 'block'; });
         }
 
-        function changeLogo(input) {
-            const file = input.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                localStorage.setItem(LOGO_KEY, e.target.result);
-                applyLogo();
-            };
-            reader.readAsDataURL(file);
-        }
-        function resetLogo() { localStorage.removeItem(LOGO_KEY); applyLogo(); }
-        function applyLogo() {
+        // Agency logo is hardcoded (see AGENCY_LOGO above) — no admin
+        // upload/reset controls, nothing stored in localStorage. Renders
+        // the same fixed image into both the main header seal and the
+        // login-screen seal.
+        function renderAgencyLogo() {
             const seal = document.getElementById('agency-seal');
-            // uses global DEFAULT_LOGO
-            const stored = localStorage.getItem(LOGO_KEY);
-            seal.innerHTML = '<img src="' + (stored || DEFAULT_LOGO) + '" alt="Agency Logo">';
+            seal.innerHTML = '<img src="' + AGENCY_LOGO + '" alt="Agency Logo">';
             const authSeal = document.getElementById('auth-seal');
-            if (authSeal) authSeal.innerHTML = '<img src="' + (stored || DEFAULT_LOGO) + '" alt="Agency Logo" style="width:100%;height:100%;object-fit:cover;">';
-        }
-
-        function setBackgroundImage(input) {
-            const file = input.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                localStorage.setItem(BG_KEY, e.target.result);
-                applyBackgroundImage();
-            };
-            reader.readAsDataURL(file);
-        }
-        function resetBackgroundImage() { localStorage.removeItem(BG_KEY); applyBackgroundImage(); }
-        function applyBackgroundImage() {
-            const stored = localStorage.getItem(BG_KEY);
-            if (stored) {
-                document.body.style.backgroundImage = "linear-gradient(rgba(15,33,72,0.65), rgba(15,33,72,0.65)), url('" + stored + "')";
-                document.body.classList.add('bg-photo-active');
-            } else {
-                document.body.style.backgroundImage = 'none';
-                document.body.classList.remove('bg-photo-active');
-            }
+            if (authSeal) authSeal.innerHTML = '<img src="' + AGENCY_LOGO + '" alt="Agency Logo" style="width:100%;height:100%;object-fit:cover;">';
         }
 
         /* =========================================================
@@ -3564,8 +3505,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             renderRepo();
             applyPlaceholders();
-            applyLogo();
-            applyBackgroundImage();
+            renderAgencyLogo();
             // Shows a live preview of the next Case ID (derived from how many
             // cases are actually saved) — never reserves/consumes a number.
             generateCaseId();
