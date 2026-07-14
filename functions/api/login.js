@@ -29,6 +29,9 @@ export async function onRequestPost({ request, env }) {
     if (user.status === 'Revoked') {
         return json({ success: false, error: 'Your access has been revoked by an administrator.' }, 403);
     }
+    if (user.status === 'Suspended') {
+        return json({ success: false, error: 'Your access has been temporarily revoked by an administrator.' }, 403);
+    }
     await logActivity(db, user.username, user.batch_id, 'login', null);
     const fullName = [user.first_name, user.mi ? user.mi.replace(/\.$/, '') + '.' : '', user.last_name].filter(Boolean).join(' ')
         + (user.suffix ? ', ' + user.suffix : '');
