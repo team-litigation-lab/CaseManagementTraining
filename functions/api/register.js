@@ -8,8 +8,8 @@ export async function onRequestPost({ request, env }) {
     if (!firstName || !lastName || !email || !userType || !username || !password) {
         return json({ success: false, error: 'Please fill out all required fields.' }, 400);
     }
-    if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
-        return json({ success: false, error: 'Please enter a valid Gmail address.' }, 400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        return json({ success: false, error: 'Please enter a valid email address.' }, 400);
     }
     if (!['Admin', 'Trainee'].includes(userType)) {
         return json({ success: false, error: 'Invalid user type.' }, 400);
