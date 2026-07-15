@@ -15,13 +15,27 @@ export async function onRequestPost({ request, env }) {
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
 
     const text = (body.text || '').trim();
-    const target = (body.target || '').trim();
+    // target arrives as '__all__' or a single username (string), OR an array of
+    // usernames when the admin selects several recipients — normalize both shapes
+    // here rather than assuming it's always a string.
+    let target = Array.isArray(body.target)
+        ? body.target.map(t => String(t || '').trim()).filter(Boolean)
+        : String(body.target || '').trim();
 
     if (!text) return json({ success: false, error: 'Ping text is required.' }, 400);
-    if (!target) return json({ success: false, error: 'Ping target is required.' }, 400);
+    if (Array.isArray(target) ? target.length === 0 : !target) {
+        return json({ success: false, error: 'Ping target is required.' }, 400);
+    }
 
-    // Validate the target user actually exists (skip check for the broadcast sentinel).
-    if (target !== '__all__') {
+    // Validate the target user(s) actually exist (skip check for the broadcast sentinel).
+    if (Array.isArray(target)) {
+        // De-dupe in case the same username was somehow submitted twice.
+        target = [...new Set(target)];
+        for (const uname of target) {
+            const user = await db.prepare(`SELECT username FROM users WHERE username = ?`).bind(uname).first();
+            if (!user) return json({ success: false, error: `Target user "${uname}" not found.` }, 400);
+        }
+    } else if (target !== '__all__') {
         const user = await db.prepare(`SELECT username FROM users WHERE username = ?`).bind(target).first();
         if (!user) return json({ success: false, error: 'Target user not found.' }, 400);
     }
@@ -45,9 +59,14 @@ export async function onRequestPost({ request, env }) {
     // proper ISO-8601 string the client's `new Date(...)` parses reliably everywhere.
     const firedAt = new Date().toISOString();
 
+    // Multi-recipient targets are stored as a JSON array string in the same TEXT
+    // column that already holds plain '__all__' / single-username values — /api/state
+    // tells the two apart on the way out by attempting a JSON.parse.
+    const targetToStore = Array.isArray(target) ? JSON.stringify(target) : target;
+
     await db.prepare(
         `INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)`
-    ).bind(text, target, by, firedAt).run();
+    ).bind(text, targetToStore, by, firedAt).run();
 
     await logActivity(db, session.username, session.batchId, 'ping', { text, target, by });
     return json({ success: true });
