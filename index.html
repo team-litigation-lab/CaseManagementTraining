@@ -1002,7 +1002,7 @@
                     <div><label>Last Name</label><input type="text" id="reg-lastname" autocomplete="off" data-allow="name" placeholder="e.g., Dela Cruz"></div>
                     <div><label>Suffix <span style="text-transform:none;">(optional)</span></label><input type="text" id="reg-suffix" autocomplete="off" placeholder="Jr., III..."></div>
                 </div>
-                <div class="auth-field"><label>Gmail</label><input type="email" id="reg-gmail" placeholder="name@gmail.com" autocomplete="off" data-allow="email"></div>
+                <div class="auth-field"><label>Email</label><input type="email" id="reg-email" placeholder="name@example.com" autocomplete="off" data-allow="email"></div>
                 <div class="auth-field"><label>Type of User</label>
                     <select id="reg-usertype" onchange="onRegUserTypeChange()">
                         <option value="Trainee">Trainee</option>
@@ -3003,6 +3003,9 @@
                 .catch(() => renderMonitoringOnline([]));
             renderMonitoringCases(_repoCache); // reuse the already-fetched shared repo cache — Admins see drafts too
         }
+        // Same separation/sort mechanism as the Users tab (see renderUsersList):
+        // Admin/Trainee segregation -> Trainees further grouped by Batch date ->
+        // both sorted by <XXX> sequence number, via the shared parseBatchId().
         function renderMonitoringOnline(list) {
             const now = Date.now();
             list.forEach(u => u._online = (now - new Date(u.last_seen).getTime()) < HEARTBEAT_GRACE_MS * 2);
@@ -3013,18 +3016,42 @@
             const container = document.getElementById('monitoring-online-list');
             if (!container) return;
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No sessions recorded yet.</p>'; return; }
-            const byBatch = {};
-            list.forEach(u => { (byBatch[u.batch_id || 'Unassigned'] = byBatch[u.batch_id || 'Unassigned'] || []).push(u); });
-            let html = '';
-            Object.keys(byBatch).sort().forEach(batch => {
-                html += '<div class="group-heading">Batch ' + batch + ' \u00B7 ' + byBatch[batch].length + ' member(s)</div>';
-                byBatch[batch].forEach(u => {
-                    html += '<div class="reg-row" style="cursor:pointer;" onclick="openMonitorCase(' + JSON.stringify(u.username) + ')"><div class="reg-info">' +
-                        '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + (u.full_name || u.username) + '</b>' +
-                        '<div class="reg-meta">' + (u.user_type || '') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + new Date(u.last_seen).toLocaleString()) + (u.current_case ? (' \u00B7 Working on: ' + u.current_case) : '') + '</div>' +
-                        '</div><div style="font-size:11px;color:#64748b;">View Latest Saved \u2192</div></div>';
+
+            function seqOf(u) {
+                const p = parseBatchId(u.batch_id || u.batchId);
+                return p ? p.seq : Number.MAX_SAFE_INTEGER; // unparseable batch ids sort last, never crash
+            }
+            function rowHtml(u) {
+                return '<div class="reg-row" style="cursor:pointer;" onclick="openMonitorCase(' + JSON.stringify(u.username) + ')"><div class="reg-info">' +
+                    '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + (u.full_name || u.username) + '</b>' +
+                    '<div class="reg-meta">' + (u.user_type || '') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + new Date(u.last_seen).toLocaleString()) + (u.current_case ? (' \u00B7 Working on: ' + u.current_case) : '') + '</div>' +
+                    '</div><div style="font-size:11px;color:#64748b;">View Latest Saved \u2192</div></div>';
+            }
+
+            const admins = list.filter(u => (u.user_type || u.userType) === 'Admin').sort((a, b) => seqOf(a) - seqOf(b));
+            const trainees = list.filter(u => (u.user_type || u.userType) !== 'Admin');
+
+            let html = '<div class="group-heading">Admins &middot; ' + admins.length + '</div>';
+            html += admins.length
+                ? admins.map(rowHtml).join('')
+                : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No admin sessions recorded.</p>';
+
+            html += '<div class="group-heading">Trainees &middot; ' + trainees.length + '</div>';
+            if (!trainees.length) {
+                html += '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No trainee sessions recorded.</p>';
+            } else {
+                const byBatchDate = {};
+                trainees.forEach(u => {
+                    const p = parseBatchId(u.batch_id || u.batchId);
+                    const key = p ? ('B' + p.dateStr) : 'Unassigned Batch';
+                    (byBatchDate[key] = byBatchDate[key] || []).push(u);
                 });
-            });
+                Object.keys(byBatchDate).sort().forEach(batchKey => {
+                    const members = byBatchDate[batchKey].sort((a, b) => seqOf(a) - seqOf(b));
+                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + batchKey + ' &middot; ' + members.length + ' member(s)</div>';
+                    html += members.map(rowHtml).join('');
+                });
+            }
             container.innerHTML = html;
         }
         function renderMonitoringCases(list) {
@@ -4110,7 +4137,7 @@ function submitRegistration() {
         mi: document.getElementById('reg-middlename').value,
         lastName: document.getElementById('reg-lastname').value,
         suffix: document.getElementById('reg-suffix').value,
-        email: document.getElementById('reg-gmail').value,
+        email: document.getElementById('reg-email').value,
         userType: document.getElementById('reg-usertype').value,
         // batchId intentionally omitted — the server generates a guaranteed-unique one on approval
         username: document.getElementById('reg-username').value,
@@ -4172,7 +4199,24 @@ function attemptLogin() {
         return;
     }
 
-    if (loginMsgDiv) { loginMsgDiv.innerText = "Verifying credentials..."; loginMsgDiv.className = "auth-msg info"; }
+    if (loginMsgDiv) { loginMsgDiv.innerText = "Verifying credentials..."; loginMsgDiv.className = "auth-msg info"; loginMsgDiv.style.display = ""; }
+
+    const loginBtn = document.querySelector('.auth-submit');
+    if (loginBtn) loginBtn.disabled = true;
+
+    // If the round-trip to /api/login takes 0.5s or more (slow connection, cold
+    // D1 read, etc.), swap the message so the trainee gets feedback that
+    // something is actively happening rather than staring at a static line.
+    // Cleared the moment the request settles either way, so a fast login never
+    // shows it at all.
+    let loginRequestSettled = false;
+    const slowLoginTimer = setTimeout(() => {
+        if (!loginRequestSettled && loginMsgDiv) {
+            loginMsgDiv.innerText = "Logging In. Please Wait.";
+            loginMsgDiv.className = "auth-msg info";
+            loginMsgDiv.style.display = "";
+        }
+    }, 500);
 
     fetch('/api/login', {
         method: 'POST',
@@ -4182,6 +4226,9 @@ function attemptLogin() {
     })
     .then(response => response.json())
     .then(data => {
+        loginRequestSettled = true;
+        clearTimeout(slowLoginTimer);
+        if (loginBtn) loginBtn.disabled = false;
         if (data.success) {
             if (loginMsgDiv) { loginMsgDiv.className = "auth-msg success"; loginMsgDiv.innerText = "Access granted! Redirecting..."; }
             showToast(`Access granted. Welcome back!`, 'success');
@@ -4215,6 +4262,9 @@ function attemptLogin() {
         }
     })
     .catch(error => {
+        loginRequestSettled = true;
+        clearTimeout(slowLoginTimer);
+        if (loginBtn) loginBtn.disabled = false;
         console.error("Authentication connection failure:", error);
         if (loginMsgDiv) { loginMsgDiv.className = "auth-msg error"; loginMsgDiv.innerText = "Network error. Failed to hit validation server."; }
         showToast("Network error. Failed to hit validation server.", 'error');
