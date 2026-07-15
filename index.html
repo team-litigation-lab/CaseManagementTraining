@@ -1742,23 +1742,21 @@
 
         function addDocument(label) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="150" class="no-print"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
+            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="150" class="no-print"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div style="font-size:8px;color:#94a3b8;margin-top:2px;">Max 2MB</div><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
             document.getElementById('doc-body').appendChild(tr);
             applyPlaceholders(tr);
         }
         // Files are attached client-side as data URLs directly inside the row
         // (same as every other Doc Hub field), so they save/load/print along
         // with the rest of the case automatically — no separate storage needed.
-        // Cap lowered from 4MB to 1.5MB per document now that the whole case
-        // (all fields + all attachments combined) is capped at 3MB server-side
-        // (see CASE_CONTENT_MAX_BYTES in _utils.js / case-repository.js) —
-        // a single 4MB attachment alone would blow the new total-case budget.
-        const DOC_UPLOAD_MAX_BYTES = 1.5 * 1024 * 1024; // 1.5MB per document
+        // Per-document cap: 2MB. (There is no separate total-per-case cap —
+        // the whole case is no longer budget-limited server-side.)
+        const DOC_UPLOAD_MAX_BYTES = 2 * 1024 * 1024; // 2MB per document
         function handleDocUpload(input) {
             const file = input.files && input.files[0];
             if (!file) return;
             if (file.size > DOC_UPLOAD_MAX_BYTES) {
-                alert('That file is too large to attach (max 4MB). Try a smaller file or a compressed copy.');
+                alert('That file is too large to attach (max 2MB). Try a smaller file or a compressed copy.');
                 input.value = '';
                 return;
             }
