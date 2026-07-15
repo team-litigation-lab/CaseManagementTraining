@@ -44,11 +44,16 @@ export async function onRequestPost({ request, env }) {
         userType: user.user_type
     });
     // This cookie — not anything the client stores in sessionStorage — is
-    // what every other endpoint now checks to decide who you are.
+    // what every other endpoint now checks to decide who you are. fullName
+    // is included here (not just username/batchId/userType) because several
+    // server-side endpoints (e.g. case-repository.js, when recording who
+    // originally submitted a case) read session.fullName directly — without
+    // it in the token, that always silently fell back to the username
+    // instead of the person's real name.
     const token = await createSessionToken(
-        { sub: user.id, username: user.username, batchId: user.batch_id, userType: user.user_type },
+        { sub: user.id, username: user.username, batchId: user.batch_id, userType: user.user_type, fullName },
         env.SESSION_SECRET
     );
     const { password: _pw, ...safeUser } = user;
-    return json({ success: true, user: safeUser }, 200, { 'Set-Cookie': sessionCookie(token, 43200) });
+    return json({ success: true, user: { ...safeUser, fullName } }, 200, { 'Set-Cookie': sessionCookie(token, 43200) });
 }
