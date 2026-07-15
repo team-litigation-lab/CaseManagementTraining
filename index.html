@@ -1172,19 +1172,22 @@
                     <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Sends an instant on-screen notification to one user or to everyone currently on the site. It uses its own louder, longer alert tone (not the login-confirmation sound) so it actually gets noticed, and shows who it's from — no full-screen takeover, no ticker change, just a quick attention-getter.</p>
 
                     <div style="display:flex; gap:8px; margin-bottom:12px;">
-                        <button type="button" class="mini-btn" id="ping-mode-single-btn" style="background:var(--navy);color:white;padding:8px 14px;" onclick="setPingMode('single')">👤 Specific User</button>
+                        <button type="button" class="mini-btn" id="ping-mode-single-btn" style="background:var(--navy);color:white;padding:8px 14px;" onclick="setPingMode('single')">👤 Specific User(s)</button>
                         <button type="button" class="mini-btn" id="ping-mode-all-btn" style="background:#94a3b8;color:white;padding:8px 14px;" onclick="setPingMode('all')">📢 All Users</button>
                     </div>
 
                     <div id="ping-user-row" style="margin-bottom:12px;">
-                        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Recipient</label><br>
+                        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Recipient(s)</label><br>
+                        <div id="ping-user-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
                         <div style="position:relative;">
                             <input type="text" id="ping-user-search" placeholder="Search by name, username, batch ID, or type…" autocomplete="off"
                                 style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;"
-                                oninput="filterPingUserList()" onfocus="openPingUserList()">
+                                oninput="filterPingUserList()" onfocus="openPingUserList()"
+                                onkeydown="if(event.key==='Escape'){closePingUserList();this.blur();}">
                             <input type="hidden" id="ping-user-select" value="">
                             <div id="ping-user-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:230px;overflow-y:auto;background:white;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 10px 26px rgba(0,0,0,0.14);z-index:80;margin-top:4px;"></div>
                         </div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Click a name to toggle it \u00B7 click outside or press Esc to close the list</div>
                     </div>
 
                     <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Message</label>
@@ -3249,8 +3252,9 @@
            then picked up by every connected browser on the next
            /api/state poll (see applySiteState -> state.ping).
            ========================================================= */
-        let pingMode = 'single'; // 'single' | 'all'
+        let pingMode = 'single'; // 'single' (one-or-more specific users) | 'all'
         let _pingUserListSorted = []; // _activeUsersCache, sorted alphabetically by full name, feeds the search dropdown
+        let pingSelectedUsers = []; // usernames currently selected as recipients, in the order they were picked
         function setPingMode(mode) {
             pingMode = mode;
             const singleBtn = document.getElementById('ping-mode-single-btn');
@@ -3268,15 +3272,12 @@
         function populatePingUserSelect() {
             _pingUserListSorted = (_activeUsersCache || []).slice().sort((a, b) =>
                 (a.full_name || a.username || '').localeCompare(b.full_name || b.username || '', undefined, { sensitivity: 'base' }));
-            const hidden = document.getElementById('ping-user-select');
-            const search = document.getElementById('ping-user-search');
-            // If the previously-selected recipient is no longer in the active
-            // list (e.g. suspended since), clear the selection rather than
-            // silently keep targeting them.
-            if (hidden && hidden.value && !_pingUserListSorted.some(u => u.username === hidden.value)) {
-                hidden.value = '';
-                if (search) search.value = '';
-            }
+            // Drop any previously-picked recipients who are no longer in the
+            // active list (e.g. suspended since) rather than silently keep
+            // targeting them.
+            pingSelectedUsers = pingSelectedUsers.filter(uname => _pingUserListSorted.some(u => u.username === uname));
+            syncPingHiddenValue();
+            renderPingUserChips();
             renderPingUserList(_pingUserListSorted);
         }
         function renderPingUserList(list) {
@@ -3291,20 +3292,23 @@
                 const fullName = u.full_name || uname;
                 const batchId = u.batch_id || u.batchId || '\u2014';
                 const type = u.user_type || u.userType || '\u2014';
-                return '<div class="ping-user-option" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f1f5f9;" ' +
-                    'onclick="selectPingUser(' + escapeHtmlAttr(JSON.stringify(uname)) + ')">' +
+                const checked = pingSelectedUsers.includes(uname);
+                return '<div class="ping-user-option' + (checked ? ' active' : '') + '" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:9px;" ' +
+                    'onclick="togglePingUser(' + escapeHtmlAttr(JSON.stringify(uname)) + ')">' +
+                    '<input type="checkbox" tabindex="-1" style="pointer-events:none;flex-shrink:0;" ' + (checked ? 'checked' : '') + '>' +
+                    '<div style="flex:1;min-width:0;">' +
                     '<div style="font-weight:700;color:var(--navy);">' + escapeHtmlAttr(fullName) + '</div>' +
                     '<div style="color:#64748b;font-size:10.5px;margin-top:2px;">@' + escapeHtmlAttr(uname) +
                     ' \u00B7 Batch ' + escapeHtmlAttr(String(batchId)) + ' \u00B7 ' + escapeHtmlAttr(type) + '</div>' +
-                    '</div>';
+                    '</div></div>';
             }).join('');
         }
         // Filters by Full Name, username, Batch ID, or Type — whichever the
-        // admin is searching by — while keeping results alphabetical.
+        // admin is searching by — while keeping results alphabetical. Typing
+        // to search no longer clears whoever is already selected.
         function filterPingUserList() {
             openPingUserList();
             const q = (document.getElementById('ping-user-search').value || '').trim().toLowerCase();
-            document.getElementById('ping-user-select').value = '';
             if (!q) { renderPingUserList(_pingUserListSorted); return; }
             const filtered = _pingUserListSorted.filter(u => {
                 const fullName = (u.full_name || '').toLowerCase();
@@ -3315,11 +3319,40 @@
             });
             renderPingUserList(filtered);
         }
-        function selectPingUser(username) {
-            const u = _pingUserListSorted.find(x => x.username === username);
-            document.getElementById('ping-user-select').value = username;
-            document.getElementById('ping-user-search').value = u ? (u.full_name || username) + ' \u00B7 @' + username : username;
-            closePingUserList();
+        // Adds/removes a user from the recipient set. The list stays open
+        // afterwards so the admin can keep picking more people — it only
+        // closes via the outside-click/Escape handlers below, or removePingUser
+        // is not what closes it either.
+        function togglePingUser(username) {
+            const idx = pingSelectedUsers.indexOf(username);
+            if (idx === -1) pingSelectedUsers.push(username); else pingSelectedUsers.splice(idx, 1);
+            syncPingHiddenValue();
+            renderPingUserChips();
+            filterPingUserList(); // re-render against whatever's currently typed in search, preserving checkmarks
+        }
+        function removePingUser(username) {
+            pingSelectedUsers = pingSelectedUsers.filter(u => u !== username);
+            syncPingHiddenValue();
+            renderPingUserChips();
+            filterPingUserList();
+        }
+        function syncPingHiddenValue() {
+            const hidden = document.getElementById('ping-user-select');
+            if (hidden) hidden.value = JSON.stringify(pingSelectedUsers);
+        }
+        // Renders the selected recipients as removable chips above the search box.
+        function renderPingUserChips() {
+            const wrap = document.getElementById('ping-user-chips');
+            if (!wrap) return;
+            if (!pingSelectedUsers.length) { wrap.innerHTML = ''; return; }
+            wrap.innerHTML = pingSelectedUsers.map(uname => {
+                const u = _pingUserListSorted.find(x => x.username === uname);
+                const label = u ? (u.full_name || uname) : uname;
+                return '<span style="display:inline-flex;align-items:center;gap:6px;background:#eef2ff;color:var(--navy);border:1px solid #c7d2fe;border-radius:999px;padding:4px 10px 4px 12px;font-size:11px;font-weight:700;">' +
+                    escapeHtmlAttr(label) +
+                    '<span onclick="removePingUser(' + escapeHtmlAttr(JSON.stringify(uname)) + ')" style="cursor:pointer;font-weight:900;color:#64748b;line-height:1;">\u00D7</span>' +
+                    '</span>';
+            }).join('');
         }
         function openPingUserList() {
             const listEl = document.getElementById('ping-user-list');
@@ -3329,9 +3362,17 @@
             const listEl = document.getElementById('ping-user-list');
             if (listEl) listEl.style.display = 'none';
         }
-        document.addEventListener('click', function (e) {
+        // Closing no longer depends on picking a user: clicking anywhere
+        // outside the recipient widget, or pressing Escape, closes the list
+        // regardless of selection state. Uses 'mousedown' + capture so it
+        // fires reliably even if something inside the admin dashboard stops
+        // click-event propagation.
+        document.addEventListener('mousedown', function (e) {
             const wrap = document.getElementById('ping-user-row');
             if (wrap && !wrap.contains(e.target)) closePingUserList();
+        }, true);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closePingUserList();
         });
         // First name of the signed-in admin, used to attribute a ping (e.g.
         // "Jane Doe" -> "Jane"). Falls back gracefully if a full name isn't set.
@@ -3343,10 +3384,13 @@
         function sendPing() {
             const text = document.getElementById('ping-text-input').value.trim();
             if (!text) { showToast('Please enter a ping message.', 'error'); return; }
+            // target is '__all__' for a broadcast, a single username string for
+            // one recipient, or an array of usernames when several are picked —
+            // the backend's /api/ping needs to accept all three shapes.
             let target = '__all__';
             if (pingMode === 'single') {
-                target = document.getElementById('ping-user-select').value;
-                if (!target) { showToast('Select a user to ping.', 'error'); return; }
+                if (!pingSelectedUsers.length) { showToast('Select at least one user to ping.', 'error'); return; }
+                target = pingSelectedUsers.length === 1 ? pingSelectedUsers[0] : pingSelectedUsers.slice();
             }
             // Attribute the ping: the hardcoded Master Account always shows as
             // "System Administrator"; any other Admin shows as "Admin <First Name>".
@@ -3360,8 +3404,17 @@
             .then(r => r.json())
             .then(data => {
                 if (!data || !data.success) { showToast((data && data.error) || 'Failed to send ping.', 'error'); return; }
-                showToast(pingMode === 'all' ? 'Ping sent to all users.' : 'Ping sent to ' + target + '.', 'success');
+                const recipientLabel = pingMode === 'all' ? 'all users' :
+                    (pingSelectedUsers.length === 1 ? pingSelectedUsers[0] : pingSelectedUsers.length + ' users');
+                showToast('Ping sent to ' + recipientLabel + '.', 'success');
                 document.getElementById('ping-text-input').value = '';
+                pingSelectedUsers = [];
+                syncPingHiddenValue();
+                const search = document.getElementById('ping-user-search');
+                if (search) search.value = '';
+                renderPingUserChips();
+                renderPingUserList(_pingUserListSorted);
+                closePingUserList();
                 refreshSiteState();
             })
             .catch(() => showToast('Network error sending ping.', 'error'));
@@ -3424,7 +3477,10 @@
             if (state.ping && state.ping.id && state.ping.id !== lastPingId) {
                 const pingSession = getSession();
                 const myUsername = pingSession && pingSession.username;
-                const isForMe = state.ping.target === '__all__' || (myUsername && state.ping.target === myUsername);
+                const isForMe = state.ping.target === '__all__' ||
+                    (myUsername && (Array.isArray(state.ping.target)
+                        ? state.ping.target.includes(myUsername)
+                        : state.ping.target === myUsername));
                 const isFresh = !state.ping.firedAt || (Date.now() - new Date(state.ping.firedAt).getTime()) < 10000;
                 if (isForMe && isFresh) {
                     const byLine = 'By: ' + (state.ping.by || 'System Administrator');
