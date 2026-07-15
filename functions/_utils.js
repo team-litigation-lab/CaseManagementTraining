@@ -185,8 +185,6 @@ export function isOwnerOrAdmin(session, ownerUsername) {
     return !!session && (session.userType === 'Admin' || session.username === ownerUsername);
 }
 
-/** Hard cap on a single case's serialized content, in bytes. */
-export const CASE_CONTENT_MAX_BYTES = 3 * 1024 * 1024; // 3MB
 
 /* =====================================================================
    PASSWORD HASHING (PBKDF2-SHA256 via Web Crypto — no external deps
