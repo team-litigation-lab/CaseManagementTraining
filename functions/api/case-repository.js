@@ -1,4 +1,4 @@
-import { json, requireSession, nextCaseId, isOwnerOrAdmin, CASE_CONTENT_MAX_BYTES } from '../_utils.js';
+import { json, requireSession, nextCaseId, isOwnerOrAdmin, CASE_CONTENT_MAX_BYTES, buildFullName } from '../_utils.js';
 
 // Server-side Case Repository — replaces the old client-side localStorage
 // repository entirely, and also replaces the old append-only 'cases' sync
@@ -126,6 +126,14 @@ export async function onRequestPost({ request, env }) {
         isDraftFlag = 0;
     }
 
+    // Looked up directly from the users table rather than trusted from
+    // session.fullName — the session JWT is signed once at login and can be
+    // up to 12h stale, so relying on it here would mean a name fix like this
+    // one wouldn't actually take effect until every open session expired and
+    // everyone logged back in. Querying live means it's correct immediately.
+    const submitterRow = await db.prepare(`SELECT first_name, mi, last_name, suffix FROM users WHERE username = ?`).bind(session.username).first();
+    const submitterName = buildFullName(submitterRow) || session.username;
+
     const result = await db.prepare(
         `INSERT INTO case_repository
             (case_id, client_name, phase, is_draft, owner_username, owner_batch_id,
@@ -135,7 +143,7 @@ export async function onRequestPost({ request, env }) {
          RETURNING id`
     ).bind(
         caseId, clientName || '', phase || null, isDraftFlag, session.username, session.batchId || null,
-        session.fullName || session.username, session.batchId || null, serializedContent, medTotal || null, contentBytes
+        submitterName, session.batchId || null, serializedContent, medTotal || null, contentBytes
     ).first();
 
     return json({ success: true, id: result.id, caseId, isDraft: !!isDraftFlag });
