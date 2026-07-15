@@ -2627,13 +2627,13 @@
 
             if (session.userType === 'Admin') {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as: <b>${session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
+                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
                     <button class="session-btn active-admin" onclick="openAdminDashboard()">⇄ Master Control</button>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             } else {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as: <b>${session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
+                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             }
