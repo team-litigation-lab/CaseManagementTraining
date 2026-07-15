@@ -7,7 +7,7 @@ export async function onRequestGet({ env }) {
         db.prepare(`SELECT paused, locked, locked_by_batch FROM site_state WHERE id = 1`).first(),
         db.prepare(`SELECT text FROM announcements WHERE id = 1`).first(),
         db.prepare(`SELECT * FROM alerts WHERE stopped = 0 ORDER BY id DESC LIMIT 1`).first(),
-        db.prepare(`SELECT id, text, target, fired_at FROM pings ORDER BY id DESC LIMIT 1`).first()
+        db.prepare(`SELECT id, text, target, by, fired_at FROM pings ORDER BY id DESC LIMIT 1`).first()
     ]);
 
     let alertPayload = { active: false };
@@ -34,6 +34,6 @@ export async function onRequestGet({ env }) {
         lockedBy: state ? state.locked_by_batch : null,
         announcement: { text: (announcement && announcement.text) || 'Welcome to the LSH Training Interface.' },
         alert: alertPayload,
-        ping: ping ? { id: ping.id, text: ping.text, target: ping.target, firedAt: ping.fired_at } : null
+        ping: ping ? { id: ping.id, text: ping.text, target: ping.target, by: ping.by, firedAt: ping.fired_at } : null
     });
 }
