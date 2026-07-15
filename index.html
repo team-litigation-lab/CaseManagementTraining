@@ -3054,17 +3054,65 @@
             }
             container.innerHTML = html;
         }
+        // Same separation/sort mechanism as the Users tab (see renderUsersList):
+        // Admin/Trainee segregation -> Trainees grouped by Batch date -> both
+        // sorted by <XXX> sequence number, via the shared parseBatchId(). A
+        // case record doesn't carry its owner's user_type, so that (and a
+        // fallback batch id) is resolved via the last-fetched Users cache
+        // (_activeUsersCache). Still capped to the 100 most-recently-updated
+        // cases first, so the list can't grow unbounded, with recency used
+        // as the tiebreaker within each group.
         function renderMonitoringCases(list) {
             const container = document.getElementById('monitoring-cases-list');
             if (!container) return;
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No cases have been saved yet.</p>'; return; }
-            const sorted = list.slice().sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-            container.innerHTML = sorted.slice(0, 100).map(c => (
-                '<div class="reg-row" style="cursor:pointer;" onclick="loadCase(' + c.id + ')">' +
-                '<div class="reg-info"><b>' + (c.clientName || 'Untitled Case') + ' <span class="status-pill ' + (c.isDraft ? 'status-pending' : 'status-approved') + '">' + (c.isDraft ? 'DRAFT' : (c.phase || '')) + '</span></b>' +
-                '<div class="reg-meta">By ' + (c.submittedBy || c.ownerUsername) + ' \u00B7 Batch ' + (c.ownerBatchId || '\u2014') + ' \u00B7 Case ID ' + (c.caseId || '\u2014') + ' \u00B7 Updated ' + new Date(c.updatedAt).toLocaleString() + '</div></div>' +
-                '<div style="font-size:11px;color:#64748b;">Open &rarr;</div></div>'
-            )).join('');
+
+            const recent = list.slice().sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 100);
+
+            function ownerInfo(c) {
+                const owner = (_activeUsersCache || []).find(u => u.username === (c.ownerUsername || c.submittedBy));
+                return {
+                    type: (owner && (owner.user_type || owner.userType)) || 'Trainee',
+                    batchId: (owner && (owner.batch_id || owner.batchId)) || c.ownerBatchId
+                };
+            }
+            function seqOf(batchId) {
+                const p = parseBatchId(batchId);
+                return p ? p.seq : Number.MAX_SAFE_INTEGER; // unparseable batch ids sort last, never crash
+            }
+            function rowHtml(c) {
+                return '<div class="reg-row" style="cursor:pointer;" onclick="loadCase(' + c.id + ')">' +
+                    '<div class="reg-info"><b>' + (c.clientName || 'Untitled Case') + ' <span class="status-pill ' + (c.isDraft ? 'status-pending' : 'status-approved') + '">' + (c.isDraft ? 'DRAFT' : (c.phase || '')) + '</span></b>' +
+                    '<div class="reg-meta">By ' + (c.submittedBy || c.ownerUsername) + ' \u00B7 Batch ' + (c.ownerBatchId || '\u2014') + ' \u00B7 Case ID ' + (c.caseId || '\u2014') + ' \u00B7 Updated ' + new Date(c.updatedAt).toLocaleString() + '</div></div>' +
+                    '<div style="font-size:11px;color:#64748b;">Open &rarr;</div></div>';
+            }
+
+            const admins = recent.filter(c => ownerInfo(c).type === 'Admin')
+                .sort((a, b) => seqOf(ownerInfo(a).batchId) - seqOf(ownerInfo(b).batchId) || new Date(b.updatedAt) - new Date(a.updatedAt));
+            const trainees = recent.filter(c => ownerInfo(c).type !== 'Admin');
+
+            let html = '<div class="group-heading">Admins &middot; ' + admins.length + '</div>';
+            html += admins.length
+                ? admins.map(rowHtml).join('')
+                : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No admin cases.</p>';
+
+            html += '<div class="group-heading">Trainees &middot; ' + trainees.length + '</div>';
+            if (!trainees.length) {
+                html += '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No trainee cases.</p>';
+            } else {
+                const byBatchDate = {};
+                trainees.forEach(c => {
+                    const p = parseBatchId(ownerInfo(c).batchId);
+                    const key = p ? ('B' + p.dateStr) : 'Unassigned Batch';
+                    (byBatchDate[key] = byBatchDate[key] || []).push(c);
+                });
+                Object.keys(byBatchDate).sort().forEach(batchKey => {
+                    const members = byBatchDate[batchKey].sort((a, b) => seqOf(ownerInfo(a).batchId) - seqOf(ownerInfo(b).batchId) || new Date(b.updatedAt) - new Date(a.updatedAt));
+                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + batchKey + ' &middot; ' + members.length + ' case(s)</div>';
+                    html += members.map(rowHtml).join('');
+                });
+            }
+            container.innerHTML = html;
         }
         // Admin clicks a trainee in the online list -> shows that user's
         // LATEST SAVED (or autosaved) case, read-only, without touching the
