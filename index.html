@@ -1029,7 +1029,7 @@
             <button class="mc-tab" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></button>
             <button class="mc-tab" onclick="showAdminDashTab('users')">Users</button>
             <button class="mc-tab" onclick="showAdminDashTab('monitoring')">Monitoring</button>
-            <button class="mc-tab" onclick="showAdminDashTab('announce')">Announcements &amp; Alerts</button>
+            <button class="mc-tab" onclick="showAdminDashTab('announce')">Broadcast &amp; Ping</button>
             <button class="mc-tab" onclick="showAdminDashTab('access')">Access Control</button>
         </div>
         <div class="mc-body">
@@ -1073,7 +1073,7 @@
                     <div class="admin-tile">
                         <h4>Current Alert</h4>
                         <div class="admin-stat" id="ov-alert-state" style="font-size:16px;">None Active</div>
-                        <div class="admin-stat-label">Manage from Announcements &amp; Alerts</div>
+                        <div class="admin-stat-label">Manage from Broadcast &amp; Ping</div>
                     </div>
                 </div>
             </div>
@@ -1157,6 +1157,28 @@
                         <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="setAlert()">⚠ Set Alert</button>
                         <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="stopAlert()">⏹ Stop / Cancel Alert</button>
                     </div>
+                </div>
+
+                <div class="mc-section-title">📣 Ping (instant toast notification — same look &amp; sound as a login confirmation)</div>
+                <div class="admin-tile">
+                    <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Sends an instant on-screen notification to one user or to everyone currently on the site. It appears (and sounds) exactly like the "Access granted" toast shown after a successful login — no full-screen takeover, no ticker change, just a quick attention-getter.</p>
+
+                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                        <button type="button" class="mini-btn" id="ping-mode-single-btn" style="background:var(--navy);color:white;padding:8px 14px;" onclick="setPingMode('single')">👤 Specific User</button>
+                        <button type="button" class="mini-btn" id="ping-mode-all-btn" style="background:#94a3b8;color:white;padding:8px 14px;" onclick="setPingMode('all')">📢 All Users</button>
+                    </div>
+
+                    <div id="ping-user-row" style="margin-bottom:12px;">
+                        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Recipient</label><br>
+                        <select id="ping-user-select" style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;">
+                            <option value="">Loading users…</option>
+                        </select>
+                    </div>
+
+                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Message</label>
+                    <textarea id="ping-text-input" placeholder="Type the ping message..." style="width:100%;min-height:56px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin:6px 0 14px;"></textarea>
+
+                    <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="sendPing()">📣 Send Ping</button>
                 </div>
             </div>
 
@@ -2164,6 +2186,7 @@
         // every save/update/delete and on a light background poll so users
         // passively see other people's changes to the shared repository.
         let _repoCache = [];
+        let _activeUsersCache = []; // last-fetched Approved/Suspended users — feeds the Ping recipient dropdown
         async function refreshRepoCache() {
             if (!hasAuthorizedAccess()) { _repoCache = []; renderRepo(); renderAllCasesModal(); return; }
             try {
@@ -2689,7 +2712,7 @@
             document.querySelectorAll('.mc-pane').forEach(p => p.classList.remove('active'));
             const pane = document.getElementById('admin-dash-' + tab);
             if (pane) pane.classList.add('active');
-            if (tab === 'registrations' || tab === 'users' || tab === 'overview') refreshUsersAndRegistrations();
+            if (tab === 'registrations' || tab === 'users' || tab === 'overview' || tab === 'announce') refreshUsersAndRegistrations();
             if (tab === 'monitoring') refreshMonitoring();
         }
 
@@ -2735,6 +2758,8 @@
 
                     renderGroupedUserList('registrations-list', pending, true, 'No pending registrations.');
                     renderUsersList(active);
+                    _activeUsersCache = active;
+                    populatePingUserSelect();
                 })
                 .catch(err => console.error('Failed to load users:', err));
         }
@@ -3186,10 +3211,69 @@
         }
 
         /* =========================================================
+           PING — instant one-shot notification (toast + sound), sent to
+           a specific user or broadcast to everyone. Unlike the Alert
+           overlay it never takes over the screen — it renders as the
+           same toast used for "Access granted" on login, sound included.
+           Delivered the same way Announcement/Alert are: written
+           server-side via /api/ping, then picked up by every connected
+           browser on the next /api/state poll (see applySiteState ->
+           state.ping).
+           ========================================================= */
+        let pingMode = 'single'; // 'single' | 'all'
+        function setPingMode(mode) {
+            pingMode = mode;
+            const singleBtn = document.getElementById('ping-mode-single-btn');
+            const allBtn = document.getElementById('ping-mode-all-btn');
+            const userRow = document.getElementById('ping-user-row');
+            if (singleBtn) singleBtn.style.background = mode === 'single' ? 'var(--navy)' : '#94a3b8';
+            if (allBtn) allBtn.style.background = mode === 'all' ? 'var(--navy)' : '#94a3b8';
+            if (userRow) userRow.style.display = mode === 'single' ? '' : 'none';
+        }
+        function populatePingUserSelect() {
+            const select = document.getElementById('ping-user-select');
+            if (!select) return;
+            const current = select.value;
+            const list = (_activeUsersCache || []).slice().sort((a, b) =>
+                (a.full_name || a.username).localeCompare(b.full_name || b.username));
+            if (!list.length) { select.innerHTML = '<option value="">No approved users found</option>'; return; }
+            select.innerHTML = list.map(u => {
+                const uname = u.username || '';
+                return '<option value="' + uname.replace(/"/g, '&quot;') + '">' +
+                    (u.full_name || uname) + ' \u00B7 @' + uname + ' (' + (u.user_type || u.userType || '') + ')' +
+                    '</option>';
+            }).join('');
+            if (current && list.some(u => u.username === current)) select.value = current;
+        }
+        function sendPing() {
+            const text = document.getElementById('ping-text-input').value.trim();
+            if (!text) { showToast('Please enter a ping message.', 'error'); return; }
+            let target = '__all__';
+            if (pingMode === 'single') {
+                target = document.getElementById('ping-user-select').value;
+                if (!target) { showToast('Select a user to ping.', 'error'); return; }
+            }
+            fetch('/api/ping', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ text, target })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.success) { showToast((data && data.error) || 'Failed to send ping.', 'error'); return; }
+                showToast(pingMode === 'all' ? 'Ping sent to all users.' : 'Ping sent to ' + target + '.', 'success');
+                document.getElementById('ping-text-input').value = '';
+                refreshSiteState();
+            })
+            .catch(() => showToast('Network error sending ping.', 'error'));
+        }
+
+        /* =========================================================
            SITE STATE POLLING — pause / lock / announcement / alert,
            shared across every connected browser via /api/state.
            ========================================================= */
         let lastAlertId = null;
+        let lastAnnouncementText = null; // null = not yet initialized (first poll after page load)
+        let lastPingId = null; // last delivered ping id, so a given ping is never toasted twice
         function refreshSiteState() {
             fetch('/api/state').then(r => r.json()).then(state => applySiteState(state)).catch(() => {});
         }
@@ -3201,6 +3285,13 @@
             if (tickerText) tickerText.innerText = annText;
             const announcePreview = document.getElementById('announce-current-preview');
             if (announcePreview) announcePreview.innerText = annText;
+            // Notification sound for everyone the moment the broadcast actually
+            // changes (skipped on first load, so reopening/refreshing the page
+            // doesn't replay a sound for an announcement that's been up a while).
+            if (lastAnnouncementText !== null && lastAnnouncementText !== annText) {
+                playNotificationSound('info');
+            }
+            lastAnnouncementText = annText;
 
             // Alert overlay (full screen, separate from ticker)
             const alertLine = document.getElementById('alert-status-line');
@@ -3215,12 +3306,30 @@
                     const img = document.getElementById('alert-overlay-image');
                     if (state.alert.image) { img.src = state.alert.image; img.style.display = 'block'; } else { img.style.display = 'none'; img.src=''; }
                     overlay.classList.add('open');
+                    playNotificationSound('alert');
                 }
             } else {
                 if (alertLine) alertLine.innerText = 'No alert is currently active.';
                 const ovState = document.getElementById('ov-alert-state'); if (ovState) ovState.innerText = 'None Active';
                 lastAlertId = null;
                 document.getElementById('alert-overlay').classList.remove('open');
+            }
+
+            // Ping — instant toast+sound notification to a specific user or
+            // everyone, styled and sounding exactly like the login-success
+            // toast (see showToast). One-shot: each ping fires at most once per
+            // browser, and stale pings (fired well before this poll, e.g. one
+            // that went out before this browser tab was opened) are skipped so
+            // loading/refreshing the page doesn't replay old notifications.
+            if (state.ping && state.ping.id && state.ping.id !== lastPingId) {
+                const pingSession = getSession();
+                const myUsername = pingSession && pingSession.username;
+                const isForMe = state.ping.target === '__all__' || (myUsername && state.ping.target === myUsername);
+                const isFresh = !state.ping.firedAt || (Date.now() - new Date(state.ping.firedAt).getTime()) < 10000;
+                if (isForMe && isFresh) {
+                    showToast('📣 ' + (state.ping.text || 'You have been pinged by an Administrator.'), 'success', 5000);
+                }
+                lastPingId = state.ping.id;
             }
 
             // Pause overlay (freezes, no logout) — admins are exempt so they can always resume
