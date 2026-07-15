@@ -165,6 +165,17 @@ export function isMaster(session) {
 }
 
 /**
+ * Builds a person's display name from their users-table row fields.
+ * Shared so login.js, register.js, and case-repository.js can't drift out
+ * of sync on how a name is assembled.
+ */
+export function buildFullName(user) {
+    if (!user) return '';
+    return [user.first_name, user.mi ? user.mi.replace(/\.$/, '') + '.' : '', user.last_name].filter(Boolean).join(' ')
+        + (user.suffix ? ', ' + user.suffix : '');
+}
+
+/**
  * Shared permission check for the server-side Case Repository: only the
  * case's original owner or an Admin may modify/delete it. Everyone else
  * gets read-only access (and, for drafts, no access at all — see
