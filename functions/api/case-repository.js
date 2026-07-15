@@ -1,4 +1,4 @@
-import { json, requireSession, nextCaseId, isOwnerOrAdmin, CASE_CONTENT_MAX_BYTES, buildFullName } from '../_utils.js';
+import { json, requireSession, nextCaseId, isOwnerOrAdmin, buildFullName } from '../_utils.js';
 
 // Server-side Case Repository — replaces the old client-side localStorage
 // repository entirely, and also replaces the old append-only 'cases' sync
@@ -76,12 +76,6 @@ export async function onRequestPost({ request, env }) {
     const { id, content, clientName, phase, medTotal, isDraft, finalize, typeCode } = body;
     const serializedContent = JSON.stringify(content || {});
     const contentBytes = new TextEncoder().encode(serializedContent).length;
-    if (contentBytes > CASE_CONTENT_MAX_BYTES) {
-        return json({
-            success: false,
-            error: `This case is too large to save (${(contentBytes / 1024 / 1024).toFixed(2)}MB — limit is 3MB). Remove or shrink attached documents and try again.`
-        }, 413);
-    }
 
     if (id) {
         // Update an existing case — owner or Admin only.
