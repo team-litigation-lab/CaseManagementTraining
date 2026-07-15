@@ -28,12 +28,24 @@ export async function onRequestGet({ env }) {
         }
     }
 
+    // A ping's target is stored as either a plain string ('__all__' or a single
+    // username) or, for multi-recipient pings, a JSON-encoded array of usernames.
+    // Try to parse it back into an array; if it isn't valid JSON (the plain-string
+    // case), fall back to the raw stored value unchanged.
+    let pingTarget = ping ? ping.target : null;
+    if (typeof pingTarget === 'string') {
+        try {
+            const parsed = JSON.parse(pingTarget);
+            if (Array.isArray(parsed)) pingTarget = parsed;
+        } catch (e) { /* not JSON — plain '__all__' or single username, leave as-is */ }
+    }
+
     return json({
         paused: !!(state && state.paused),
         locked: !!(state && state.locked),
         lockedBy: state ? state.locked_by_batch : null,
         announcement: { text: (announcement && announcement.text) || 'Welcome to the LSH Training Interface.' },
         alert: alertPayload,
-        ping: ping ? { id: ping.id, text: ping.text, target: ping.target, by: ping.by, firedAt: ping.fired_at } : null
+        ping: ping ? { id: ping.id, text: ping.text, target: pingTarget, by: ping.by, firedAt: ping.fired_at } : null
     });
 }
