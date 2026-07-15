@@ -457,6 +457,14 @@
     .toast.error { background: var(--classified-red); }
     .toast.info { background: var(--navy); }
     .toast.alert { background: #7c2d12; }
+    .toast.ping { background: var(--orange); color: var(--navy-deep); border-left: 4px solid var(--navy-deep); min-width: 260px; }
+    .toast-main { font-size: 12px; font-weight: 700; }
+    .toast-sub { font-size: 10.5px; font-weight: 700; opacity: 0.85; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+    /* ===== PING RECIPIENT SEARCH DROPDOWN ===== */
+    .ping-user-option { transition: background .1s ease; }
+    .ping-user-option:hover, .ping-user-option.active { background: #f1f5f9; }
+    .ping-user-option:last-child { border-bottom: none !important; }
 
     /* ===== MASTER CONTROL (full page, not a window) ===== */
     #master-control-page {
@@ -1159,9 +1167,9 @@
                     </div>
                 </div>
 
-                <div class="mc-section-title">📣 Ping (instant toast notification — same look &amp; sound as a login confirmation)</div>
+                <div class="mc-section-title">📣 Ping (instant toast notification with a loud, distinct alert tone)</div>
                 <div class="admin-tile">
-                    <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Sends an instant on-screen notification to one user or to everyone currently on the site. It appears (and sounds) exactly like the "Access granted" toast shown after a successful login — no full-screen takeover, no ticker change, just a quick attention-getter.</p>
+                    <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Sends an instant on-screen notification to one user or to everyone currently on the site. It uses its own louder, longer alert tone (not the login-confirmation sound) so it actually gets noticed, and shows who it's from — no full-screen takeover, no ticker change, just a quick attention-getter.</p>
 
                     <div style="display:flex; gap:8px; margin-bottom:12px;">
                         <button type="button" class="mini-btn" id="ping-mode-single-btn" style="background:var(--navy);color:white;padding:8px 14px;" onclick="setPingMode('single')">👤 Specific User</button>
@@ -1170,9 +1178,13 @@
 
                     <div id="ping-user-row" style="margin-bottom:12px;">
                         <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Recipient</label><br>
-                        <select id="ping-user-select" style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;">
-                            <option value="">Loading users…</option>
-                        </select>
+                        <div style="position:relative;">
+                            <input type="text" id="ping-user-search" placeholder="Search by name, username, batch ID, or type…" autocomplete="off"
+                                style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;"
+                                oninput="filterPingUserList()" onfocus="openPingUserList()">
+                            <input type="hidden" id="ping-user-select" value="">
+                            <div id="ping-user-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:230px;overflow-y:auto;background:white;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 10px 26px rgba(0,0,0,0.14);z-index:80;margin-top:4px;"></div>
+                        </div>
                     </div>
 
                     <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Message</label>
@@ -1256,7 +1268,7 @@
     <!-- ===== INACTIVITY REMINDER / AUTO-ARCHIVE MODAL ===== -->
     <div class="modal-overlay no-print" id="auto-archive-modal" style="z-index:2500;">
         <div class="modal-box">
-            <h2 class="serif">⚠ Hey, Are You Still There?</h2>
+            <h2 class="serif">⚠ Still There?</h2>
             <div class="sub mono">Data Protection Safeguard</div>
             <p style="font-size:12px; color:#475569; margin-bottom:14px; line-height:1.5;">
                 No activity has been detected on this case for 5 minutes. Let us know what you'd like to do — otherwise this case will be automatically archived to the Case Repository as a draft.
@@ -1412,25 +1424,33 @@
                     success: [660, 880],
                     error: [300, 210],
                     info: [520, 660],
-                    alert: [440, 330, 440]
+                    alert: [440, 330, 440],
+                    // Ping needs to cut through and actually grab attention, so it's
+                    // louder, longer, and uses its own back-and-forth two-tone
+                    // pattern (repeated) rather than reusing any other cue.
+                    ping: [988, 740, 988, 740, 988, 740]
                 };
                 const notes = patterns[type] || patterns.info;
+                const isPing = type === 'ping';
+                const peakGain = isPing ? 0.42 : 0.22;
+                const noteSpacing = isPing ? 0.24 : 0.13;
+                const noteLength = isPing ? 0.34 : 0.18;
                 notes.forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
                     osc.type = 'sine';
                     osc.frequency.value = freq;
-                    const t = now + i * 0.13;
+                    const t = now + i * noteSpacing;
                     gain.gain.setValueAtTime(0.0001, t);
-                    gain.gain.exponentialRampToValueAtTime(0.22, t + 0.015);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+                    gain.gain.exponentialRampToValueAtTime(peakGain, t + 0.015);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, t + noteLength);
                     osc.connect(gain).connect(ctx.destination);
                     osc.start(t);
-                    osc.stop(t + 0.2);
+                    osc.stop(t + noteLength + 0.02);
                 });
             } catch (e) { console.warn('Audio playback unavailable:', e); }
         }
-        function showToast(message, type, duration) {
+        function showToast(message, type, duration, subtitle) {
             type = type || 'info';
             duration = duration || 3500;
             let container = document.getElementById('toast-container');
@@ -1441,7 +1461,12 @@
             }
             const toast = document.createElement('div');
             toast.className = 'toast ' + type;
-            toast.textContent = message;
+            if (subtitle) {
+                toast.innerHTML = '<div class="toast-main">' + escapeHtmlAttr(message) + '</div>' +
+                    '<div class="toast-sub">' + escapeHtmlAttr(subtitle) + '</div>';
+            } else {
+                toast.textContent = message;
+            }
             container.appendChild(toast);
             requestAnimationFrame(() => toast.classList.add('show'));
             playNotificationSound(type);
@@ -3213,14 +3238,19 @@
         /* =========================================================
            PING — instant one-shot notification (toast + sound), sent to
            a specific user or broadcast to everyone. Unlike the Alert
-           overlay it never takes over the screen — it renders as the
-           same toast used for "Access granted" on login, sound included.
+           overlay it never takes over the screen. It renders with its
+           own 'ping' toast style and its own louder, longer alert tone
+           (see playNotificationSound's 'ping' pattern) so it stands out
+           from ordinary success/info toasts, and always shows who sent
+           it via a "By: ..." line — "By: System Administrator" for the
+           hardcoded Master Account, otherwise "By: Admin <First Name>".
            Delivered the same way Announcement/Alert are: written
-           server-side via /api/ping, then picked up by every connected
-           browser on the next /api/state poll (see applySiteState ->
-           state.ping).
+           server-side via /api/ping (including the "by" attribution),
+           then picked up by every connected browser on the next
+           /api/state poll (see applySiteState -> state.ping).
            ========================================================= */
         let pingMode = 'single'; // 'single' | 'all'
+        let _pingUserListSorted = []; // _activeUsersCache, sorted alphabetically by full name, feeds the search dropdown
         function setPingMode(mode) {
             pingMode = mode;
             const singleBtn = document.getElementById('ping-mode-single-btn');
@@ -3229,21 +3259,86 @@
             if (singleBtn) singleBtn.style.background = mode === 'single' ? 'var(--navy)' : '#94a3b8';
             if (allBtn) allBtn.style.background = mode === 'all' ? 'var(--navy)' : '#94a3b8';
             if (userRow) userRow.style.display = mode === 'single' ? '' : 'none';
+            if (mode !== 'single') closePingUserList();
         }
+        // Builds the alphabetized (by full name) recipient list used by the
+        // searchable dropdown below. Each row surfaces Full Name, username,
+        // Batch ID, and Type, in that order, so admins can search/scan by any
+        // of them.
         function populatePingUserSelect() {
-            const select = document.getElementById('ping-user-select');
-            if (!select) return;
-            const current = select.value;
-            const list = (_activeUsersCache || []).slice().sort((a, b) =>
-                (a.full_name || a.username).localeCompare(b.full_name || b.username));
-            if (!list.length) { select.innerHTML = '<option value="">No approved users found</option>'; return; }
-            select.innerHTML = list.map(u => {
+            _pingUserListSorted = (_activeUsersCache || []).slice().sort((a, b) =>
+                (a.full_name || a.username || '').localeCompare(b.full_name || b.username || '', undefined, { sensitivity: 'base' }));
+            const hidden = document.getElementById('ping-user-select');
+            const search = document.getElementById('ping-user-search');
+            // If the previously-selected recipient is no longer in the active
+            // list (e.g. suspended since), clear the selection rather than
+            // silently keep targeting them.
+            if (hidden && hidden.value && !_pingUserListSorted.some(u => u.username === hidden.value)) {
+                hidden.value = '';
+                if (search) search.value = '';
+            }
+            renderPingUserList(_pingUserListSorted);
+        }
+        function renderPingUserList(list) {
+            const listEl = document.getElementById('ping-user-list');
+            if (!listEl) return;
+            if (!list.length) {
+                listEl.innerHTML = '<div style="padding:10px;font-size:12px;color:#94a3b8;">No matching users found</div>';
+                return;
+            }
+            listEl.innerHTML = list.map(u => {
                 const uname = u.username || '';
-                return '<option value="' + uname.replace(/"/g, '&quot;') + '">' +
-                    (u.full_name || uname) + ' \u00B7 @' + uname + ' (' + (u.user_type || u.userType || '') + ')' +
-                    '</option>';
+                const fullName = u.full_name || uname;
+                const batchId = u.batch_id || u.batchId || '\u2014';
+                const type = u.user_type || u.userType || '\u2014';
+                return '<div class="ping-user-option" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f1f5f9;" ' +
+                    'onclick="selectPingUser(' + escapeHtmlAttr(JSON.stringify(uname)) + ')">' +
+                    '<div style="font-weight:700;color:var(--navy);">' + escapeHtmlAttr(fullName) + '</div>' +
+                    '<div style="color:#64748b;font-size:10.5px;margin-top:2px;">@' + escapeHtmlAttr(uname) +
+                    ' \u00B7 Batch ' + escapeHtmlAttr(String(batchId)) + ' \u00B7 ' + escapeHtmlAttr(type) + '</div>' +
+                    '</div>';
             }).join('');
-            if (current && list.some(u => u.username === current)) select.value = current;
+        }
+        // Filters by Full Name, username, Batch ID, or Type — whichever the
+        // admin is searching by — while keeping results alphabetical.
+        function filterPingUserList() {
+            openPingUserList();
+            const q = (document.getElementById('ping-user-search').value || '').trim().toLowerCase();
+            document.getElementById('ping-user-select').value = '';
+            if (!q) { renderPingUserList(_pingUserListSorted); return; }
+            const filtered = _pingUserListSorted.filter(u => {
+                const fullName = (u.full_name || '').toLowerCase();
+                const uname = (u.username || '').toLowerCase();
+                const batchId = String(u.batch_id || u.batchId || '').toLowerCase();
+                const type = (u.user_type || u.userType || '').toLowerCase();
+                return fullName.includes(q) || uname.includes(q) || batchId.includes(q) || type.includes(q);
+            });
+            renderPingUserList(filtered);
+        }
+        function selectPingUser(username) {
+            const u = _pingUserListSorted.find(x => x.username === username);
+            document.getElementById('ping-user-select').value = username;
+            document.getElementById('ping-user-search').value = u ? (u.full_name || username) + ' \u00B7 @' + username : username;
+            closePingUserList();
+        }
+        function openPingUserList() {
+            const listEl = document.getElementById('ping-user-list');
+            if (listEl) listEl.style.display = 'block';
+        }
+        function closePingUserList() {
+            const listEl = document.getElementById('ping-user-list');
+            if (listEl) listEl.style.display = 'none';
+        }
+        document.addEventListener('click', function (e) {
+            const wrap = document.getElementById('ping-user-row');
+            if (wrap && !wrap.contains(e.target)) closePingUserList();
+        });
+        // First name of the signed-in admin, used to attribute a ping (e.g.
+        // "Jane Doe" -> "Jane"). Falls back gracefully if a full name isn't set.
+        function firstNameOf(fullName) {
+            const trimmed = String(fullName || '').trim();
+            if (!trimmed) return 'Administrator';
+            return trimmed.split(/\s+/)[0];
         }
         function sendPing() {
             const text = document.getElementById('ping-text-input').value.trim();
@@ -3253,9 +3348,14 @@
                 target = document.getElementById('ping-user-select').value;
                 if (!target) { showToast('Select a user to ping.', 'error'); return; }
             }
+            // Attribute the ping: the hardcoded Master Account always shows as
+            // "System Administrator"; any other Admin shows as "Admin <First Name>".
+            const pingSession = getSession();
+            const isMasterSender = !!(pingSession && pingSession.username === 'LSHADMIN123');
+            const sentBy = isMasterSender ? 'System Administrator' : ('Admin ' + firstNameOf(pingSession && pingSession.fullName));
             fetch('/api/ping', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ text, target })
+                body: JSON.stringify({ text, target, by: sentBy })
             })
             .then(r => r.json())
             .then(data => {
@@ -3327,7 +3427,8 @@
                 const isForMe = state.ping.target === '__all__' || (myUsername && state.ping.target === myUsername);
                 const isFresh = !state.ping.firedAt || (Date.now() - new Date(state.ping.firedAt).getTime()) < 10000;
                 if (isForMe && isFresh) {
-                    showToast('📣 ' + (state.ping.text || 'You have been pinged by an Administrator.'), 'success', 5000);
+                    const byLine = 'By: ' + (state.ping.by || 'System Administrator');
+                    showToast('📣 ' + (state.ping.text || 'You have been pinged by an Administrator.'), 'ping', 6000, byLine);
                 }
                 lastPingId = state.ping.id;
             }
