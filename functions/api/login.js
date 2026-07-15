@@ -1,4 +1,4 @@
-import { json, logActivity, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat } from '../_utils.js';
+import { json, logActivity, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName } from '../_utils.js';
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
@@ -33,8 +33,7 @@ export async function onRequestPost({ request, env }) {
         return json({ success: false, error: 'Your access has been temporarily revoked by an administrator.' }, 403);
     }
     await logActivity(db, user.username, user.batch_id, 'login', null);
-    const fullName = [user.first_name, user.mi ? user.mi.replace(/\.$/, '') + '.' : '', user.last_name].filter(Boolean).join(' ')
-        + (user.suffix ? ', ' + user.suffix : '');
+    const fullName = buildFullName(user);
     // Seed the heartbeat row immediately so the first API call after login
     // (and the first client ping) both pass the grace-window check.
     await upsertSessionHeartbeat(db, {
