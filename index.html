@@ -795,12 +795,13 @@
                     <table class="treat-table w-full">
                         <thead>
                             <tr>
-                                <th width="190">Medical Facility</th>
-                                <th width="170">Specialty</th>
-                                <th width="180">Provider Contact</th>
-                                <th width="170">Dates of Treatment</th>
-                                <th width="150">Treatment Status</th>
-                                <th width="140">Invoiced Charges</th>
+                                <th width="160">Medical Facility</th>
+                                <th width="140">Specialty</th>
+                                <th width="130">Phone</th>
+                                <th width="150">Email</th>
+                                <th width="150">Dates of Treatment</th>
+                                <th width="130">Treatment Status</th>
+                                <th width="120">Invoiced Charges</th>
                                 <th width="30"></th>
                             </tr>
                         </thead>
@@ -917,7 +918,7 @@
 
             <div id="pane-docs" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
-                    <div class="section-head">Quick Label Portal</div>
+                    <div class="section-head">Documents</div>
                     <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
                         <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
                         <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
@@ -1637,7 +1638,8 @@
                         <button id="rev-${id}" onclick="revertOther('sel-${id}', 'oth-${id}', this.id)" class="revert-btn">↺</button>
                     </div>
                 </td>
-                <td><div contenteditable="true" class="text-xs" data-ph="Phone / Email" data-fmt="phone"></div></td>
+                <td><div contenteditable="true" class="text-xs" data-ph="(000) 000-0000" data-fmt="phone"></div></td>
+                <td><div contenteditable="true" class="text-xs" data-ph="name@example.com" data-fmt="email"></div></td>
                 <td><div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY – MM/DD/YYYY"></div></td>
                 <td><select class="prof-input text-xs"><option>Ongoing</option><option>Discharged</option><option>Referred Out</option><option>Pending Records</option></select></td>
                 <td><div contenteditable="true" class="med-field font-black text-green-700 text-xs" data-ph="$ 0.00" data-fmt="currency"></div></td>
@@ -2199,7 +2201,7 @@
                 + (item.canEdit ? '' : ' <span style="font-size:9px;font-weight:800;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle;">VIEW ONLY</span>');
             return `<div onclick="loadCase(${item.id})" class="repo-card group p-3 rounded-lg">
                 <span class="repo-name block font-bold text-xs mb-1">${item.clientName || 'Unnamed Client'}${badges}</span>
-                <span style="font-size:9px;color:#64748b;">by ${item.ownerUsername}</span>
+                <span style="font-size:9px;color:#64748b;">By ${item.submittedBy || item.ownerUsername}</span>
                 ${item.canEdit ? `<button onclick="deleteCase(${item.id}, event)" class="absolute top-1 right-2 text-slate-500">×</button>` : ''}
             </div>`;
         }
@@ -2277,7 +2279,7 @@
             return `<div class="reg-row" style="cursor:pointer;" onclick="loadCase(${item.id})">
                 <div class="reg-info">
                     <b>${item.clientName || 'Unnamed Client'}${viewOnly}</b>
-                    <div class="reg-meta">${item.caseId || 'DRAFT — no Case ID yet'} ${item.phase ? '&middot; ' + item.phase : ''} &middot; by ${item.ownerUsername} &middot; updated ${new Date(item.updatedAt).toLocaleString()}</div>
+                    <div class="reg-meta">${item.caseId || 'DRAFT — no Case ID yet'} ${item.phase ? '&middot; ' + item.phase : ''} &middot; By ${item.submittedBy || item.ownerUsername} &middot; updated ${new Date(item.updatedAt).toLocaleString()}</div>
                 </div>
                 ${item.canEdit ? `<button class="mini-btn reject" onclick="deleteCase(${item.id}, event)">Delete</button>` : ''}
             </div>`;
@@ -2358,6 +2360,37 @@
             // see the dedicated Doc Hub section built below instead, which is
             // appended LAST, after every other card, per the requested PDF
             // ordering).
+            //
+            // Every field is always included, even if blank (shown as
+            // "None") — this section used to skip empty fields entirely.
+            // findFieldLabel() also fixes table-based sections (Chronology,
+            // Treatment Matrix, Litigation, Finance, Notes, Tasks, Liens):
+            // those cells have no <label> sibling, so they used to all fall
+            // back to a generic "Detail" — now each cell's label comes from
+            // its column's real <thead> header instead.
+            function findFieldLabel(input) {
+                const td = input.closest('td');
+                if (td) {
+                    const tr = td.closest('tr');
+                    const table = td.closest('table');
+                    if (tr && table) {
+                        const cellIndex = Array.prototype.indexOf.call(tr.children, td);
+                        const headRow = table.querySelector('thead tr');
+                        if (headRow && headRow.children[cellIndex]) {
+                            const label = headRow.children[cellIndex].innerText.trim();
+                            if (label) return label;
+                        }
+                    }
+                    return 'Detail';
+                }
+                if (input.previousElementSibling && input.previousElementSibling.tagName === 'LABEL') {
+                    return input.previousElementSibling.innerText;
+                }
+                if (input.closest('div') && input.closest('div').querySelector('label')) {
+                    return input.closest('div').querySelector('label').innerText;
+                }
+                return 'Detail';
+            }
             const cards = document.querySelectorAll('.pdf-card');
             cards.forEach(card => {
                 if (card.closest('#pane-docs')) return;
@@ -2367,18 +2400,12 @@
                 const inputs = card.querySelectorAll('[contenteditable="true"], select');
                 inputs.forEach(input => {
                     const val = input.tagName === 'SELECT' ? input.value : input.innerText.trim();
-                    if (val) {
-                        let labelText = "Detail";
-                        if (input.previousElementSibling && input.previousElementSibling.tagName === "LABEL") {
-                            labelText = input.previousElementSibling.innerText;
-                        } else if (input.closest('div') && input.closest('div').querySelector('label')) {
-                            labelText = input.closest('div').querySelector('label').innerText;
-                        }
-                        sectionContent += `<div style="margin-bottom: 11px; padding-bottom: 6px; border-bottom: 1px solid #f1f5f9; break-inside: avoid;">
-                            <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing:0.04em;">${labelText}</div>
-                            <div style="font-size: 12px; font-weight: 600; color: #0f2148; margin-top:2px;">${val}</div>
-                        </div>`;
-                    }
+                    const labelText = findFieldLabel(input);
+                    const displayVal = val || 'None';
+                    sectionContent += `<div style="margin-bottom: 11px; padding-bottom: 6px; border-bottom: 1px solid #f1f5f9; break-inside: avoid;">
+                        <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing:0.04em;">${labelText}</div>
+                        <div style="font-size: 12px; font-weight: 600; color: ${val ? '#0f2148' : '#94a3b8'}; margin-top:2px;${val ? '' : ' font-style:italic;'}">${displayVal}</div>
+                    </div>`;
                 });
                 if (sectionContent) {
                     virtualPage.innerHTML += `<div style="margin-bottom: 26px; break-inside: avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
@@ -2404,7 +2431,6 @@
                 const summaryEl = row.querySelector('[contenteditable="true"]');
                 const summary = summaryEl ? summaryEl.innerText.trim() : '';
                 const linkEl = row.querySelector('.doc-attachment a');
-                if (!category && !summary && !linkEl) return; // skip fully empty rows
 
                 let attachmentHtml = '';
                 if (linkEl) {
@@ -2415,17 +2441,19 @@
                     } else {
                         attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">📎 Attached file: ${filename}</div>`;
                     }
+                } else {
+                    attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-style:italic;color:#94a3b8;">No attachment</div>`;
                 }
 
                 docHubContent += `<div style="margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; break-inside: avoid;">
                     <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size: 9px; font-weight: 900; color: #9a3412; text-transform: uppercase; letter-spacing:0.05em;">${category || 'Uncategorized'}</div>
-                    ${summary ? `<div style="font-size: 12px; font-weight: 600; color: #0f2148; margin-top:4px;">${summary}</div>` : ''}
+                    <div style="font-size: 12px; font-weight: 600; color: ${summary ? '#0f2148' : '#94a3b8'}; margin-top:4px;${summary ? '' : ' font-style:italic;'}">${summary || 'None'}</div>
                     ${attachmentHtml}
                 </div>`;
             });
             if (docHubContent) {
                 virtualPage.innerHTML += `<div style="margin-bottom: 26px; break-inside: avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
-                    <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">Doc Hub</div>
+                    <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">Documents</div>
                     <div style="padding: 16px 18px;">${docHubContent}</div>
                 </div>`;
             }
@@ -2954,7 +2982,7 @@
             container.innerHTML = sorted.slice(0, 100).map(c => (
                 '<div class="reg-row" style="cursor:pointer;" onclick="loadCase(' + c.id + ')">' +
                 '<div class="reg-info"><b>' + (c.clientName || 'Untitled Case') + ' <span class="status-pill ' + (c.isDraft ? 'status-pending' : 'status-approved') + '">' + (c.isDraft ? 'DRAFT' : (c.phase || '')) + '</span></b>' +
-                '<div class="reg-meta">By @' + c.ownerUsername + ' \u00B7 Batch ' + (c.ownerBatchId || '\u2014') + ' \u00B7 Case ID ' + (c.caseId || '\u2014') + ' \u00B7 Updated ' + new Date(c.updatedAt).toLocaleString() + '</div></div>' +
+                '<div class="reg-meta">By ' + (c.submittedBy || c.ownerUsername) + ' \u00B7 Batch ' + (c.ownerBatchId || '\u2014') + ' \u00B7 Case ID ' + (c.caseId || '\u2014') + ' \u00B7 Updated ' + new Date(c.updatedAt).toLocaleString() + '</div></div>' +
                 '<div style="font-size:11px;color:#64748b;">Open &rarr;</div></div>'
             )).join('');
         }
