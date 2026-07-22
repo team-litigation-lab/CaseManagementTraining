@@ -1037,6 +1037,7 @@
             <button class="mc-tab" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></button>
             <button class="mc-tab" onclick="showAdminDashTab('users')">Users</button>
             <button class="mc-tab" onclick="showAdminDashTab('monitoring')">Monitoring</button>
+            <button class="mc-tab" onclick="showAdminDashTab('case-logs')">Case Logs</button>
             <button class="mc-tab" onclick="showAdminDashTab('announce')">Broadcast &amp; Ping</button>
             <button class="mc-tab" onclick="showAdminDashTab('access')">Access Control</button>
         </div>
@@ -1098,15 +1099,28 @@
                 <div id="users-list"></div>
             </div>
 
-            <!-- MONITORING (individual + by group) -->
+            <!-- MONITORING (live sessions + Server Logs) -->
             <div class="mc-pane" id="admin-dash-monitoring">
-                <div class="mc-section-title">🟢 Trainees Online — Individually &amp; By Group (Batch)</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Live view of who is signed in and working, grouped by Batch ID. Click a name to view their latest saved (or autosaved) case, read-only.</p>
+                <div class="mc-section-title">🟢 Trainees Online</div>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Live view of who is signed in and working right now. Click a name to view their latest saved (or autosaved) case, read-only.</p>
                 <div id="monitoring-online-list"></div>
 
-                <div class="mc-section-title">📄 Case Review — Recent Submitted / Autosaved Work</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Every case in the shared repository, most recently updated first, including drafts. Click a row to open it directly in your workspace.</p>
-                <div id="monitoring-cases-list"></div>
+                <div class="mc-section-title">🗄 Server Logs</div>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Log-ins, log-outs, pauses, pings, locks, and revocations, with duration where applicable.</p>
+                <div class="admin-tile" style="cursor:pointer;" onclick="openServerLogs()" onkeydown="if(event.key==='Enter')openServerLogs()" tabindex="0" role="button">
+                    <h4>Server Logs</h4>
+                    <p style="font-size:12px;color:var(--navy);font-weight:700;margin:0;">Click to view the full activity record &rarr;</p>
+                </div>
+            </div>
+
+            <!-- CASE LOGS (search, chronological list, versions, full view) -->
+            <div class="mc-pane" id="admin-dash-case-logs">
+                <div class="mc-section-title">🔍 Search Case</div>
+                <input type="text" id="case-logs-search" oninput="renderCaseLogs()" placeholder="Search by client name or Case ID..." style="width:100%; padding:9px 12px; margin-bottom:16px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
+
+                <div class="mc-section-title">📄 All Cases — Most Recently Modified First</div>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Every case in the shared repository, including drafts, sorted by most recent modification.</p>
+                <div id="case-logs-list"></div>
             </div>
 
             <!-- ANNOUNCEMENTS & ALERTS -->
@@ -1309,6 +1323,43 @@
             <div id="monitor-case-body" style="overflow-y:auto; flex:1;"></div>
             <div class="modal-btn-row">
                 <button class="btn-ghost" onclick="closeMonitorCase()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SERVER LOGS MODAL (Admin > Monitoring > Server Logs) ===== -->
+    <div class="modal-overlay no-print" id="server-logs-modal" style="z-index:2960;">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif">Server Logs</h2>
+            <div class="sub mono">Log-ins, log-outs, pauses, pings, locks &amp; revocations</div>
+            <div id="server-logs-list" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeServerLogs()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CASE VERSIONS MODAL (Admin > Case Logs > See Previous Versions) ===== -->
+    <div class="modal-overlay no-print" id="case-versions-modal" style="z-index:2965;">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif" id="case-versions-title">Previous Versions</h2>
+            <div class="sub mono">Read-only — snapshot at time of each save</div>
+            <div id="case-versions-list" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeCaseVersions()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CASE VERSION / FULL CASE VIEW MODAL (read-only) ===== -->
+    <div class="modal-overlay no-print" id="case-logs-view-modal" style="z-index:2970;">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif" id="case-logs-view-title">View Case</h2>
+            <div class="sub mono" id="case-logs-view-sub">Read-only</div>
+            <div id="case-logs-view-meta"></div>
+            <div id="case-logs-view-body" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeCaseLogsView()">Close</button>
             </div>
         </div>
     </div>
@@ -2222,6 +2273,7 @@
             } catch (e) { /* keep showing the last-known cache on a transient network error */ }
             renderRepo();
             renderAllCasesModal();
+            renderCaseLogs();
         }
         setInterval(refreshRepoCache, 15000); // passive background refresh so shared changes show up without a manual reload
 
@@ -2732,7 +2784,7 @@
         // Kept for backward compatibility with older markup/links.
         function closeAdminDashboard() { exitMasterControl(); }
 
-        const MC_TABS = ['overview', 'registrations', 'users', 'monitoring', 'announce', 'access'];
+        const MC_TABS = ['overview', 'registrations', 'users', 'monitoring', 'case-logs', 'announce', 'access'];
         function showAdminDashTab(tab) {
             document.querySelectorAll('.mc-tab').forEach((t, i) => t.classList.toggle('active', MC_TABS[i] === tab));
             document.querySelectorAll('.mc-pane').forEach(p => p.classList.remove('active'));
@@ -2740,6 +2792,7 @@
             if (pane) pane.classList.add('active');
             if (tab === 'registrations' || tab === 'users' || tab === 'overview' || tab === 'announce') refreshUsersAndRegistrations();
             if (tab === 'monitoring') refreshMonitoring();
+            if (tab === 'case-logs') refreshCaseLogs();
         }
 
         /* =========================================================
@@ -2988,22 +3041,25 @@
         }
 
         /* =========================================================
-           MONITORING — online trainees (individually & by group), with
-           click-to-view of each user's latest saved case, plus a Case
-           Review list — both now backed by /api/heartbeat and the
-           server-side case repository (/api/case-repository,
-           /api/monitor-case), replacing the old append-only /api/cases log.
+           MONITORING — reset to a single live-sessions view: who's
+           online right now, click a name to view their latest saved
+           case (read-only). Case Review has moved to its own "Case
+           Logs" tab (see below). Backed by /api/heartbeat and
+           /api/monitor-case.
+
+           NOTE: deleted (permanently revoked) accounts never appear
+           here — revoke-user.js deletes their heartbeat row the
+           moment they're revoked, so there's no separate filtering
+           needed on this side.
            ========================================================= */
         function refreshMonitoring() {
             fetch('/api/heartbeat', { credentials: 'include' })
                 .then(r => r.json())
                 .then(list => renderMonitoringOnline(Array.isArray(list) ? list : []))
                 .catch(() => renderMonitoringOnline([]));
-            renderMonitoringCases(_repoCache); // reuse the already-fetched shared repo cache — Admins see drafts too
         }
-        // Same separation/sort mechanism as the Users tab (see renderUsersList):
-        // Admin/Trainee segregation -> Trainees further grouped by Batch date ->
-        // both sorted by <XXX> sequence number, via the shared parseBatchId().
+        // Flat list, no Batch ID grouping — sorted online-first, then by
+        // most recently seen.
         function renderMonitoringOnline(list) {
             const now = Date.now();
             list.forEach(u => u._online = (now - new Date(u.last_seen).getTime()) < HEARTBEAT_GRACE_MS * 2);
@@ -3015,10 +3071,6 @@
             if (!container) return;
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No sessions recorded yet.</p>'; return; }
 
-            function seqOf(u) {
-                const p = parseBatchId(u.batch_id || u.batchId);
-                return p ? p.seq : Number.MAX_SAFE_INTEGER; // unparseable batch ids sort last, never crash
-            }
             function rowHtml(u) {
                 return '<div class="reg-row" style="cursor:pointer;" onclick="openMonitorCase(' + JSON.stringify(u.username) + ')"><div class="reg-info">' +
                     '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + (u.full_name || u.username) + '</b>' +
@@ -3026,92 +3078,176 @@
                     '</div><div style="font-size:11px;color:#64748b;">View Latest Saved \u2192</div></div>';
             }
 
-            const admins = list.filter(u => (u.user_type || u.userType) === 'Admin').sort((a, b) => seqOf(a) - seqOf(b));
-            const trainees = list.filter(u => (u.user_type || u.userType) !== 'Admin');
-
-            let html = '<div class="group-heading">Admins &middot; ' + admins.length + '</div>';
-            html += admins.length
-                ? admins.map(rowHtml).join('')
-                : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No admin sessions recorded.</p>';
-
-            html += '<div class="group-heading">Trainees &middot; ' + trainees.length + '</div>';
-            if (!trainees.length) {
-                html += '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No trainee sessions recorded.</p>';
-            } else {
-                const byBatchDate = {};
-                trainees.forEach(u => {
-                    const p = parseBatchId(u.batch_id || u.batchId);
-                    const key = p ? ('B' + p.dateStr) : 'Unassigned Batch';
-                    (byBatchDate[key] = byBatchDate[key] || []).push(u);
-                });
-                Object.keys(byBatchDate).sort().forEach(batchKey => {
-                    const members = byBatchDate[batchKey].sort((a, b) => seqOf(a) - seqOf(b));
-                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + batchKey + ' &middot; ' + members.length + ' member(s)</div>';
-                    html += members.map(rowHtml).join('');
-                });
-            }
-            container.innerHTML = html;
+            const sorted = list.slice().sort((a, b) => (b._online - a._online) || (new Date(b.last_seen) - new Date(a.last_seen)));
+            container.innerHTML = sorted.map(rowHtml).join('');
         }
-        // Same separation/sort mechanism as the Users tab (see renderUsersList):
-        // Admin/Trainee segregation -> Trainees grouped by Batch date -> both
-        // sorted by <XXX> sequence number, via the shared parseBatchId(). A
-        // case record doesn't carry its owner's user_type, so that (and a
-        // fallback batch id) is resolved via the last-fetched Users cache
-        // (_activeUsersCache). Still capped to the 100 most-recently-updated
-        // cases first, so the list can't grow unbounded, with recency used
-        // as the tiebreaker within each group.
-        function renderMonitoringCases(list) {
-            const container = document.getElementById('monitoring-cases-list');
+
+        /* =========================================================
+           SERVER LOGS (Monitoring > Server Logs clickable panel) —
+           backed by /api/server-logs, which reshapes the existing
+           activity_log table (login, logout, pause/resume, lock/
+           unlock, ping, and the three revocation actions) with a
+           computed duration for the paired event types.
+           ========================================================= */
+        function openServerLogs() {
+            document.getElementById('server-logs-modal').classList.add('open');
+            document.getElementById('server-logs-list').innerHTML = '<p style="font-size:12px;color:#94a3b8;">Loading...</p>';
+            fetch('/api/server-logs', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => renderServerLogs((data && data.success) ? data.logs : []))
+                .catch(() => renderServerLogs([]));
+        }
+        function closeServerLogs() { document.getElementById('server-logs-modal').classList.remove('open'); }
+        function formatDuration(seconds) {
+            if (seconds == null) return '';
+            if (seconds < 60) return seconds + 's';
+            const m = Math.floor(seconds / 60), s = seconds % 60;
+            if (m < 60) return m + 'm ' + s + 's';
+            const h = Math.floor(m / 60), rm = m % 60;
+            return h + 'h ' + rm + 'm';
+        }
+        function renderServerLogs(logs) {
+            const container = document.getElementById('server-logs-list');
             if (!container) return;
-            if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No cases have been saved yet.</p>'; return; }
-
-            const recent = list.slice().sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 100);
-
-            function ownerInfo(c) {
-                const owner = (_activeUsersCache || []).find(u => u.username === (c.ownerUsername || c.submittedBy));
-                return {
-                    type: (owner && (owner.user_type || owner.userType)) || 'Trainee',
-                    batchId: (owner && (owner.batch_id || owner.batchId)) || c.ownerBatchId
-                };
-            }
-            function seqOf(batchId) {
-                const p = parseBatchId(batchId);
-                return p ? p.seq : Number.MAX_SAFE_INTEGER; // unparseable batch ids sort last, never crash
-            }
-            function rowHtml(c) {
-                return '<div class="reg-row" style="cursor:pointer;" onclick="loadCase(' + c.id + ')">' +
-                    '<div class="reg-info"><b>' + (c.clientName || 'Untitled Case') + ' <span class="status-pill ' + (c.isDraft ? 'status-pending' : 'status-approved') + '">' + (c.isDraft ? 'DRAFT' : (c.phase || '')) + '</span></b>' +
-                    '<div class="reg-meta">By ' + (c.submittedBy || c.ownerUsername) + ' \u00B7 Batch ' + (c.ownerBatchId || '\u2014') + ' \u00B7 Case ID ' + (c.caseId || '\u2014') + ' \u00B7 Updated ' + new Date(c.updatedAt).toLocaleString() + '</div></div>' +
-                    '<div style="font-size:11px;color:#64748b;">Open &rarr;</div></div>';
-            }
-
-            const admins = recent.filter(c => ownerInfo(c).type === 'Admin')
-                .sort((a, b) => seqOf(ownerInfo(a).batchId) - seqOf(ownerInfo(b).batchId) || new Date(b.updatedAt) - new Date(a.updatedAt));
-            const trainees = recent.filter(c => ownerInfo(c).type !== 'Admin');
-
-            let html = '<div class="group-heading">Admins &middot; ' + admins.length + '</div>';
-            html += admins.length
-                ? admins.map(rowHtml).join('')
-                : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No admin cases.</p>';
-
-            html += '<div class="group-heading">Trainees &middot; ' + trainees.length + '</div>';
-            if (!trainees.length) {
-                html += '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No trainee cases.</p>';
-            } else {
-                const byBatchDate = {};
-                trainees.forEach(c => {
-                    const p = parseBatchId(ownerInfo(c).batchId);
-                    const key = p ? ('B' + p.dateStr) : 'Unassigned Batch';
-                    (byBatchDate[key] = byBatchDate[key] || []).push(c);
-                });
-                Object.keys(byBatchDate).sort().forEach(batchKey => {
-                    const members = byBatchDate[batchKey].sort((a, b) => seqOf(ownerInfo(a).batchId) - seqOf(ownerInfo(b).batchId) || new Date(b.updatedAt) - new Date(a.updatedAt));
-                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + batchKey + ' &middot; ' + members.length + ' case(s)</div>';
-                    html += members.map(rowHtml).join('');
-                });
-            }
-            container.innerHTML = html;
+            if (!logs.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No activity recorded yet.</p>'; return; }
+            container.innerHTML = logs.map(function (l) {
+                return '<div class="reg-row"><div class="reg-info">' +
+                    '<b>' + l.label + (l.durationSeconds != null ? ' <span class="status-pill status-approved">' + formatDuration(l.durationSeconds) + '</span>' : '') + '</b>' +
+                    '<div class="reg-meta">' + (l.actorUsername ? '@' + l.actorUsername : 'System') + (l.actorBatch ? ' \u00B7 Batch ' + l.actorBatch : '') + ' \u00B7 ' + new Date(l.occurredAt).toLocaleString() + '</div>' +
+                    '</div></div>';
+            }).join('');
         }
+
+        /* =========================================================
+           CASE LOGS (Master Control > Case Logs) — Search Case, all
+           cases sorted by most recent modification, See Previous
+           Versions (backed by /api/case-versions), and View Full Case
+           (the current version, read-only, backed by
+           /api/case-repository?id=).
+           ========================================================= */
+        function refreshCaseLogs() {
+            renderCaseLogs(); // reuses the already-fetched shared repo cache (_repoCache)
+        }
+        function renderCaseLogs() {
+            const container = document.getElementById('case-logs-list');
+            if (!container) return;
+            const searchEl = document.getElementById('case-logs-search');
+            const query = (searchEl ? searchEl.value : '').trim().toLowerCase();
+
+            let list = _repoCache.slice();
+            if (query) {
+                list = list.filter(c =>
+                    (c.clientName || '').toLowerCase().includes(query) ||
+                    (c.caseId || '').toLowerCase().includes(query)
+                );
+            }
+            list.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+            if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No matching cases.</p>'; return; }
+
+            container.innerHTML = list.map(function (c) {
+                return '<div class="reg-row"><div class="reg-info">' +
+                    '<b>' + (c.clientName || 'Untitled Case') + ' <span class="status-pill ' + (c.isDraft ? 'status-pending' : 'status-approved') + '">' + (c.isDraft ? 'DRAFT' : (c.phase || '')) + '</span></b>' +
+                    '<div class="reg-meta">By ' + (c.submittedBy || c.ownerUsername) + ' \u00B7 Case ID ' + (c.caseId || '\u2014') + ' \u00B7 Modified ' + new Date(c.updatedAt).toLocaleString() + '</div>' +
+                    '</div><div style="display:flex;gap:8px;">' +
+                    '<button class="mini-btn" style="background:var(--navy);color:white;" onclick="openCaseVersions(' + c.id + ', event)">See Previous Versions</button>' +
+                    '<button class="mini-btn" style="background:#16a34a;color:white;" onclick="openCaseLogsFullView(' + c.id + ', event)">View Full Case</button>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        function openCaseVersions(caseRepositoryId, evt) {
+            if (evt) evt.stopPropagation();
+            document.getElementById('case-versions-modal').classList.add('open');
+            document.getElementById('case-versions-list').innerHTML = '<p style="font-size:12px;color:#94a3b8;">Loading...</p>';
+            fetch('/api/case-versions?caseRepositoryId=' + encodeURIComponent(caseRepositoryId), { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => renderCaseVersions(caseRepositoryId, (data && data.success) ? data.versions : []))
+                .catch(() => renderCaseVersions(caseRepositoryId, []));
+        }
+        function renderCaseVersions(caseRepositoryId, versions) {
+            const container = document.getElementById('case-versions-list');
+            if (!container) return;
+            if (!versions.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No previous versions recorded for this case yet.</p>'; return; }
+            container.innerHTML = versions.map(function (v) {
+                return '<div class="reg-row" style="cursor:pointer;" onclick="openCaseVersionView(' + caseRepositoryId + ', ' + v.id + ')"><div class="reg-info">' +
+                    '<b>' + (v.clientName || 'Untitled Case') + ' <span class="status-pill ' + (v.isDraft ? 'status-pending' : 'status-approved') + '">' + (v.isDraft ? 'DRAFT' : (v.phase || '')) + '</span></b>' +
+                    '<div class="reg-meta">Saved by ' + (v.savedBy || '\u2014') + (v.savedByBatch ? ' \u00B7 Batch ' + v.savedByBatch : '') + ' \u00B7 ' + new Date(v.savedAt).toLocaleString() + '</div>' +
+                    '</div><div style="font-size:11px;color:#64748b;">View &rarr;</div></div>';
+            }).join('');
+        }
+        function closeCaseVersions() { document.getElementById('case-versions-modal').classList.remove('open'); }
+
+        // Renders a read-only snapshot (either a past version, or the current
+        // full case) into the shared case-logs-view-modal, reusing the same
+        // detached-clone technique as openMonitorCase().
+        function renderReadOnlyCaseInto(elIds, meta, content) {
+            document.getElementById(elIds.title).innerText = meta.title;
+            document.getElementById(elIds.sub).innerText = meta.sub;
+            document.getElementById(elIds.meta).innerHTML = meta.metaHtml;
+            if (_emptyCaptureAreaTemplate) {
+                const offscreen = _emptyCaptureAreaTemplate.cloneNode(true);
+                applyCaseContentToDOM(content, offscreen);
+                document.getElementById(elIds.body).innerHTML = extractReadableSections(offscreen);
+            } else {
+                document.getElementById(elIds.body).innerHTML = '<p style="font-size:12px;color:#94a3b8;">Preview unavailable.</p>';
+            }
+        }
+        async function openCaseVersionView(caseRepositoryId, versionId) {
+            const modal = document.getElementById('case-logs-view-modal');
+            document.getElementById('case-logs-view-title').innerText = 'Previous Version';
+            document.getElementById('case-logs-view-body').innerHTML = '<p style="font-size:12px;color:#94a3b8;">Loading...</p>';
+            modal.classList.add('open');
+            try {
+                const res = await fetch('/api/case-versions?caseRepositoryId=' + encodeURIComponent(caseRepositoryId) + '&versionId=' + encodeURIComponent(versionId), { credentials: 'include' });
+                const data = await res.json();
+                if (!data || !data.success) {
+                    document.getElementById('case-logs-view-body').innerHTML = '<p style="font-size:12px;color:#94a3b8;">' + ((data && data.error) || 'Could not load this version.') + '</p>';
+                    return;
+                }
+                const v = data.version;
+                renderReadOnlyCaseInto(
+                    { title: 'case-logs-view-title', sub: 'case-logs-view-sub', meta: 'case-logs-view-meta', body: 'case-logs-view-body' },
+                    {
+                        title: 'Previous Version \u2014 ' + (v.clientName || 'Unnamed'),
+                        sub: 'Saved by ' + (v.savedBy || '\u2014') + ' \u00B7 ' + new Date(v.savedAt).toLocaleString(),
+                        metaHtml: '<div class="reg-meta" style="margin-bottom:10px;">' + (v.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + v.caseId)) + ' \u00B7 Phase: ' + (v.phase || '\u2014') + '</div>'
+                    },
+                    v.content
+                );
+            } catch (e) {
+                document.getElementById('case-logs-view-body').innerHTML = '<p style="font-size:12px;color:#94a3b8;">Network error loading this version.</p>';
+            }
+        }
+        async function openCaseLogsFullView(id, evt) {
+            if (evt) evt.stopPropagation();
+            const modal = document.getElementById('case-logs-view-modal');
+            document.getElementById('case-logs-view-title').innerText = 'Current Version';
+            document.getElementById('case-logs-view-body').innerHTML = '<p style="font-size:12px;color:#94a3b8;">Loading...</p>';
+            modal.classList.add('open');
+            try {
+                const res = await fetch('/api/case-repository?id=' + encodeURIComponent(id), { credentials: 'include' });
+                const data = await res.json();
+                if (!data || !data.success) {
+                    document.getElementById('case-logs-view-body').innerHTML = '<p style="font-size:12px;color:#94a3b8;">' + ((data && data.error) || 'Could not load this case.') + '</p>';
+                    return;
+                }
+                const c = data.case;
+                renderReadOnlyCaseInto(
+                    { title: 'case-logs-view-title', sub: 'case-logs-view-sub', meta: 'case-logs-view-meta', body: 'case-logs-view-body' },
+                    {
+                        title: 'Full Case \u2014 ' + (c.clientName || 'Unnamed'),
+                        sub: 'Current version \u00B7 last saved ' + new Date(c.updatedAt).toLocaleString(),
+                        metaHtml: '<div class="reg-meta" style="margin-bottom:10px;">' + (c.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + c.caseId)) + ' \u00B7 Phase: ' + (c.phase || '\u2014') + ' \u00B7 By ' + (c.submittedBy || c.ownerUsername) + '</div>'
+                    },
+                    c.content
+                );
+            } catch (e) {
+                document.getElementById('case-logs-view-body').innerHTML = '<p style="font-size:12px;color:#94a3b8;">Network error loading this case.</p>';
+            }
+        }
+        function closeCaseLogsView() { document.getElementById('case-logs-view-modal').classList.remove('open'); }
+
         // Admin clicks a trainee in the online list -> shows that user's
         // LATEST SAVED (or autosaved) case, read-only, without touching the
         // admin's own in-progress work in the main editor. Renders via a
