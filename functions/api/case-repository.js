@@ -8,6 +8,27 @@ import { json, requireSession, nextCaseId, isOwnerOrAdmin, buildFullName } from 
 // user. Drafts (is_draft = 1) are readable only by their owner or an Admin.
 // Modify/delete (POST update / DELETE): owner or Admin only, enforced here
 // server-side — never trust the UI alone for this.
+//
+// VERSION HISTORY: every successful create or update also writes a snapshot
+// into `case_versions` (see snapshotVersion() below and case-versions.js),
+// which is what powers Master Control > Case Logs > "See Previous Versions".
+// case_repository itself always holds only the current/latest state.
+//
+// Requires this table to exist (run once via wrangler d1 execute):
+//   CREATE TABLE IF NOT EXISTS case_versions (
+//     id INTEGER PRIMARY KEY AUTOINCREMENT,
+//     case_repository_id INTEGER NOT NULL,
+//     case_id TEXT,
+//     client_name TEXT,
+//     phase TEXT,
+//     is_draft INTEGER,
+//     content TEXT NOT NULL,
+//     med_total TEXT,
+//     saved_by TEXT,
+//     saved_by_batch TEXT,
+//     saved_at TEXT NOT NULL DEFAULT (datetime('now'))
+//   );
+//   CREATE INDEX IF NOT EXISTS idx_case_versions_repo ON case_versions(case_repository_id, saved_at DESC);
 
 function rowToListItem(row, session) {
     return {
@@ -32,6 +53,19 @@ function rowToFull(row, session) {
     let content = {};
     try { content = JSON.parse(row.content); } catch (e) { content = {}; }
     return Object.assign(rowToListItem(row, session), { content });
+}
+
+async function snapshotVersion(db, { caseRepositoryId, caseId, clientName, phase, isDraft, content, medTotal, savedBy, savedByBatch }) {
+    try {
+        await db.prepare(
+            `INSERT INTO case_versions
+                (case_repository_id, case_id, client_name, phase, is_draft, content, med_total, saved_by, saved_by_batch, saved_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+        ).bind(caseRepositoryId, caseId || null, clientName || '', phase || null, isDraft ? 1 : 0, content, medTotal || null, savedBy || null, savedByBatch || null).run();
+    } catch (e) {
+        // Never let version-history logging break the actual save.
+        console.error('case_versions snapshot failed', e);
+    }
 }
 
 export async function onRequestGet({ request, env }) {
@@ -104,6 +138,11 @@ export async function onRequestPost({ request, env }) {
              WHERE id = ?`
         ).bind(serializedContent, clientName || '', phase || null, medTotal || null, contentBytes, caseId, isDraftFlag, id).run();
 
+        await snapshotVersion(db, {
+            caseRepositoryId: id, caseId, clientName, phase, isDraft: isDraftFlag,
+            content: serializedContent, medTotal, savedBy: session.username, savedByBatch: session.batchId
+        });
+
         return json({ success: true, id: Number(id), caseId, isDraft: !!isDraftFlag });
     }
 
@@ -140,6 +179,11 @@ export async function onRequestPost({ request, env }) {
         submitterName, session.batchId || null, serializedContent, medTotal || null, contentBytes
     ).first();
 
+    await snapshotVersion(db, {
+        caseRepositoryId: result.id, caseId, clientName, phase, isDraft: isDraftFlag,
+        content: serializedContent, medTotal, savedBy: session.username, savedByBatch: session.batchId
+    });
+
     return json({ success: true, id: result.id, caseId, isDraft: !!isDraftFlag });
 }
 
@@ -159,5 +203,10 @@ export async function onRequestDelete({ request, env }) {
     }
 
     await db.prepare(`DELETE FROM case_repository WHERE id = ?`).bind(id).run();
+    // Deliberately leaving case_versions rows in place even though the case
+    // itself is deleted — they're keyed by case_repository_id, not a foreign
+    // key constraint, so they simply become orphaned history. If you want
+    // version rows purged along with the case, add:
+    //   await db.prepare(`DELETE FROM case_versions WHERE case_repository_id = ?`).bind(id).run();
     return json({ success: true });
 }
