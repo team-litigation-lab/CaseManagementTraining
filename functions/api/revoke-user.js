@@ -34,6 +34,14 @@ export async function onRequestPost({ request, env }) {
 
     await tombstoneUser(db, target, session.username);
     await db.prepare(`DELETE FROM users WHERE id = ?`).bind(userId).run();
+    // Also clear any live heartbeat row for this account. Without this, a
+    // user revoked while actively online would keep showing up in Master
+    // Control > Monitoring's "online now" list — a deleted account with a
+    // stale presence row — until their heartbeat naturally expired past the
+    // grace window. requireSession() already cuts off their API access
+    // immediately (live status re-check on every request); this just makes
+    // Monitoring reflect that same instant cutoff visually.
+    await db.prepare(`DELETE FROM heartbeats WHERE username = ?`).bind(target.username).run();
     // Deliberately no changes to the `cases` table here — those rows are
     // keyed by username, so the user's saved cases remain exactly as they
     // were, permanently accessible to admins for review even after the
