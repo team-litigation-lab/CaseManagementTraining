@@ -1,2105 +1,828 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CM Training Interface — Trainee Portal</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-  :root{
-    --bg-dark:#081226;
-    --bg-card-dark:#132a5c;
-    --bg-card-dark-hover:#1b3468;
-    --navy-header:#0f2148;
-    --orange:#f97316;
-    --orange-dark:#c2410c;
-    --peach:#fff7ed;
-    --white:#FFFFFF;
-    --ink:#0f172a;
-    --muted:#94a3b8;
-    --muted-dark:#64748b;
-    --input-bg:#f8fafc;
-    --green:#16a34a;
-    --green-dark:#166534;
-    --red:#b91c1c;
-    --line:#1e2c4d;
-    --line-light:#e2e8f0;
-    --r-lg:12px;
-    --r-md:8px;
-    --r-sm:8px;
-    --r-xs:6px;
-    --shadow-sm:0 1px 2px rgba(15,23,42,0.08);
-    --shadow-md:0 10px 30px rgba(15,23,42,0.12);
-    --shadow-lg:0 20px 60px rgba(0,0,0,0.35);
-  }
-  *{box-sizing:border-box;}
-  html,body{ height:100%; }
-  body{
-    margin:0;
-    background:#f8fafc;
-    color:var(--ink);
-    font-family:'IBM Plex Sans', Arial, Helvetica, sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  input,select,textarea,button{ font-family:'IBM Plex Sans', Arial, Helvetica, sans-serif; }
-  .mono{ font-family:'IBM Plex Mono','Courier New',monospace; }
-  ::selection{background:var(--orange); color:#fff;}
-  a,button,input,select,textarea,.nav-item,.pill,.status-badge{ transition:background 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease; }
-
-  ::-webkit-scrollbar{ width:9px; height:9px; }
-  ::-webkit-scrollbar-track{ background:transparent; }
-  ::-webkit-scrollbar-thumb{ background:rgba(138,147,166,0.35); border-radius:20px; }
-  ::-webkit-scrollbar-thumb:hover{ background:rgba(138,147,166,0.55); }
-
-  .app{ display:flex; min-height:100vh; }
-
-  /* ================= SIDEBAR ================= */
-  .sidebar{
-    width:290px;
-    flex-shrink:0;
-    background:var(--bg-dark);
-    color:#fff;
-    padding:24px 20px 20px 20px;
-    display:flex;
-    flex-direction:column;
-    gap:18px;
-  }
-  .logo-row{ display:flex; align-items:center; gap:12px; }
-  .logo-box{
-    width:50px; height:50px; background:transparent; border-radius:var(--r-sm);
-    border:2px solid var(--orange);
-    display:flex; align-items:center; justify-content:center;
-    font-weight:800; font-size:19px; color:#fff; font-family:'IBM Plex Mono','Courier New',monospace;
-    letter-spacing:0.5px; flex-shrink:0;
-  }
-  .logo-text .l1{ font-weight:800; font-size:14.5px; letter-spacing:0.3px; line-height:1.3; text-transform:uppercase; }
-  .logo-text .l2{ font-weight:700; font-size:10px; letter-spacing:1.5px; color:var(--orange); margin-top:1px; text-transform:uppercase; font-family:'IBM Plex Mono','Courier New',monospace; }
-
-  .field-label{ font-size:10px; letter-spacing:1.3px; color:var(--muted); margin-bottom:6px; }
-  .side-input{
-    width:100%; padding:10px 12px; background:var(--bg-card-dark);
-    border:1px solid var(--line); color:#fff; font-size:12.5px; border-radius:var(--r-xs);
-  }
-  .side-input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.18); }
-  .side-input::placeholder{ color:var(--muted-dark); }
-  .roletoggle{ display:flex; background:var(--bg-card-dark); border:1px solid var(--line); border-radius:var(--r-xs); overflow:hidden; padding:3px; gap:3px; }
-  .roletoggle button{
-    flex:1; border:none; background:transparent; color:var(--muted); border-radius:6px;
-    font-size:10.5px; letter-spacing:0.8px; padding:9px 6px; cursor:pointer; font-weight:800;
-    text-transform:uppercase; font-family:'IBM Plex Mono','Courier New',monospace;
-  }
-  .roletoggle button.active{ background:var(--orange); color:#0f2148; font-weight:800; }
-
-  .nav-label{ font-size:10px; letter-spacing:1.8px; color:var(--muted); margin:6px 0 2px 0; }
-  .nav-list{ display:flex; flex-direction:column; gap:8px; overflow-y:auto; }
-  .nav-item{
-    background:var(--bg-card-dark); border:1px solid var(--line); border-radius:var(--r-sm);
-    padding:11px 13px; cursor:pointer; position:relative;
-  }
-  .nav-item:hover{ background:var(--bg-card-dark-hover); transform:translateY(-1px); box-shadow:var(--shadow-sm); }
-  .nav-item.active{ background:var(--bg-card-dark-hover); border-color:var(--orange); box-shadow:0 0 0 1px var(--orange); }
-  .nav-item.locked{ opacity:0.45; cursor:not-allowed; }
-  .nav-item.locked:hover{ transform:none; box-shadow:none; }
-  .nav-item .title-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  .nav-item .name{ font-weight:700; font-size:12.5px; letter-spacing:0.2px; }
-  .nav-item .sub{ font-size:10.5px; color:var(--muted); margin-top:4px; font-family:'IBM Plex Mono','Courier New',monospace; }
-  .pill{
-    font-size:9px; letter-spacing:0.8px; padding:3px 8px; border-radius:20px; border:1px solid var(--orange);
-    color:var(--orange); white-space:nowrap; font-weight:800; text-transform:uppercase;
-    font-family:'IBM Plex Mono','Courier New',monospace;
-  }
-  .pill.gray{ border-color:var(--muted-dark); color:var(--muted); }
-  .pill.green{ border-color:var(--green); color:var(--green); }
-
-  .sidebar-spacer{ flex:1; }
-  .btn-full{
-    width:100%; padding:11px; border:none; font-size:11px; letter-spacing:0.8px; font-weight:800;
-    cursor:pointer; border-radius:var(--r-xs); text-transform:uppercase; font-family:'IBM Plex Mono','Courier New',monospace;
-  }
-  .btn-green{ background:var(--green); color:#fff; }
-  .btn-green:hover{ background:var(--green-dark); }
-  .btn-outline-red{ background:transparent; border:1px solid var(--red); color:#fca5a5; }
-  .btn-outline-red:hover{ background:rgba(185,28,28,0.15); }
-  .signed-in{ font-size:10.5px; color:var(--muted); text-align:center; line-height:1.6; font-family:'IBM Plex Mono','Courier New',monospace; }
-  .signed-in b{ color:#fff; }
-
-  /* ================= TOPBAR ================= */
-  .topbar{
-    background:var(--bg-dark); color:#fff; padding:10px 26px;
-    display:flex; align-items:center; gap:18px; border-bottom:2px solid var(--orange);
-    font-size:11px; letter-spacing:0.5px; flex-wrap:wrap;
-    font-family:'IBM Plex Mono','Courier New',monospace; font-weight:700;
-  }
-  .topbar .badge{ background:var(--orange); color:var(--bg-dark); font-weight:900; padding:3px 10px; letter-spacing:1.5px; border-radius:3px; }
-  .topbar .portal-title{ font-weight:700; letter-spacing:0.5px; font-size:10px; color:#cbd5e1; }
-  .topbar .announce{ color:var(--orange); font-weight:900; letter-spacing:1.5px; font-size:10px; }
-  .topbar .announce-text{ color:#e2e8f0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:360px; font-weight:600; }
-  .topbar .spacer{ flex:1; }
-  .topbar .clock{ color:#e2e8f0; }
-  .topbar select.loc{
-    background:#0f172a; color:var(--orange); border:1px solid var(--line); padding:3px 6px; font-size:10px; border-radius:4px; cursor:pointer;
-    font-family:'IBM Plex Mono','Courier New',monospace; font-weight:700;
-  }
-
-  /* ================= MAIN ================= */
-  .main{ flex:1; padding:28px; min-width:0; }
-  .card{
-    background:var(--white); border:1px solid var(--line-light); border-radius:var(--r-lg);
-    padding:26px 30px; margin-bottom:20px; box-shadow:var(--shadow-md);
-  }
-  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap; }
-  .card-head h1{
-    font-family:'IBM Plex Sans', Arial, Helvetica, sans-serif; font-style:normal; font-weight:800; font-size:22px;
-    color:var(--navy-header); margin:0 0 6px 0; letter-spacing:0.2px; text-transform:uppercase;
-  }
-  .card-head .intro{ color:var(--muted-dark); font-size:12px; max-width:560px; line-height:1.65; }
-  .stamp{
-    font-family:'IBM Plex Mono','Courier New',monospace; font-style:normal; font-weight:800; font-size:11px; letter-spacing:1.5px;
-    color:var(--orange); background:rgba(249,115,22,0.1); border-radius:20px; padding:6px 14px;
-    text-align:right; display:inline-block; text-transform:uppercase;
-  }
-  .meta-mini{ font-size:10px; color:var(--muted-dark); letter-spacing:1px; text-align:right; margin-top:8px; font-family:'IBM Plex Mono','Courier New',monospace;}
-
-  .stat-bar{
-    background:var(--bg-dark); border-radius:var(--r-md); margin-top:18px; padding:16px 20px;
-    display:flex; gap:34px; flex-wrap:wrap; align-items:center; color:#fff;
-    border-left:4px solid var(--orange);
-  }
-  .stat{ }
-  .stat .lbl{ font-size:9.5px; letter-spacing:1.3px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; font-weight:800; }
-  .stat .val{ font-size:16px; font-weight:800; font-family:'IBM Plex Mono','Courier New',monospace; }
-  .stat-bar .grow{ flex:1; }
-  .role-chip{
-    background:rgba(249,115,22,0.15); border:1px solid var(--orange); color:var(--orange); border-radius:20px;
-    padding:6px 14px; font-size:11px; letter-spacing:0.6px; font-weight:800; font-family:'IBM Plex Mono','Courier New',monospace;
-    text-transform:uppercase;
-  }
-
-  .search-row{ margin-top:18px; }
-  .search-row input{
-    width:100%; padding:11px 14px; background:var(--input-bg); border:1px solid var(--line-light); font-size:12.5px; color:var(--ink);
-    border-radius:var(--r-xs);
-  }
-  .search-row input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.12); background:#fff; }
-  .search-row input::placeholder{ color:var(--muted-dark); }
-
-  .empty-note{ color:var(--muted-dark); font-size:12px; }
-
-  /* ---------- data card (IDENTITY-style) ---------- */
-  .dcard{ border:1px solid var(--line-light); border-radius:var(--r-lg); margin-top:16px; background:#fff; overflow:hidden; box-shadow:var(--shadow-sm); }
-  .dcard.alt .dhead{ background:var(--peach); color:var(--orange-dark); }
-  .dhead{
-    background:var(--navy-header); color:#fff; font-size:11.5px; font-weight:700;
-    letter-spacing:1px; padding:12px 18px;
-  }
-  .dbody{ padding:20px; }
-  .dbody .prompt{ font-size:12.5px; line-height:1.7; color:var(--ink); margin-bottom:14px; }
-  .dbody textarea{
-    width:100%; min-height:100px; padding:12px; background:var(--input-bg); border:1px solid var(--line-light);
-    font-size:12.5px; color:var(--ink); resize:vertical; border-radius:var(--r-xs);
-  }
-  .dbody textarea:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.12); background:#fff; }
-  .dbody textarea:disabled{ background:#EEEFF2; color:#666; }
-  .dbody textarea::placeholder{ color:var(--muted-dark); }
-
-  .row-actions{ display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:10px;}
-  .status-badge{ font-size:10px; letter-spacing:0.8px; padding:6px 12px; border:1px solid transparent; border-radius:20px; font-weight:600; }
-  .status-empty{ background:var(--input-bg); color:var(--muted-dark); border-color:var(--line-light); }
-  .status-pending{ background:var(--peach); color:var(--orange-dark); border-color:var(--orange); }
-  .status-graded{ background:var(--navy-header); color:#fff; border-color:var(--navy-header); }
-
-  .model-answer{
-    background:var(--input-bg); border-left:3px solid var(--orange); border-radius:0 var(--r-xs) var(--r-xs) 0; padding:12px 14px; font-size:11.5px;
-    color:var(--ink); margin-top:10px; display:none; line-height:1.65;
-  }
-  .model-answer.show{ display:block; }
-  .toggle-model{ font-size:10.5px; color:var(--orange-dark); cursor:pointer; font-weight:600; }
-  .toggle-model:hover{ color:var(--orange); }
-
-  .grade-row{ margin-top:14px; border-top:1px solid var(--line-light); padding-top:14px; display:flex; gap:14px; flex-wrap:wrap; align-items:center;}
-  .grade-inputs{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .grade-inputs label{ font-size:10px; color:var(--muted-dark); letter-spacing:0.8px; }
-  .grade-inputs input[type=number]{ width:58px; padding:8px; border:1px solid var(--line-light); background:var(--input-bg); font-size:12px; border-radius:var(--r-xs); }
-  .grade-inputs input[type=text]{ flex:1; min-width:220px; padding:8px 10px; border:1px solid var(--line-light); background:var(--input-bg); font-size:12px; border-radius:var(--r-xs); }
-  .grade-inputs input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.12); background:#fff; }
-
-  select.day-select{ padding:10px 12px; border:1px solid var(--line-light); background:var(--input-bg); font-size:12px; border-radius:var(--r-xs); cursor:pointer; }
-
-  button.btn{
-    font-size:11.5px; letter-spacing:0.6px; padding:11px 22px; border:none; cursor:pointer; font-weight:700;
-    border-radius:var(--r-xs);
-  }
-  button.btn.orange{ background:var(--orange); color:#fff; box-shadow:var(--shadow-sm); }
-  button.btn.orange:hover{ background:var(--orange-dark); transform:translateY(-1px); box-shadow:var(--shadow-md); }
-  button.btn.ghost{ background:transparent; border:1px solid var(--line-light); color:var(--navy-header); }
-  button.btn.ghost:hover{ background:var(--input-bg); }
-  button.btn:disabled{ opacity:0.45; cursor:not-allowed; transform:none; box-shadow:none; }
-
-  /* ---------- leaderboard ---------- */
-  table.leader{ width:100%; border-collapse:collapse; margin-top:6px; }
-  table.leader th{
-    text-align:left; font-size:10px; letter-spacing:1.2px; color:var(--muted-dark);
-    padding:10px; border-bottom:2px solid var(--line-light);
-  }
-  table.leader td{ padding:14px 10px; border-bottom:1px solid var(--line-light); font-size:12.5px; }
-  table.leader tr:hover td{ background:#FAFBFC; }
-  .rank{ font-weight:700; color:var(--navy-header); }
-  .rank.gold{ color:var(--orange); }
-  .score-total{ font-weight:700; color:var(--orange-dark); }
-
-  .locked-panel{ text-align:center; padding:60px 20px; color:var(--muted-dark); }
-  .locked-panel .lock-stamp{
-    font-weight:700; letter-spacing:1.5px; border:1px solid var(--orange); border-radius:20px;
-    color:var(--orange); background:rgba(249,115,22,0.08); display:inline-block; padding:8px 20px; margin-bottom:14px;
-  }
-
-  /* ---------- subtabs (admin: manage vs grade) ---------- */
-  .subtabs{ display:flex; gap:6px; margin-top:18px; }
-  .subtab{
-    padding:9px 16px; font-size:11px; letter-spacing:0.8px; font-weight:700; color:var(--muted-dark);
-    background:var(--input-bg); border:1px solid var(--line-light); border-radius:var(--r-xs); cursor:pointer;
-  }
-  .subtab.active{ background:var(--navy-header); color:#fff; border-color:var(--navy-header); }
-
-  /* ---------- activity builder form ---------- */
-  .form-field{ margin-bottom:14px; }
-  .form-field label{ display:block; font-size:10px; letter-spacing:1px; color:var(--muted-dark); margin-bottom:6px; font-weight:600; }
-  .form-field input[type=text], .form-field textarea{
-    width:100%; padding:10px 12px; border:1px solid var(--line-light); background:var(--input-bg);
-    font-size:12.5px; color:var(--ink); border-radius:var(--r-xs); font-family:inherit;
-  }
-  .form-field textarea{ min-height:80px; resize:vertical; }
-  .form-field input:focus, .form-field textarea:focus{
-    outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.12); background:#fff;
-  }
-  .form-row{ display:flex; gap:14px; flex-wrap:wrap; }
-  .form-row > .form-field{ flex:1; min-width:220px; }
-
-  .item-row{
-    display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
-    padding:14px 16px; border:1px solid var(--line-light); border-radius:var(--r-sm); margin-top:10px; background:#fff;
-  }
-  .item-row .item-num{ font-size:10px; color:var(--orange); font-weight:700; letter-spacing:1px; margin-bottom:4px; }
-  .item-row .item-title{ font-weight:700; font-size:13px; color:var(--ink); }
-  .item-row .item-preview{ font-size:11.5px; color:var(--muted-dark); margin-top:4px; line-height:1.5; }
-  .item-actions{ display:flex; gap:8px; flex-shrink:0; }
-  .icon-btn{
-    padding:7px 12px; font-size:10.5px; font-weight:700; letter-spacing:0.5px; border-radius:var(--r-xs);
-    border:1px solid var(--line-light); background:var(--input-bg); color:var(--navy-header); cursor:pointer;
-  }
-  .icon-btn:hover{ background:#fff; }
-  .icon-btn.danger{ color:var(--red); border-color:rgba(185,28,28,0.3); }
-  .icon-btn.danger:hover{ background:rgba(185,28,28,0.08); }
-
-  .empty-state{
-    text-align:center; padding:34px 20px; color:var(--muted-dark); font-size:12px;
-    border:1px dashed var(--line-light); border-radius:var(--r-md); margin-top:14px;
-  }
-
-  .form-field select, .form-field input[type=datetime-local]{
-    width:100%; padding:10px 12px; border:1px solid var(--line-light); background:var(--input-bg);
-    font-size:12.5px; color:var(--ink); border-radius:var(--r-xs); font-family:inherit;
-  }
-  .form-field select:focus, .form-field input[type=datetime-local]:focus{
-    outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.12); background:#fff;
-  }
-
-  /* ---------- rich text editor ---------- */
-  .rte-wrap{ border:1px solid var(--line-light); border-radius:var(--r-xs); overflow:hidden; background:var(--input-bg); }
-  .rte-wrap:focus-within{ border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.12); background:#fff; }
-  .rte-toolbar{ display:flex; align-items:center; gap:3px; padding:6px 8px; border-bottom:1px solid var(--line-light); background:#fff; }
-  .rte-toolbar button{
-    width:26px; height:26px; border:1px solid transparent; background:transparent; border-radius:6px;
-    color:var(--navy-header); font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;
-  }
-  .rte-toolbar button:hover{ background:var(--input-bg); border-color:var(--line-light); }
-  .rte-toolbar button.active{ background:var(--orange); border-color:var(--orange); color:#fff; }
-  .rte-toolbar button.active:hover{ background:var(--orange-dark); border-color:var(--orange-dark); }
-  .rte-editor{
-    min-height:80px; padding:10px 12px; font-size:12.5px; color:var(--ink); line-height:1.5;
-    outline:none;
-  }
-  .rte-editor:empty:before{ content:attr(data-placeholder); color:var(--muted-dark); font-style:italic; }
-  .rte-editor.readonly{ background:#F6F7F9; cursor:default; }
-  .rte-display{ font-size:12px; line-height:1.65; color:var(--ink); }
-
-  @media (max-width:900px){
-    .app{ flex-direction:column; }
-    .sidebar{ width:100%; }
-  }
-
-  /* ================= AUTH GATE (login / register) ================= */
-  .authpage{
-    --auth-accent:#f97316;
-    --auth-accent-hover:#fb923c;
-    --auth-glow:#132a5c;
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-    background: radial-gradient(circle at 30% 20%, var(--auth-glow), var(--bg-dark) 70%);
-    padding:40px 16px; font-family:'IBM Plex Sans', Arial, Helvetica, sans-serif;
-    transition: background 0.4s ease;
-  }
-  .authpage.theme-admin{
-    --auth-accent:#ef4444;
-    --auth-accent-hover:#f87171;
-    --auth-glow:#3b0d0d;
-  }
-  .authcard{
-    width:100%; max-width:420px; background:rgba(255,255,255,0.03);
-    border-radius:var(--r-lg); border:1px solid var(--line); border-top:3px solid var(--auth-accent);
-    box-shadow:var(--shadow-lg); padding:32px; color:#fff;
-    transition: border-top-color 0.4s ease;
-  }
-
-  .authbrand{ display:flex; align-items:center; gap:12px; margin-bottom:22px; }
-  .authbrand .logo-box{ width:38px; height:38px; font-size:14px; border-color:var(--auth-accent); transition:border-color 0.4s ease; }
-  .authbrand .l1{ font-size:15px; font-weight:900; }
-  .authbrand .l2{ color:var(--auth-accent); transition:color 0.4s ease; }
-
-  .authtabs{ display:flex; gap:6px; margin-bottom:20px; background:#0d1c3d;
-    border-radius:8px; padding:4px; }
-  .authtabs button{
-    flex:1; border:none; background:transparent; color:#94a3b8; border-radius:6px;
-    font-size:10.5px; letter-spacing:0.05em; font-weight:800; text-transform:uppercase; padding:9px 6px; cursor:pointer;
-    font-family:'IBM Plex Mono','Courier New',monospace; transition:background 0.25s ease, color 0.25s ease;
-  }
-  .authtabs button.active{ background:var(--auth-accent); color:#0f2148; }
-
-  .authfield{ margin-bottom:12px; }
-  .authfield label{ display:block; font-size:9.5px; letter-spacing:1.2px; color:#94a3b8; margin-bottom:6px; text-transform:uppercase; font-weight:800; }
-  .authfield input, .authfield select{
-    width:100%; padding:10px 12px; background:#0d1c3d; border:1px solid var(--line);
-    color:#fff; font-size:13px; border-radius:var(--r-xs); font-family:'IBM Plex Mono','Courier New',monospace;
-  }
-  .authfield input::placeholder{ color:var(--muted-dark); }
-  .authfield input:focus, .authfield select:focus{
-    outline:none; border-color:var(--auth-accent);
-  }
-  .authfield input:disabled{ opacity:0.5; cursor:not-allowed; }
-  .authhint{ font-size:10px; color:var(--muted); margin-top:6px; line-height:1.4; font-family:'IBM Plex Sans', Arial, sans-serif; }
-
-  .authrow{ display:flex; gap:12px; }
-  .authrow .authfield{ flex:1; }
-  .authrow .authfield.small{ flex:0 0 68px; }
-  .authrow .authfield.suffix{ flex:0 0 118px; }
-
-  .authbtn{
-    width:100%; padding:11px; border:none; border-radius:6px; background:var(--auth-accent);
-    color:#0f2148; font-size:11px; font-weight:900; letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; margin-top:6px;
-    font-family:'IBM Plex Sans', Arial, sans-serif; transition:background 0.25s ease;
-  }
-  .authbtn:hover{ background:var(--auth-accent-hover); }
-
-  .authfooter{ text-align:center; font-size:11px; color:#94a3b8; margin-top:16px; }
-  .authfooter a{ color:var(--auth-accent); font-weight:700; text-decoration:underline; cursor:pointer; }
-
-  .autherror{ color:#fca5a5; font-size:11px; font-weight:700; margin-bottom:12px; display:none; background:rgba(185,28,28,0.15);
-    border-radius:6px; padding:9px 12px; }
-  .authnotice{ color:#fdba74; font-size:11px; font-weight:700; margin-bottom:12px; display:none; background:rgba(249,115,22,0.15);
-    border-radius:6px; padding:9px 12px; }
-
-  .authview{ display:none; }
-  .authview.active{ display:block; }
-
-  /* ================= MASTER CONTROL (admin, full page) ================= */
-  #master-control-page{
-    position:fixed; inset:0; z-index:1500; display:none; background:#f8fafc; flex-direction:column;
-    font-family:'IBM Plex Sans', Arial, sans-serif;
-  }
-  #master-control-page.open{ display:flex; }
-  .mc-header{
-    background:var(--bg-dark); color:#fff; padding:16px 26px; display:flex; align-items:center;
-    justify-content:space-between; flex-shrink:0; border-bottom:4px solid var(--orange);
-  }
-  .mc-header h2{ margin:0; font-size:19px; font-weight:800; letter-spacing:0.3px; }
-  .mc-header .sub{ font-size:11px; color:var(--orange); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; font-family:'IBM Plex Mono','Courier New',monospace; }
-  .portal-toggle-btn{
-    display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); color:#fff;
-    border:1px solid rgba(255,255,255,0.25); padding:9px 16px; border-radius:7px; font-size:11px;
-    font-weight:800; text-transform:uppercase; letter-spacing:0.04em; cursor:pointer; font-family:'IBM Plex Mono','Courier New',monospace;
-  }
-  .portal-toggle-btn:hover{ background:rgba(249,115,22,0.25); border-color:var(--orange); }
-  .mc-tabs{ display:flex; gap:2px; background:#e2e8f0; padding:0 20px; flex-shrink:0; overflow-x:auto; }
-  .mc-tab{
-    padding:13px 18px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;
-    color:#64748b; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; background:none;
-    border-left:none; border-right:none; border-top:none; font-family:'IBM Plex Mono','Courier New',monospace;
-  }
-  .mc-tab.active{ color:var(--orange); border-bottom-color:var(--orange); background:#f8fafc; }
-  .mc-body{ flex:1; overflow-y:auto; padding:26px 30px; background:#f8fafc; }
-  .mc-pane{ display:none; }
-  .mc-pane.active{ display:block; }
-  .mc-section-title{ font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:0.05em; color:var(--navy-header); margin:26px 0 12px; }
-  .mc-section-title:first-child{ margin-top:0; }
-
-  .admin-panel-grid{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px; margin-top:6px; }
-  @media (max-width:1100px){ .admin-panel-grid{ grid-template-columns:1fr 1fr; } }
-  .admin-tile{ background:#fff; border:1px solid var(--line-light); border-radius:8px; padding:16px; }
-  .admin-tile h4{ font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; font-weight:800; margin:0 0 10px; }
-  .admin-stat{ font-family:'IBM Plex Mono','Courier New',monospace; font-size:22px; font-weight:800; color:var(--navy-header); }
-  .admin-stat-label{ font-size:10px; color:var(--muted-dark); font-weight:700; text-transform:uppercase; }
-
-  .reg-row{
-    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    background:white; border:1px solid var(--line-light); border-radius:8px; padding:12px 16px; margin-bottom:10px;
-  }
-  .reg-row .reg-info{ font-size:12px; }
-  .reg-row .reg-info b{ display:block; font-size:13px; }
-  .reg-row .reg-meta{ font-size:10px; color:var(--muted-dark); font-family:'IBM Plex Mono','Courier New',monospace; }
-  .status-pill{ font-size:9px; font-weight:900; text-transform:uppercase; padding:3px 8px; border-radius:20px; letter-spacing:0.04em; font-family:'IBM Plex Mono','Courier New',monospace; }
-  .status-pending{ background:#fff7ed; color:#c2410c; }
-  .status-approved{ background:#f0fdf4; color:#166534; }
-  .status-rejected{ background:#fef2f2; color:#b91c1c; }
-  .status-revoked{ background:#f1f5f9; color:#475569; }
-  .status-suspended{ background:#fef9c3; color:#854d0e; }
-  .mini-btn{ font-size:10px; font-weight:800; text-transform:uppercase; padding:6px 12px; border-radius:5px; cursor:pointer; border:none; font-family:'IBM Plex Mono','Courier New',monospace; }
-  .mini-btn.approve{ background:#166534; color:#fff; }
-  .mini-btn.reject{ background:#b91c1c; color:#fff; }
-  .mini-btn.revoke{ background:#64748b; color:#fff; }
-  .mini-btn.suspend{ background:#d97706; color:#fff; }
-  .mini-btn.reinstate{ background:#16a34a; color:#fff; }
-  .mini-btn.ping{ background:var(--orange); color:#0f2148; }
-  .group-heading{
-    font-size:10.5px; font-weight:900; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted-dark);
-    background:#eef2f7; padding:7px 12px; border-radius:6px; margin:16px 0 8px;
-  }
-  .online-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; background:#94a3b8; flex-shrink:0; }
-  .online-dot.live{ background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,0.2); }
-
-  .mc-input{ width:100%; padding:9px 12px; border-radius:6px; border:1px solid var(--line-light); font-size:13px; outline:none; font-family:'IBM Plex Sans',Arial,sans-serif; }
-  .mc-input:focus{ border-color:var(--orange); }
-  .mc-table{ width:100%; border-collapse:collapse; font-size:11.5px; }
-  .mc-table th{ text-align:left; font-size:9.5px; text-transform:uppercase; color:var(--muted-dark); padding:9px 10px; border-bottom:2px solid var(--line-light); letter-spacing:0.04em; }
-  .mc-table td{ padding:9px 10px; border-bottom:1px solid var(--line-light); }
-  .swatch-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-  .swatch{ width:28px; height:28px; border-radius:6px; cursor:pointer; border:2px solid transparent; }
-  .swatch.selected{ border-color:var(--navy-header); box-shadow:0 0 0 2px white inset; }
-
-  /* ===== ALERT OVERLAY (full screen) ===== */
-  #alert-overlay{
-    position:fixed; inset:0; z-index:2600; display:none; align-items:center; justify-content:center;
-    flex-direction:column; text-align:center; padding:40px;
-  }
-  #alert-overlay.open{ display:flex; }
-  #alert-overlay .alert-box{ max-width:640px; display:flex; flex-direction:column; align-items:center; gap:18px; }
-  #alert-overlay img.alert-image{ max-width:100%; max-height:280px; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.4); }
-  #alert-overlay .alert-tag{ font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:#fff; background:rgba(0,0,0,0.35); padding:4px 14px; border-radius:20px; font-family:'IBM Plex Mono','Courier New',monospace; }
-  #alert-overlay .alert-text{ font-size:26px; font-weight:800; color:#fff; line-height:1.35; text-shadow:0 2px 10px rgba(0,0,0,0.4); }
-  #alert-overlay .alert-dismiss{ margin-top:6px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.4); color:#fff; padding:9px 22px; border-radius:6px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; font-family:'IBM Plex Mono','Courier New',monospace; }
-  #alert-overlay .alert-dismiss:hover{ background:rgba(255,255,255,0.28); }
-
-  /* ===== TOAST NOTIFICATIONS (ping) ===== */
-  #toast-container{ position:fixed; top:14px; right:20px; z-index:5000; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
-  .toast{
-    min-width:240px; max-width:340px; padding:12px 16px 12px 14px; border-radius:8px; font-size:12px; font-weight:700;
-    color:#fff; box-shadow:0 10px 30px rgba(0,0,0,0.3); border-left:4px solid rgba(255,255,255,0.4);
-    opacity:0; transform:translateX(40px); transition:opacity .3s ease, transform .3s ease; pointer-events:auto;
-    background:var(--orange); font-family:'IBM Plex Sans',Arial,sans-serif;
-  }
-  .toast.show{ opacity:1; transform:translateX(0); }
-  .toast-main{ font-size:12px; font-weight:700; }
-  .toast-sub{ font-size:10.5px; font-weight:700; opacity:0.85; margin-top:5px; text-transform:uppercase; letter-spacing:0.03em; }
-</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSH Case Management System | Restricted Access</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="app">
 
-  <aside class="sidebar">
-    <div class="logo-row">
-      <div class="logo-box">CM</div>
-      <div class="logo-text">
-        <div class="l1">CASE MANAGEMENT</div>
-        <div class="l2">TRAINING INTERFACE</div>
-      </div>
-    </div>
-
-    <div class="roletoggle" id="roleToggle">
-      <button data-role="trainee" class="active">TRAINEE</button>
-      <button data-role="admin">ADMIN</button>
-    </div>
-
-    <div>
-      <div class="field-label">YOUR NAME</div>
-      <input class="side-input" id="nameInput" type="text" placeholder="Enter your name" />
-    </div>
-
-    <div class="nav-label">TRAINING ACTIVITIES</div>
-    <div class="nav-list" id="navList"></div>
-
-    <div class="sidebar-spacer"></div>
-    <button class="btn-full" id="masterControlBtn" style="display:none; background:transparent; border:1px solid var(--orange); color:var(--orange); margin-bottom:8px;">⇄ MASTER CONTROL</button>
-    <button class="btn-full btn-green" id="primaryActionBtn">SUBMIT ANSWERS</button>
-    <div class="signed-in" id="signedInBlock">Not signed in</div>
-    <button class="btn-full btn-outline-red" id="logoutBtn">LOG OUT</button>
-  </aside>
-
-  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
-    <div class="topbar">
-      <span class="badge">CM</span>
-      <span class="portal-title" id="portalTitle">CASE MANAGEMENT TRAINING INTERFACE — TRAINEE PORTAL</span>
-      <span class="announce">ANNOUNCEMENT:</span>
-      <span class="announce-text" id="announceText">Welcome to the CM Training Interface.</span>
-      <span class="spacer"></span>
-      <span class="clock" id="clock"></span>
-      <select class="loc">
-        <option>Manila</option>
-        <option>Caloocan</option>
-        <option>Quezon City</option>
-      </select>
-    </div>
-
-    <div class="main">
-      <div id="panel"></div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ===== MASTER CONTROL (admin, full page) ===== -->
-<div id="master-control-page">
-  <div class="mc-header">
-    <div>
-      <h2>Master Control</h2>
-      <div class="sub" id="mc-session-label">Administrator Session</div>
-    </div>
-    <div style="display:flex; gap:10px;">
-      <button class="portal-toggle-btn" onclick="exitMasterControl()">⇄ Back to Training Portal</button>
-      <button class="portal-toggle-btn" style="background:rgba(185,28,28,0.35); border-color:#b91c1c;" onclick="document.getElementById('logoutBtn').click()">Log Out</button>
-    </div>
-  </div>
-  <div class="mc-tabs">
-    <button class="mc-tab active" data-mc-tab="overview" onclick="showAdminDashTab('overview')">Overview</button>
-    <button class="mc-tab" data-mc-tab="registrations" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></button>
-    <button class="mc-tab" data-mc-tab="users" onclick="showAdminDashTab('users')">Users</button>
-    <button class="mc-tab" data-mc-tab="monitoring" onclick="showAdminDashTab('monitoring')">Monitoring</button>
-    <button class="mc-tab" data-mc-tab="case-logs" onclick="showAdminDashTab('case-logs')">Case Logs</button>
-    <button class="mc-tab" data-mc-tab="announce" onclick="showAdminDashTab('announce')">Broadcast &amp; Ping</button>
-    <button class="mc-tab" data-mc-tab="access" onclick="showAdminDashTab('access')">Access Control</button>
-  </div>
-  <div class="mc-body">
-
-    <!-- OVERVIEW -->
-    <div class="mc-pane active" id="mc-pane-overview">
-      <div class="admin-panel-grid">
-        <div class="admin-tile"><h4>Assigned Activities</h4><div class="admin-stat" id="mc-stat-activities">0</div><div class="admin-stat-label">Days with at least one item</div></div>
-        <div class="admin-tile"><h4>Total Submissions</h4><div class="admin-stat" id="mc-stat-submissions">0</div><div class="admin-stat-label">Across all days</div></div>
-        <div class="admin-tile"><h4>Trainees Online Now</h4><div class="admin-stat" id="mc-stat-online">0</div><div class="admin-stat-label">Active in the last 60 seconds</div></div>
-        <div class="admin-tile"><h4>Pending Registrations</h4><div class="admin-stat" id="mc-stat-pending">0</div><div class="admin-stat-label">Awaiting review</div></div>
-      </div>
-      <div class="mc-section-title">Site-Wide Status</div>
-      <div class="admin-panel-grid">
-        <div class="admin-tile"><h4>Activity State</h4><div class="admin-stat" id="mc-ov-pause-state" style="font-size:16px;">Active</div><div class="admin-stat-label">Pause / Resume from Access Control</div></div>
-        <div class="admin-tile"><h4>Access State</h4><div class="admin-stat" id="mc-ov-lock-state" style="font-size:16px;">Unlocked</div><div class="admin-stat-label">Lock / Unlock from Access Control</div></div>
-        <div class="admin-tile"><h4>Current Alert</h4><div class="admin-stat" id="mc-ov-alert-state" style="font-size:16px;">None Active</div><div class="admin-stat-label">Manage from Broadcast &amp; Ping</div></div>
-      </div>
-    </div>
-
-    <!-- REGISTRATIONS -->
-    <div class="mc-pane" id="mc-pane-registrations">
-      <p style="font-size:11px;color:var(--muted-dark);margin-bottom:14px;">Pending registrations submitted from the login screen. Approve to move an account into the <b>Users</b> tab (assign a Batch ID for trainees), or reject.</p>
-      <div id="mc-registrations-list"></div>
-    </div>
-
-    <!-- USERS -->
-    <div class="mc-pane" id="mc-pane-users">
-      <p style="font-size:11px;color:var(--muted-dark);margin-bottom:14px;">Approved accounts, segregated by Admin / Trainee. Trainees are grouped by Batch ID and sorted by registration order.</p>
-      <div id="mc-users-list"></div>
-    </div>
-
-    <!-- MONITORING -->
-    <div class="mc-pane" id="mc-pane-monitoring">
-      <div class="mc-section-title">🟢 Trainees Online</div>
-      <p style="font-size:11px;color:var(--muted-dark);margin-bottom:14px;">Live view of who is signed in right now. Click a name to view their latest saved submission, read-only.</p>
-      <div id="mc-online-list"></div>
-
-      <div class="mc-section-title">🗄 Server Logs</div>
-      <p style="font-size:11px;color:var(--muted-dark);margin-bottom:14px;">Logins, logouts, submissions, and grades, most recent first.</p>
-      <div id="mc-logs-list"></div>
-    </div>
-
-    <!-- CASE LOGS -->
-    <div class="mc-pane" id="mc-pane-case-logs">
-      <div class="mc-section-title">🔍 Search</div>
-      <input type="text" id="mc-case-logs-search" class="mc-input" oninput="renderMcCaseLogs()" placeholder="Search by trainee name..." style="margin-bottom:16px;">
-      <div class="mc-section-title">📄 Submissions &amp; Grading — Most Recent First</div>
-      <p style="font-size:11px;color:var(--muted-dark);margin-bottom:14px;">Every submission and every grading action across all days, sorted by most recent.</p>
-      <div id="mc-case-logs-list"></div>
-    </div>
-
-    <!-- BROADCAST & PING -->
-    <div class="mc-pane" id="mc-pane-announce">
-      <div class="mc-section-title">📢 Announcement (scrolling ticker, top bar)</div>
-      <div class="admin-tile">
-        <p id="mc-announce-current-preview" style="font-size:13px;font-weight:700;color:var(--navy-header);margin-bottom:14px;">Welcome to the CM Training Interface.</p>
-        <textarea id="mc-announce-text-input" class="mc-input" placeholder="Type the message to broadcast in the ticker..." style="min-height:70px;margin-bottom:12px;"></textarea>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="mini-btn approve" onclick="mcMakeAnnouncement()">📢 Broadcast Announcement</button>
-          <button class="mini-btn revoke" onclick="mcClearAnnouncement()">Clear Ticker</button>
+    <!-- CLASSIFICATION / TIME BAR -->
+    <div id="classification-bar" class="no-print">
+        <div class="cls-left">
+            <span class="cls-label">LSH</span>
+            <span id="portal-title">LEGAL SUPPORT HELP TRAINING INTERFACE</span>
         </div>
-      </div>
-
-      <div class="mc-section-title">⚠ Alert (covers the entire screen for every user until stopped)</div>
-      <div class="admin-tile">
-        <div id="mc-alert-status-line" style="font-size:12px; font-weight:800; color:var(--red); margin-bottom:12px;">No alert is currently active.</div>
-        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted-dark);">Alert Text</label>
-        <textarea id="mc-alert-text-input" class="mc-input" placeholder="Type the full-screen alert message..." style="min-height:60px;margin:6px 0 14px;"></textarea>
-        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted-dark);">Background Color</label>
-        <div class="swatch-row" id="mc-alert-bg-swatches" style="margin-top:6px;"></div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-          <button class="mini-btn approve" onclick="mcActivateAlert()">Activate Alert</button>
-          <button class="mini-btn revoke" onclick="mcDeactivateAlert()">Deactivate Alert</button>
-        </div>
-      </div>
-
-      <div class="mc-section-title">✉ Ping a Trainee (individual message)</div>
-      <div class="admin-tile">
-        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted-dark);">Recipient</label>
-        <select id="mc-ping-target" class="mc-input" style="margin:6px 0 12px;"></select>
-        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted-dark);">Message</label>
-        <textarea id="mc-ping-text-input" class="mc-input" placeholder="Type a message for this trainee only..." style="min-height:60px;margin:6px 0 14px;"></textarea>
-        <button class="mini-btn ping" onclick="mcSendPing()">Send Ping</button>
-      </div>
-    </div>
-
-    <!-- ACCESS CONTROL -->
-    <div class="mc-pane" id="mc-pane-access">
-      <div class="mc-section-title">🔒 Site Lock</div>
-      <div class="admin-tile">
-        <p style="font-size:12px;color:var(--muted-dark);margin-bottom:14px;">When locked, new Trainee Portal logins are blocked. Admins can always still log in.</p>
-        <div id="mc-lock-status-line" style="font-size:13px;font-weight:800;color:var(--navy-header);margin-bottom:12px;">Currently Unlocked</div>
-        <button class="mini-btn suspend" id="mc-lock-toggle-btn" onclick="mcToggleLock()">Lock Site</button>
-      </div>
-      <div class="mc-section-title">⏸ Pause Activities</div>
-      <div class="admin-tile">
-        <p style="font-size:12px;color:var(--muted-dark);margin-bottom:14px;">When paused, trainees stay signed in and can review their work, but cannot submit answers.</p>
-        <div id="mc-pause-status-line" style="font-size:13px;font-weight:800;color:var(--navy-header);margin-bottom:12px;">Currently Active</div>
-        <button class="mini-btn suspend" id="mc-pause-toggle-btn" onclick="mcTogglePause()">Pause Activities</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ===== ALERT OVERLAY ===== -->
-<div id="alert-overlay">
-  <div class="alert-box">
-    <span class="alert-tag">ADMIN ALERT</span>
-    <img id="alert-overlay-image" class="alert-image" style="display:none;">
-    <div class="alert-text" id="alert-overlay-text"></div>
-    <button class="alert-dismiss" onclick="dismissAlertOverlay()">Dismiss</button>
-  </div>
-</div>
-
-<!-- ===== TOASTS (ping) ===== -->
-<div id="toast-container"></div>
-
-<script>
-/* ================= CONFIG ================= */
-const DEFAULT_DAY_KEYS = ["day1","day2","day3","day4","day5"];
-const DEFAULT_DAY_LABELS = {
-  day1:{label:"Day 1", short:"DAY 1"},
-  day2:{label:"Day 2", short:"DAY 2"},
-  day3:{label:"Day 3", short:"DAY 3"},
-  day4:{label:"Day 4", short:"DAY 4"},
-  day5:{label:"Day 5", short:"DAY 5"},
-};
-let DAY_KEYS = [...DEFAULT_DAY_KEYS];
-let DAY_LABELS = {...DEFAULT_DAY_LABELS};
-
-/* Admin-added days beyond the default 5 are stored under a shared key so every
-   admin/trainee session sees the same set. */
-async function loadExtraDays(){
-  const extra = await getJSON('config:extra_days', true);
-  if(!Array.isArray(extra)) return;
-  extra.forEach(d=>{
-    if(d && d.key && !DAY_KEYS.includes(d.key)){
-      DAY_KEYS.push(d.key);
-      DAY_LABELS[d.key] = { label: d.label || d.key, short: d.short || d.key.toUpperCase() };
-    }
-  });
-}
-
-/* ================= STATE ================= */
-let state = {
-  role: "trainee",
-  name: "",
-  username: "",
-  activeTab: "day1",
-  selectedTrainee: null,
-  search: "",
-  adminView: "manage",
-  editingItemId: null,
-};
-
-function slugify(n){
-  return n.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_\-]/g,'') || 'anonymous';
-}
-function uid(){ return 'itm_' + Math.random().toString(36).slice(2,9); }
-function stripHtml(html){
-  const d = document.createElement('div');
-  d.innerHTML = html || '';
-  return (d.textContent || d.innerText || '').trim();
-}
-function formatDeadline(iso){
-  if(!iso) return '';
-  const d = new Date(iso);
-  if(isNaN(d.getTime())) return '';
-  return d.toLocaleString('en-US', { month:'short', day:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-}
-
-/* ================= STORAGE HELPERS ================= */
-async function getJSON(key, shared){
-  try{
-    const res = await fetch(`/api/kv/${encodeURIComponent(key)}${shared ? '?shared=1' : ''}`, { credentials: 'include' });
-    if(res.status === 401){ location.reload(); return null; }
-    const data = await res.json();
-    return data.value ? JSON.parse(data.value) : null;
-  }catch(e){ return null; }
-}
-async function setJSON(key, val, shared){
-  try{
-    const res = await fetch(`/api/kv/${encodeURIComponent(key)}`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: JSON.stringify(val), shared: !!shared }),
-    });
-    return res.ok;
-  }catch(e){ console.error("storage set failed", e); return false; }
-}
-async function listKeys(prefix, shared){
-  try{
-    const res = await fetch(`/api/kv?prefix=${encodeURIComponent(prefix)}${shared ? '&shared=1' : ''}`, { credentials: 'include' });
-    const data = await res.json();
-    return data.keys || [];
-  }catch(e){ return []; }
-}
-async function logEvent(type, detail, identity){
-  try{
-    const who = identity || { username: state.username||'', name: state.name||'', role: state.role||'' };
-    const id = `log:${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-    await setJSON(id, { type, username: who.username||'', name: who.name||'', role: who.role||'', detail: detail||'', at: Date.now() }, true);
-  }catch(e){ /* logging must never block the underlying action */ }
-}
-
-/* ================= ACTIVITY DATA ================= */
-async function getActivityMeta(day){
-  const m = await getJSON(`activity_meta:${day}`, true);
-  return m || { title:"", description:"", instructions:"", deadline:"" };
-}
-async function setActivityMeta(day, meta){
-  return setJSON(`activity_meta:${day}`, meta, true);
-}
-async function getActivityItems(day){
-  const items = await getJSON(`activity_items:${day}`, true);
-  return items || [];
-}
-async function setActivityItems(day, items){
-  return setJSON(`activity_items:${day}`, items, true);
-}
-
-/* ================= RICH TEXT EDITOR ================= */
-function richEditorHTML(id, contentHTML, placeholder, readonly){
-  if(readonly){
-    return `<div class="rte-display">${contentHTML || '<em>No answer submitted.</em>'}</div>`;
-  }
-  return `
-    <div class="rte-wrap">
-      <div class="rte-toolbar">
-        <button type="button" data-rte="${id}" data-cmd="bold" title="Bold"><b>B</b></button>
-        <button type="button" data-rte="${id}" data-cmd="italic" title="Italic"><i>I</i></button>
-      </div>
-      <div class="rte-editor" id="${id}" contenteditable="true" data-placeholder="${placeholder}">${contentHTML || ''}</div>
-    </div>`;
-}
-function updateToolbarState(editor){
-  const wrap = editor.closest('.rte-wrap');
-  if(!wrap) return;
-  wrap.querySelectorAll('button[data-cmd]').forEach(btn=>{
-    let active = false;
-    try{ active = document.queryCommandState(btn.dataset.cmd); }catch(e){ active = false; }
-    btn.classList.toggle('active', active);
-  });
-}
-function bindRichEditors(root){
-  root.querySelectorAll('button[data-rte]').forEach(btn=>{
-    btn.addEventListener('mousedown', (e)=> e.preventDefault());
-    btn.addEventListener('click', ()=>{
-      const editor = document.getElementById(btn.dataset.rte);
-      if(!editor) return;
-      editor.focus();
-      document.execCommand(btn.dataset.cmd, false, null);
-      updateToolbarState(editor);
-    });
-  });
-  root.querySelectorAll('.rte-editor').forEach(editor=>{
-    ['keyup','mouseup','click'].forEach(evt=>{
-      editor.addEventListener(evt, ()=> updateToolbarState(editor));
-    });
-  });
-}
-function getRteContent(id){
-  const el = document.getElementById(id);
-  return el ? el.innerHTML.trim() : '';
-}
-
-/* ================= CLOCK ================= */
-function startClock(){
-  const el = document.getElementById('clock');
-  function tick(){
-    const d = new Date();
-    const opts = { month:'short', day:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true };
-    el.textContent = d.toLocaleString('en-US', opts);
-  }
-  tick();
-  setInterval(tick, 1000);
-}
-
-/* ================= HEADER BINDINGS ================= */
-function bindHeader(){
-  const roleToggle = document.getElementById('roleToggle');
-  if(roleToggle) roleToggle.style.display = 'none'; // role is now set by the server session, not chosen client-side
-
-  const nameInput = document.getElementById('nameInput');
-  nameInput.value = state.name;
-  nameInput.readOnly = true; // identity now comes from the authenticated account
-
-  document.getElementById('logoutBtn').onclick = async ()=>{
-    await logEvent('logout', '');
-    try{ await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); }
-    catch(e){ /* ignore — reload will re-check session either way */ }
-    location.reload();
-  };
-
-  document.getElementById('portalTitle').textContent =
-    `CASE MANAGEMENT TRAINING INTERFACE — ${state.role.toUpperCase()} PORTAL`;
-
-  document.getElementById('announceText').textContent =
-    state.activeTab === 'leaderboard'
-      ? 'Leaderboard updates live as admins submit grades.'
-      : (state.role === 'admin' ? 'Build or grade this activity from the panel below.' : 'Select a training activity to begin.');
-
-  document.getElementById('signedInBlock').innerHTML = state.name.trim()
-    ? `Signed in as: <b>${state.name.trim()}</b><br/>Role: <b>${state.role.toUpperCase()}</b>`
-    : `Not signed in`;
-}
-
-async function renderSidebarNav(){
-  const nav = document.getElementById('navList');
-  let html = '';
-  const visibleDays = [];
-  for(const d of DAY_KEYS){
-    const meta = DAY_LABELS[d];
-    const items = await getActivityItems(d);
-    const hasContent = items.length > 0;
-
-    /* Trainees only ever see a day once the admin has added at least one activity item. */
-    if(state.role === 'trainee' && !hasContent) continue;
-
-    visibleDays.push(d);
-    const active = state.activeTab === d ? 'active' : '';
-    let sub = hasContent ? `${items.length} item${items.length===1?'':'s'}` : 'No activities assigned yet';
-    if(hasContent){
-      if(state.role === 'admin'){
-        const keys = await listKeys(`submission:${d}:`, true);
-        sub = `${keys.length} trainee${keys.length===1?'':'s'} submitted`;
-      } else {
-        const slug = slugify(state.name || '');
-        const grade = state.name.trim() ? await getJSON(`grade:${d}:${slug}`, true) : null;
-        const gradedCount = grade ? Object.keys(grade.items||{}).length : 0;
-        sub = `${gradedCount}/${items.length} graded`;
-      }
-    }
-    html += `
-      <div class="nav-item ${active}" data-day="${d}">
-        <div class="title-row">
-          <span class="name">${meta.short}</span>
-          <span class="pill ${hasContent ? '' : 'gray'}">${hasContent ? items.length+' ITEMS' : 'EMPTY'}</span>
-        </div>
-        <div class="sub">${sub}</div>
-      </div>`;
-  }
-
-  if(state.role === 'trainee' && visibleDays.length === 0){
-    html += `<div class="empty-note" style="padding:6px 2px;">No activities assigned yet. Check back once your admin publishes one.</div>`;
-  }
-
-  html += `
-    <div class="nav-item ${state.activeTab==='leaderboard'?'active':''}" data-day="leaderboard">
-      <div class="title-row"><span class="name">LEADERBOARD</span><span class="pill green">LIVE</span></div>
-      <div class="sub">Ranked by total points</div>
-    </div>`;
-  nav.innerHTML = html;
-  nav.querySelectorAll('.nav-item').forEach(item=>{
-    item.onclick = ()=>{
-      state.activeTab = item.dataset.day;
-      state.selectedTrainee = null;
-      state.adminView = "manage";
-      state.editingItemId = null;
-      state.search = "";
-      render();
-    };
-  });
-
-  /* If the trainee's active tab points at a day that's no longer visible (e.g. the
-     admin removed its last item, or the trainee just switched roles), fall back to
-     the first visible day, or the leaderboard if none are available yet. */
-  if(state.role === 'trainee' && state.activeTab !== 'leaderboard' && !visibleDays.includes(state.activeTab)){
-    state.activeTab = visibleDays.length ? visibleDays[0] : 'leaderboard';
-  }
-}
-
-/* ================= MAIN RENDER ================= */
-async function render(){
-  bindHeader();
-  await renderSidebarNav();
-
-  const panel = document.getElementById('panel');
-  const primaryBtn = document.getElementById('primaryActionBtn');
-
-  if(state.activeTab === 'leaderboard'){
-    primaryBtn.style.display = 'none';
-    await renderLeaderboard(panel);
-    return;
-  }
-
-  if(state.role === 'trainee'){
-    await renderTraineeDay(panel, state.activeTab);
-  } else {
-    await renderAdminDay(panel, state.activeTab);
-  }
-}
-
-/* ================= LESSON DECK BLOCK ================= */
-async function renderLessonBlock(dayKey){
-  const lesson = await getJSON(`lesson:${dayKey}`, true);
-  if(state.role === 'admin'){
-    return `
-      <div class="dcard alt">
-        <div class="dhead">LESSON DECK — ${DAY_LABELS[dayKey].label.toUpperCase()}</div>
-        <div class="dbody" style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
-          <div>${lesson ? `<strong>${lesson.filename}</strong>` : `<span class="empty-note">No deck uploaded yet.</span>`}</div>
-          <div>
-            <input type="file" id="pptxInput" accept=".ppt,.pptx" style="display:none" />
-            <button class="btn ghost" id="uploadPptxBtn">${lesson ? 'Replace deck' : 'Upload PPTX'}</button>
-          </div>
-        </div>
-      </div>`;
-  } else {
-    return `
-      <div class="dcard alt">
-        <div class="dhead">LESSON DECK — ${DAY_LABELS[dayKey].label.toUpperCase()}</div>
-        <div class="dbody" style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
-          <div>${lesson ? `<strong>${lesson.filename}</strong><div class="empty-note">Uploaded by admin</div>` : `<span class="empty-note">Not uploaded yet — check back before starting the activity.</span>`}</div>
-          ${lesson ? `<a class="btn orange" href="${lesson.dataUrl}" download="${lesson.filename}" style="text-decoration:none;">REVIEW LESSON</a>` : ''}
-        </div>
-      </div>`;
-  }
-}
-
-function bindLessonUpload(dayKey){
-  const btn = document.getElementById('uploadPptxBtn');
-  if(!btn) return;
-  const input = document.getElementById('pptxInput');
-  btn.onclick = ()=> input.click();
-  input.onchange = async ()=>{
-    const file = input.files[0];
-    if(!file) return;
-    if(file.size > 4.5 * 1024 * 1024){
-      alert("This file is too large for the prototype's storage (limit ~4.5MB). A production build would upload this to real file storage instead.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async ()=>{
-      btn.textContent = "Uploading...";
-      const ok = await setJSON(`lesson:${dayKey}`, {filename:file.name, dataUrl:reader.result, uploadedAt:Date.now()}, true);
-      if(!ok) alert("Upload failed. Please try again.");
-      render();
-    };
-    reader.readAsDataURL(file);
-  };
-}
-
-/* ================= TRAINEE VIEW ================= */
-async function renderTraineeDay(panel, dayKey){
-  const meta = await getActivityMeta(dayKey);
-  const items = await getActivityItems(dayKey);
-  const dayLabel = DAY_LABELS[dayKey];
-  const slug = slugify(state.name || '');
-  const hasName = !!state.name.trim();
-
-  document.getElementById('primaryActionBtn').style.display = items.length ? 'block' : 'none';
-  document.getElementById('primaryActionBtn').textContent = 'SUBMIT ANSWERS';
-
-  const lessonHtml = await renderLessonBlock(dayKey);
-
-  if(items.length === 0){
-    panel.innerHTML = `
-      <div class="card">
-        <div class="card-head">
-          <div><h1>${dayLabel.label}</h1><div class="intro">No activities assigned yet.</div></div>
-          <div><div class="stamp">TRAINEE</div><div class="meta-mini">${dayLabel.short}</div></div>
-        </div>
-      </div>
-      ${lessonHtml}
-      <div class="empty-state">No activities assigned yet for ${dayLabel.label}. Check back once your admin uploads one.</div>
-    `;
-    bindLessonUpload(dayKey);
-    return;
-  }
-
-  let submission = hasName ? await getJSON(`submission:${dayKey}:${slug}`, true) : null;
-  let grade = hasName ? await getJSON(`grade:${dayKey}:${slug}`, true) : null;
-  const pauseState = await getJSON('config:pause', true);
-  const isPaused = !!(pauseState && pauseState.paused);
-
-  const gradedCount = grade ? Object.keys(grade.items || {}).length : 0;
-  const submittedCount = submission ? Object.keys(submission.answers||{}).filter(k=>submission.answers[k]).length : 0;
-  const totalPoints = grade ? Object.values(grade.items||{}).reduce((s,it)=>s+(it.points||0),0) : 0;
-
-  const visibleItems = items.filter(q =>
-    !state.search || (q.title + stripHtml(q.prompt)).toLowerCase().includes(state.search.toLowerCase())
-  );
-
-  let cards = '';
-  visibleItems.forEach((q)=>{
-    const savedAns = submission && submission.answers ? (submission.answers[q.id] || '') : '';
-    const g = grade && grade.items ? grade.items[q.id] : null;
-    let badge = `<span class="status-badge status-empty">NOT STARTED</span>`;
-    if(stripHtml(savedAns) && !g) badge = `<span class="status-badge status-pending">SUBMITTED · AWAITING REVIEW</span>`;
-    if(g) badge = `<span class="status-badge status-graded">GRADED · ${g.points}/10</span>`;
-
-    cards += `
-      <div class="dcard">
-        <div class="dhead">${q.title}</div>
-        <div class="dbody">
-          <div class="prompt">${q.prompt}</div>
-          ${richEditorHTML(`rte-ans-${q.id}`, savedAns, 'Type your response here...', !!g)}
-          ${g && g.feedback ? `<div class="model-answer show"><strong>Admin feedback:</strong> ${g.feedback}</div>` : ''}
-          <div class="row-actions">${badge}<span></span></div>
-        </div>
-      </div>`;
-  });
-
-  panel.innerHTML = `
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <h1>${meta.title || dayLabel.label}</h1>
-          <div class="intro">${meta.description || ''}</div>
-        </div>
-        <div>
-          <div class="stamp">${state.role.toUpperCase()}</div>
-          <div class="meta-mini">${dayLabel.short}${meta.deadline ? ' · DUE '+formatDeadline(meta.deadline) : ' · OPEN DEADLINE'}</div>
-        </div>
-      </div>
-      <div class="stat-bar">
-        <div class="stat"><div class="lbl">ANSWERED</div><div class="val">${submittedCount}/${items.length}</div></div>
-        <div class="stat"><div class="lbl">GRADED</div><div class="val">${gradedCount}/${items.length}</div></div>
-        <div class="stat"><div class="lbl">POINTS EARNED</div><div class="val">${totalPoints}/${items.length*10}</div></div>
-        <div class="grow"></div>
-        <div class="role-chip">${hasName ? state.name.trim().toUpperCase() : 'ENTER NAME TO START'}</div>
-      </div>
-      <div class="search-row"><input id="searchInput" placeholder="Search this activity's items..." value="${state.search}" /></div>
-    </div>
-    ${isPaused ? `<div class="dcard alt"><div class="dbody" style="display:flex; align-items:center; gap:10px; padding:14px 20px;"><span style="font-size:16px;">⏸</span><div style="font-size:12px; font-weight:700; color:var(--orange-dark);">Activities are currently paused by an administrator. You can review your work, but submissions are temporarily disabled.</div></div></div>` : ''}
-
-    ${meta.instructions ? `<div class="dcard alt"><div class="dhead">INSTRUCTIONS</div><div class="dbody"><div class="rte-display">${meta.instructions}</div></div></div>` : ''}
-    ${lessonHtml}
-    ${!hasName ? '<p class="empty-note" style="margin:10px 0 16px 4px;">Enter your name in the sidebar to save and submit answers.</p>' : ''}
-    ${cards}
-  `;
-
-  document.getElementById('searchInput').oninput = (e)=>{ state.search = e.target.value; renderTraineeDay(panel, dayKey); };
-  bindRichEditors(panel);
-  const primaryBtnEl = document.getElementById('primaryActionBtn');
-  primaryBtnEl.disabled = isPaused;
-  primaryBtnEl.style.opacity = isPaused ? '0.5' : '';
-  primaryBtnEl.style.cursor = isPaused ? 'not-allowed' : '';
-  primaryBtnEl.onclick = async ()=>{
-    const pause = await getJSON('config:pause', true);
-    if(pause && pause.paused){
-      alert('Activities are currently paused by an administrator. Submissions are temporarily disabled.');
-      return;
-    }
-    const answers = {};
-    panel.querySelectorAll('.rte-editor[id^="rte-ans-"]').forEach(ed=>{
-      if(ed.classList.contains('readonly')) return;
-      const qid = ed.id.replace('rte-ans-','');
-      answers[qid] = ed.innerHTML.trim();
-    });
-    const existing = submission && submission.answers ? submission.answers : {};
-    const merged = {...existing, ...answers};
-    await setJSON(`submission:${dayKey}:${slug}`, {name: state.name.trim(), answers: merged, submittedAt: Date.now()}, true);
-    await logEvent('submit', `${dayLabel.label}`);
-    render();
-  };
-  bindLessonUpload(dayKey);
-}
-
-/* ================= ADMIN VIEW ================= */
-async function renderAdminDay(panel, dayKey){
-  const meta = await getActivityMeta(dayKey);
-  const items = await getActivityItems(dayKey);
-  const dayLabel = DAY_LABELS[dayKey];
-  const lessonHtml = await renderLessonBlock(dayKey);
-
-  const subtabsHtml = `
-    <div class="subtabs">
-      <div class="subtab ${state.adminView==='manage'?'active':''}" data-view="manage">MANAGE ACTIVITY</div>
-      <div class="subtab ${state.adminView==='grade'?'active':''}" data-view="grade">GRADE SUBMISSIONS</div>
-    </div>`;
-
-  const headerHtml = `
-    <div class="card">
-      <div class="card-head">
-        <div><h1>${meta.title || dayLabel.label}</h1><div class="intro">${meta.description || 'No description yet.'}</div></div>
-        <div><div class="stamp">ADMIN</div><div class="meta-mini">${dayLabel.short}${meta.deadline ? ' · DUE '+formatDeadline(meta.deadline) : ' · OPEN DEADLINE'}</div></div>
-      </div>
-      ${subtabsHtml}
-    </div>`;
-
-  document.getElementById('primaryActionBtn').style.display = 'none';
-
-  if(state.adminView === 'manage'){
-    panel.innerHTML = headerHtml + renderManageView(dayKey, meta, items) + lessonHtml;
-    bindManageView(dayKey, meta, items, panel);
-    bindRichEditors(panel);
-  } else {
-    panel.innerHTML = headerHtml + lessonHtml + await renderGradeView(dayKey, items, panel);
-  }
-
-  panel.querySelectorAll('.subtab').forEach(t=>{
-    t.onclick = ()=>{
-      state.adminView = t.dataset.view;
-      state.editingItemId = null;
-      state.search = "";
-      render();
-    };
-  });
-  bindLessonUpload(dayKey);
-}
-
-/* ---- Manage Activity sub-view ---- */
-function renderManageView(dayKey, meta, items){
-  let itemRows = '';
-  items.forEach((it, i)=>{
-    const preview = stripHtml(it.prompt);
-    itemRows += `
-      <div class="item-row">
-        <div>
-          <div class="item-num">ITEM ${String(i+1).padStart(2,'0')}</div>
-          <div class="item-title">${it.title}</div>
-          <div class="item-preview">${preview.slice(0,140)}${preview.length>140?'...':''}</div>
-        </div>
-        <div class="item-actions">
-          <button class="icon-btn" data-edit="${it.id}">EDIT</button>
-          <button class="icon-btn danger" data-delete="${it.id}">DELETE</button>
-        </div>
-      </div>`;
-  });
-
-  const editing = items.find(it => it.id === state.editingItemId) || null;
-  const deadlineVal = meta.deadline || '';
-
-  return `
-    <div class="dcard alt">
-      <div class="dhead">ACTIVITY DETAILS</div>
-      <div class="dbody">
-        <div class="form-row">
-          <div class="form-field"><label>DAY</label><div style="padding:10px 12px; background:var(--input-bg); border:1px solid var(--line-light); border-radius:var(--r-xs); font-size:12.5px; font-weight:700; color:var(--ink);">${DAY_LABELS[dayKey].label}</div></div>
-          <div class="form-field">
-            <label>DEADLINE</label>
-            <input type="datetime-local" id="deadlineInput" value="${deadlineVal}" ${!deadlineVal ? 'disabled' : ''} />
-            <label style="display:flex; align-items:center; gap:6px; margin-top:8px; font-size:11px; letter-spacing:0.2px; color:var(--muted-dark); font-weight:400; text-transform:none;">
-              <input type="checkbox" id="openDeadlineToggle" ${!deadlineVal ? 'checked' : ''} style="width:auto; margin:0;" /> Open deadline (no due date)
-            </label>
-          </div>
-        </div>
-        <div class="form-field"><label>ACTIVITY TITLE</label><input type="text" id="dayTitleInput" value="${(meta.title||'').replace(/"/g,'&quot;')}" placeholder="e.g. Intake, Compliance & Treatment Advocacy" /></div>
-        <div class="form-field"><label>DESCRIPTION</label><textarea id="dayDescInput" placeholder="Short summary shown to trainees">${meta.description||''}</textarea></div>
-        <div class="form-field"><label>INSTRUCTIONS</label><textarea id="dayInstrInput" placeholder="Step-by-step instructions for completing this activity">${meta.instructions||''}</textarea></div>
-        <button class="btn orange" id="saveDayMetaBtn">Save Activity Details</button>
-      </div>
-    </div>
-
-    <div class="dcard">
-      <div class="dhead">${editing ? 'EDIT ACTIVITY ITEM' : 'ADD ACTIVITY ITEM'}</div>
-      <div class="dbody">
-        <div class="form-field"><label>SCENARIO</label><input type="text" id="itemTitleInput" value="${editing ? editing.title.replace(/"/g,'&quot;') : ''}" placeholder="e.g. Analyzing Intake Bottlenecks" /></div>
-        <div class="form-field"><label>QUESTION</label>${richEditorHTML('itemQuestionEditor', editing ? editing.prompt : '', 'What the trainee is asked to respond to')}</div>
-        <div class="form-field"><label>ANSWER</label>${richEditorHTML('itemAnswerEditor', editing ? editing.model : '', 'Key points the admin checks the answer against')}</div>
-        <div class="row-actions">
-          <span></span>
-          <div style="display:flex; gap:10px;">
-            ${editing ? `<button class="btn ghost" id="cancelEditBtn">Cancel</button>` : ''}
-            <button class="btn orange" id="saveItemBtn">${editing ? 'Save Changes' : 'Add Item'}</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="dcard">
-      <div class="dhead">ACTIVITY ITEMS (${items.length})</div>
-      <div class="dbody">
-        ${items.length ? itemRows : '<div class="empty-state">No items yet. Use the form above to add the first scenario.</div>'}
-      </div>
-    </div>
-  `;
-}
-
-function bindManageView(dayKey, meta, items, panel){
-  const openDeadlineToggle = document.getElementById('openDeadlineToggle');
-  const deadlineInput = document.getElementById('deadlineInput');
-  if(openDeadlineToggle && deadlineInput){
-    openDeadlineToggle.onchange = ()=>{
-      deadlineInput.disabled = openDeadlineToggle.checked;
-      if(openDeadlineToggle.checked) deadlineInput.value = '';
-    };
-  }
-
-  document.getElementById('saveDayMetaBtn').onclick = async ()=>{
-    const title = document.getElementById('dayTitleInput').value.trim();
-    const description = document.getElementById('dayDescInput').value.trim();
-    const instructions = document.getElementById('dayInstrInput').value.trim();
-    const deadline = openDeadlineToggle && openDeadlineToggle.checked ? '' : deadlineInput.value;
-    await setActivityMeta(dayKey, { title, description, instructions, deadline });
-    render();
-  };
-
-  document.getElementById('saveItemBtn').onclick = async ()=>{
-    const title = document.getElementById('itemTitleInput').value.trim();
-    const prompt = getRteContent('itemQuestionEditor');
-    const model = getRteContent('itemAnswerEditor');
-    if(!title || !stripHtml(prompt)){ alert('Please provide at least a scenario and a question.'); return; }
-
-    let current = await getActivityItems(dayKey);
-    if(state.editingItemId){
-      current = current.map(it => it.id === state.editingItemId ? {...it, title, prompt, model} : it);
-    } else {
-      current = [...current, { id: uid(), title, prompt, model }];
-    }
-    await setActivityItems(dayKey, current);
-    state.editingItemId = null;
-    render();
-  };
-
-  const cancelBtn = document.getElementById('cancelEditBtn');
-  if(cancelBtn) cancelBtn.onclick = ()=>{ state.editingItemId = null; render(); };
-
-  panel.querySelectorAll('[data-edit]').forEach(b=>{
-    b.onclick = ()=>{ state.editingItemId = b.dataset.edit; render(); };
-  });
-  panel.querySelectorAll('[data-delete]').forEach(b=>{
-    b.onclick = async ()=>{
-      if(!confirm('Delete this activity item? This does not remove trainee answers already submitted.')) return;
-      const current = await getActivityItems(dayKey);
-      await setActivityItems(dayKey, current.filter(it => it.id !== b.dataset.delete));
-      render();
-    };
-  });
-}
-
-/* ---- Grade Submissions sub-view ---- */
-async function renderGradeView(dayKey, items, panel){
-  if(items.length === 0){
-    return `<div class="empty-state">Add activity items in "Manage Activity" before grading submissions.</div>`;
-  }
-
-  const submissionKeys = await listKeys(`submission:${dayKey}:`, true);
-  const slugs = submissionKeys.map(k => k.split(':').slice(2).join(':'));
-
-  if(slugs.length === 0){
-    return `<div class="empty-state">No trainee submissions yet for this activity.</div>`;
-  }
-
-  if(!state.selectedTrainee || !slugs.includes(state.selectedTrainee)) state.selectedTrainee = slugs[0];
-
-  const submission = await getJSON(`submission:${dayKey}:${state.selectedTrainee}`, true);
-  const grade = await getJSON(`grade:${dayKey}:${state.selectedTrainee}`, true) || {items:{}};
-
-  let options = '';
-  for(const s of slugs){
-    const sub = await getJSON(`submission:${dayKey}:${s}`, true);
-    options += `<option value="${s}" ${s===state.selectedTrainee?'selected':''}>${sub ? sub.name : s}</option>`;
-  }
-
-  const qs = items.filter(q =>
-    !state.search || (q.title + stripHtml(submission.answers?.[q.id]||'')).toLowerCase().includes(state.search.toLowerCase())
-  );
-
-  let cards = '';
-  qs.forEach((q)=>{
-    const ans = submission && submission.answers ? (submission.answers[q.id] || '') : '';
-    const g = grade.items[q.id] || null;
-    cards += `
-      <div class="dcard">
-        <div class="dhead">${q.title}</div>
-        <div class="dbody">
-          <div class="rte-display" style="margin-bottom:12px;">${ans || '<em>No answer submitted.</em>'}</div>
-          ${q.model ? `<span class="toggle-model" data-qid="${q.id}">Show answer key</span><div class="model-answer" id="model-${q.id}">${q.model}</div>` : ''}
-          <div class="grade-row">
-            <div class="grade-inputs">
-              <label>POINTS (0–10)</label>
-              <input type="number" min="0" max="10" data-points="${q.id}" value="${g ? g.points : ''}" />
-              <input type="text" data-feedback="${q.id}" placeholder="Feedback for trainee (optional)" value="${g && g.feedback ? g.feedback.replace(/"/g,'&quot;') : ''}" />
+        <div class="announcement-ticker" id="announcement-ticker">
+            <span class="announcement-tag" id="announcement-tag">ANNOUNCEMENT:</span>
+            <div class="ticker-viewport">
+                <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
             </div>
-          </div>
         </div>
-      </div>`;
-  });
-
-  const html = `
-    <div class="card">
-      <div class="stat-bar">
-        <div class="stat"><div class="lbl">TRAINEE</div><div class="val"><select class="day-select" id="traineeSelect" style="background:var(--bg-card-dark);color:#fff;border-color:var(--line);">${options}</select></div></div>
-        <div class="grow"></div>
-        <div class="role-chip">${slugs.length} SUBMISSION${slugs.length===1?'':'S'}</div>
-      </div>
-      <div class="search-row"><input id="searchInput" placeholder="Search items or answers..." value="${state.search}" /></div>
-    </div>
-    ${cards}
-    <div class="row-actions" style="margin:6px 4px 0 4px;">
-      <span></span>
-      <button class="btn orange" id="saveGradesBtn">Save Grades</button>
-    </div>
-  `;
-
-  setTimeout(()=>{
-    const searchEl = document.getElementById('searchInput');
-    if(searchEl) searchEl.oninput = (e)=>{ state.search = e.target.value; render(); };
-    const traineeSel = document.getElementById('traineeSelect');
-    if(traineeSel) traineeSel.onchange = (e)=>{ state.selectedTrainee = e.target.value; render(); };
-    panel.querySelectorAll('.toggle-model').forEach(el=>{
-      el.onclick = ()=>{
-        const box = document.getElementById('model-'+el.dataset.qid);
-        box.classList.toggle('show');
-        el.textContent = box.classList.contains('show') ? 'Hide answer key' : 'Show answer key';
-      };
-    });
-    const saveBtn = document.getElementById('saveGradesBtn');
-    if(saveBtn) saveBtn.onclick = async ()=>{
-      const currentItems = await getActivityItems(dayKey);
-      const items2 = {...grade.items};
-      currentItems.forEach(q=>{
-        const pEl = document.querySelector(`[data-points="${q.id}"]`);
-        const fEl = document.querySelector(`[data-feedback="${q.id}"]`);
-        if(!pEl) return;
-        const p = pEl.value, f = fEl.value;
-        if(p !== '') items2[q.id] = { points: Math.max(0, Math.min(10, Number(p))), feedback: f };
-      });
-      await setJSON(`grade:${dayKey}:${state.selectedTrainee}`, {name: submission.name, items: items2, gradedAt: Date.now(), gradedBy: state.username || state.name}, true);
-      await logEvent('grade', `${DAY_LABELS[dayKey].label} — ${submission.name}`);
-      render();
-    };
-  }, 0);
-
-  return html;
-}
-
-/* ================= LEADERBOARD ================= */
-async function renderLeaderboard(panel){
-  panel.innerHTML = `<div class="card"><div class="card-head"><div><h1>Leaderboard</h1><div class="intro">Total points across all graded activities.</div></div></div></div><p class="empty-note">Loading...</p>`;
-  const gradeKeys = await listKeys('grade:', true);
-  const totals = {};
-
-  for(const key of gradeKeys){
-    const parts = key.split(':');
-    const dayKey = parts[1];
-    const slug = parts.slice(2).join(':');
-    const g = await getJSON(key, true);
-    if(!g) continue;
-    const dayTotal = Object.values(g.items || {}).reduce((s,it)=> s + (it.points||0), 0);
-    if(!totals[slug]) totals[slug] = { name: g.name || slug, total: 0, perDay: {} };
-    totals[slug].total += dayTotal;
-    totals[slug].perDay[dayKey] = dayTotal;
-  }
-
-  const ranked = Object.values(totals).sort((a,b)=> b.total - a.total);
-  let rows = '';
-  if(ranked.length === 0){
-    rows = `<tr><td colspan="4" class="empty-note">No grades recorded yet.</td></tr>`;
-  } else {
-    ranked.forEach((r,i)=>{
-      const breakdown = DAY_KEYS.map(d => r.perDay[d] ? `${DAY_LABELS[d].short.replace('DAY ','D')}:${r.perDay[d]}` : '').filter(Boolean).join('  ');
-      rows += `<tr>
-        <td class="rank ${i===0?'gold':''}">#${i+1}</td>
-        <td>${r.name}</td>
-        <td style="color:var(--muted-dark); font-size:11px;">${breakdown}</td>
-        <td class="score-total">${r.total} PTS</td>
-      </tr>`;
-    });
-  }
-
-  panel.innerHTML = `
-    <div class="card">
-      <div class="card-head">
-        <div><h1>Leaderboard</h1><div class="intro">Total points across all graded activities. Updates live as the admin submits grades.</div></div>
-        <div><div class="stamp">RANKINGS</div></div>
-      </div>
-    </div>
-    <div class="dcard">
-      <div class="dhead">DOCKET — ALL TRAINEES</div>
-      <div class="dbody" style="padding-top:6px;">
-        <table class="leader">
-          <thead><tr><th>RANK</th><th>TRAINEE</th><th>BREAKDOWN</th><th>TOTAL</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-async function checkSession(){
-  try{
-    const res = await fetch('/api/auth/me', { credentials: 'include' });
-    if(res.status === 401) return null;
-    const data = await res.json();
-    return data.user || null;
-  }catch(e){ return null; }
-}
-
-function renderLoginGate(){
-  document.body.innerHTML = `
-    <div class="authpage" id="authPage">
-      <div class="authcard">
-
-        <div class="authbrand">
-          <div class="logo-box">CM</div>
-          <div class="logo-text">
-            <div class="l1">CASE MANAGEMENT</div>
-            <div class="l2">TRAINING INTERFACE</div>
-          </div>
-        </div>
-
-        <!-- LOGIN VIEW -->
-        <div id="authLoginView" class="authview active">
-          <div class="authtabs" id="authPortalTabs">
-            <button type="button" data-portal="trainee" class="active">TRAINEE PORTAL</button>
-            <button type="button" data-portal="admin">ADMIN PORTAL</button>
-          </div>
-
-          <div class="autherror" id="loginError"></div>
-
-          <div class="authfield">
-            <label>USERNAME</label>
-            <input id="authUsername" type="text" placeholder="Enter your username" />
-          </div>
-          <div class="authfield">
-            <label>PASSWORD</label>
-            <input id="authPassword" type="password" placeholder="Enter your password" />
-          </div>
-
-          <button id="authLoginBtn" class="authbtn">LOG IN</button>
-          <div class="authfooter">No account yet? <a id="goToRegister">Register here</a></div>
-        </div>
-
-        <!-- REGISTER VIEW -->
-        <div id="authRegisterView" class="authview">
-          <div class="autherror" id="registerError"></div>
-          <div class="authnotice" id="registerNotice"></div>
-
-          <div class="authrow">
-            <div class="authfield"><label>FIRST NAME</label><input id="regFirst" type="text" placeholder="e.g., Juan" /></div>
-            <div class="authfield small"><label>M.I.</label><input id="regMI" type="text" placeholder="M.I." maxlength="2" /></div>
-          </div>
-          <div class="authrow">
-            <div class="authfield"><label>LAST NAME</label><input id="regLast" type="text" placeholder="e.g., Dela Cruz" /></div>
-            <div class="authfield suffix"><label>SUFFIX (OPTIONAL)</label><input id="regSuffix" type="text" placeholder="Jr., III..." /></div>
-          </div>
-          <div class="authfield">
-            <label>EMAIL</label>
-            <input id="regEmail" type="email" placeholder="name@example.com" />
-          </div>
-          <div class="authfield">
-            <label>TYPE OF USER</label>
-            <select id="regRole">
-              <option value="trainee">Trainee</option>
-              <option value="admin">Admin</option>
+        <div class="clock-widget">
+            <span id="live-clock">--:--:--</span>
+            <select id="tz-select" onchange="refreshClock()" style="max-width:220px;">
+                <option value="Asia/Manila">Manila (PHT)</option>
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">New York (ET)</option>
+                <option value="America/Chicago">Chicago (CT)</option>
+                <option value="America/Denver">Denver (MT)</option>
+                <option value="America/Los_Angeles">Los Angeles (PT)</option>
+                <option value="Europe/London">London (GMT/BST)</option>
+                <option value="Asia/Tokyo">Tokyo (JST)</option>
+                <option value="Australia/Sydney">Sydney (AEST)</option>
             </select>
-          </div>
-          <div class="authfield">
-            <label>BATCH ID</label>
-            <input type="text" placeholder="Batch ID will be assigned upon approval" disabled />
-          </div>
-          <div class="authfield">
-            <label>USERNAME</label>
-            <input id="regUsername" type="text" placeholder="Choose a username" />
-          </div>
-          <div class="authfield">
-            <label>PASSWORD</label>
-            <input id="regPassword" type="password" placeholder="Create a password" />
-            <div class="authhint">At least 8 characters, letters and numbers only (must include at least one of each).</div>
-          </div>
-          <div class="authfield">
-            <label>RETYPE PASSWORD</label>
-            <input id="regPassword2" type="password" placeholder="Retype your password" />
-          </div>
-
-          <button id="authRegisterBtn" class="authbtn">SUBMIT REGISTRATION</button>
-          <div class="authfooter">Already have an account? <a id="goToLogin">Back to log in</a></div>
         </div>
-
-      </div>
     </div>
-  `;
 
-  const page = document.getElementById('authPage');
-  const loginView = document.getElementById('authLoginView');
-  const registerView = document.getElementById('authRegisterView');
-  const portalTabs = document.querySelectorAll('#authPortalTabs button');
-  const regRole = document.getElementById('regRole');
-  const loginErr = document.getElementById('loginError');
-  const regErr = document.getElementById('registerError');
-  const regNotice = document.getElementById('registerNotice');
+    <div id="app-shell">
+    <aside id="sidebar" class="no-print custom-scrollbar">
+        <div id="sidebar-header">
+            <div id="agency-seal"><span>⚖</span></div>
+            <div>
+                <h1 class="font-black text-white leading-tight uppercase tracking-tight serif" style="font-size:22px; margin:0;">Legal Support Help</h1>
+                <div class="text-orange-500 mono" style="font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-top:4px;">Case Management System</div>
+            </div>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto custom-scrollbar" id="sidebar-actions" style="flex:1;">
+            <button onclick="requestDownload()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download Case Summary (PDF)</button>
+            <button onclick="newCase()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">Start a New Case</button>
 
-  const showError = (box, msg)=>{ box.textContent = msg; box.style.display = 'block'; };
-  const hideError = (box)=>{ box.style.display = 'none'; };
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Repository</p>
+            <form autocomplete="off" onsubmit="return false;" style="margin:0;">
+                <input type="search" id="repo-search" class="repo-search-input" name="case-repo-filter-q" oninput="renderRepo()" placeholder="Search by client name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" style="width:100%; padding:8px 10px; margin-bottom:10px; border-radius:6px; border:1px solid #1e2c4d; background:#0d1c3d; color:white; font-size:11px; outline:none;">
+            </form>
+            <div id="repo-list" class="space-y-3 mb-2"></div>
+            <div id="repo-count-note" style="font-size:9.5px; color:#64748b; margin-bottom:8px;"></div>
+            <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">View All Files</button>
 
-  const setTheme = (portal)=>{
-    page.classList.toggle('theme-admin', portal === 'admin');
-  };
+            <button onclick="saveCase()" class="w-full bg-[#10b981] hover:bg-emerald-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Save Case</button>
+            <button onclick="archiveCaseAsDraft()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Archive Case (Save as Draft)</button>
+            <button onclick="updateCase()" class="w-full bg-[#2563eb] hover:bg-blue-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Update Saved Case</button>
+            <div id="autosave-indicator" style="font-size:9.5px; color:#64748b; text-align:center; margin-bottom:12px; opacity:0.55; transition:opacity 0.3s;">Autosave active — drafts only, not final</div>
 
-  portalTabs.forEach(btn=>{
-    btn.onclick = ()=>{
-      portalTabs.forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      setTheme(btn.dataset.portal);
-    };
-  });
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="exportRepo()" class="w-full h-9 flex items-center justify-center bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-black rounded uppercase leading-none col-span-2" style="box-sizing:border-box;">Export Case List</button>
+            </div>
+        </div>
+        <div id="session-footer" style="margin:16px;"></div>
+    </aside>
 
-  document.getElementById('goToRegister').onclick = ()=>{
-    loginView.classList.remove('active');
-    registerView.classList.add('active');
-    setTheme(regRole.value);
-  };
-  document.getElementById('goToLogin').onclick = ()=>{
-    registerView.classList.remove('active');
-    loginView.classList.add('active');
-    const activePortal = document.querySelector('#authPortalTabs button.active').dataset.portal;
-    setTheme(activePortal);
-  };
-  regRole.onchange = ()=> setTheme(regRole.value);
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar" id="capture-area">
 
-  const doLogin = async ()=>{
-    hideError(loginErr);
-    const username = document.getElementById('authUsername').value.trim();
-    const password = document.getElementById('authPassword').value;
-    const portal = document.querySelector('#authPortalTabs button.active').dataset.portal;
-    if(!username || !password){ showError(loginErr, 'Enter a username and password.'); return; }
-    try{
-      // Site lock (Access Control tab): blocks new Trainee Portal logins. Admins can
-      // always still log in — they're the only ones who can lift the lock.
-      if(portal === 'trainee'){
-        const lock = await getJSON('config:lock', true);
-        if(lock && lock.locked){
-          showError(loginErr, 'Site access is currently locked by an administrator. Please try again later.');
-          return;
-        }
-      }
+            <div class="pdf-card header-card shadow-lg border-2 border-orange-500">
+                <div class="flex justify-between items-start">
+                    <div class="space-y-1">
+                        <div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div>
+                        <div class="flex items-center gap-6">
+                            <div class="flex items-center gap-2"><label class="mb-0 contact-label">Contact:</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" style="min-width:140px" class="text-xs font-bold text-slate-700"></div></div>
+                            <div class="flex items-center gap-2"><label class="mb-0 text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" style="min-width:120px" class="target-settlement-display"></div></div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="flex items-center gap-3 mb-2 justify-end"><label class="mb-0">Case ID:</label><div id="case-id-field" contenteditable="false" class="text-xs font-bold text-slate-500 min-w-[160px] bg-slate-100 px-2 py-0.5 rounded mono">LSH-----</div></div>
+                        <div class="flex items-center gap-2">
+                            <select id="phase-selector" onchange="updatePhaseDisplay(this.value)" class="bg-orange-50 text-orange-700 text-[10px] font-black uppercase px-2 py-1 rounded border border-orange-100 cursor-pointer">
+                                <option value="Intake">Intake</option><option value="Investigation">Investigation</option><option value="Treatment">Treatment</option><option value="Demand Review">Demand Review</option><option value="Bi Demand">Bi Demand</option><option value="BI Settlement Nego">BI Settlement Nego</option><option value="UM Demand">UM Demand</option><option value="UM settlement">UM settlement</option><option value="Lien Negotiations">Lien Negotiations</option><option value="Disbursement">Disbursement</option><option value="Litigation">Litigation</option>
+                            </select>
+                            <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic leading-none min-w-[280px] serif">INTAKE</div>
+                        </div>
+                    </div>
+                </div>
 
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, portal }),
-      });
-      if(!res.ok){
-        const data = await res.json().catch(()=>({}));
-        showError(loginErr, data.error || 'Something went wrong.');
-        return;
-      }
-      const data = await res.json().catch(()=>({}));
-      const role = data && data.user && data.user.role;
-      if(role && role !== portal){
-        // Credentials were valid but the account's role doesn't match the portal selected.
-        // Kill the session immediately rather than let a mismatched role in.
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(()=>{});
-        const correctPortal = role === 'trainee' ? 'Trainee Portal' : 'Admin Portal';
-        showError(loginErr, `This account is registered as ${role === 'trainee' ? 'Trainee' : 'Admin'}. Please log in through the ${correctPortal}.`);
-        return;
-      }
+                <div id="lsh-integrated-bar">
+                    <div class="bar-data-container">
+                        <div class="bar-box">
+                            <label>DATE OF LOSS</label>
+                            <div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div>
+                        </div>
+                        <div class="bar-box sol-box">
+                            <label>STATUTE (SOL)</label>
+                            <div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div>
+                        </div>
+                    </div>
 
-      // Suspended/revoked accounts (Users tab, Master Control): reject even with valid credentials.
-      const regRec = await getJSON(`reg:${username}`, true);
-      if(regRec && (regRec.status === 'suspended' || regRec.status === 'revoked')){
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(()=>{});
-        showError(loginErr, regRec.status === 'revoked'
-          ? 'This account has been revoked. Contact an administrator.'
-          : 'This account is currently suspended. Contact an administrator.');
-        return;
-      }
+                    <div class="ml-auto flex items-center">
+                        <span class="text-[10px] font-black text-orange-500 italic uppercase mr-3">Type:</span>
+                        <div class="flex items-center bg-[#1f2937] rounded-lg border border-slate-700 p-1">
+                            <select id="main-case-type" onchange="handleOtherSystem(this.id, 'main-case-other', 'main-revert'); generateCaseId();" class="bg-transparent text-blue-400 font-black text-[11px] px-4 outline-none cursor-pointer uppercase">
+                                <option value="MVA">MVA</option>
+                                <option value="Slip and Fall">Slip and Fall</option>
+                                <option value="Dog Bite">Dog Bite</option>
+                                <option value="Premise Liability">Premise Liability</option>
+                                <option value="Others">Others</option>
+                            </select>
+                            <div id="main-case-other" contenteditable="true" data-ph="TYPE OTHER..." oninput="generateCaseId();" class="hidden text-white text-[11px] px-2 min-w-[120px] outline-none"></div>
+                            <button id="main-revert" onclick="revertOther('main-case-type', 'main-case-other', 'main-revert')" class="revert-btn">↺</button>
+                        </div>
+                    </div>
+                </div>
 
-      await logEvent('login', `${portal === 'admin' ? 'Admin' : 'Trainee'} Portal`, {
-        username, name: (data.user && data.user.name) || username, role: role || portal,
-      });
-      location.reload();
-    }catch(e){ showError(loginErr, 'Network error — please try again.'); }
-  };
+                <div class="flex gap-6 mt-6 no-print overflow-x-auto pb-2">
+                    <div onclick="showTab('profile')" id="tab-profile" class="tab-btn active-tab">Profile</div>
+                    <div onclick="showTab('police')" id="tab-police" class="tab-btn">Police Report</div>
+                    <div onclick="showTab('matrix')" id="tab-matrix" class="tab-btn">Insurance</div>
+                    <div onclick="showTab('liens')" id="tab-liens" class="tab-btn">Liens</div>
+                    <div onclick="showTab('medical')" id="tab-medical" class="tab-btn">Treatment</div>
+                    <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Property Damage</div>
+                    <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
+                    <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Finance</div>
+                    <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
+                    <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
+                    <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
+                </div>
+            </div>
 
-  const doRegister = async ()=>{
-    hideError(regErr); regNotice.style.display = 'none';
-    const first = document.getElementById('regFirst').value.trim();
-    const mi = document.getElementById('regMI').value.trim();
-    const last = document.getElementById('regLast').value.trim();
-    const suffix = document.getElementById('regSuffix').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const role = regRole.value;
-    const username = document.getElementById('regUsername').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const password2 = document.getElementById('regPassword2').value;
+            <div id="pane-profile" class="tab-pane active">
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><div class="section-head">Identity</div>
+                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
+                            <div class="mb-4"><label>Email Address</label><div contenteditable="true" data-ph="name@example.com" data-fmt="email"></div></div><div><label>Home Address</label><div contenteditable="true" data-ph="Street, City, State, ZIP"></div></div>
+                        </div>
+                        <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><div class="section-head" style="background:#fff7ed;color:#c2410c;">Emergency Contact</div>
+                            <div class="mb-4"><label>Full Name</label><div contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
+                            <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div><div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse"></div></div></div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="pdf-card shadow-sm"><div class="section-head">Employment Details</div>
+                            <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option><option>Retired</option></select></div>
+                            <div class="mb-4"><label>Employer Name</label><div contenteditable="true" data-ph="Enter employer" data-fmt="name"></div></div>
+                            <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true" data-ph="Enter title"></div></div>
+                        </div>
+                    </div>
+                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div></div>
+                </div>
+                <div class="mt-6">
+                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase mb-0">Passenger Records</label><button onclick="addPassenger()" class="add-btn no-print">+ Add Passenger</button></div>
+                    <div id="passenger-container" class="space-y-4"></div>
+                </div>
+            </div>
 
-    if(!first || !last || !email || !username || !password){
-      showError(regErr, 'Please fill in all required fields.'); return;
-    }
-    const pwRule = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-    if(!pwRule.test(password)){
-      showError(regErr, 'Password must be at least 8 characters and include letters and numbers.'); return;
-    }
-    if(password !== password2){
-      showError(regErr, 'Passwords do not match.'); return;
-    }
+            <div id="pane-police" class="tab-pane">
+                <div class="pdf-card border-l-8 border-blue-500">
+                    <div class="section-head" style="background:#0f172a;color:#60a5fa;">Police Report Details</div>
+                    <div class="grid grid-cols-3 gap-8 mb-8">
+                        <div><label>Responding Agency</label><div contenteditable="true" data-ph="e.g. State Highway Patrol"></div></div>
+                        <div><label>Report Number</label><div contenteditable="true" data-ph="Enter report #"></div></div>
+                        <div><label>Reporting Officer</label><div contenteditable="true" data-ph="Name & Badge #"></div></div>
+                    </div>
+                    <label>Officer's Narrative Summary</label>
+                    <div contenteditable="true" data-ph="Type police summary here..." class="multiline-field min-h-[420px] bg-slate-50 p-6 rounded text-sm italic leading-relaxed text-slate-700"></div>
+                </div>
+            </div>
 
-    try{
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName: first, mi, lastName: last, suffix, email, role, username, password }),
-      });
-      if(!res.ok){
-        const data = await res.json().catch(()=>({}));
-        showError(regErr, data.error || 'Something went wrong. Please try again.');
-        return;
-      }
-      // Tracking record for Master Control (Registrations / Users / Batch grouping).
-      // This is separate from whatever the auth backend itself does with the account.
-      await setJSON(`reg:${username}`, {
-        username, firstName: first, mi, lastName: last, suffix, email, role,
-        batchId: '', status: 'pending', createdAt: Date.now(), approvedAt: null, approvedBy: null,
-      }, true);
-      regNotice.textContent = 'Registration submitted. Please wait for admin approval, then log in.';
-      regNotice.style.display = 'block';
-      setTimeout(()=>{ document.getElementById('goToLogin').click(); }, 2200);
-    }catch(e){ showError(regErr, 'Network error — please try again.'); }
-  };
+            <div id="pane-matrix" class="tab-pane">
+                <div class="space-y-8">
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="pdf-card border-l-4 border-blue-500 shadow-sm">
+                            <div class="section-head" style="background:#eff6ff;color:#1d4ed8;">Health Insurance</div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Carrier</label><div contenteditable="true" data-ph="Enter carrier" data-fmt="name"></div></div>
+                                <div><label>Member ID</label><div contenteditable="true" data-ph="Enter member ID"></div></div>
+                                <div class="col-span-2"><label>Group Number</label><div contenteditable="true" data-ph="Enter group #"></div></div>
+                            </div>
+                        </div>
+                        <div class="pdf-card border-l-4 border-blue-900 shadow-sm">
+                            <div class="section-head" style="background:#eef2ff;color:#1e3a8a;">Independent Subrogation Card</div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label>Subro Agency</label><div contenteditable="true" data-ph="Enter agency" data-fmt="name"></div></div>
+                                <div><label>Lien Holder</label><div contenteditable="true" data-ph="Enter lien holder" data-fmt="name"></div></div>
+                                <div><label>Claim #</label><div contenteditable="true" data-ph="Enter claim #"></div></div>
+                                <div><label>Lien Amount</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="font-bold text-red-600"></div></div>
+                            </div>
+                        </div>
+                    </div>
 
-  document.getElementById('authLoginBtn').onclick = doLogin;
-  document.getElementById('authRegisterBtn').onclick = doRegister;
-}
+                    <div class="flex justify-between items-center"><label class="font-black text-red-600 text-sm uppercase mb-0">Bodily Injury (BI) Policies</label><button onclick="addBI()" class="add-btn no-print">+ Add BI Policy</button></div>
+                    <div id="bi-container" class="space-y-4"></div>
 
-/* ================================================================
-   MASTER CONTROL (admin) — full module
-   ================================================================ */
+                    <div class="flex justify-between items-center"><label class="font-black text-orange-600 text-sm uppercase mb-0">PIP / UM/UIM Coverage Stack</label><button onclick="addPIPUM()" class="add-btn no-print">+ Add Coverage</button></div>
+                    <div id="pip-um-container" class="space-y-4"></div>
+                </div>
+            </div>
 
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function jsStr(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+            <div id="pane-liens" class="tab-pane">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="section-head" style="margin-bottom:0;">Outstanding Case Liens</div>
+                    <button onclick="addLien()" class="add-btn no-print">+ Add Lien Entry</button>
+                </div>
+                <div id="lien-container" class="space-y-4"></div>
+            </div>
 
-function initMasterControlShell(){
-  const btn = document.getElementById('masterControlBtn');
-  if(!btn) return;
-  btn.style.display = state.role === 'admin' ? 'block' : 'none';
-  btn.onclick = openMasterControl;
-}
+            <div id="pane-medical" class="tab-pane">
+                <div class="pdf-card mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Medical Chronology</div>
+                        <button onclick="addChronology()" class="add-btn no-print">+ Add Chronology Entry</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead>
+                            <tr>
+                                <th width="210">Date of Service</th>
+                                <th width="190">Medical Facility</th>
+                                <th width="160">Next Appointment Schedule</th>
+                                <th>Notes</th>
+                                <th width="30"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="chrono-container"></tbody>
+                    </table>
+                </div>
+                <div class="pdf-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Provider Treatment Matrix</div>
+                        <button onclick="addFacility()" class="add-btn no-print">+ Add Medical Facility</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead>
+                            <tr>
+                                <th width="160">Medical Facility</th>
+                                <th width="140">Specialty</th>
+                                <th width="130">Phone</th>
+                                <th width="150">Email</th>
+                                <th width="150">Dates of Treatment</th>
+                                <th width="130">Treatment Status</th>
+                                <th width="120">Invoiced Charges</th>
+                                <th width="30"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="facility-container"></tbody>
+                    </table>
+                </div>
+                <div class="pdf-card bg-green-50 mt-4 border-l-8 border-green-600 flex justify-between items-center">
+                    <span class="font-black uppercase text-green-700 text-sm tracking-widest">Total Medical Specials (Auto-Calc)</span>
+                    <span id="med-total" class="text-4xl font-black text-green-800 mono">$ 0.00</span>
+                </div>
+                <div class="pdf-card mt-4">
+                    <div class="section-head">Treatment Notes</div>
+                    <div contenteditable="true" data-ph="Enter treatment notes, gaps in care, referrals, or other clinical observations..." class="multiline-field min-h-[160px] text-sm italic leading-relaxed text-slate-600"></div>
+                </div>
+            </div>
 
-function openMasterControl(){
-  document.getElementById('mc-session-label').textContent = `Administrator Session — ${state.name || state.username}`;
-  document.getElementById('master-control-page').classList.add('open');
-  showAdminDashTab('overview');
-}
-function exitMasterControl(){
-  document.getElementById('master-control-page').classList.remove('open');
-}
+            <div id="pane-pd" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500 mb-8">
+                    <div class="section-head">Client Vehicle</div>
+                    <div class="grid grid-cols-4 gap-6 mb-8">
+                        <div><label>Year</label><div contenteditable="true" data-ph="YYYY" data-fmt="year"></div></div>
+                        <div><label>Make</label><div contenteditable="true" data-ph="Enter make"></div></div>
+                        <div><label>Model</label><div contenteditable="true" data-ph="Enter model"></div></div>
+                        <div><label>License Plate No.</label><div contenteditable="true" data-ph="Enter plate number" data-fmt="upper" class="mono"></div></div>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-lg">
+                        <div class="grid grid-cols-2 gap-8">
+                            <div><label>Registered Owner</label><div contenteditable="true" data-ph="Enter owner" data-fmt="name"></div></div>
+                            <div><label>Driver's Name</label><div contenteditable="true" data-ph="Enter driver" data-fmt="name"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pdf-card border-l-8 border-slate-400">
+                    <div class="section-head" style="background:#334155;">Third Party Vehicle</div>
+                    <div class="grid grid-cols-4 gap-6 mb-8">
+                        <div><label>Year</label><div contenteditable="true" data-ph="YYYY" data-fmt="year"></div></div>
+                        <div><label>Make</label><div contenteditable="true" data-ph="Enter make"></div></div>
+                        <div><label>Model</label><div contenteditable="true" data-ph="Enter model"></div></div>
+                        <div><label>License Plate No.</label><div contenteditable="true" data-ph="Enter plate number" data-fmt="upper" class="mono"></div></div>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-lg">
+                        <div class="grid grid-cols-2 gap-8 mb-2">
+                            <div><label>Registered Owner</label><div id="tp-owner" contenteditable="true" data-ph="Enter owner" data-fmt="name"></div></div>
+                            <div><label>Driver's Name</label><div id="tp-driver" contenteditable="true" data-ph="Enter driver" data-fmt="name"></div></div>
+                        </div>
 
-function showAdminDashTab(tab){
-  document.querySelectorAll('.mc-tab').forEach(t=> t.classList.toggle('active', t.dataset.mcTab === tab));
-  document.querySelectorAll('.mc-pane').forEach(p=> p.classList.remove('active'));
-  const pane = document.getElementById(`mc-pane-${tab}`);
-  if(pane) pane.classList.add('active');
-  if(tab === 'overview') renderMcOverview();
-  else if(tab === 'registrations') renderMcRegistrations();
-  else if(tab === 'users') renderMcUsers();
-  else if(tab === 'monitoring') renderMcMonitoring();
-  else if(tab === 'case-logs') renderMcCaseLogs();
-  else if(tab === 'announce') renderMcAnnouncePane();
-  else if(tab === 'access') renderMcAccessPane();
-}
+                        <div id="tp-owner-extra" class="hidden grid grid-cols-2 gap-8 mb-6 mt-2 pt-4 border-t border-slate-200">
+                            <div>
+                                <label class="text-orange-600">Vehicle Owner's Contact Number <span class="normal-case font-normal text-slate-400">(owner differs from driver)</span></label>
+                                <div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div>
+                            </div>
+                            <div>
+                                <label class="text-orange-600">Vehicle Owner's Policy Information</label>
+                                <div contenteditable="true" data-ph="Enter owner's insurance carrier & policy #"></div>
+                            </div>
+                        </div>
 
-async function getAllRegs(){
-  const keys = await listKeys('reg:', true);
-  const regs = [];
-  for(const k of keys){
-    const r = await getJSON(k, true);
-    if(r) regs.push(r);
-  }
-  return regs;
-}
-async function getOnlinePresence(){
-  const keys = await listKeys('presence:', true);
-  const now = Date.now();
-  const online = [];
-  for(const k of keys){
-    const p = await getJSON(k, true);
-    if(p && (now - p.lastSeen) < 60000) online.push(p);
-  }
-  return online;
-}
+                        <div class="grid grid-cols-2 gap-8 mt-6">
+                            <div><label>Driver Insured?</label><select id="tp-driver-insured" onchange="toggleDriverInsuredExtra()" class="prof-input"><option>Select</option><option>Yes</option><option>No</option></select></div>
+                            <div><label>Carrier / Policy Details</label><div contenteditable="true" data-ph="Enter carrier & policy"></div></div>
+                        </div>
 
-/* ---------- OVERVIEW ---------- */
-async function renderMcOverview(){
-  let activityDays = 0, totalSubs = 0;
-  for(const d of DAY_KEYS){
-    const items = await getActivityItems(d);
-    if(items.length) activityDays++;
-    const subKeys = await listKeys(`submission:${d}:`, true);
-    totalSubs += subKeys.length;
-  }
-  const regs = await getAllRegs();
-  const pending = regs.filter(r=>r.status==='pending').length;
-  const online = (await getOnlinePresence()).filter(p=>p.role==='trainee').length;
+                        <div id="tp-driver-extra" class="hidden grid grid-cols-2 gap-8 mt-6 pt-4 border-t border-slate-200">
+                            <div>
+                                <label class="text-orange-600">Driver's Contact Number</label>
+                                <div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div>
+                            </div>
+                            <div>
+                                <label class="text-orange-600">Driver's Insurance Company</label>
+                                <div contenteditable="true" data-ph="Enter insurance company" data-fmt="name"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-  document.getElementById('mc-stat-activities').textContent = activityDays;
-  document.getElementById('mc-stat-submissions').textContent = totalSubs;
-  document.getElementById('mc-stat-online').textContent = online;
-  document.getElementById('mc-stat-pending').textContent = pending;
-  document.getElementById('reg-pending-badge').textContent = pending ? `(${pending})` : '';
+            <div id="pane-litigation" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500 mb-6">
+                    <div class="grid grid-cols-4 gap-8">
+                        <div><label>Statute (SOL)</label><div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        <div><label>Complaint Filed</label><div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        <div><label>Discovery Cut-off</label><div contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        <div><label>Trial Date</label><div contenteditable="true" class="sol-font-fix text-orange-600" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                    </div>
+                </div>
+                <div class="pdf-card shadow-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Discovery & Filing Tracker</div>
+                        <button onclick="addRow('lit-body')" class="add-btn no-print">+ Add Task</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="200">Task Type</th><th width="200">Party Involved</th><th width="150">Due Date</th><th width="150">Status</th><th width="40"></th></tr></thead>
+                        <tbody id="lit-body"></tbody>
+                    </table>
+                </div>
+            </div>
 
-  const pause = await getJSON('config:pause', true);
-  const lock = await getJSON('config:lock', true);
-  const alert = await getJSON('config:alert', true);
-  document.getElementById('mc-ov-pause-state').textContent = (pause && pause.paused) ? 'Paused' : 'Active';
-  document.getElementById('mc-ov-lock-state').textContent = (lock && lock.locked) ? 'Locked' : 'Unlocked';
-  document.getElementById('mc-ov-alert-state').textContent = (alert && alert.active) ? 'Active' : 'None Active';
-}
+            <div id="pane-finance" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="section-head" style="margin-bottom:0;">Finance Tracking</div>
+                        <button onclick="addRow('fin-body')" class="add-btn no-print">+ Add Entry</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Assigned To</th><th>Expense ID / Description</th><th width="150">Amount</th><th width="40"></th></tr></thead>
+                        <tbody id="fin-body"></tbody>
+                    </table>
+                </div>
+                <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center">
+                    <span class="font-black uppercase text-blue-700 text-xs">Consolidated File Expenses</span>
+                    <span id="exp-total" class="text-2xl font-black text-blue-700 mono">$ 0.00</span>
+                </div>
+            </div>
 
-/* ---------- REGISTRATIONS ---------- */
-async function renderMcRegistrations(){
-  const list = document.getElementById('mc-registrations-list');
-  list.innerHTML = '<p class="empty-note">Loading...</p>';
-  const regs = (await getAllRegs()).filter(r=>r.status==='pending').sort((a,b)=>a.createdAt-b.createdAt);
-  if(regs.length === 0){ list.innerHTML = '<p class="empty-note">No pending registrations.</p>'; return; }
-  list.innerHTML = regs.map(r=>`
-    <div class="reg-row">
-      <div class="reg-info">
-        <b>${esc(r.firstName)} ${esc(r.mi?r.mi+'.':'')} ${esc(r.lastName)}${r.suffix?', '+esc(r.suffix):''}</b>
-        <div class="reg-meta">${esc(r.username)} · ${esc(r.email)} · ${r.role.toUpperCase()}</div>
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        ${r.role==='trainee' ? `<input class="mc-input" id="batch-${esc(r.username)}" placeholder="Batch ID" style="width:120px; padding:6px 8px; font-size:11px;">` : ''}
-        <button class="mini-btn approve" onclick="mcApprove('${jsStr(r.username)}')">Approve</button>
-        <button class="mini-btn reject" onclick="mcReject('${jsStr(r.username)}')">Reject</button>
-      </div>
+            <div id="pane-docs" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="section-head">Documents</div>
+                    <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
+                        <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
+                        <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
+                        <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
+                        <button onclick="addDocument('Invoices')" class="hub-btn">Invoices</button>
+                        <button onclick="addDocument('Bills')" class="hub-btn">Bills</button>
+                        <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
+                        <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
+                        <button onclick="addDocument('Others')" class="hub-btn">Others</button>
+                    </div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="200">Category</th><th>Summary</th><th width="150" class="no-print">Attachment</th><th width="40"></th></tr></thead>
+                        <tbody id="doc-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="pane-notes" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6"><div class="section-head" style="margin-bottom:0;">Case Chronology</div><button onclick="addRow('note-body')" class="add-btn no-print">+ Add Note</button></div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Staff Member</th><th>Note Content</th><th width="40"></th></tr></thead>
+                        <tbody id="note-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="pane-tasks" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-6"><div class="section-head" style="margin-bottom:0;">Action Item Log</div><button onclick="addRow('task-body')" class="add-btn no-print">+ Add Task</button></div>
+                    <table class="treat-table w-full">
+                        <thead><tr><th width="150">Date</th><th width="200">Staff Assigned</th><th>Task Description</th><th width="40"></th></tr></thead>
+                        <tbody id="task-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
     </div>
-  `).join('');
-}
-async function mcApprove(username){
-  const r = await getJSON(`reg:${username}`, true);
-  if(!r) return;
-  if(r.role === 'trainee'){
-    const input = document.getElementById(`batch-${username}`);
-    const batchId = input ? input.value.trim() : '';
-    if(!batchId){ alert('Please enter a Batch ID before approving a trainee.'); return; }
-    r.batchId = batchId;
-  }
-  r.status = 'approved';
-  r.approvedAt = Date.now();
-  r.approvedBy = state.username || state.name;
-  await setJSON(`reg:${username}`, r, true);
-  renderMcRegistrations();
-  renderMcOverview();
-}
-async function mcReject(username){
-  const r = await getJSON(`reg:${username}`, true);
-  if(!r) return;
-  r.status = 'rejected';
-  await setJSON(`reg:${username}`, r, true);
-  renderMcRegistrations();
-  renderMcOverview();
-}
 
-/* ---------- USERS ---------- */
-async function renderMcUsers(){
-  const list = document.getElementById('mc-users-list');
-  list.innerHTML = '<p class="empty-note">Loading...</p>';
-  const regs = (await getAllRegs()).filter(r=>['approved','suspended'].includes(r.status)).sort((a,b)=>a.createdAt-b.createdAt);
-  const admins = regs.filter(r=>r.role==='admin');
-  const trainees = regs.filter(r=>r.role==='trainee');
+    <!-- ===== AUTH GATE: LOGIN / REGISTER ===== -->
+    <div id="auth-gate" class="no-print">
+        <div class="auth-box">
+            <div class="auth-brand">
+                <div id="auth-seal" style="width:38px;height:38px;border-radius:6px;border:2px solid var(--orange);overflow:hidden;flex-shrink:0;"></div>
+                <div>
+                    <h1>Legal Support Help</h1>
+                    <span>Training Interface Access</span>
+                </div>
+            </div>
 
-  const batches = {};
-  trainees.forEach(r=>{
-    const b = r.batchId || 'UNASSIGNED';
-    if(!batches[b]) batches[b] = [];
-    batches[b].push(r);
-  });
+            <!-- LOGIN VIEW -->
+            <div id="auth-login-view">
+                <div class="portal-tabs">
+                    <div class="portal-tab active" id="portal-tab-trainee" onclick="switchPortalTab('Trainee')">Trainee Portal</div>
+                    <div class="portal-tab" id="portal-tab-admin" onclick="switchPortalTab('Admin')">Admin Portal</div>
+                </div>
+                <div id="auth-login-msg" class="auth-msg"></div>
+                <div class="auth-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" placeholder="Enter your username"></div>
+                <div class="auth-field"><label>Password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter your password"></div>
+                <button class="auth-submit" onclick="attemptLogin()">Log In</button>
+                <div class="auth-switch">No account yet? <a onclick="showRegisterView()">Register here</a></div>
+            </div>
 
-  const rowHtml = (r)=>`
-    <div class="reg-row">
-      <div class="reg-info">
-        <b>${esc(r.firstName)} ${esc(r.lastName)} <span class="status-pill status-${r.status}">${r.status}</span></b>
-        <div class="reg-meta">${esc(r.username)} · ${esc(r.email)}</div>
-      </div>
-      <div style="display:flex; gap:8px;">
-        ${r.status==='approved'
-          ? `<button class="mini-btn suspend" onclick="mcSuspend('${jsStr(r.username)}')">Suspend</button>`
-          : `<button class="mini-btn reinstate" onclick="mcReinstate('${jsStr(r.username)}')">Reinstate</button>`}
-        <button class="mini-btn revoke" onclick="mcRevoke('${jsStr(r.username)}')">Revoke</button>
-      </div>
-    </div>`;
+            <!-- REGISTER VIEW -->
+            <div id="auth-register-view" class="hidden">
+                <div id="auth-register-msg" class="auth-msg"></div>
+                <div class="auth-field" style="display:grid; grid-template-columns: 2fr 0.7fr; gap:8px;">
+                    <div><label>First Name</label><input type="text" id="reg-firstname" autocomplete="off" data-allow="name" placeholder="e.g., Juan"></div>
+                    <div><label>M.I.</label><input type="text" id="reg-middlename" autocomplete="off" maxlength="2" data-allow="alnum-upper" placeholder="M.I."></div>
+                </div>
+                <div class="auth-field" style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                    <div><label>Last Name</label><input type="text" id="reg-lastname" autocomplete="off" data-allow="name" placeholder="e.g., Dela Cruz"></div>
+                    <div><label>Suffix <span style="text-transform:none;">(optional)</span></label><input type="text" id="reg-suffix" autocomplete="off" placeholder="Jr., III..."></div>
+                </div>
+                <div class="auth-field"><label>Email</label><input type="email" id="reg-email" placeholder="name@example.com" autocomplete="off" data-allow="email"></div>
+                <div class="auth-field"><label>Type of User</label>
+                    <select id="reg-usertype" onchange="onRegUserTypeChange()">
+                        <option value="Trainee">Trainee</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div class="auth-field" id="reg-training-date-wrap"><label>Start of Training Date</label><input type="date" id="reg-training-date" autocomplete="off"></div>
+                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" readonly placeholder="Batch ID will be assigned upon the approval of your registration." disabled style="opacity:0.6; cursor:not-allowed;"></div>
+                <div class="auth-field"><label>Username</label><input type="text" id="reg-username" autocomplete="off" data-allow="alnum-underscore" placeholder="Choose a username"></div>
+                <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="new-password" placeholder="Create a password" minlength="8"><p style="font-size:11px;color:#64748b;margin:4px 0 0;line-height:1.4;">At least 8 characters, letters and numbers only (must include at least one of each).</p></div>
+                <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="new-password" placeholder="Retype your password" minlength="8"></div>
+                <button class="auth-submit" onclick="submitRegistration()">Submit Registration</button>
+                <div class="auth-switch">Already have an account? <a onclick="showLoginView()">Back to log in</a></div>
+            </div>
+        </div>
+    </div>
 
-  let html = '';
-  html += `<div class="group-heading">ADMINS (${admins.length})</div>`;
-  html += admins.length ? admins.map(rowHtml).join('') : '<p class="empty-note">No admin accounts yet.</p>';
-  Object.keys(batches).sort().forEach(b=>{
-    html += `<div class="group-heading">BATCH: ${esc(b)} (${batches[b].length})</div>`;
-    html += batches[b].map(rowHtml).join('');
-  });
-  if(trainees.length === 0) html += '<p class="empty-note">No trainee accounts yet.</p>';
-  list.innerHTML = html;
-}
-async function mcSuspend(username){
-  const r = await getJSON(`reg:${username}`, true); if(!r) return;
-  r.status = 'suspended'; await setJSON(`reg:${username}`, r, true); renderMcUsers();
-}
-async function mcReinstate(username){
-  const r = await getJSON(`reg:${username}`, true); if(!r) return;
-  r.status = 'approved'; await setJSON(`reg:${username}`, r, true); renderMcUsers();
-}
-async function mcRevoke(username){
-  if(!confirm(`Revoke access for ${username}? This cannot be undone from here.`)) return;
-  const r = await getJSON(`reg:${username}`, true); if(!r) return;
-  r.status = 'revoked'; await setJSON(`reg:${username}`, r, true); renderMcUsers();
-}
+    <!-- ===== MASTER CONTROL (Admin Master Control — full page) ===== -->
+    <div id="master-control-page" class="no-print">
+        <div class="mc-header">
+            <div>
+                <h2>Master Control</h2>
+                <div class="sub" id="admin-dash-session">Administrator Session</div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="portal-toggle-btn" onclick="exitMasterControl()">⇄ Back to Case Workspace</button>
+                <button class="portal-toggle-btn" style="background:rgba(185,28,28,0.35); border-color:#b91c1c;" onclick="logoutSession()">Log Out</button>
+            </div>
+        </div>
+        <div class="mc-tabs">
+            <button class="mc-tab active" onclick="showAdminDashTab('overview')">Overview</button>
+            <button class="mc-tab" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></button>
+            <button class="mc-tab" onclick="showAdminDashTab('users')">Users</button>
+            <button class="mc-tab" onclick="showAdminDashTab('monitoring')">Monitoring</button>
+            <button class="mc-tab" onclick="showAdminDashTab('case-logs')">Case Logs</button>
+            <button class="mc-tab" onclick="showAdminDashTab('announce')">Broadcast &amp; Ping</button>
+            <button class="mc-tab" onclick="showAdminDashTab('access')">Access Control</button>
+        </div>
+        <div class="mc-body">
 
-/* ---------- MONITORING ---------- */
-async function renderMcMonitoring(){
-  const onlineList = document.getElementById('mc-online-list');
-  onlineList.innerHTML = '<p class="empty-note">Loading...</p>';
-  const online = (await getOnlinePresence()).filter(p=>p.role==='trainee').sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  onlineList.innerHTML = online.length
-    ? online.map(p=>`
-        <div class="reg-row" style="cursor:pointer;" onclick="mcViewTrainee('${jsStr(p.name)}')">
-          <div class="reg-info"><b><span class="online-dot live"></span>${esc(p.name)}</b><div class="reg-meta">${esc(p.username)}</div></div>
-          <div style="font-size:10px; color:var(--muted-dark); font-family:'IBM Plex Mono','Courier New',monospace;">VIEW LATEST →</div>
-        </div>`).join('')
-    : '<p class="empty-note">No trainees online right now.</p>';
+            <!-- OVERVIEW -->
+            <div class="mc-pane active" id="admin-dash-overview">
+                <div class="admin-panel-grid">
+                    <div class="admin-tile">
+                        <h4>Archived Cases</h4>
+                        <div class="admin-stat" id="admin-stat-cases">0</div>
+                        <div class="admin-stat-label">Records in Repository</div>
+                    </div>
+                    <div class="admin-tile">
+                        <h4>Current Case (this device)</h4>
+                        <div class="admin-stat" id="admin-stat-name" style="font-size:14px;">—</div>
+                        <div class="admin-stat-label" id="admin-stat-phase">No active phase</div>
+                    </div>
+                    <div class="admin-tile">
+                        <h4>Trainees Online Now</h4>
+                        <div class="admin-stat" id="admin-stat-online">0</div>
+                        <div class="admin-stat-label">Active in the last 60 seconds</div>
+                    </div>
+                    <div class="admin-tile">
+                        <h4>Pending Registrations</h4>
+                        <div class="admin-stat" id="admin-stat-pending">0</div>
+                        <div class="admin-stat-label">Awaiting review</div>
+                    </div>
+                </div>
+                <div class="mc-section-title">Site-Wide Status</div>
+                <div class="admin-panel-grid">
+                    <div class="admin-tile">
+                        <h4>Activity State</h4>
+                        <div class="admin-stat" id="ov-pause-state" style="font-size:16px;">Active</div>
+                        <div class="admin-stat-label">Pause / Resume from Access Control</div>
+                    </div>
+                    <div class="admin-tile">
+                        <h4>Access State</h4>
+                        <div class="admin-stat" id="ov-lock-state" style="font-size:16px;">Unlocked</div>
+                        <div class="admin-stat-label">Lock / Unlock from Access Control</div>
+                    </div>
+                    <div class="admin-tile">
+                        <h4>Current Alert</h4>
+                        <div class="admin-stat" id="ov-alert-state" style="font-size:16px;">None Active</div>
+                        <div class="admin-stat-label">Manage from Broadcast &amp; Ping</div>
+                    </div>
+                </div>
+            </div>
 
-  const logsList = document.getElementById('mc-logs-list');
-  logsList.innerHTML = '<p class="empty-note">Loading...</p>';
-  const keys = (await listKeys('log:', true)).sort().reverse().slice(0,200);
-  const rows = [];
-  for(const k of keys){ const l = await getJSON(k, true); if(l) rows.push(l); }
-  logsList.innerHTML = rows.length ? `
-    <table class="mc-table"><thead><tr><th>Time</th><th>Type</th><th>Name</th><th>Role</th><th>Detail</th></tr></thead>
-    <tbody>${rows.map(l=>`<tr><td>${new Date(l.at).toLocaleString('en-US',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td><td>${esc(l.type)}</td><td>${esc(l.name)}</td><td>${esc(l.role)}</td><td>${esc(l.detail)}</td></tr>`).join('')}</tbody></table>
-  ` : '<p class="empty-note">No log entries yet.</p>';
-}
-async function mcViewTrainee(name){
-  const slug = slugify(name || '');
-  let latest = null;
-  for(const d of DAY_KEYS){
-    const sub = await getJSON(`submission:${d}:${slug}`, true);
-    if(sub && (!latest || sub.submittedAt > latest.submittedAt)) latest = {...sub, day: d};
-  }
-  if(!latest){ alert(`${name} has no saved submissions yet.`); return; }
-  const answersHtml = Object.entries(latest.answers||{}).map(([qid,ans])=>`<div style="margin-bottom:10px; padding:8px 10px; background:#f8fafc; border-radius:6px; font-size:12px;">${ans || '<i>(empty)</i>'}</div>`).join('');
-  alert(`Latest submission — ${name} (${DAY_LABELS[latest.day] ? DAY_LABELS[latest.day].label : latest.day})\nSubmitted: ${new Date(latest.submittedAt).toLocaleString()}\n\n(Open the Case Logs tab for a full read-only breakdown.)`);
-}
+            <!-- REGISTRATIONS (pending only) -->
+            <div class="mc-pane" id="admin-dash-registrations">
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Pending registrations submitted from the login screen. Approve to move an account into the <b>Users</b> tab and issue its Batch ID.</p>
+                <div id="registrations-list"></div>
+            </div>
 
-/* ---------- CASE LOGS ---------- */
-async function renderMcCaseLogs(){
-  const list = document.getElementById('mc-case-logs-list');
-  if(!list) return;
-  list.innerHTML = '<p class="empty-note">Loading...</p>';
-  const search = (document.getElementById('mc-case-logs-search')?.value || '').toLowerCase();
-  const entries = [];
-  for(const d of DAY_KEYS){
-    const subKeys = await listKeys(`submission:${d}:`, true);
-    for(const k of subKeys){
-      const s = await getJSON(k, true); if(!s) continue;
-      entries.push({ type:'Submission', day:d, name:s.name, at:s.submittedAt, detail:'' });
-    }
-    const gradeKeys = await listKeys(`grade:${d}:`, true);
-    for(const k of gradeKeys){
-      const g = await getJSON(k, true); if(!g) continue;
-      const total = Object.values(g.items||{}).reduce((s,it)=>s+(it.points||0),0);
-      entries.push({ type:'Graded', day:d, name:g.name, at:g.gradedAt, detail:`${total} pts · by ${g.gradedBy||'—'}` });
-    }
-  }
-  const filtered = entries.filter(e => !search || (e.name||'').toLowerCase().includes(search)).sort((a,b)=>b.at-a.at);
-  list.innerHTML = filtered.length ? `
-    <table class="mc-table"><thead><tr><th>Time</th><th>Type</th><th>Trainee</th><th>Day</th><th>Detail</th></tr></thead>
-    <tbody>${filtered.map(e=>`<tr><td>${new Date(e.at).toLocaleString('en-US',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${e.type}</td><td>${esc(e.name)}</td><td>${DAY_LABELS[e.day]?DAY_LABELS[e.day].short:e.day}</td><td>${esc(e.detail)}</td></tr>`).join('')}</tbody></table>
-  ` : '<p class="empty-note">No matching records.</p>';
-}
+            <!-- USERS (approved, segregated by type / batch, sorted by sequence) -->
+            <div class="mc-pane" id="admin-dash-users">
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Approved accounts, segregated by Admin / Trainee. Trainees are further grouped by Batch ID and sorted by sequence number; Admins are listed flat, sorted by sequence number.</p>
+                <div id="users-list"></div>
+            </div>
 
-/* ---------- BROADCAST & PING ---------- */
-const ALERT_SWATCHES = ['#b91c1c','#c2410c','#166534','#0f2148','#7c2d12'];
-async function renderMcAnnouncePane(){
-  const ann = await getJSON('config:announcement', true);
-  document.getElementById('mc-announce-current-preview').textContent = (ann && ann.text) || 'No announcement set.';
-  document.getElementById('mc-announce-text-input').value = (ann && ann.text) || '';
+            <!-- MONITORING (live sessions + Server Logs) -->
+            <div class="mc-pane" id="admin-dash-monitoring">
+                <div class="mc-section-title">🟢 Trainees Online</div>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Live view of who is signed in and working right now. Click a name to view their latest saved (or autosaved) case, read-only.</p>
+                <div id="monitoring-online-list"></div>
 
-  const alertCfg = await getJSON('config:alert', true);
-  document.getElementById('mc-alert-status-line').textContent = (alertCfg && alertCfg.active) ? `Alert is currently active: "${alertCfg.text}"` : 'No alert is currently active.';
-  document.getElementById('mc-alert-text-input').value = (alertCfg && alertCfg.text) || '';
-  const chosenColor = (alertCfg && alertCfg.bgColor) || ALERT_SWATCHES[0];
-  document.getElementById('mc-alert-bg-swatches').innerHTML = ALERT_SWATCHES.map(c=>
-    `<div class="swatch ${c===chosenColor?'selected':''}" style="background:${c};" data-color="${c}" onclick="mcSelectSwatch(this)"></div>`
-  ).join('');
+                <div class="mc-section-title">🗄 Server Logs</div>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Log-ins, log-outs, pauses, pings, locks, and revocations, with duration where applicable.</p>
+                <div class="admin-tile" style="cursor:pointer;" onclick="openServerLogs()" onkeydown="if(event.key==='Enter')openServerLogs()" tabindex="0" role="button">
+                    <h4>Server Logs</h4>
+                    <p style="font-size:12px;color:var(--navy);font-weight:700;margin:0;">Click to view the full activity record &rarr;</p>
+                </div>
+            </div>
 
-  const regs = (await getAllRegs()).filter(r=>r.status==='approved' && r.role==='trainee');
-  const select = document.getElementById('mc-ping-target');
-  select.innerHTML = regs.length
-    ? regs.map(r=>`<option value="${esc(r.username)}">${esc(r.firstName)} ${esc(r.lastName)} (${esc(r.username)})</option>`).join('')
-    : '<option value="">No approved trainees yet</option>';
-}
-function mcSelectSwatch(el){
-  document.querySelectorAll('#mc-alert-bg-swatches .swatch').forEach(s=>s.classList.remove('selected'));
-  el.classList.add('selected');
-}
-async function mcMakeAnnouncement(){
-  const text = document.getElementById('mc-announce-text-input').value.trim();
-  if(!text) return;
-  await setJSON('config:announcement', { text, updatedAt: Date.now() }, true);
-  renderMcAnnouncePane();
-}
-async function mcClearAnnouncement(){
-  await setJSON('config:announcement', { text: '', updatedAt: Date.now() }, true);
-  renderMcAnnouncePane();
-}
-async function mcActivateAlert(){
-  const text = document.getElementById('mc-alert-text-input').value.trim();
-  if(!text){ alert('Enter alert text first.'); return; }
-  const selected = document.querySelector('#mc-alert-bg-swatches .swatch.selected');
-  const bgColor = selected ? selected.dataset.color : ALERT_SWATCHES[0];
-  await setJSON('config:alert', { active:true, text, bgColor, updatedAt: Date.now() }, true);
-  renderMcAnnouncePane();
-  renderMcOverview();
-}
-async function mcDeactivateAlert(){
-  await setJSON('config:alert', { active:false, text:'', bgColor:'', updatedAt: Date.now() }, true);
-  renderMcAnnouncePane();
-  renderMcOverview();
-}
-async function mcSendPing(){
-  const target = document.getElementById('mc-ping-target').value;
-  const message = document.getElementById('mc-ping-text-input').value.trim();
-  if(!target || !message) return;
-  const list = (await getJSON(`ping:${target}`, true)) || [];
-  list.push({ id: 'p_'+Math.random().toString(36).slice(2,9), message, from: state.name || state.username, at: Date.now(), read:false });
-  await setJSON(`ping:${target}`, list, true);
-  document.getElementById('mc-ping-text-input').value = '';
-  showToast('info', 'Ping sent', target);
-}
+            <!-- CASE LOGS (search, chronological list, versions, full view) -->
+            <div class="mc-pane" id="admin-dash-case-logs">
+                <div class="mc-section-title">🔍 Search Case</div>
+                <input type="text" id="case-logs-search" oninput="renderCaseLogs()" placeholder="Search by client name or Case ID..." style="width:100%; padding:9px 12px; margin-bottom:16px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
 
-/* ---------- ACCESS CONTROL ---------- */
-async function renderMcAccessPane(){
-  const lock = await getJSON('config:lock', true);
-  const locked = !!(lock && lock.locked);
-  document.getElementById('mc-lock-status-line').textContent = locked ? 'Currently Locked' : 'Currently Unlocked';
-  document.getElementById('mc-lock-toggle-btn').textContent = locked ? 'Unlock Site' : 'Lock Site';
+                <div class="mc-section-title">📄 All Cases — Most Recently Modified First</div>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Every case in the shared repository, including drafts, sorted by most recent modification.</p>
+                <div id="case-logs-list"></div>
+            </div>
 
-  const pause = await getJSON('config:pause', true);
-  const paused = !!(pause && pause.paused);
-  document.getElementById('mc-pause-status-line').textContent = paused ? 'Currently Paused' : 'Currently Active';
-  document.getElementById('mc-pause-toggle-btn').textContent = paused ? 'Resume Activities' : 'Pause Activities';
-}
-async function mcToggleLock(){
-  const lock = await getJSON('config:lock', true);
-  const locked = !(lock && lock.locked);
-  await setJSON('config:lock', { locked }, true);
-  renderMcAccessPane();
-  renderMcOverview();
-}
-async function mcTogglePause(){
-  const pause = await getJSON('config:pause', true);
-  const paused = !(pause && pause.paused);
-  await setJSON('config:pause', { paused }, true);
-  renderMcAccessPane();
-  renderMcOverview();
-}
+            <!-- ANNOUNCEMENTS & ALERTS -->
+            <div class="mc-pane" id="admin-dash-announce">
+                <div class="mc-section-title">📢 Announcement (shows in the scrolling ticker, top bar only)</div>
+                <div class="admin-tile">
+                    <p id="announce-current-preview" style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">Welcome to the LSH Training Interface.</p>
+                    <textarea id="announce-text-input" placeholder="Type the message to broadcast in the ticker..." style="width:100%;min-height:70px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin-bottom:12px;"></textarea>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAnnouncement()">📢 Broadcast Announcement</button>
+                        <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="clearAnnouncement()">Clear Ticker</button>
+                    </div>
+                </div>
 
-/* ---------- PRESENCE HEARTBEAT ---------- */
-function startPresenceHeartbeat(){
-  const beat = async ()=>{
-    if(!state.username) return;
-    await setJSON(`presence:${state.username}`, { username: state.username, name: state.name, role: state.role, lastSeen: Date.now() }, true);
-  };
-  beat();
-  setInterval(beat, 20000);
-}
+                <div class="mc-section-title">⚠ Alert (covers the entire screen for every user until stopped or expired)</div>
+                <div class="admin-tile">
+                    <div id="alert-status-line" style="font-size:12px; font-weight:800; color:var(--classified-red); margin-bottom:12px;">No alert is currently active.</div>
 
-/* ---------- ANNOUNCEMENT / ALERT / PING POLLING ---------- */
-function startAnnouncementPolling(){
-  const poll = async ()=>{
-    const ann = await getJSON('config:announcement', true);
-    const el = document.getElementById('announceText');
-    if(el && ann && ann.text) el.textContent = ann.text;
-  };
-  poll();
-  setInterval(poll, 20000);
-}
-function startAlertPolling(){
-  const poll = async ()=>{
-    const alertCfg = await getJSON('config:alert', true);
-    const overlay = document.getElementById('alert-overlay');
-    if(!overlay) return;
-    if(alertCfg && alertCfg.active){
-      document.getElementById('alert-overlay-text').textContent = alertCfg.text || '';
-      overlay.style.background = alertCfg.bgColor || '#b91c1c';
-      overlay.classList.add('open');
-    } else {
-      overlay.classList.remove('open');
-    }
-  };
-  poll();
-  setInterval(poll, 15000);
-}
-function dismissAlertOverlay(){
-  document.getElementById('alert-overlay').classList.remove('open');
-}
-function startPingPolling(){
-  const poll = async ()=>{
-    if(!state.username) return;
-    const list = (await getJSON(`ping:${state.username}`, true)) || [];
-    const unread = list.filter(p=>!p.read);
-    if(unread.length){
-      unread.forEach(p=> showToast('ping', p.message, `From: ${p.from}`));
-      const updated = list.map(p=> ({...p, read:true}));
-      await setJSON(`ping:${state.username}`, updated, true);
-    }
-  };
-  poll();
-  setInterval(poll, 10000);
-}
-function showToast(type, main, sub){
-  const container = document.getElementById('toast-container');
-  if(!container) return;
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.innerHTML = `<div class="toast-main">${esc(main)}</div>${sub?`<div class="toast-sub">${esc(sub)}</div>`:''}`;
-  container.appendChild(el);
-  requestAnimationFrame(()=> el.classList.add('show'));
-  setTimeout(()=>{
-    el.classList.remove('show');
-    setTimeout(()=> el.remove(), 350);
-  }, 6000);
-}
+                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Alert Text</label>
+                    <textarea id="alert-text-input" placeholder="Type the full-screen alert message..." style="width:100%;min-height:60px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin:6px 0 14px;"></textarea>
 
-(async ()=>{
-  const user = await checkSession();
-  if(!user){ renderLoginGate(); return; }
-  state.role = user.role;
-  state.name = user.name || user.email;
-  state.username = user.username || user.email || user.name || '';
-  await loadExtraDays();
-  startClock();
-  render();
-  initMasterControlShell();
-  startPresenceHeartbeat();
-  startAnnouncementPolling();
-  startAlertPolling();
-  if(state.role === 'trainee') startPingPolling();
-})();
-</script>
+                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Attach Image (optional)</label>
+                    <div style="display:flex;align-items:center;gap:12px;margin:6px 0 14px;">
+                        <label class="btn-ghost" style="cursor:pointer;padding:8px 14px;border-radius:6px;font-size:10.5px;">
+                            Choose Image
+                            <input type="file" accept="image/*" class="hidden" id="alert-image-input" onchange="previewAlertImage(this)">
+                        </label>
+                        <img id="alert-image-preview" style="display:none;height:44px;border-radius:6px;">
+                        <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;font-size:10.5px;" onclick="clearAlertImage()">Remove Image</button>
+                    </div>
+
+                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Background Color</label>
+                    <div class="swatch-row" id="alert-bg-swatches" style="margin-top:6px;"></div>
+                    <input type="color" id="alert-bg-color" value="#b91c1c" style="width:60px;height:32px;border:none;border-radius:6px;cursor:pointer;margin-bottom:14px;">
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                        <div>
+                            <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Duration</label><br>
+                            <select id="alert-duration-select" style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;">
+                                <option value="0">Until manually stopped</option>
+                                <option value="15">15 seconds</option>
+                                <option value="30">30 seconds</option>
+                                <option value="60">1 minute</option>
+                                <option value="300">5 minutes</option>
+                                <option value="900">15 minutes</option>
+                                <option value="3600">1 hour</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Set Alert Time (optional — leave blank to fire immediately)</label><br>
+                            <input type="datetime-local" id="alert-schedule-input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="setAlert()">⚠ Set Alert</button>
+                        <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="stopAlert()">⏹ Stop / Cancel Alert</button>
+                    </div>
+                </div>
+
+                <div class="mc-section-title">📣 Ping (instant toast notification with a loud, distinct alert tone)</div>
+                <div class="admin-tile">
+                    <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Sends an instant on-screen notification to one user or to everyone currently on the site. It uses its own louder, longer alert tone (not the login-confirmation sound) so it actually gets noticed, and shows who it's from — no full-screen takeover, no ticker change, just a quick attention-getter.</p>
+
+                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                        <button type="button" class="mini-btn" id="ping-mode-single-btn" style="background:var(--navy);color:white;padding:8px 14px;" onclick="setPingMode('single')">👤 Specific User(s)</button>
+                        <button type="button" class="mini-btn" id="ping-mode-all-btn" style="background:#94a3b8;color:white;padding:8px 14px;" onclick="setPingMode('all')">📢 All Users</button>
+                    </div>
+
+                    <div id="ping-user-row" style="margin-bottom:12px;">
+                        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Recipient(s)</label><br>
+                        <div id="ping-user-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+                        <div style="position:relative;">
+                            <input type="text" id="ping-user-search" placeholder="Search by name, username, batch ID, or type…" autocomplete="off"
+                                style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;"
+                                oninput="filterPingUserList()" onfocus="openPingUserList()"
+                                onkeydown="if(event.key==='Escape'){closePingUserList();this.blur();}">
+                            <input type="hidden" id="ping-user-select" value="">
+                            <div id="ping-user-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:230px;overflow-y:auto;background:white;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 10px 26px rgba(0,0,0,0.14);z-index:80;margin-top:4px;"></div>
+                        </div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Click a name to toggle it \u00B7 click outside or press Esc to close the list</div>
+                    </div>
+
+                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Message</label>
+                    <textarea id="ping-text-input" placeholder="Type the ping message..." style="width:100%;min-height:56px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin:6px 0 14px;"></textarea>
+
+                    <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="sendPing()">📣 Send Ping</button>
+                </div>
+            </div>
+
+            <!-- ACCESS CONTROL (Pause vs Lock) -->
+            <div class="mc-pane" id="admin-dash-access">
+                <div class="mc-section-title">⏸ Pause Activity (site-wide, no logout, resumable)</div>
+                <div class="admin-tile">
+                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Pausing freezes activity across every connected user. Nobody is logged out and no progress is lost — when you Resume, everyone continues exactly where they left off.</p>
+                    <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="pause-state-label" style="color:var(--classified-red);">Active (not paused)</span></div>
+                    <button class="btn-primary" id="pause-toggle-btn" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="togglePause()">⏸ Pause All Activity</button>
+                </div>
+
+                <div class="mc-section-title">🔒 Lock Access (site-wide, forces logout, requires unlock)</div>
+                <div class="admin-tile">
+                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Locking immediately signs every user out and blocks the page entirely until an administrator unlocks it again. This requires Batch ID + password confirmation before it takes effect.</p>
+                    <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="lock-state-label" style="color:#166534;">Unlocked</span></div>
+                    <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="openLockConfirm()">🔒 Lock This Site</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== LOCK CONFIRMATION MODAL (required to engage Lock) ===== -->
+    <div class="modal-overlay no-print" id="lock-confirm-modal" style="z-index:2900;">
+        <div class="modal-box">
+            <h2 class="serif">🔒 Confirm Site Lock</h2>
+            <div class="sub mono">Administrator Verification Required</div>
+            <p style="font-size:12px; color:#475569; margin-bottom:14px; line-height:1.5;">
+                Locking will immediately log out every user and block access until unlocked. Enter your admin Batch ID and password to confirm.
+            </p>
+            <div id="lock-confirm-error" style="display:none;color:var(--classified-red);font-size:11px;font-weight:700;margin-bottom:8px;">Batch ID / password did not match an administrator record.</div>
+            <label>Batch ID</label>
+            <input type="text" id="lock-confirm-batchid" autocomplete="off" placeholder="Your admin Batch ID" class="mono">
+            <label>Password</label>
+            <input type="password" id="lock-confirm-password" autocomplete="off" placeholder="Your password">
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeLockConfirm()">Cancel</button>
+                <button class="btn-primary" style="background:var(--classified-red);color:white;" onclick="confirmLock()">Confirm &amp; Lock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PAUSE OVERLAY (site frozen, nobody logged out) ===== -->
+    <div id="pause-overlay">
+        <div style="font-size:40px;">⏸</div>
+        <h2 class="serif" style="margin:14px 0 4px;">Activity Paused by Administrator</h2>
+        <p class="mono" style="font-size:11px; color:#cbd5e1; max-width:360px;">Your session and progress are safe. This screen will disappear automatically the moment an administrator resumes activity.</p>
+    </div>
+
+    <!-- ===== ALERT OVERLAY (full-screen, separate from ticker announcement) ===== -->
+    <div id="alert-overlay">
+        <div class="alert-box">
+            <span class="alert-tag">⚠ ALERT</span>
+            <img id="alert-overlay-image" class="alert-image" style="display:none;">
+            <div class="alert-text" id="alert-overlay-text"></div>
+            <button class="alert-dismiss" onclick="dismissAlertLocally()">Dismiss</button>
+        </div>
+    </div>
+
+    <!-- ===== LOCK SCREEN ===== -->
+    <div id="lock-overlay">
+        <div style="font-size:40px;">🔒</div>
+        <h2 class="serif" style="margin:14px 0 4px;">Page Locked by Administrator</h2>
+        <div id="lock-locked-by">Locked By: Batch ID —</div>
+        <p class="mono" style="font-size:11px; color:#94a3b8; margin-bottom:20px;">Enter administrator credentials to resume access.</p>
+        <div style="width:300px;">
+            <input type="text" id="unlock-user" placeholder="Username" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;background:#ffffff;color:#0f172a;">
+            <input type="password" id="unlock-pass" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;background:#ffffff;color:#0f172a;">
+            <div id="unlock-error" style="display:none;color:#f87171;font-size:11px;margin-bottom:8px;">Invalid credentials.</div>
+            <button class="btn-primary" style="width:100%;padding:10px;border-radius:6px;" onclick="attemptUnlock()">Unlock Page</button>
+        </div>
+    </div>
+
+    <!-- ===== INACTIVITY REMINDER / AUTO-ARCHIVE MODAL ===== -->
+    <div class="modal-overlay no-print" id="auto-archive-modal" style="z-index:2500;">
+        <div class="modal-box">
+            <h2 class="serif">⚠ Still There?</h2>
+            <div class="sub mono">Data Protection Safeguard</div>
+            <p style="font-size:12px; color:#475569; margin-bottom:14px; line-height:1.5;">
+                No activity has been detected on this case for 5 minutes. Let us know what you'd like to do — otherwise this case will be automatically archived to the Case Repository as a draft.
+            </p>
+            <p style="font-size:12px; color:#0f2148; font-weight:800; margin-bottom:16px;">
+                Auto-archiving in <span id="auto-archive-countdown" style="color:var(--classified-red); font-family:'IBM Plex Mono','Courier New',monospace; font-size:16px;">30</span> seconds if no response...
+            </p>
+            <div class="modal-btn-row" style="flex-direction:column;">
+                <button class="btn-primary" onclick="continueEditing()">Continue</button>
+                <button class="btn-ghost" onclick="archiveFromInactivityPrompt()">Archive Case (Save as Draft)</button>
+                <button class="btn-ghost" style="color:var(--classified-red);" onclick="startNewCaseFromInactivityPrompt()">Start a New Case</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ALL CASES MODAL ===== -->
+    <div class="modal-overlay no-print" id="all-cases-modal">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif">All Archived Cases</h2>
+            <div class="sub mono">Full Case Repository</div>
+            <input type="text" id="all-cases-search" oninput="renderAllCasesModal()" placeholder="Search by client name..." style="width:100%; padding:9px 12px; margin-bottom:12px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
+            <div id="all-cases-list" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeAllCasesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MONITOR CASE MODAL (Admin > Monitoring > click a trainee) ===== -->
+    <div class="modal-overlay no-print" id="monitor-case-modal" style="z-index:2950;">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif" id="monitor-case-title">Latest Saved Case</h2>
+            <div class="sub mono">Read-only — last saved / autosaved version</div>
+            <div id="monitor-case-meta"></div>
+            <div id="monitor-case-body" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeMonitorCase()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SERVER LOGS MODAL (Admin > Monitoring > Server Logs) ===== -->
+    <div class="modal-overlay no-print" id="server-logs-modal" style="z-index:2960;">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif">Server Logs</h2>
+            <div class="sub mono">Log-ins, log-outs, pauses, pings, locks &amp; revocations</div>
+            <div id="server-logs-list" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeServerLogs()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CASE VERSIONS MODAL (Admin > Case Logs > See Previous Versions) ===== -->
+    <div class="modal-overlay no-print" id="case-versions-modal" style="z-index:2965;">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif" id="case-versions-title">Previous Versions</h2>
+            <div class="sub mono">Read-only — snapshot at time of each save</div>
+            <div id="case-versions-list" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeCaseVersions()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CASE VERSION / FULL CASE VIEW MODAL (read-only) ===== -->
+    <div class="modal-overlay no-print" id="case-logs-view-modal" style="z-index:2970;">
+        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
+            <h2 class="serif" id="case-logs-view-title">View Case</h2>
+            <div class="sub mono" id="case-logs-view-sub">Read-only</div>
+            <div id="case-logs-view-meta"></div>
+            <div id="case-logs-view-body" style="overflow-y:auto; flex:1;"></div>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeCaseLogsView()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== DOWNLOAD CONFIRMATION MODAL ===== -->
+    <div class="modal-overlay no-print" id="download-confirm-modal">
+        <div class="modal-box">
+            <h2 class="serif">Confirm Copy Production</h2>
+            <div class="sub mono">Detected from your logged-in account</div>
+            <div id="download-confirm-error" style="display:none;color:var(--classified-red);font-size:11px;font-weight:700;margin-bottom:8px;">Please complete both fields.</div>
+            <label>Full Name</label>
+            <div id="dl-fullname" class="mono" style="font-weight:800;padding:8px 0 4px;">&mdash;</div>
+            <label>Batch ID</label>
+            <div id="dl-batchid" class="mono" style="font-weight:800;padding:8px 0 4px;">&mdash;</div>
+            <p style="font-size:10px;color:#94a3b8;margin:6px 0 0;">Date &amp; time this copy is produced (auto-generated): <b id="dl-date-preview" class="mono"></b></p>
+            <div class="modal-btn-row">
+                <button class="btn-ghost" onclick="closeDownloadConfirm()">Cancel</button>
+                <button class="btn-primary" onclick="confirmDownload()">Confirm & Download</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+  <script src="portal.js"></script>
 </body>
 </html>
