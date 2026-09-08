@@ -666,6 +666,15 @@
                     <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="lock-state-label" style="color:#166534;">Unlocked</span></div>
                     <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="openLockConfirm()">🔒 Lock This Site</button>
                 </div>
+
+                <div id="db-maintenance-section" style="display:none;">
+                    <div class="mc-section-title">🗄 Database Maintenance</div>
+                    <div class="admin-tile">
+                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Deleting cases or registrations frees that space for reuse, but doesn't shrink the database file itself until it's compacted. Vacuuming rewrites the file and reclaims that freed space. This briefly locks the database, so it's restricted to the Master Account and best run when few people are active.</p>
+                        <div style="font-size:12px;font-weight:800;margin-bottom:10px;" id="vacuum-result-label">Not run this session</div>
+                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" id="vacuum-db-btn" onclick="runDbVacuum()">🗄 Run Database Vacuum</button>
+                    </div>
+                </div>
             </div>
 
         </div>
