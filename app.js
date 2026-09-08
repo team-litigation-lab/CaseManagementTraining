@@ -47,6 +47,14 @@
             document.querySelectorAll('[contenteditable="true"]').forEach(el => { el.innerHTML = ''; });
             const nameField = document.getElementById('client-name-field');
             if (nameField) nameField.innerText = '';
+            // Attorney / Case Manager are plain <input> fields (see
+            // buildCaseContentPayload), so they're not swept up by the
+            // contenteditable-clearing loop above — clear them explicitly
+            // so this wipe covers them too.
+            const attorneyField = document.getElementById('attorney-field');
+            if (attorneyField) attorneyField.value = '';
+            const caseManagerField = document.getElementById('case-manager-field');
+            if (caseManagerField) caseManagerField.value = '';
             currentCaseId = null;
             currentCaseIsDraft = false;
             currentCaseCanEdit = true;
@@ -467,6 +475,15 @@
                 caseType: document.getElementById('main-case-type') ? document.getElementById('main-case-type').value : null,
                 caseTypeOther: document.getElementById('main-case-other') ? document.getElementById('main-case-other').innerHTML : '',
                 caseTypeOtherVisible: !!(document.getElementById('main-case-other') && !document.getElementById('main-case-other').classList.contains('hidden')),
+                // Attorney / Case Manager: plain <input> fields, not
+                // contenteditable — deliberately kept OUT of the generic
+                // positional `inputs`/`sels` arrays below. Those arrays
+                // restore-by-index, so inserting these anywhere in that
+                // list would shift every field after them for every case
+                // saved before this feature existed. Captured/restored
+                // explicitly by id instead, so old saved cases are unaffected.
+                attorney: document.getElementById('attorney-field') ? document.getElementById('attorney-field').value : '',
+                caseManager: document.getElementById('case-manager-field') ? document.getElementById('case-manager-field').value : '',
                 html: {
                     pass: document.getElementById('passenger-container').innerHTML,
                     facs: document.getElementById('facility-container').innerHTML,
@@ -507,6 +524,8 @@
             $('note-body').innerHTML = (content.html && content.html.notes) || '';
             $('task-body').innerHTML = (content.html && content.html.tasks) || '';
             if (content.html && content.html.police) $('pane-police').innerHTML = content.html.police;
+            if ($('attorney-field')) $('attorney-field').value = content.attorney || '';
+            if ($('case-manager-field')) $('case-manager-field').value = content.caseManager || '';
 
             const edits = root.querySelectorAll('[contenteditable="true"]');
             (content.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
@@ -1024,6 +1043,8 @@
             const clientName = document.getElementById('client-name-field').innerText.trim() || "UNNAMED CLIENT";
             const phase = document.getElementById('display-phase').innerText;
             const caseId = document.getElementById('case-id-field').innerText.trim() || '—';
+            const attorneyName = (document.getElementById('attorney-field') && document.getElementById('attorney-field').value.trim()) || '—';
+            const caseManagerName = (document.getElementById('case-manager-field') && document.getElementById('case-manager-field').value.trim()) || '—';
             const logoSrc = AGENCY_LOGO;
 
             // Person who originally submitted / created this case record.
@@ -1054,6 +1075,10 @@
                         <span style="color: #f97316;">Phase: ${phase}</span>
                         <span style="color: #64748b;">Printed: ${new Date().toLocaleString()}</span>
                         <span style="color: #b91c1c;">Print Sequence: #${printSeq}</span>
+                    </div>
+                    <div style="display:flex; gap:24px; margin-top:8px; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing:0.04em; color:#0f2148;">
+                        <span>Attorney: ${attorneyName}</span>
+                        <span>Case Manager: ${caseManagerName}</span>
                     </div>
                     <div style="margin-top:14px; display:flex; gap:12px;">
                         <div style="flex:1; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-family:'IBM Plex Mono','Courier New',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:#0f2148;">
@@ -1408,6 +1433,46 @@
             if (tab === 'registrations' || tab === 'users' || tab === 'overview' || tab === 'announce') refreshUsersAndRegistrations();
             if (tab === 'monitoring') refreshMonitoring();
             if (tab === 'case-logs') refreshCaseLogs();
+            if (tab === 'access') renderDbMaintenanceVisibility();
+        }
+
+        /* =========================================================
+           DATABASE MAINTENANCE — Master-only VACUUM trigger.
+           Deletes free space for reuse but don't shrink the D1 file;
+           this reclaims it. See /api/vacuum-db for the server side.
+           ========================================================= */
+        function renderDbMaintenanceVisibility() {
+            const section = document.getElementById('db-maintenance-section');
+            if (!section) return;
+            const session = getSession();
+            const sessionIsMaster = !!(session && session.username === 'LSHADMIN123');
+            section.style.display = sessionIsMaster ? 'block' : 'none';
+        }
+        function runDbVacuum() {
+            const btn = document.getElementById('vacuum-db-btn');
+            const label = document.getElementById('vacuum-result-label');
+            if (!confirm('Vacuum the database now? This briefly locks the database and may take a moment.')) return;
+            btn.disabled = true;
+            btn.innerText = 'Vacuuming…';
+            fetch('/api/vacuum-db', { method: 'POST', credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    btn.disabled = false;
+                    btn.innerText = '🗄 Run Database Vacuum';
+                    if (data.success) {
+                        const kb = data.bytesReclaimed !== null ? (data.bytesReclaimed / 1024).toFixed(1) : '?';
+                        label.innerText = 'Last run: reclaimed ~' + kb + ' KB in ' + data.durationMs + 'ms';
+                        showToast('Vacuum complete — reclaimed ~' + kb + ' KB.', 'info');
+                    } else {
+                        label.innerText = 'Last run failed: ' + (data.error || 'Unknown error');
+                        showToast(data.error || 'Vacuum failed.', 'error');
+                    }
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.innerText = '🗄 Run Database Vacuum';
+                    showToast('Network error running vacuum.', 'error');
+                });
         }
 
         /* =========================================================
