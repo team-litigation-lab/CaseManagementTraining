@@ -424,21 +424,21 @@
            Files used to be inlined into the row as base64 data URLs, which
            meant every attachment was carried inside the case's serialized
            HTML blob and re-sent on every save. They now live in R2 instead:
-           the upload POSTs to /api/files, the server returns an opaque key,
-           and the row stores only a short path.
+           the upload POSTs to /api/upload (functions/api/upload.js), the
+           server returns an opaque key, and the row stores only a short path.
 
-           The saved markup therefore holds `/api/files/<key>` in the href
-           rather than a multi-megabyte data: URI. Everything downstream that
-           reads the row (save/load/print) keeps working on the anchor exactly
-           as before — only the href's contents changed. /api/files/<key> is
-           session-gated server-side, so an attachment is no more reachable
-           than the case it belongs to.
+           The saved markup therefore holds `/api/file?key=<key>` in the href
+           (functions/api/file.js) rather than a multi-megabyte data: URI.
+           Everything downstream that reads the row (save/load/print) keeps
+           working on the anchor exactly as before — only the href's contents
+           changed. /api/file?key=<key> is session-gated server-side, so an
+           attachment is no more reachable than the case it belongs to.
 
            `data-r2-mime` is stamped on the anchor at upload time so the PDF
            export can tell an image from a PDF/Word file without sniffing the
            URL. Legacy rows saved before this change still carry `data:` URIs
            and are handled by the fallback paths — they are not broken by it. */
-        const DOC_UPLOAD_MAX_BYTES = 25 * 1024 * 1024; // 25MB per document
+        const DOC_UPLOAD_MAX_BYTES = 2 * 1024 * 1024; // 2MB per document — matches upload.js's server-side MAX_UPLOAD_BYTES; keep these two in sync
         function formatBytes(n) {
             if (n >= 1024 * 1024) return Math.round(n / (1024 * 1024)) + 'MB';
             return Math.round(n / 1024) + 'KB';
@@ -446,11 +446,20 @@
         // Uploads a File to R2 and resolves to { key, url, mime, name, size }.
         // Rejects on any non-2xx so callers can surface a real failure instead
         // of silently attaching nothing.
+        //
+        // The real backend route is POST /api/upload (functions/api/upload.js),
+        // which returns only { success, key, filename } — no url/mime, and
+        // "filename" not "name". Files are read back via GET
+        // /api/file?key=<key> (functions/api/file.js; also the format
+        // migrate-to-r2.js already writes into saved case content), not the
+        // /api/files/<key> path this used to call. Everything downstream
+        // (up.url / up.key / up.mime / up.name) is unchanged — this function
+        // is the only place that needs to know the real contract.
         async function uploadFileToR2(file, scope) {
             const fd = new FormData();
             fd.append('file', file, file.name);
             if (scope) fd.append('scope', scope);
-            const res = await fetch('/api/files', { method: 'POST', credentials: 'include', body: fd });
+            const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: fd });
             if (!res.ok) {
                 let msg = 'Upload failed (' + res.status + ')';
                 try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
@@ -458,7 +467,13 @@
             }
             const data = await res.json();
             if (!data || !data.key) throw new Error('Upload succeeded but returned no key.');
-            return data;
+            return {
+                key: data.key,
+                url: '/api/file?key=' + encodeURIComponent(data.key),
+                mime: file.type || '',
+                name: data.filename || file.name,
+                size: file.size
+            };
         }
         async function handleDocUpload(input) {
             const file = input.files && input.files[0];
@@ -2150,7 +2165,7 @@
         }
         // Alert images go to R2 as well. The preview renders instantly from a
         // local object URL so the admin isn't staring at a blank box while the
-        // upload runs; `alertImageDataUrl` then holds the /api/files/<key>
+        // upload runs; `alertImageDataUrl` then holds the /api/file?key=<key>
         // path that gets broadcast, not the image bytes. The variable keeps
         // its old name so the alert-render path at refreshSiteState (which
         // just assigns it to img.src) needs no change — a path works there
