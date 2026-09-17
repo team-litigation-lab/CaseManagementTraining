@@ -416,36 +416,73 @@
 
         function addDocument(label) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="150" class="no-print"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div style="font-size:8px;color:#94a3b8;margin-top:2px;">Max 2MB</div><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
+            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="150" class="no-print"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div style="font-size:8px;color:#94a3b8;margin-top:2px;">Max ${formatBytes(DOC_UPLOAD_MAX_BYTES)}</div><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
             document.getElementById('doc-body').appendChild(tr);
             applyPlaceholders(tr);
         }
-        // Files are attached client-side as data URLs directly inside the row
-        // (same as every other Doc Hub field), so they save/load/print along
-        // with the rest of the case automatically — no separate storage needed.
-        // Per-document cap: 2MB. (There is no separate total-per-case cap —
-        // the whole case is no longer budget-limited server-side.)
-        const DOC_UPLOAD_MAX_BYTES = 2 * 1024 * 1024; // 2MB per document
-        function handleDocUpload(input) {
+        /* ---------- R2-backed file attachments ----------
+           Files used to be inlined into the row as base64 data URLs, which
+           meant every attachment was carried inside the case's serialized
+           HTML blob and re-sent on every save. They now live in R2 instead:
+           the upload POSTs to /api/files, the server returns an opaque key,
+           and the row stores only a short path.
+
+           The saved markup therefore holds `/api/files/<key>` in the href
+           rather than a multi-megabyte data: URI. Everything downstream that
+           reads the row (save/load/print) keeps working on the anchor exactly
+           as before — only the href's contents changed. /api/files/<key> is
+           session-gated server-side, so an attachment is no more reachable
+           than the case it belongs to.
+
+           `data-r2-mime` is stamped on the anchor at upload time so the PDF
+           export can tell an image from a PDF/Word file without sniffing the
+           URL. Legacy rows saved before this change still carry `data:` URIs
+           and are handled by the fallback paths — they are not broken by it. */
+        const DOC_UPLOAD_MAX_BYTES = 25 * 1024 * 1024; // 25MB per document
+        function formatBytes(n) {
+            if (n >= 1024 * 1024) return Math.round(n / (1024 * 1024)) + 'MB';
+            return Math.round(n / 1024) + 'KB';
+        }
+        // Uploads a File to R2 and resolves to { key, url, mime, name, size }.
+        // Rejects on any non-2xx so callers can surface a real failure instead
+        // of silently attaching nothing.
+        async function uploadFileToR2(file, scope) {
+            const fd = new FormData();
+            fd.append('file', file, file.name);
+            if (scope) fd.append('scope', scope);
+            const res = await fetch('/api/files', { method: 'POST', credentials: 'include', body: fd });
+            if (!res.ok) {
+                let msg = 'Upload failed (' + res.status + ')';
+                try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+                throw new Error(msg);
+            }
+            const data = await res.json();
+            if (!data || !data.key) throw new Error('Upload succeeded but returned no key.');
+            return data;
+        }
+        async function handleDocUpload(input) {
             const file = input.files && input.files[0];
             if (!file) return;
             if (file.size > DOC_UPLOAD_MAX_BYTES) {
-                alert('That file is too large to attach (max 2MB). Try a smaller file or a compressed copy.');
+                alert('That file is too large to attach (max ' + formatBytes(DOC_UPLOAD_MAX_BYTES) + '). Try a smaller file or a compressed copy.');
                 input.value = '';
                 return;
             }
             const row = input.closest('tr');
             const holder = row ? row.querySelector('.doc-attachment') : null;
-            const reader = new FileReader();
-            reader.onload = () => {
-                const safeName = file.name.replace(/"/g, '&quot;');
+            if (holder) holder.innerHTML = '<span style="color:#64748b;font-style:italic;">Uploading…</span>';
+            try {
+                const up = await uploadFileToR2(file, 'case-doc');
+                const safeName = (up.name || file.name).replace(/"/g, '&quot;');
+                const safeMime = (up.mime || file.type || '').replace(/"/g, '&quot;');
                 if (holder) {
-                    holder.innerHTML = `<a href="${reader.result}" download="${safeName}" class="doc-file-link" style="color:#2563eb;font-weight:700;">📎 ${safeName}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
+                    holder.innerHTML = `<a href="${up.url}" download="${safeName}" data-r2-key="${up.key}" data-r2-mime="${safeMime}" target="_blank" rel="noopener" class="doc-file-link" style="color:#2563eb;font-weight:700;">📎 ${safeName}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
                 }
-                input.value = '';
-            };
-            reader.onerror = () => { alert('Could not read that file. Please try again.'); input.value = ''; };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                if (holder) holder.innerHTML = '';
+                alert('Could not attach that file: ' + (err && err.message ? err.message : 'unknown error'));
+            }
+            input.value = '';
         }
 
         /* ---------- Totals ---------- */
@@ -1035,7 +1072,26 @@
         }
 
         /* ---------- PDF export ---------- */
-        function downloadPDF(info) {
+        // Pulls a same-origin R2 file back down and re-encodes it as a data
+        // URI so html2canvas can rasterize it. Returns null (never throws) on
+        // any failure, so one dead attachment can't take the export with it.
+        async function fetchAsDataURI(url) {
+            try {
+                const res = await fetch(url, { credentials: 'include' });
+                if (!res.ok) return null;
+                const blob = await res.blob();
+                return await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => resolve(null);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) { return null; }
+        }
+        // async because the Doc Hub section now awaits R2 image fetches before
+        // handing the assembled page to html2pdf. Callers fire-and-forget as
+        // before; nothing downstream depends on the return value.
+        async function downloadPDF(info) {
             info = info || {};
             const virtualPage = document.createElement('div');
             Object.assign(virtualPage.style, { padding: '46px', backgroundColor: '#ffffff', color: '#0f2148', fontFamily: "'IBM Plex Sans', Arial, sans-serif", lineHeight: '1.5' });
@@ -1164,9 +1220,16 @@
             // visible in the printed/downloaded PDF; non-image attachments
             // (e.g. PDFs, Word docs) can't be rasterized into a static page,
             // so those are referenced by filename instead.
-            const docRows = document.querySelectorAll('#doc-body tr');
+            // Attachments no longer live in the markup as data URIs, so an
+            // image has to be fetched back out of R2 and re-encoded before
+            // html2pdf rasterizes the page — html2canvas cannot reliably
+            // capture an <img> that is still in flight. Each image is pulled
+            // and inlined here, and a fetch failure degrades to the same
+            // filename-only reference used for non-image attachments rather
+            // than aborting the whole export.
+            const docRows = Array.from(document.querySelectorAll('#doc-body tr'));
             let docHubContent = '';
-            docRows.forEach(row => {
+            for (const row of docRows) {
                 const categoryEl = row.querySelector('td:first-child div');
                 const category = categoryEl ? categoryEl.innerText.trim() : '';
                 const summaryEl = row.querySelector('[contenteditable="true"]');
@@ -1177,8 +1240,17 @@
                 if (linkEl) {
                     const href = linkEl.getAttribute('href') || '';
                     const filename = linkEl.getAttribute('download') || linkEl.innerText.trim();
-                    if (/^data:image\//i.test(href)) {
+                    const mime = linkEl.getAttribute('data-r2-mime') || '';
+                    const isLegacyImage = /^data:image\//i.test(href);
+                    const isR2Image = !!href && !/^data:/i.test(href) && /^image\//i.test(mime);
+                    if (isLegacyImage) {
+                        // Pre-R2 row: the base64 is still sitting in the href.
                         attachmentHtml = `<div style="margin-top:8px;"><img src="${href}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`;
+                    } else if (isR2Image) {
+                        const dataUri = await fetchAsDataURI(href);
+                        attachmentHtml = dataUri
+                            ? `<div style="margin-top:8px;"><img src="${dataUri}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`
+                            : `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">📎 Attached file: ${filename}</div>`;
                     } else {
                         attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">📎 Attached file: ${filename}</div>`;
                     }
@@ -1191,7 +1263,7 @@
                     <div style="font-size: 12px; font-weight: 600; color: ${summary ? '#0f2148' : '#94a3b8'}; margin-top:4px;${summary ? '' : ' font-style:italic;'}">${summary || 'None'}</div>
                     ${attachmentHtml}
                 </div>`;
-            });
+            }
             if (docHubContent) {
                 virtualPage.innerHTML += `<div style="margin-bottom: 26px; break-inside: avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">Documents</div>
@@ -2076,21 +2148,46 @@
             document.querySelectorAll('#alert-bg-swatches .swatch').forEach(s => s.classList.remove('selected'));
             if (el) el.classList.add('selected');
         }
-        function previewAlertImage(input) {
+        // Alert images go to R2 as well. The preview renders instantly from a
+        // local object URL so the admin isn't staring at a blank box while the
+        // upload runs; `alertImageDataUrl` then holds the /api/files/<key>
+        // path that gets broadcast, not the image bytes. The variable keeps
+        // its old name so the alert-render path at refreshSiteState (which
+        // just assigns it to img.src) needs no change — a path works there
+        // exactly as a data URI did.
+        let alertImagePreviewObjectUrl = null;
+        async function previewAlertImage(input) {
             const file = input.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                alertImageDataUrl = e.target.result;
-                const preview = document.getElementById('alert-image-preview');
-                preview.src = alertImageDataUrl; preview.style.display = 'inline-block';
-            };
-            reader.readAsDataURL(file);
+            const preview = document.getElementById('alert-image-preview');
+            if (file.size > DOC_UPLOAD_MAX_BYTES) {
+                showToast('That image is too large (max ' + formatBytes(DOC_UPLOAD_MAX_BYTES) + ').', 'error');
+                input.value = '';
+                return;
+            }
+            if (alertImagePreviewObjectUrl) { URL.revokeObjectURL(alertImagePreviewObjectUrl); alertImagePreviewObjectUrl = null; }
+            alertImagePreviewObjectUrl = URL.createObjectURL(file);
+            preview.src = alertImagePreviewObjectUrl;
+            preview.style.display = 'inline-block';
+            preview.style.opacity = '0.5';
+            try {
+                const up = await uploadFileToR2(file, 'alert-image');
+                alertImageDataUrl = up.url;
+                preview.style.opacity = '1';
+            } catch (err) {
+                alertImageDataUrl = null;
+                preview.style.display = 'none';
+                preview.src = '';
+                preview.style.opacity = '1';
+                showToast('Could not upload that image: ' + (err && err.message ? err.message : 'unknown error'), 'error');
+            }
+            input.value = '';
         }
         function clearAlertImage() {
             alertImageDataUrl = null;
+            if (alertImagePreviewObjectUrl) { URL.revokeObjectURL(alertImagePreviewObjectUrl); alertImagePreviewObjectUrl = null; }
             document.getElementById('alert-image-input').value = '';
             const preview = document.getElementById('alert-image-preview');
-            preview.style.display = 'none'; preview.src = '';
+            preview.style.display = 'none'; preview.src = ''; preview.style.opacity = '1';
         }
         function makeAnnouncement() {
             const text = document.getElementById('announce-text-input').value.trim();
