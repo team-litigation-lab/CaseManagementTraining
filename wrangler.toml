@@ -11,5 +11,5 @@ binding = "LSH_KV"
 id = "b121aa911590471bbad351d03274d7f4"
 
 [[r2_buckets]]
-binding = "DOCUMENTS"
+binding = "lshtraining"
 bucket_name = "lshtraining"
