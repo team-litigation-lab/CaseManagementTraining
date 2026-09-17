@@ -118,15 +118,25 @@ export async function upsertSessionHeartbeat(db, { username, fullName, batchId, 
  * endpoint that returns or mutates real data — never trust a
  * username/batchId/userType sent in the request body or query string.
  */
-export async function requireSession(request, env, { adminOnly = false } = {}) {
+export async function requireSession(request, env, { adminOnly = false, skipHeartbeatCheck = false } = {}) {
     const token = getCookie(request, 'lsh_session');
     const payload = await verifySessionToken(token, env.SESSION_SECRET);
     if (!payload) {
         return { ok: false, response: json({ success: false, error: 'Not authenticated.', code: 'NOT_AUTHENTICATED' }, 401) };
     }
-    const alive = await isSessionHeartbeatAlive(env.DB, payload.username);
-    if (!alive) {
-        return { ok: false, response: json({ success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' }, 401) };
+    // /api/heartbeat's own POST handler is the one call site that passes
+    // skipHeartbeatCheck: true. Its entire purpose is to refresh the
+    // heartbeat row, so requiring an already-fresh heartbeat to get past
+    // this check creates a deadlock — one late ping (redirect delay, a
+    // throttled background tab, ordinary network jitter) trips
+    // isSessionHeartbeatAlive, which locks the endpoint that's supposed to
+    // fix that out for the rest of the 12h token lifetime. Every other
+    // caller still goes through the freshness check as before.
+    if (!skipHeartbeatCheck) {
+        const alive = await isSessionHeartbeatAlive(env.DB, payload.username);
+        if (!alive) {
+            return { ok: false, response: json({ success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' }, 401) };
+        }
     }
     // Re-check the account's live status on every request, not just at
     // login. A signed session token + a live heartbeat alone would
