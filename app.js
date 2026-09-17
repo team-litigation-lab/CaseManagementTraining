@@ -427,26 +427,34 @@
         // the whole case is no longer budget-limited server-side.)
         const DOC_UPLOAD_MAX_BYTES = 2 * 1024 * 1024; // 2MB per document
         function handleDocUpload(input) {
-            const file = input.files && input.files[0];
-            if (!file) return;
-            if (file.size > DOC_UPLOAD_MAX_BYTES) {
-                alert('That file is too large to attach (max 2MB). Try a smaller file or a compressed copy.');
-                input.value = '';
-                return;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > DOC_UPLOAD_MAX_BYTES) {
+        alert('That file is too large to attach (max 2MB). Try a smaller file or a compressed copy.');
+        input.value = '';
+        return;
+    }
+    const row = input.closest('tr');
+    const holder = row ? row.querySelector('.doc-attachment') : null;
+    if (holder) holder.innerHTML = '<span style="font-size:10px;color:#64748b;">Uploading…</span>';
+    const fd = new FormData();
+    fd.append('file', file);
+    fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' })
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.success) throw new Error((data && data.error) || 'Upload failed');
+            const safeName = file.name.replace(/"/g, '&quot;');
+            if (holder) {
+                holder.innerHTML = `<a href="/api/file?key=${encodeURIComponent(data.key)}" target="_blank" class="doc-file-link" style="color:#2563eb;font-weight:700;">📎 ${safeName}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
             }
-            const row = input.closest('tr');
-            const holder = row ? row.querySelector('.doc-attachment') : null;
-            const reader = new FileReader();
-            reader.onload = () => {
-                const safeName = file.name.replace(/"/g, '&quot;');
-                if (holder) {
-                    holder.innerHTML = `<a href="${reader.result}" download="${safeName}" class="doc-file-link" style="color:#2563eb;font-weight:700;">📎 ${safeName}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
-                }
-                input.value = '';
-            };
-            reader.onerror = () => { alert('Could not read that file. Please try again.'); input.value = ''; };
-            reader.readAsDataURL(file);
-        }
+            input.value = '';
+        })
+        .catch(() => {
+            if (holder) holder.innerHTML = '';
+            alert('Network error uploading file. Please try again.');
+            input.value = '';
+        });
+}
 
         /* ---------- Totals ---------- */
         function updateTotals() {
@@ -1177,14 +1185,14 @@
                 if (linkEl) {
                     const href = linkEl.getAttribute('href') || '';
                     const filename = linkEl.getAttribute('download') || linkEl.innerText.trim();
-                    if (/^data:image\//i.test(href)) {
-                        attachmentHtml = `<div style="margin-top:8px;"><img src="${href}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`;
-                    } else {
-                        attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">📎 Attached file: ${filename}</div>`;
-                    }
-                } else {
-                    attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-style:italic;color:#94a3b8;">No attachment</div>`;
-                }
+                   if (/^data:image\//i.test(href)) {
+    attachmentHtml = `<div style="margin-top:8px;"><img src="${href}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`;
+} else if (/^\/api\/file/.test(href)) {
+    attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">📎 Attached file: ${filename} <span style="font-weight:400;color:#94a3b8;">(stored in R2)</span></div>`;
+} else {
+    attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-style:italic;color:#94a3b8;">No attachment</div>`;
+}
+
 
                 docHubContent += `<div style="margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; break-inside: avoid;">
                     <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size: 9px; font-weight: 900; color: #9a3412; text-transform: uppercase; letter-spacing:0.05em;">${category || 'Uncategorized'}</div>
