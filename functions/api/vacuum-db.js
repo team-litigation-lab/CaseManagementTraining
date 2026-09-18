@@ -28,26 +28,30 @@ export async function onRequestPost({ request, env }) {
     }
     const db = env.DB;
 
+    // D1 blocks PRAGMA page_count / freelist_count outright ("not
+    // authorized: SQLITE_AUTH") even though page_size is allowed — this is
+    // a platform restriction, not a bug here. Stats are a nice-to-have for
+    // reporting bytes reclaimed; they must never block the vacuum itself,
+    // so every PRAGMA is caught individually and just comes back null on
+    // failure instead of aborting the whole request.
     const readStats = async () => {
-        const [pageCount, freelist, pageSize] = await Promise.all([
-            db.prepare(`PRAGMA page_count`).first(),
-            db.prepare(`PRAGMA freelist_count`).first(),
-            db.prepare(`PRAGMA page_size`).first(),
-        ]);
-        return {
-            pageCount: Number(pageCount ? pageCount.page_count : 0),
-            freelistCount: Number(freelist ? freelist.freelist_count : 0),
-            pageSize: Number(pageSize ? pageSize.page_size : 0),
+        const safePragma = async (sql, key) => {
+            try {
+                const row = await db.prepare(sql).first();
+                return row ? Number(row[key]) : null;
+            } catch (e) {
+                return null;
+            }
         };
+        const [pageCount, freelistCount, pageSize] = await Promise.all([
+            safePragma(`PRAGMA page_count`, 'page_count'),
+            safePragma(`PRAGMA freelist_count`, 'freelist_count'),
+            safePragma(`PRAGMA page_size`, 'page_size'),
+        ]);
+        return { pageCount, freelistCount, pageSize };
     };
 
-    let before;
-    try {
-        before = await readStats();
-    } catch (e) {
-        return json({ success: false, error: 'Could not read database stats before vacuuming: ' + e.message }, 500);
-    }
-
+    const before = await readStats();
     const startedAt = Date.now();
     try {
         // Raw, param-free statement — this is what env.DB.exec() is for,
@@ -66,22 +70,16 @@ export async function onRequestPost({ request, env }) {
     }
     const durationMs = Date.now() - startedAt;
 
-    let after;
-    try {
-        after = await readStats();
-    } catch (e) {
-        // The vacuum itself succeeded even if we can't re-read stats.
-        after = null;
-    }
+    const after = await readStats();
 
-    const bytesBefore = before.pageCount * before.pageSize;
-    const bytesAfter = after ? after.pageCount * after.pageSize : null;
-    const bytesReclaimed = bytesAfter !== null ? Math.max(0, bytesBefore - bytesAfter) : null;
+    const bytesBefore = (before.pageCount !== null && before.pageSize !== null) ? before.pageCount * before.pageSize : null;
+    const bytesAfter = (after.pageCount !== null && after.pageSize !== null) ? after.pageCount * after.pageSize : null;
+    const bytesReclaimed = (bytesBefore !== null && bytesAfter !== null) ? Math.max(0, bytesBefore - bytesAfter) : null;
 
     await logActivity(db, session.username, session.batchId, 'vacuum-db', {
         durationMs,
         pageCountBefore: before.pageCount,
-        pageCountAfter: after ? after.pageCount : null,
+        pageCountAfter: after.pageCount,
         freelistCountBefore: before.freelistCount,
         bytesReclaimed
     });
@@ -90,7 +88,8 @@ export async function onRequestPost({ request, env }) {
         success: true,
         durationMs,
         before: { pageCount: before.pageCount, freelistCount: before.freelistCount, approxBytes: bytesBefore },
-        after: after ? { pageCount: after.pageCount, freelistCount: after.freelistCount, approxBytes: bytesAfter } : null,
-        bytesReclaimed
+        after: { pageCount: after.pageCount, freelistCount: after.freelistCount, approxBytes: bytesAfter },
+        bytesReclaimed,
+        note: bytesReclaimed === null ? 'Byte-level stats are blocked by D1 for this account; the vacuum itself still ran.' : undefined
     });
 }
