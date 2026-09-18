@@ -536,6 +536,25 @@
                 // explicitly by id instead, so old saved cases are unaffected.
                 attorney: document.getElementById('attorney-field') ? document.getElementById('attorney-field').value : '',
                 caseManager: document.getElementById('case-manager-field') ? document.getElementById('case-manager-field').value : '',
+                // Calendar-export date fields: same reasoning as attorney/
+                // caseManager above — captured explicitly by id so the
+                // /api/export-calendar endpoint can query them directly as
+                // real DB columns instead of parsing them back out of the
+                // saved HTML. These divs are STILL also contenteditable and
+                // still captured by the generic positional array below as
+                // before (only an id was added to them) — this is a second,
+                // additive capture for the new columns, not a replacement.
+                // NOTE: the summary bar's SOL and the Litigation tab's own
+                // separate "Statute (SOL)" field are NOT linked to each
+                // other (a pre-existing quirk, not introduced here) — both
+                // are captured under distinct keys so neither is silently
+                // dropped.
+                dateOfLoss: document.getElementById('date-of-loss-field') ? document.getElementById('date-of-loss-field').innerText.trim() : '',
+                solBar: document.getElementById('sol-bar-field') ? document.getElementById('sol-bar-field').innerText.trim() : '',
+                solLitigation: document.getElementById('sol-litigation-field') ? document.getElementById('sol-litigation-field').innerText.trim() : '',
+                complaintFiled: document.getElementById('complaint-filed-field') ? document.getElementById('complaint-filed-field').innerText.trim() : '',
+                discoveryCutoff: document.getElementById('discovery-cutoff-field') ? document.getElementById('discovery-cutoff-field').innerText.trim() : '',
+                trialDate: document.getElementById('trial-date-field') ? document.getElementById('trial-date-field').innerText.trim() : '',
                 html: {
                     pass: document.getElementById('passenger-container').innerHTML,
                     facs: document.getElementById('facility-container').innerHTML,
@@ -784,6 +803,41 @@
             generateCaseId();
             showTab('profile');
             renderRepo();
+        }
+
+        /* ---------- Export My Calendar (.ics) ----------
+           Not a live Google Calendar connection — generates a downloadable
+           .ics file of every date-bearing deadline across cases the
+           logged-in user can see (own cases + all finalized cases, or
+           everything if Admin), which they then import into their own
+           Google Calendar via Settings > Import & export > Import. See
+           functions/api/export-calendar.js for the generation side. */
+        async function exportMyCalendar() {
+            try {
+                const res = await fetch('/api/export-calendar', { credentials: 'include' });
+                if (!res.ok) {
+                    let msg = 'Could not generate calendar (' + res.status + ')';
+                    try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+                    showToast(msg, 'error');
+                    return;
+                }
+                const eventCount = res.headers.get('X-Event-Count');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'my-case-calendar.ics';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showToast(
+                    (eventCount !== null ? eventCount + ' event(s)' : 'Calendar') + ' downloaded — import it into Google Calendar via Settings > Import & export.',
+                    'info'
+                );
+            } catch (e) {
+                showToast('Network error generating calendar.', 'error');
+            }
         }
 
         /* ---------- Save Case (permanent — assigns the real Case ID) ----------
