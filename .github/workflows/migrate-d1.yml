@@ -6,7 +6,7 @@ on:
       new_db_name:
         description: 'Name for the brand-new database'
         required: true
-        default: 'lshcasemanagementtraining-trainingcrmlogins-v2'
+        default: 'lshcasemanagementtraining-trainingcrmlogins-v3'
 
 permissions:
   contents: write
@@ -39,7 +39,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: a5bc4befef0191374735bd6a0109fec0
 
-      - name: Split oversized statements and import in safe batches
+      - name: Split oversized statements (row-level and field-level) and import in safe batches
         run: |
           cat > split_import.py << 'PYEOF'
           import re, subprocess, sys, os
@@ -68,19 +68,19 @@ jobs:
                   statements.append(tail)
               return statements
 
-          def split_values_tuples(values_part):
-              tuples = []
+          def split_top_level(s, sep=','):
+              parts = []
               current = []
               depth = 0
               in_string = False
               i = 0
-              n = len(values_part)
+              n = len(s)
               while i < n:
-                  c = values_part[i]
+                  c = s[i]
                   if c == "'":
                       current.append(c)
-                      if in_string and i + 1 < n and values_part[i+1] == "'":
-                          current.append(values_part[i+1]); i += 2; continue
+                      if in_string and i + 1 < n and s[i+1] == "'":
+                          current.append(s[i+1]); i += 2; continue
                       in_string = not in_string
                       i += 1
                       continue
@@ -89,10 +89,10 @@ jobs:
                           depth += 1
                       elif c == ')':
                           depth -= 1
-                      if c == ',' and depth == 0:
-                          tup = ''.join(current).strip()
-                          if tup:
-                              tuples.append(tup)
+                      if c == sep and depth == 0:
+                          part = ''.join(current).strip()
+                          if part:
+                              parts.append(part)
                           current = []
                           i += 1
                           continue
@@ -100,39 +100,92 @@ jobs:
                   i += 1
               tail = ''.join(current).strip()
               if tail:
-                  tuples.append(tail)
-              return tuples
+                  parts.append(tail)
+              return parts
+
+          def unquote(val):
+              val = val.strip()
+              if val.startswith("'") and val.endswith("'"):
+                  return val[1:-1].replace("''", "'")
+              return val
+
+          def sql_quote(val):
+              return "'" + val.replace("'", "''") + "'"
 
           THRESHOLD = 40000
           BATCH_LIMIT = 500000
+          CHUNK_SIZE = 20000
+
+          insert_re = re.compile(r'^INSERT INTO ([^\s\(]+)\s*\(([^\)]*)\)\s*VALUES\s*(.*)$', re.IGNORECASE | re.DOTALL)
+
+          def handle_oversized_row(table, columns, tuple_str):
+              inner = tuple_str.strip()
+              if inner.startswith('(') and inner.endswith(')'):
+                  inner = inner[1:-1]
+              fields = split_top_level(inner, ',')
+              if len(fields) != len(columns):
+                  return [f"INSERT INTO {table} ({', '.join(columns)}) VALUES {tuple_str};"]
+
+              id_idx = None
+              for idx, col in enumerate(columns):
+                  if col.strip().strip('"').lower() == 'id':
+                      id_idx = idx
+                      break
+
+              max_idx = max(range(len(fields)), key=lambda i: len(fields[i]))
+
+              if id_idx is None or max_idx == id_idx or len(fields[max_idx]) <= THRESHOLD:
+                  return [f"INSERT INTO {table} ({', '.join(columns)}) VALUES {tuple_str};"]
+
+              id_value = fields[id_idx].strip()
+              big_value = unquote(fields[max_idx])
+              target_col = columns[max_idx].strip().strip('"')
+
+              insert_fields = list(fields)
+              insert_fields[max_idx] = "''"
+              stmts = [f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join(insert_fields)});"]
+
+              for i in range(0, len(big_value), CHUNK_SIZE):
+                  chunk = big_value[i:i+CHUNK_SIZE]
+                  stmts.append(
+                      f"UPDATE {table} SET {target_col} = {target_col} || {sql_quote(chunk)} WHERE id = {id_value};"
+                  )
+              return stmts
 
           def build_batches(path):
               with open(path, 'r', encoding='utf-8') as f:
                   sql = f.read()
               statements = split_statements(sql)
               expanded = []
-              insert_re = re.compile(r'^(INSERT INTO [^\(]+\([^\)]*\)\s*VALUES\s*)(.*)$', re.IGNORECASE | re.DOTALL)
+
               for stmt in statements:
-                  if len(stmt) > THRESHOLD and stmt.strip().upper().startswith('INSERT'):
-                      m = insert_re.match(stmt.strip())
+                  stripped = stmt.strip()
+                  if len(stmt) > THRESHOLD and stripped.upper().startswith('INSERT'):
+                      m = insert_re.match(stripped)
                       if m:
-                          prefix = m.group(1)
-                          values_part = m.group(2).rstrip().rstrip(';').strip()
-                          tuples = split_values_tuples(values_part)
+                          table = m.group(1)
+                          columns = split_top_level(m.group(2), ',')
+                          values_part = m.group(3).rstrip().rstrip(';').strip()
+                          tuples = split_top_level(values_part, ',')
                           for t in tuples:
-                              expanded.append(prefix + t + ';')
+                              if len(t) > THRESHOLD:
+                                  expanded.extend(handle_oversized_row(table, columns, t))
+                              else:
+                                  expanded.append(f"INSERT INTO {table} ({', '.join(columns)}) VALUES {t};")
                           continue
                   expanded.append(stmt if stmt.endswith(';') else stmt + ';')
+
               batches = []
               current_batch = []
               current_size = 0
               for stmt in expanded:
-                  if current_size + len(stmt) > BATCH_LIMIT and current_batch:
+                  stmt_len = len(stmt)
+                  if current_size + stmt_len > BATCH_LIMIT and current_batch:
                       batches.append(current_batch)
                       current_batch = []
                       current_size = 0
                   current_batch.append(stmt)
-                  current_size += len(stmt)
+                  current_size += stmt_len
               if current_batch:
                   batches.append(current_batch)
               return expanded, batches
@@ -140,7 +193,9 @@ jobs:
           if __name__ == '__main__':
               db_name = sys.argv[1]
               expanded, batches = build_batches('backup.sql')
-              print(f"Total statements after splitting oversized INSERTs: {len(expanded)}")
+              print(f"Total statements after splitting: {len(expanded)}")
+              over = [s for s in expanded if len(s) > THRESHOLD]
+              print(f"Statements still over threshold: {len(over)}")
               print(f"Batched into {len(batches)} files for import")
               for idx, batch in enumerate(batches):
                   fname = f"batch_{idx:04d}.sql"
