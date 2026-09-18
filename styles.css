@@ -549,6 +549,32 @@
     .swatch { width:28px; height:28px; border-radius:6px; cursor:pointer; border:2px solid transparent; }
     .swatch.selected { border-color: var(--navy); box-shadow:0 0 0 2px white inset; }
 
+    /* ===== TRAINEE DASHBOARD (full page, same pattern as Master Control) ===== */
+    #trainee-dashboard-page {
+        position: fixed; inset:0; z-index: 1500; display:none;
+        background:#f8fafc; flex-direction:column;
+    }
+    #trainee-dashboard-page.open { display:flex; }
+    .review-day-group { margin-bottom:22px; }
+    .review-day-label { font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:0.05em; color:var(--navy); margin-bottom:10px; }
+    .review-entry { background:white; border:1px solid #e2e8f0; border-radius:10px; padding:16px 18px; margin-bottom:12px; }
+    .review-entry-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; flex-wrap:wrap; gap:6px; }
+    .review-entry-case { font-size:13px; font-weight:800; color:var(--navy); }
+    .review-entry-time { font-size:10.5px; color:#94a3b8; font-weight:600; }
+    .review-finding-list { display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+    .review-finding { display:flex; align-items:flex-start; gap:8px; font-size:11.5px; }
+    .review-finding-badge { flex-shrink:0; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; color:white; margin-top:1px; }
+    .review-finding-badge.pass { background:#16a34a; }
+    .review-finding-badge.warning { background:#f59e0b; }
+    .review-finding-badge.fail { background:#dc2626; }
+    .review-finding-text { color:#334155; }
+    .review-finding-check { font-weight:700; }
+    .review-comment-box { border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px; }
+    .review-comment-box label { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; display:block; margin-bottom:5px; }
+    .review-comment-box textarea { width:100%; min-height:56px; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; font-size:12px; font-family:inherit; resize:vertical; }
+    .review-comment-readonly { font-size:12px; color:#334155; background:#f8fafc; border-radius:6px; padding:8px 10px; }
+    .review-comment-meta { font-size:9.5px; color:#94a3b8; margin-top:4px; }
+
     @media print {
         .no-print { display: none !important; }
         .pdf-card { border: 2px solid var(--orange) !important; break-inside: avoid; }
