@@ -52,7 +52,8 @@
             <button onclick="requestDownload()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download Case Summary (PDF)</button>
             <button onclick="newCase()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-4">Start a New Case</button>
             <button onclick="exportMyCalendar()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-2">📅 Export My Calendar (.ics)</button>
-            <button onclick="downloadTrainingCalendar()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">🗓️ Training Simulation Calendar (.ics)</button>
+            <button onclick="downloadTrainingCalendar()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-2">🗓️ Training Simulation Calendar (.ics)</button>
+            <button onclick="openTraineeDashboard()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">📊 My Dashboard</button>
 
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Repository</p>
             <form autocomplete="off" onsubmit="return false;" style="margin:0;">
@@ -463,6 +464,24 @@
                 <button class="auth-submit" onclick="submitRegistration()">Submit Registration</button>
                 <div class="auth-switch">Already have an account? <a onclick="showLoginView()">Back to log in</a></div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== TRAINEE DASHBOARD (per-user automated review feed — full page) ===== -->
+    <div id="trainee-dashboard-page" class="no-print">
+        <div class="mc-header">
+            <div>
+                <h2 id="trainee-dash-title">My Dashboard</h2>
+                <div class="sub" id="trainee-dash-sub">Automated Case Review</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <select id="trainee-dash-picker" style="display:none; padding:8px 10px; border-radius:6px; border:none; font-size:11px; font-weight:700;" onchange="loadTraineeDashboard(this.value)"></select>
+                <button class="portal-toggle-btn" onclick="closeTraineeDashboard()">⇄ Back to Case Workspace</button>
+            </div>
+        </div>
+        <div class="mc-body">
+            <div id="trainee-dash-empty" style="display:none; font-size:12px; color:#94a3b8;">No case reviews yet — a review is generated automatically each time a case is saved.</div>
+            <div id="trainee-dash-list"></div>
         </div>
     </div>
 
