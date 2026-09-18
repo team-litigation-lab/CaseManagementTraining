@@ -26,11 +26,15 @@ jobs:
       - name: Create a brand-new, empty database
         id: create_db
         run: |
+          set +e
           OUTPUT=$(npx wrangler d1 create "${{ github.event.inputs.new_db_name }}" 2>&1)
+          CREATE_EXIT=$?
+          set -e
           echo "$OUTPUT"
+          echo "wrangler exit code: $CREATE_EXIT"
           NEW_ID=$(echo "$OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
           if [ -z "$NEW_ID" ]; then
-            echo "Could not find a new database ID in wrangler's output — aborting."
+            echo "Could not find a new database ID in wrangler's output above — aborting."
             exit 1
           fi
           echo "New database ID: $NEW_ID"
