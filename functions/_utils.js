@@ -195,6 +195,95 @@ export function isOwnerOrAdmin(session, ownerUsername) {
     return !!session && (session.userType === 'Admin' || session.username === ownerUsername);
 }
 
+/* =====================================================================
+   AUTOMATED CASE REVIEW (Phase 1 — rule-based only; AI-powered writing
+   review is a later phase, layered on top of this same findings array
+   rather than replacing it).
+
+   Runs once per successful case save (see case-repository.js). Checks
+   only fields with a dedicated, reliable column or explicit content key
+   — deliberately does NOT try to parse the positional contenteditable
+   array (fragile, DOM-order-dependent), so this stays robust as the case
+   editor's markup evolves. `content` is the parsed case content object;
+   `row` is the case_repository columns being saved (post-update values,
+   not a fresh DB read).
+   ===================================================================== */
+export function runAutomatedReview(content, row) {
+    const findings = [];
+    const push = (check, status, message) => findings.push({ check, status, message });
+
+    const clientName = (row.client_name || '').trim();
+    if (!clientName || clientName === 'Unnamed Client') {
+        push('Client Name', 'fail', 'No client name has been entered.');
+    } else {
+        push('Client Name', 'pass', 'Client name is on file.');
+    }
+
+    if (!(row.sol_bar || '').trim()) {
+        push('SOL Deadline (Summary Bar)', 'fail', 'Statute of limitations date is missing — this is a critical deadline.');
+    } else {
+        push('SOL Deadline (Summary Bar)', 'pass', 'SOL deadline is recorded.');
+    }
+
+    if (!(row.date_of_loss || '').trim()) {
+        push('Date of Loss', 'warning', 'Date of loss has not been entered yet.');
+    } else {
+        push('Date of Loss', 'pass', 'Date of loss is recorded.');
+    }
+
+    const attorney = (content && content.attorney || '').trim();
+    if (!attorney) {
+        push('Attorney Assigned', 'warning', 'No attorney has been assigned to this case.');
+    } else {
+        push('Attorney Assigned', 'pass', `Attorney assigned: ${attorney}.`);
+    }
+
+    const caseManager = (content && content.caseManager || '').trim();
+    if (!caseManager) {
+        push('Case Manager Assigned', 'warning', 'No case manager has been assigned to this case.');
+    } else {
+        push('Case Manager Assigned', 'pass', `Case manager assigned: ${caseManager}.`);
+    }
+
+    const litigationFields = [
+        ['sol_litigation', 'Statute (Litigation Tab)'],
+        ['complaint_filed', 'Complaint Filed'],
+        ['discovery_cutoff', 'Discovery Cut-off'],
+        ['trial_date', 'Trial Date'],
+    ];
+    for (const [col, label] of litigationFields) {
+        if (!(row[col] || '').trim()) {
+            push(label, 'warning', `${label} has not been entered yet.`);
+        } else {
+            push(label, 'pass', `${label} is recorded.`);
+        }
+    }
+
+    // Robust to exactly where in the saved content a document link lives —
+    // searches the whole serialized blob rather than a specific position.
+    const serialized = JSON.stringify(content || {});
+    if (serialized.includes('/api/file?key=')) {
+        push('Documents Uploaded', 'pass', 'At least one document has been uploaded to Doc Hub.');
+    } else {
+        push('Documents Uploaded', 'warning', 'No documents have been uploaded to Doc Hub yet (e.g. a demand letter).');
+    }
+
+    return findings;
+}
+
+// Plain calendar days since the trainee's registration training_start_date
+// (inclusive — the start date itself is Day 1). Deliberately NOT
+// business-day-aware like the training simulation calendar — this is a
+// simple elapsed-day counter, not a scheduling tool.
+export function computeTrainingDay(trainingStartDate) {
+    if (!trainingStartDate || !/^\d{4}-\d{2}-\d{2}$/.test(trainingStartDate)) return null;
+    const start = new Date(trainingStartDate + 'T00:00:00Z');
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const diffDays = Math.round((todayUTC - start) / 86400000);
+    return diffDays + 1;
+}
+
 
 /* =====================================================================
    PASSWORD HASHING (PBKDF2-SHA256 via Web Crypto — no external deps
