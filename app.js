@@ -875,6 +875,173 @@
             }
         }
 
+        /* ---------- Trainee Dashboard (Phase 1: rule-based automated review) ----------
+           Same full-page overlay pattern as Master Control
+           (#trainee-dashboard-page + .open, mirroring #master-control-page).
+           A Trainee sees only their own review feed, read-only. An Admin
+           gets a trainee picker and can add/edit trainer notes per entry —
+           see functions/api/trainee-dashboard.js and review-comment.js. */
+        function openTraineeDashboard() {
+            const session = getSession();
+            if (!session) return;
+            document.getElementById('trainee-dashboard-page').classList.add('open');
+            document.body.classList.add('mc-active');
+            const picker = document.getElementById('trainee-dash-picker');
+            if (session.userType === 'Admin') {
+                picker.style.display = '';
+                populateTraineeDashPicker();
+            } else {
+                picker.style.display = 'none';
+                document.getElementById('trainee-dash-title').innerText = 'My Dashboard';
+                document.getElementById('trainee-dash-sub').innerText = 'Automated Case Review';
+                loadTraineeDashboard(session.username);
+            }
+        }
+        function closeTraineeDashboard() {
+            document.getElementById('trainee-dashboard-page').classList.remove('open');
+            document.body.classList.remove('mc-active');
+        }
+
+        function populateTraineeDashPicker() {
+            const picker = document.getElementById('trainee-dash-picker');
+            picker.innerHTML = '<option value="">Loading trainees…</option>';
+            fetch('/api/users', { credentials: 'include' })
+                .then(r => r.json())
+                .then(users => {
+                    users = Array.isArray(users) ? users : [];
+                    const trainees = users.filter(u => u.user_type === 'Trainee')
+                        .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+                    if (!trainees.length) {
+                        picker.innerHTML = '<option value="">No trainees registered yet</option>';
+                        document.getElementById('trainee-dash-list').innerHTML = '';
+                        const empty = document.getElementById('trainee-dash-empty');
+                        empty.style.display = 'block';
+                        empty.innerText = 'No trainees registered yet.';
+                        return;
+                    }
+                    picker.innerHTML = trainees.map(t =>
+                        `<option value="${t.username}">${(t.full_name || t.username).replace(/"/g, '&quot;')}</option>`
+                    ).join('');
+                    loadTraineeDashboard(trainees[0].username);
+                })
+                .catch(() => { picker.innerHTML = '<option value="">Could not load trainees</option>'; });
+        }
+
+        function loadTraineeDashboard(username) {
+            const session = getSession();
+            const isAdminView = !!(session && session.userType === 'Admin');
+            const list = document.getElementById('trainee-dash-list');
+            const empty = document.getElementById('trainee-dash-empty');
+            list.innerHTML = '<p style="font-size:12px;color:#94a3b8;">Loading…</p>';
+            empty.style.display = 'none';
+            if (isAdminView) {
+                const picker = document.getElementById('trainee-dash-picker');
+                const selectedOption = picker.options[picker.selectedIndex];
+                document.getElementById('trainee-dash-title').innerText = selectedOption ? selectedOption.innerText : username;
+                document.getElementById('trainee-dash-sub').innerText = 'Automated Case Review — ' + username;
+            }
+            fetch('/api/trainee-dashboard?username=' + encodeURIComponent(username), { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.success) {
+                        list.innerHTML = '';
+                        empty.style.display = 'block';
+                        empty.innerText = (data && data.error) || 'Could not load this dashboard.';
+                        return;
+                    }
+                    renderTraineeDashboardEntries(data.entries || [], isAdminView);
+                })
+                .catch(() => {
+                    list.innerHTML = '';
+                    empty.style.display = 'block';
+                    empty.innerText = 'Network error loading dashboard.';
+                });
+        }
+
+        function renderTraineeDashboardEntries(entries, isAdminView) {
+            const list = document.getElementById('trainee-dash-list');
+            const empty = document.getElementById('trainee-dash-empty');
+            if (!entries.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                empty.innerText = 'No case reviews yet — a review is generated automatically each time a case is saved.';
+                return;
+            }
+            empty.style.display = 'none';
+
+            // Entries arrive newest-first from the API; group consecutive
+            // entries that share a training day under one heading.
+            const groups = [];
+            let currentDay;
+            let currentGroup = null;
+            entries.forEach(e => {
+                const dayLabel = e.trainingDay ? ('Day ' + e.trainingDay) : 'Day —';
+                if (dayLabel !== currentDay) {
+                    currentDay = dayLabel;
+                    currentGroup = { label: dayLabel, items: [] };
+                    groups.push(currentGroup);
+                }
+                currentGroup.items.push(e);
+            });
+
+            const badgeIcon = { pass: '✓', warning: '!', fail: '✕' };
+            const esc = s => String(s == null ? '' : s).replace(/</g, '&lt;');
+
+            list.innerHTML = groups.map(g => `
+                <div class="review-day-group">
+                    <div class="review-day-label">${g.label}</div>
+                    ${g.items.map(e => `
+                        <div class="review-entry">
+                            <div class="review-entry-header">
+                                <div class="review-entry-case">${esc(e.clientName || 'Unnamed Client')}${e.caseId ? ' · ' + esc(e.caseId) : ''}</div>
+                                <div class="review-entry-time">${new Date(e.createdAt).toLocaleString()}</div>
+                            </div>
+                            <div class="review-finding-list">
+                                ${e.findings.map(f => `
+                                    <div class="review-finding">
+                                        <div class="review-finding-badge ${f.status}">${badgeIcon[f.status] || '?'}</div>
+                                        <div class="review-finding-text"><span class="review-finding-check">${esc(f.check)}:</span> ${esc(f.message)}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="review-comment-box">
+                                <label>Trainer Notes</label>
+                                ${isAdminView ? `
+                                    <textarea id="comment-${e.id}">${esc(e.trainerComment)}</textarea>
+                                    <div style="margin-top:6px; display:flex; justify-content:flex-end;">
+                                        <button class="btn-primary" style="padding:6px 14px; font-size:10px; border-radius:5px;" onclick="saveTrainerComment(${e.id})">Save Note</button>
+                                    </div>
+                                ` : `
+                                    <div class="review-comment-readonly">${e.trainerComment ? esc(e.trainerComment) : 'No comments from your trainer yet on this entry.'}</div>
+                                `}
+                                ${e.trainerComment && e.commentUpdatedAt ? `<div class="review-comment-meta">— ${esc(e.trainerUsername || 'Trainer')}, ${new Date(e.commentUpdatedAt).toLocaleString()}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        function saveTrainerComment(reviewId) {
+            const textarea = document.getElementById('comment-' + reviewId);
+            if (!textarea) return;
+            fetch('/api/review-comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ reviewId, comment: textarea.value })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.success) {
+                        showToast('Trainer note saved.', 'info');
+                    } else {
+                        showToast((data && data.error) || 'Could not save note.', 'error');
+                    }
+                })
+                .catch(() => showToast('Network error saving note.', 'error'));
+        }
+
         /* ---------- Save Case (permanent — assigns the real Case ID) ----------
            If this case has never been permanently saved before (a brand-new
            case, or a draft opened via "Archive Case (Save as Draft)"), a real
