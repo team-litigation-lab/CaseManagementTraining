@@ -53,146 +53,105 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: a5bc4befef0191374735bd6a0109fec0
 
-      - name: Split oversized statements (row-level and field-level) and import in safe batches
+      - name: Load export into local SQLite, then generate size-safe import batches from real parsed rows
         run: |
-          cat > split_import.py << 'PYEOF'
-          import re, subprocess, sys, os
-
-          def split_statements(sql):
-              statements = []
-              current = []
-              in_string = False
-              i = 0
-              n = len(sql)
-              while i < n:
-                  c = sql[i]
-                  current.append(c)
-                  if c == "'":
-                      if in_string and i + 1 < n and sql[i+1] == "'":
-                          current.append(sql[i+1]); i += 2; continue
-                      in_string = not in_string
-                  elif c == ';' and not in_string:
-                      stmt = ''.join(current).strip()
-                      if stmt:
-                          statements.append(stmt)
-                      current = []
-                  i += 1
-              tail = ''.join(current).strip()
-              if tail:
-                  statements.append(tail)
-              return statements
-
-          def split_top_level(s, sep=','):
-              parts = []
-              current = []
-              depth = 0
-              in_string = False
-              i = 0
-              n = len(s)
-              while i < n:
-                  c = s[i]
-                  if c == "'":
-                      current.append(c)
-                      if in_string and i + 1 < n and s[i+1] == "'":
-                          current.append(s[i+1]); i += 2; continue
-                      in_string = not in_string
-                      i += 1
-                      continue
-                  if not in_string:
-                      if c == '(':
-                          depth += 1
-                      elif c == ')':
-                          depth -= 1
-                      if c == sep and depth == 0:
-                          part = ''.join(current).strip()
-                          if part:
-                              parts.append(part)
-                          current = []
-                          i += 1
-                          continue
-                  current.append(c)
-                  i += 1
-              tail = ''.join(current).strip()
-              if tail:
-                  parts.append(tail)
-              return parts
-
-          def unquote(val):
-              val = val.strip()
-              if val.startswith("'") and val.endswith("'"):
-                  return val[1:-1].replace("''", "'")
-              return val
-
-          def sql_quote(val):
-              return "'" + val.replace("'", "''") + "'"
+          cat > split_import.py << 'PYEOF_INNER'
+          import sqlite3, subprocess, sys, os
 
           THRESHOLD = 40000
           BATCH_LIMIT = 500000
           CHUNK_SIZE = 20000
+          ROWS_PER_INSERT = 50
 
-          insert_re = re.compile(r'^INSERT INTO ([^\s\(]+)\s*\(([^\)]*)\)\s*VALUES\s*(.*)$', re.IGNORECASE | re.DOTALL)
+          def sql_literal(value):
+              if value is None:
+                  return "NULL"
+              if isinstance(value, (int, float)):
+                  return str(value)
+              if isinstance(value, bytes):
+                  return "X'" + value.hex() + "'"
+              return "'" + str(value).replace("'", "''") + "'"
 
-          def handle_oversized_row(table, columns, tuple_str):
-              inner = tuple_str.strip()
-              if inner.startswith('(') and inner.endswith(')'):
-                  inner = inner[1:-1]
-              fields = split_top_level(inner, ',')
-              if len(fields) != len(columns):
-                  return [f"INSERT INTO {table} ({', '.join(columns)}) VALUES {tuple_str};"]
+          def build_statements(local_db_path):
+              conn = sqlite3.connect(local_db_path)
+              conn.row_factory = sqlite3.Row
+              cur = conn.cursor()
 
-              id_idx = None
-              for idx, col in enumerate(columns):
-                  if col.strip().strip('"').lower() == 'id':
-                      id_idx = idx
-                      break
+              statements = []
+              cur.execute("SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY (type='table') DESC")
+              schema_rows = cur.fetchall()
 
-              max_idx = max(range(len(fields)), key=lambda i: len(fields[i]))
+              table_names = []
+              for row in schema_rows:
+                  statements.append(row['sql'].rstrip(';') + ';')
+                  if row['type'] == 'table':
+                      table_names.append(row['name'])
 
-              if id_idx is None or max_idx == id_idx or len(fields[max_idx]) <= THRESHOLD:
-                  return [f"INSERT INTO {table} ({', '.join(columns)}) VALUES {tuple_str};"]
+              for table in table_names:
+                  cur2 = conn.cursor()
+                  cur2.execute(f'SELECT * FROM "{table}"')
+                  cols = [d[0] for d in cur2.description]
+                  col_list = ', '.join(f'"{c}"' for c in cols)
 
-              id_value = fields[id_idx].strip()
-              big_value = unquote(fields[max_idx])
-              target_col = columns[max_idx].strip().strip('"')
+                  pending_rows = []
+                  pending_size = [0]
 
-              insert_fields = list(fields)
-              insert_fields[max_idx] = "''"
-              stmts = [f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join(insert_fields)});"]
+                  def flush():
+                      if pending_rows:
+                          values_sql = ',\n'.join(pending_rows)
+                          statements.append(f'INSERT INTO "{table}" ({col_list}) VALUES {values_sql};')
+                          pending_rows.clear()
+                          pending_size[0] = 0
 
-              for i in range(0, len(big_value), CHUNK_SIZE):
-                  chunk = big_value[i:i+CHUNK_SIZE]
-                  stmts.append(
-                      f"UPDATE {table} SET {target_col} = {target_col} || {sql_quote(chunk)} WHERE id = {id_value};"
-                  )
-              return stmts
+                  for row in cur2:
+                      values = [sql_literal(row[c]) for c in cols]
+                      tuple_sql = '(' + ', '.join(values) + ')'
 
-          def build_batches(path):
-              with open(path, 'r', encoding='utf-8') as f:
-                  sql = f.read()
-              statements = split_statements(sql)
-              expanded = []
-
-              for stmt in statements:
-                  stripped = stmt.strip()
-                  if len(stmt) > THRESHOLD and stripped.upper().startswith('INSERT'):
-                      m = insert_re.match(stripped)
-                      if m:
-                          table = m.group(1)
-                          columns = split_top_level(m.group(2), ',')
-                          values_part = m.group(3).rstrip().rstrip(';').strip()
-                          tuples = split_top_level(values_part, ',')
-                          for t in tuples:
-                              if len(t) > THRESHOLD:
-                                  expanded.extend(handle_oversized_row(table, columns, t))
-                              else:
-                                  expanded.append(f"INSERT INTO {table} ({', '.join(columns)}) VALUES {t};")
+                      if len(tuple_sql) > THRESHOLD:
+                          flush()
+                          id_col = None
+                          for c in cols:
+                              if c.lower() == 'id':
+                                  id_col = c
+                                  break
+                          max_i = max(range(len(cols)), key=lambda i: len(values[i]))
+                          if id_col is None or cols[max_i].lower() == 'id' or len(values[max_i]) <= THRESHOLD:
+                              statements.append(f'INSERT INTO "{table}" ({col_list}) VALUES {tuple_sql};')
+                              continue
+                          big_col = cols[max_i]
+                          big_value = row[big_col]
+                          id_value = row[id_col]
+                          empty_values = list(values)
+                          empty_values[max_i] = "X''" if isinstance(big_value, bytes) else "''"
+                          statements.append(f'INSERT INTO "{table}" ({col_list}) VALUES (' + ', '.join(empty_values) + ');')
+                          if isinstance(big_value, bytes):
+                              for i in range(0, len(big_value), CHUNK_SIZE):
+                                  chunk = big_value[i:i+CHUNK_SIZE]
+                                  statements.append(
+                                      f'UPDATE "{table}" SET "{big_col}" = "{big_col}" || X\'{chunk.hex()}\' WHERE "{id_col}" = {sql_literal(id_value)};'
+                                  )
+                          else:
+                              for i in range(0, len(big_value), CHUNK_SIZE):
+                                  chunk = big_value[i:i+CHUNK_SIZE]
+                                  statements.append(
+                                      f'UPDATE "{table}" SET "{big_col}" = "{big_col}" || {sql_literal(chunk)} WHERE "{id_col}" = {sql_literal(id_value)};'
+                                  )
                           continue
-                  expanded.append(stmt if stmt.endswith(';') else stmt + ';')
 
+                      pending_rows.append(tuple_sql)
+                      pending_size[0] += len(tuple_sql)
+                      if len(pending_rows) >= ROWS_PER_INSERT or pending_size[0] > THRESHOLD:
+                          flush()
+                  flush()
+
+              conn.close()
+              return statements
+
+          def batch_statements(statements):
               batches = []
               current_batch = []
               current_size = 0
-              for stmt in expanded:
+              for stmt in statements:
                   stmt_len = len(stmt)
                   if current_size + stmt_len > BATCH_LIMIT and current_batch:
                       batches.append(current_batch)
@@ -202,15 +161,32 @@ jobs:
                   current_size += stmt_len
               if current_batch:
                   batches.append(current_batch)
-              return expanded, batches
+              return batches
 
           if __name__ == '__main__':
               db_name = sys.argv[1]
-              expanded, batches = build_batches('backup.sql')
-              print(f"Total statements after splitting: {len(expanded)}")
-              over = [s for s in expanded if len(s) > THRESHOLD]
+
+              # Load the raw export into a real local SQLite file — this is what
+              # guarantees correct parsing of the source dump, no matter what
+              # characters/edge cases are in the actual data.
+              local_path = 'local_import.db'
+              if os.path.exists(local_path):
+                  os.remove(local_path)
+              local_conn = sqlite3.connect(local_path)
+              with open('backup.sql', 'r', encoding='utf-8') as f:
+                  local_conn.executescript(f.read())
+              local_conn.commit()
+              local_conn.close()
+              print("Loaded export into local SQLite file successfully.")
+
+              statements = build_statements(local_path)
+              over = [s for s in statements if len(s) > THRESHOLD]
+              print(f"Total statements to import: {len(statements)}")
               print(f"Statements still over threshold: {len(over)}")
+
+              batches = batch_statements(statements)
               print(f"Batched into {len(batches)} files for import")
+
               for idx, batch in enumerate(batches):
                   fname = f"batch_{idx:04d}.sql"
                   with open(fname, 'w', encoding='utf-8') as f:
@@ -225,12 +201,12 @@ jobs:
                       sys.exit(1)
                   os.remove(fname)
               print("All batches imported successfully.")
-          PYEOF
+
+          PYEOF_INNER
           python3 split_import.py "${{ github.event.inputs.new_db_name }}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: a5bc4befef0191374735bd6a0109fec0
-
       - name: Point wrangler.toml at the new database
         run: |
           sed -i "s/database_name = \".*\"/database_name = \"${{ github.event.inputs.new_db_name }}\"/" wrangler.toml
