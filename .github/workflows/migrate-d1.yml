@@ -1,0 +1,67 @@
+name: Migrate D1 to fresh database (fixes unreclaimed bloat)
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_db_name:
+        description: 'Name for the brand-new database'
+        required: true
+        default: 'lshcasemanagementtraining-trainingcrmlogins-v2'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export current database (schema + data)
+        run: npx wrangler d1 export lshcasemanagementtraining-trainingcrmlogins --remote --output=backup.sql
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a5bc4befef0191374735bd6a0109fec0
+
+      - name: Create a brand-new, empty database
+        id: create_db
+        run: |
+          OUTPUT=$(npx wrangler d1 create "${{ github.event.inputs.new_db_name }}" 2>&1)
+          echo "$OUTPUT"
+          NEW_ID=$(echo "$OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          if [ -z "$NEW_ID" ]; then
+            echo "Could not find a new database ID in wrangler's output — aborting before anything else runs."
+            exit 1
+          fi
+          echo "New database ID: $NEW_ID"
+          echo "new_id=$NEW_ID" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a5bc4befef0191374735bd6a0109fec0
+
+      - name: Import the export into the fresh database
+        run: npx wrangler d1 execute "${{ github.event.inputs.new_db_name }}" --remote --file=backup.sql
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a5bc4befef0191374735bd6a0109fec0
+
+      - name: Point wrangler.toml at the new database
+        run: |
+          sed -i "s/database_name = \".*\"/database_name = \"${{ github.event.inputs.new_db_name }}\"/" wrangler.toml
+          sed -i "s/database_id = \".*\"/database_id = \"${{ steps.create_db.outputs.new_id }}\"/" wrangler.toml
+          echo "--- updated wrangler.toml ---"
+          cat wrangler.toml
+
+      - name: Commit and push the updated wrangler.toml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add wrangler.toml
+          git commit -m "Migrate to fresh D1 database (old one had unreclaimable bloat, VACUUM unsupported on D1)"
+          git push
+
+      - name: Upload the exported backup as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-sql
+          path: backup.sql
