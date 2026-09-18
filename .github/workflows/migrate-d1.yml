@@ -23,7 +23,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: a5bc4befef0191374735bd6a0109fec0
 
-      - name: Create a brand-new, empty database
+      - name: Create a brand-new, empty database (or reuse it if already created by a prior attempt)
         id: create_db
         run: |
           set +e
@@ -31,10 +31,20 @@ jobs:
           CREATE_EXIT=$?
           set -e
           echo "$OUTPUT"
-          echo "wrangler exit code: $CREATE_EXIT"
+          echo "wrangler create exit code: $CREATE_EXIT"
           NEW_ID=$(echo "$OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+
+          if [ -z "$NEW_ID" ] && echo "$OUTPUT" | grep -qi "already exists"; then
+            echo "Database already exists (likely from a prior attempt that failed after creating it) — fetching its existing ID instead of failing."
+            set +e
+            INFO_OUTPUT=$(npx wrangler d1 info "${{ github.event.inputs.new_db_name }}" 2>&1)
+            set -e
+            echo "$INFO_OUTPUT"
+            NEW_ID=$(echo "$INFO_OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          fi
+
           if [ -z "$NEW_ID" ]; then
-            echo "Could not find a new database ID in wrangler's output above — aborting."
+            echo "Still could not determine a database ID — aborting."
             exit 1
           fi
           echo "New database ID: $NEW_ID"
