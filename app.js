@@ -1551,8 +1551,8 @@
                         label.innerText = 'Last run: reclaimed ~' + kb + ' KB in ' + data.durationMs + 'ms';
                         showToast('Vacuum complete — reclaimed ~' + kb + ' KB.', 'info');
                     } else {
-                        label.innerText = 'Last run failed: ' + (data.error || 'Unknown error');
-                        showToast(data.error || 'Vacuum failed.', 'error');
+                        label.innerText = 'Last run failed: ' + (data.error || 'Unknown error') + (data.hint ? ' — ' + data.hint : '');
+                        showToast((data.error || 'Vacuum failed.') + (data.hint ? ' ' + data.hint : ''), 'error');
                     }
                 })
                 .catch(() => {
