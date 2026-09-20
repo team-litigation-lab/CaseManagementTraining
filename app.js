@@ -1004,6 +1004,16 @@
                                     </div>
                                 `).join('')}
                             </div>
+                            ${(e.changedSections && e.changedSections.length) ? `
+                                <div class="review-changed-box">
+                                    <label>What Was Updated</label>
+                                    <div class="review-changed-list">
+                                        ${e.changedSections.map(c => `
+                                            <span class="review-changed-chip ${c.wasEmpty ? 'added' : (c.isEmpty ? 'cleared' : 'edited')}">${esc(c.label)}${c.wasEmpty ? ' (added)' : (c.isEmpty ? ' (cleared)' : '')}</span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
                             <div class="review-comment-box">
                                 <label>Trainer Notes</label>
                                 ${isAdminView ? `
