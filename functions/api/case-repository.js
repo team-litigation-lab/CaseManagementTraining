@@ -81,11 +81,29 @@ async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUserna
         const findings = runAutomatedReview(content, row);
         const userRow = await db.prepare(`SELECT training_start_date FROM users WHERE username = ?`).bind(ownerUsername).first();
         const trainingDay = userRow ? computeTrainingDay(userRow.training_start_date) : null;
-        await db.prepare(
-            `INSERT INTO case_reviews
-                (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
-        ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings)).run();
+
+        // One row per case, kept current — not a new history entry every
+        // save (a trainee saving 10 times shouldn't produce 10 near-
+        // identical dashboard entries). created_at is repurposed here to
+        // mean "last reviewed at" for this row. trainer_comment /
+        // trainer_username / comment_updated_at are deliberately left
+        // untouched on refresh so a trainer's note survives the trainee's
+        // next save instead of being wiped out.
+        const existing = await db.prepare(`SELECT id FROM case_reviews WHERE case_repository_id = ?`).bind(caseRepositoryId).first();
+        if (existing) {
+            await db.prepare(
+                `UPDATE case_reviews
+                 SET case_id = ?, trainee_username = ?, client_name = ?, training_day = ?,
+                     automated_findings = ?, created_at = datetime('now')
+                 WHERE id = ?`
+            ).bind(caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings), existing.id).run();
+        } else {
+            await db.prepare(
+                `INSERT INTO case_reviews
+                    (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+            ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings)).run();
+        }
     } catch (e) {
         console.error('case_reviews automated review failed', e);
     }
