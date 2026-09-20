@@ -475,11 +475,28 @@
                 <div class="sub" id="trainee-dash-sub">Automated Case Review</div>
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
+                <button id="trainer-roster-back-btn" class="portal-toggle-btn" style="display:none;" onclick="showTrainerRoster()">← Back to Roster</button>
                 <select id="trainee-dash-picker" style="display:none; padding:8px 10px; border-radius:6px; border:none; font-size:11px; font-weight:700;" onchange="loadTraineeDashboard(this.value)"></select>
                 <button class="portal-toggle-btn" onclick="closeTraineeDashboard()">⇄ Back to Case Workspace</button>
             </div>
         </div>
         <div class="mc-body">
+            <div id="trainer-roster-container" style="display:none;">
+                <table class="roster-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Trainee</th>
+                            <th>Cases</th>
+                            <th>Last Active</th>
+                            <th>Completeness Trend</th>
+                            <th>Writing Quality Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trainer-roster-body"></tbody>
+                </table>
+                <div id="trainer-roster-empty" style="display:none; font-size:12px; color:#94a3b8; padding:20px 0;">No trainees registered yet.</div>
+            </div>
             <div id="trainee-dash-empty" style="display:none; font-size:12px; color:#94a3b8;">No case reviews yet — a review is generated automatically each time a case is saved.</div>
             <div id="trainee-dash-list"></div>
         </div>
