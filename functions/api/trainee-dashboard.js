@@ -27,8 +27,8 @@ export async function onRequestGet({ request, env }) {
 
     const { results } = await db.prepare(
         `SELECT id, case_repository_id, case_id, client_name, training_day,
-                automated_findings, changed_sections, trainer_comment, trainer_username,
-                comment_updated_at, created_at
+                automated_findings, changed_sections, ai_review, ai_review_status, ai_reviewed_at,
+                trainer_comment, trainer_username, comment_updated_at, created_at
          FROM case_reviews
          WHERE trainee_username = ?
          ORDER BY created_at DESC`
@@ -39,6 +39,8 @@ export async function onRequestGet({ request, env }) {
         try { findings = JSON.parse(row.automated_findings); } catch (e) { findings = []; }
         let changedSections = [];
         try { changedSections = row.changed_sections ? JSON.parse(row.changed_sections) : []; } catch (e) { changedSections = []; }
+        let aiReview = null;
+        try { aiReview = row.ai_review ? JSON.parse(row.ai_review) : null; } catch (e) { aiReview = null; }
         return {
             id: row.id,
             caseRepositoryId: row.case_repository_id,
@@ -47,6 +49,9 @@ export async function onRequestGet({ request, env }) {
             trainingDay: row.training_day,
             findings,
             changedSections,
+            aiReview,
+            aiReviewStatus: row.ai_review_status,
+            aiReviewedAt: row.ai_reviewed_at,
             trainerComment: row.trainer_comment,
             trainerUsername: row.trainer_username,
             commentUpdatedAt: row.comment_updated_at,
