@@ -575,6 +575,17 @@
     .review-changed-chip { font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:20px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
     .review-changed-chip.added { background:#f0fdf4; color:#15803d; border-color:#bbf7d0; }
     .review-changed-chip.cleared { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
+    .review-ai-box { border-top:1px dashed #e2e8f0; padding-top:10px; margin-bottom:10px; }
+    .review-ai-box label { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; display:block; margin-bottom:6px; }
+    .review-ai-stars { color:#f59e0b; letter-spacing:1px; }
+    .review-ai-summary { font-size:12px; color:#334155; margin-bottom:8px; }
+    .review-ai-sublabel { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#94a3b8; margin:8px 0 3px; }
+    .review-ai-list { margin:0; padding-left:18px; font-size:11.5px; color:#334155; }
+    .review-ai-list li { margin-bottom:3px; }
+    .review-ai-list.issues li { color:#b91c1c; }
+    .review-ai-list.strengths li { color:#15803d; }
+    .review-ai-list.concerns li { color:#b45309; }
+    .review-ai-pending-text { font-size:11.5px; color:#94a3b8; font-style:italic; }
     .review-comment-box { border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px; }
     .review-comment-box label { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; display:block; margin-bottom:5px; }
     .review-comment-box textarea { width:100%; min-height:56px; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; font-size:12px; font-family:inherit; resize:vertical; }
