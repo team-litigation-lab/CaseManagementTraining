@@ -1061,13 +1061,13 @@
                 // one is actually expected, not for every ordinary entry.
                 const docsChanged = (e.changedSections || []).some(c => c.key === 'docs');
                 if (!docsChanged) return '';
-                return `<div class="review-ai-box review-ai-pending"><label>AI Document Review</label><div class="review-ai-pending-text">Running — check back in a moment.</div></div>`;
+                return `<div class="review-ai-box review-ai-pending"><label>Automated Feedback</label><div class="review-ai-pending-text">Running — check back in a moment.</div></div>`;
             }
             if (e.aiReviewStatus === 'skipped') {
-                return `<div class="review-ai-box review-ai-skipped"><label>AI Document Review</label><div class="review-ai-pending-text">${esc(e.aiReview && e.aiReview.reason)}</div></div>`;
+                return `<div class="review-ai-box review-ai-skipped"><label>Automated Feedback</label><div class="review-ai-pending-text">${esc(e.aiReview && e.aiReview.reason)}</div></div>`;
             }
             if (e.aiReviewStatus === 'failed') {
-                return `<div class="review-ai-box review-ai-failed"><label>AI Document Review</label><div class="review-ai-pending-text">Could not complete: ${esc(e.aiReview && e.aiReview.reason)}</div></div>`;
+                return `<div class="review-ai-box review-ai-failed"><label>Automated Feedback</label><div class="review-ai-pending-text">Could not complete: ${esc(e.aiReview && e.aiReview.reason)}</div></div>`;
             }
             const r = e.aiReview || {};
             const score = r.writingQualityScore;
@@ -1077,7 +1077,7 @@
                 : '';
             return `
                 <div class="review-ai-box">
-                    <label>AI Document Review${stars ? ` <span class="review-ai-stars">${stars}</span>` : ''}</label>
+                    <label>Automated Feedback${stars ? ` <span class="review-ai-stars">${stars}</span>` : ''}</label>
                     ${r.writingQualitySummary ? `<div class="review-ai-summary">${esc(r.writingQualitySummary)}</div>` : ''}
                     ${(r.consistencyIssues && r.consistencyIssues.length) ? `<div class="review-ai-sublabel">Consistency Issues</div>${list(r.consistencyIssues, 'issues')}` : ''}
                     ${(r.strengths && r.strengths.length) ? `<div class="review-ai-sublabel">Strengths</div>${list(r.strengths, 'strengths')}` : ''}
@@ -1143,18 +1143,16 @@
                                 </div>
                             ` : ''}
                             ${renderAiReviewBlock(e)}
-                            <div class="review-comment-box">
-                                <label>Trainer Notes</label>
-                                ${isAdminView ? `
+                            ${isAdminView ? `
+                                <div class="review-comment-box">
+                                    <label>Trainer Notes</label>
                                     <textarea id="comment-${e.id}">${esc(e.trainerComment)}</textarea>
                                     <div style="margin-top:6px; display:flex; justify-content:flex-end;">
                                         <button class="btn-primary" style="padding:6px 14px; font-size:10px; border-radius:5px;" onclick="saveTrainerComment(${e.id})">Save Note</button>
                                     </div>
-                                ` : `
-                                    <div class="review-comment-readonly">${e.trainerComment ? esc(e.trainerComment) : 'No comments from your trainer yet on this entry.'}</div>
-                                `}
-                                ${e.trainerComment && e.commentUpdatedAt ? `<div class="review-comment-meta">— ${esc(e.trainerUsername || 'Trainer')}, ${new Date(e.commentUpdatedAt).toLocaleString()}</div>` : ''}
-                            </div>
+                                    ${e.trainerComment && e.commentUpdatedAt ? `<div class="review-comment-meta">— ${esc(e.trainerUsername || 'Trainer')}, ${new Date(e.commentUpdatedAt).toLocaleString()}</div>` : ''}
+                                </div>
+                            ` : ''}
                         </div>
                     `).join('')}
                 </div>
