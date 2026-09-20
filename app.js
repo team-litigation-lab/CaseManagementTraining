@@ -886,12 +886,12 @@
             if (!session) return;
             document.getElementById('trainee-dashboard-page').classList.add('open');
             document.body.classList.add('mc-active');
-            const picker = document.getElementById('trainee-dash-picker');
             if (session.userType === 'Admin') {
-                picker.style.display = '';
-                populateTraineeDashPicker();
+                showTrainerRoster();
             } else {
-                picker.style.display = 'none';
+                document.getElementById('trainee-dash-picker').style.display = 'none';
+                document.getElementById('trainer-roster-back-btn').style.display = 'none';
+                document.getElementById('trainer-roster-container').style.display = 'none';
                 document.getElementById('trainee-dash-title').innerText = 'My Dashboard';
                 document.getElementById('trainee-dash-sub').innerText = 'Automated Case Review';
                 loadTraineeDashboard(session.username);
@@ -902,7 +902,92 @@
             document.body.classList.remove('mc-active');
         }
 
-        function populateTraineeDashPicker() {
+        /* ---------- Trainer Roster (Admin: all trainees at a glance) ----------
+           The Admin's DEFAULT view when opening the dashboard — a table of
+           every trainee with a health dot and both trends (completeness +
+           AI writing quality), see functions/api/trainer-roster.js.
+           Clicking a row drills into that trainee's existing full feed
+           (loadTraineeDashboard, already built) via showTraineeDetail(). */
+        function showTrainerRoster() {
+            document.getElementById('trainer-roster-container').style.display = '';
+            document.getElementById('trainee-dash-list').innerHTML = '';
+            document.getElementById('trainee-dash-empty').style.display = 'none';
+            document.getElementById('trainee-dash-picker').style.display = 'none';
+            document.getElementById('trainer-roster-back-btn').style.display = 'none';
+            document.getElementById('trainee-dash-title').innerText = 'Trainer Roster';
+            document.getElementById('trainee-dash-sub').innerText = 'All Trainees — Progress at a Glance';
+            loadTrainerRoster();
+        }
+
+        function loadTrainerRoster() {
+            const body = document.getElementById('trainer-roster-body');
+            const empty = document.getElementById('trainer-roster-empty');
+            body.innerHTML = '<tr><td colspan="6" style="color:#94a3b8; font-size:12px;">Loading…</td></tr>';
+            empty.style.display = 'none';
+            fetch('/api/trainer-roster', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.success) {
+                        body.innerHTML = '';
+                        empty.style.display = 'block';
+                        empty.innerText = (data && data.error) || 'Could not load the roster.';
+                        return;
+                    }
+                    renderTrainerRoster(data.roster || []);
+                })
+                .catch(() => {
+                    body.innerHTML = '';
+                    empty.style.display = 'block';
+                    empty.innerText = 'Network error loading the roster.';
+                });
+        }
+
+        function renderTrainerRoster(roster) {
+            const body = document.getElementById('trainer-roster-body');
+            const empty = document.getElementById('trainer-roster-empty');
+            if (!roster.length) {
+                body.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            const esc = s => String(s == null ? '' : s).replace(/</g, '&lt;');
+
+            function completenessTrend(c) {
+                if (!c || !c.earliest || !c.latest) return '<span class="roster-no-data">No cases yet</span>';
+                const before = c.earliest.fails * 10 + c.earliest.warnings; // fails weigh more for direction
+                const after = c.latest.fails * 10 + c.latest.warnings;
+                const arrow = after < before ? '↑' : (after > before ? '↓' : '→');
+                const cls = after < before ? 'up' : (after > before ? 'down' : 'flat');
+                return `<div class="roster-trend"><span>${c.earliest.fails}F/${c.earliest.warnings}W</span><span class="roster-trend-arrow ${cls}">${arrow}</span><span>${c.latest.fails}F/${c.latest.warnings}W</span></div>`;
+            }
+            function writingTrend(w) {
+                if (!w || w.earliest === null || w.latest === null) return '<span class="roster-no-data">No AI reviews yet</span>';
+                const arrow = w.latest > w.earliest ? '↑' : (w.latest < w.earliest ? '↓' : '→');
+                const cls = w.latest > w.earliest ? 'up' : (w.latest < w.earliest ? 'down' : 'flat');
+                return `<div class="roster-trend"><span>${w.earliest}/5</span><span class="roster-trend-arrow ${cls}">${arrow}</span><span>${w.latest}/5</span></div>`;
+            }
+
+            body.innerHTML = roster.map(t => `
+                <tr onclick="drillIntoTrainee('${t.username.replace(/'/g, "\\'")}')">
+                    <td><span class="roster-health-dot ${t.health}"></span></td>
+                    <td><span class="roster-name">${esc(t.fullName)}</span></td>
+                    <td>${t.distinctCases}</td>
+                    <td>${t.lastActiveDay ? 'Day ' + t.lastActiveDay : '—'}</td>
+                    <td>${completenessTrend(t.completeness)}</td>
+                    <td>${writingTrend(t.writingQuality)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function drillIntoTrainee(username) {
+            document.getElementById('trainer-roster-container').style.display = 'none';
+            document.getElementById('trainer-roster-back-btn').style.display = '';
+            document.getElementById('trainee-dash-picker').style.display = '';
+            populateTraineeDashPicker(username);
+        }
+
+        function populateTraineeDashPicker(preselectUsername) {
             const picker = document.getElementById('trainee-dash-picker');
             picker.innerHTML = '<option value="">Loading trainees…</option>';
             fetch('/api/users', { credentials: 'include' })
@@ -922,7 +1007,11 @@
                     picker.innerHTML = trainees.map(t =>
                         `<option value="${t.username}">${(t.full_name || t.username).replace(/"/g, '&quot;')}</option>`
                     ).join('');
-                    loadTraineeDashboard(trainees[0].username);
+                    const target = (preselectUsername && trainees.some(t => t.username === preselectUsername))
+                        ? preselectUsername
+                        : trainees[0].username;
+                    picker.value = target;
+                    loadTraineeDashboard(target);
                 })
                 .catch(() => { picker.innerHTML = '<option value="">Could not load trainees</option>'; });
         }
