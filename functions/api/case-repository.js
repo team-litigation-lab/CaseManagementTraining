@@ -82,33 +82,38 @@ async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUserna
         const userRow = await db.prepare(`SELECT training_start_date FROM users WHERE username = ?`).bind(ownerUsername).first();
         const trainingDay = userRow ? computeTrainingDay(userRow.training_start_date) : null;
 
-        // One row per case PER TRAINING DAY — this is the key distinction:
-        // repeated saves on the SAME day update that day's row in place (no
-        // spam from someone saving 10 times in an afternoon), but a save on
-        // a NEW day creates a fresh row and leaves every prior day's row
-        // untouched. This is what actually preserves day-to-day progress
-        // across the training — collapsing to one row per case entirely
-        // would erase that history, which defeats the whole point.
-        // trainer_comment / trainer_username / comment_updated_at are only
-        // touched when this DAY's row is first created — an existing
-        // same-day comment is preserved across same-day re-saves.
-        const existing = await db.prepare(
-            `SELECT id FROM case_reviews WHERE case_repository_id = ? AND training_day IS ?`
-        ).bind(caseRepositoryId, trainingDay).first();
-        if (existing) {
-            await db.prepare(
-                `UPDATE case_reviews
-                 SET case_id = ?, trainee_username = ?, client_name = ?,
-                     automated_findings = ?, created_at = datetime('now')
-                 WHERE id = ?`
-            ).bind(caseId || null, ownerUsername, row.client_name || '', JSON.stringify(findings), existing.id).run();
-        } else {
-            await db.prepare(
-                `INSERT INTO case_reviews
-                    (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
-            ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings)).run();
-        }
+        // One row per case PER TRAINING DAY, enforced as a true atomic
+        // upsert (INSERT ... ON CONFLICT DO UPDATE) against a UNIQUE
+        // index on (case_repository_id, training_day) — see
+        // create-case-review-unique-index.sql. This is NOT optional: a
+        // separate "SELECT does it exist? then INSERT or UPDATE" has a
+        // race condition where two saves close together in time can both
+        // see "no row yet" and both insert, producing exactly the
+        // duplicate-same-day rows this replaced. The database constraint
+        // is what actually closes that gap — application code checking
+        // first cannot, no matter how it's ordered.
+        //
+        // trainer_comment / trainer_username / comment_updated_at are
+        // deliberately left out of the DO UPDATE SET clause, so an
+        // existing note is never overwritten by a same-day re-save.
+        //
+        // NOTE: rows where training_day is NULL (no training_start_date
+        // on the account — e.g. an Admin account) are NOT protected by
+        // this constraint, since SQLite/D1 treat every NULL as distinct
+        // for uniqueness purposes. That's an acceptable gap for that
+        // edge case; it does not affect real trainee accounts, which
+        // always have a training_start_date set at registration.
+        await db.prepare(
+            `INSERT INTO case_reviews
+                (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+             ON CONFLICT(case_repository_id, training_day) DO UPDATE SET
+                case_id = excluded.case_id,
+                trainee_username = excluded.trainee_username,
+                client_name = excluded.client_name,
+                automated_findings = excluded.automated_findings,
+                created_at = excluded.created_at`
+        ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings)).run();
     } catch (e) {
         console.error('case_reviews automated review failed', e);
     }
