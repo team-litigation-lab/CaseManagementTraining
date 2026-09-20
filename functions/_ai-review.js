@@ -102,6 +102,10 @@ export async function runAiReview(env, { caseRepositoryId, trainingDay, content,
         const apiKey = env.ANTHROPIC_API_KEY;
         if (!apiKey) {
             console.error('ANTHROPIC_API_KEY not configured — skipping AI review');
+            await storeAiReview(env.DB, caseRepositoryId, trainingDay, {
+                status: 'failed',
+                reason: 'AI review is not configured yet (missing API key) — contact your admin.'
+            });
             return;
         }
 
