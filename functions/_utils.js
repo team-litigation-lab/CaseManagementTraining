@@ -207,10 +207,36 @@ export function isOwnerOrAdmin(session, ownerUsername) {
    editor's markup evolves. `content` is the parsed case content object;
    `row` is the case_repository columns being saved (post-update values,
    not a fresh DB read).
+
+   PHASE-AWARE: severity depends on where the case actually is in its
+   lifecycle (see PHASE_ORDER below, matching the exact #phase-selector
+   options in index.html). A missing Trial Date at Intake is normal, not
+   a problem — the same gap once a case reaches Litigation is a real one.
+   Litigation-specific fields are skipped entirely before that stage
+   instead of being reported as findings at all, so the checklist stays
+   relevant to what a trainee should actually be doing right now rather
+   than penalizing them for steps that legitimately haven't come up yet.
    ===================================================================== */
+const PHASE_ORDER = [
+    'Intake', 'Investigation', 'Treatment', 'Demand Review', 'Bi Demand',
+    'BI Settlement Nego', 'UM Demand', 'UM settlement', 'Lien Negotiations',
+    'Disbursement', 'Litigation',
+];
+function phaseIndex(phase) {
+    const i = PHASE_ORDER.indexOf((phase || '').trim());
+    return i === -1 ? 0 : i; // unrecognized/blank phase treated as earliest
+}
+function phaseAtOrAfter(phase, target) {
+    return phaseIndex(phase) >= PHASE_ORDER.indexOf(target);
+}
+
 export function runAutomatedReview(content, row) {
     const findings = [];
     const push = (check, status, message) => findings.push({ check, status, message });
+    const phase = row.phase || 'Intake';
+    const reachedDemand = phaseAtOrAfter(phase, 'Demand Review');
+    const reachedLitigation = phaseAtOrAfter(phase, 'Litigation');
+    const pastEarlyStage = phaseAtOrAfter(phase, 'Treatment');
 
     const clientName = (row.client_name || '').trim();
     if (!clientName || clientName === 'Unnamed Client') {
@@ -219,6 +245,8 @@ export function runAutomatedReview(content, row) {
         push('Client Name', 'pass', 'Client name is on file.');
     }
 
+    // SOL is a hard deadline from day one, regardless of phase — never
+    // downgraded or skipped.
     if (!(row.sol_bar || '').trim()) {
         push('SOL Deadline (Summary Bar)', 'fail', 'Statute of limitations date is missing — this is a critical deadline.');
     } else {
@@ -226,50 +254,72 @@ export function runAutomatedReview(content, row) {
     }
 
     if (!(row.date_of_loss || '').trim()) {
-        push('Date of Loss', 'warning', 'Date of loss has not been entered yet.');
+        push('Date of Loss', pastEarlyStage ? 'fail' : 'warning',
+            pastEarlyStage
+                ? `Date of loss is still missing at the ${phase} stage — this should be locked in by now.`
+                : 'Date of loss has not been entered yet.');
     } else {
         push('Date of Loss', 'pass', 'Date of loss is recorded.');
     }
 
     const attorney = (content && content.attorney || '').trim();
     if (!attorney) {
-        push('Attorney Assigned', 'warning', 'No attorney has been assigned to this case.');
+        push('Attorney Assigned', reachedDemand ? 'fail' : 'warning',
+            reachedDemand
+                ? `No attorney has been assigned, and the case is already at ${phase}.`
+                : 'No attorney has been assigned to this case.');
     } else {
         push('Attorney Assigned', 'pass', `Attorney assigned: ${attorney}.`);
     }
 
     const caseManager = (content && content.caseManager || '').trim();
     if (!caseManager) {
-        push('Case Manager Assigned', 'warning', 'No case manager has been assigned to this case.');
+        push('Case Manager Assigned', reachedDemand ? 'fail' : 'warning',
+            reachedDemand
+                ? `No case manager has been assigned, and the case is already at ${phase}.`
+                : 'No case manager has been assigned to this case.');
     } else {
         push('Case Manager Assigned', 'pass', `Case manager assigned: ${caseManager}.`);
     }
 
-    const litigationFields = [
-        ['sol_litigation', 'Statute (Litigation Tab)'],
-        ['complaint_filed', 'Complaint Filed'],
-        ['discovery_cutoff', 'Discovery Cut-off'],
-        ['trial_date', 'Trial Date'],
-    ];
-    for (const [col, label] of litigationFields) {
-        if (!(row[col] || '').trim()) {
-            push(label, 'warning', `${label} has not been entered yet.`);
-        } else {
-            push(label, 'pass', `${label} is recorded.`);
+    // Litigation-specific dates: not relevant before the case actually
+    // reaches litigation-adjacent stages, so they're left off the
+    // checklist entirely rather than reported as a gap.
+    if (phaseAtOrAfter(phase, 'Lien Negotiations')) {
+        const litigationFields = [
+            ['sol_litigation', 'Statute (Litigation Tab)'],
+            ['complaint_filed', 'Complaint Filed'],
+            ['discovery_cutoff', 'Discovery Cut-off'],
+            ['trial_date', 'Trial Date'],
+        ];
+        for (const [col, label] of litigationFields) {
+            if (!(row[col] || '').trim()) {
+                push(label, reachedLitigation ? 'fail' : 'warning',
+                    reachedLitigation
+                        ? `${label} is missing and the case is already in Litigation.`
+                        : `${label} has not been entered yet.`);
+            } else {
+                push(label, 'pass', `${label} is recorded.`);
+            }
         }
     }
 
     // Robust to exactly where in the saved content a document link lives —
     // searches the whole serialized blob rather than a specific position.
     const serialized = JSON.stringify(content || {});
-    if (serialized.includes('/api/file?key=')) {
-        push('Documents Uploaded', 'pass', 'At least one document has been uploaded to Doc Hub.');
+    const hasDocs = serialized.includes('/api/file?key=');
+    if (!hasDocs) {
+        push('Documents Uploaded', reachedDemand ? 'fail' : 'warning',
+            reachedDemand
+                ? `No documents uploaded to Doc Hub, but the case is already at ${phase} — a demand package should have supporting documents by now.`
+                : 'No documents have been uploaded to Doc Hub yet (e.g. a demand letter).');
     } else {
-        push('Documents Uploaded', 'warning', 'No documents have been uploaded to Doc Hub yet (e.g. a demand letter).');
+        push('Documents Uploaded', 'pass', 'At least one document has been uploaded to Doc Hub.');
     }
 
     return findings;
 }
+
 
 // Plain calendar days since the trainee's registration training_start_date
 // (inclusive — the start date itself is Day 1). Deliberately NOT
@@ -282,6 +332,49 @@ export function computeTrainingDay(trainingStartDate) {
     const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const diffDays = Math.round((todayUTC - start) / 86400000);
     return diffDays + 1;
+}
+
+// The 12 named, structured sections every case's content.html carries (see
+// buildCaseContentPayload() in app.js) — matched by the exact keys used
+// there, so this must be updated if that object's keys ever change.
+const SECTION_LABELS = {
+    pass: 'Passengers', facs: 'Facilities', chrono: 'Treatment Chronology',
+    fin: 'Finance', pipum: 'PIP/UM Insurance', bi: 'BI Insurance',
+    docs: 'Doc Hub Documents', lit: 'Litigation', liens: 'Liens',
+    notes: 'Notes', tasks: 'Tasks', police: 'Police Report Narrative',
+};
+// The explicit named fields captured outside content.html (see
+// buildCaseContentPayload() in app.js — attorney/caseManager/date fields).
+const NAMED_FIELD_LABELS = [
+    ['attorney', 'Attorney'], ['caseManager', 'Case Manager'],
+    ['dateOfLoss', 'Date of Loss'], ['solBar', 'SOL (Summary Bar)'],
+    ['solLitigation', 'Statute (Litigation Tab)'], ['complaintFiled', 'Complaint Filed'],
+    ['discoveryCutoff', 'Discovery Cut-off'], ['trialDate', 'Trial Date'],
+];
+
+// Compares the PREVIOUS saved content against the one just saved and
+// returns which of the 20 tracked areas actually changed — this is what
+// answers "what did the trainee actually update in this save" on the
+// dashboard, as distinct from runAutomatedReview()'s static completeness
+// checklist. oldContent is null for a brand-new case (everything present
+// is reported as "added", nothing as "changed"). Compares trimmed values,
+// so whitespace-only differences (e.g. re-saving without editing) don't
+// falsely show up as a change.
+export function detectChangedSections(oldContent, newContent) {
+    const oldHtml = (oldContent && oldContent.html) || {};
+    const newHtml = (newContent && newContent.html) || {};
+    const changed = [];
+    for (const [key, label] of Object.entries(SECTION_LABELS)) {
+        const oldVal = (oldHtml[key] || '').trim();
+        const newVal = (newHtml[key] || '').trim();
+        if (oldVal !== newVal) changed.push({ key, label, wasEmpty: !oldVal, isEmpty: !newVal });
+    }
+    for (const [key, label] of NAMED_FIELD_LABELS) {
+        const oldVal = ((oldContent && oldContent[key]) || '').trim();
+        const newVal = ((newContent && newContent[key]) || '').trim();
+        if (oldVal !== newVal) changed.push({ key, label, wasEmpty: !oldVal, isEmpty: !newVal });
+    }
+    return changed;
 }
 
 
