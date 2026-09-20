@@ -1,4 +1,4 @@
-import { json, requireSession, nextCaseId, isOwnerOrAdmin, buildFullName } from '../_utils.js';
+import { json, requireSession, nextCaseId, isOwnerOrAdmin, buildFullName, runAutomatedReview, computeTrainingDay } from '../_utils.js';
 
 // Server-side Case Repository — replaces the old client-side localStorage
 // repository entirely, and also replaces the old append-only 'cases' sync
@@ -68,6 +68,29 @@ async function snapshotVersion(db, { caseRepositoryId, caseId, clientName, phase
     }
 }
 
+// Phase 1 of the admin review system: runs the rule-based checks (see
+// runAutomatedReview() in _utils.js) on every successful save and logs a
+// case_reviews row for the trainee's dashboard. Deliberately fire-and-log
+// like snapshotVersion() above — a bug here must never block or fail an
+// actual case save. Requires the case_reviews table (see
+// create-case-reviews-table.sql) — silently no-ops (logs and continues) if
+// it doesn't exist yet, so this is safe to deploy before that migration
+// has been run.
+async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUsername, row, content }) {
+    try {
+        const findings = runAutomatedReview(content, row);
+        const userRow = await db.prepare(`SELECT training_start_date FROM users WHERE username = ?`).bind(ownerUsername).first();
+        const trainingDay = userRow ? computeTrainingDay(userRow.training_start_date) : null;
+        await db.prepare(
+            `INSERT INTO case_reviews
+                (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+        ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings)).run();
+    } catch (e) {
+        console.error('case_reviews automated review failed', e);
+    }
+}
+
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
@@ -111,6 +134,19 @@ export async function onRequestPost({ request, env }) {
     const serializedContent = JSON.stringify(content || {});
     const contentBytes = new TextEncoder().encode(serializedContent).length;
 
+    // Calendar-export date fields, pulled out of `content` (where
+    // buildCaseContentPayload() already puts them) into their own columns
+    // so /api/export-calendar can query them directly instead of parsing
+    // them back out of stored HTML. Never trust these as anything but
+    // free-text strings the user typed (e.g. "MM/DD/YYYY") — no date
+    // validation happens client-side today.
+    const dateOfLoss = (content && content.dateOfLoss) || null;
+    const solBar = (content && content.solBar) || null;
+    const solLitigation = (content && content.solLitigation) || null;
+    const complaintFiled = (content && content.complaintFiled) || null;
+    const discoveryCutoff = (content && content.discoveryCutoff) || null;
+    const trialDate = (content && content.trialDate) || null;
+
     if (id) {
         // Update an existing case — owner or Admin only.
         const existing = await db.prepare(`SELECT * FROM case_repository WHERE id = ?`).bind(id).first();
@@ -134,13 +170,30 @@ export async function onRequestPost({ request, env }) {
         await db.prepare(
             `UPDATE case_repository
              SET content = ?, client_name = ?, phase = ?, med_total = ?, content_bytes = ?,
-                 case_id = ?, is_draft = ?, updated_at = datetime('now')
+                 case_id = ?, is_draft = ?, updated_at = datetime('now'),
+                 date_of_loss = ?, sol_bar = ?, sol_litigation = ?, complaint_filed = ?,
+                 discovery_cutoff = ?, trial_date = ?
              WHERE id = ?`
-        ).bind(serializedContent, clientName || '', phase || null, medTotal || null, contentBytes, caseId, isDraftFlag, id).run();
+        ).bind(
+            serializedContent, clientName || '', phase || null, medTotal || null, contentBytes,
+            caseId, isDraftFlag,
+            dateOfLoss, solBar, solLitigation, complaintFiled, discoveryCutoff, trialDate,
+            id
+        ).run();
 
         await snapshotVersion(db, {
             caseRepositoryId: id, caseId, clientName, phase, isDraft: isDraftFlag,
             content: serializedContent, medTotal, savedBy: session.username, savedByBatch: session.batchId
+        });
+
+        await recordAutomatedReview(db, {
+            caseRepositoryId: id, caseId, ownerUsername: existing.owner_username,
+            row: {
+                client_name: clientName || '', date_of_loss: dateOfLoss, sol_bar: solBar,
+                sol_litigation: solLitigation, complaint_filed: complaintFiled,
+                discovery_cutoff: discoveryCutoff, trial_date: trialDate
+            },
+            content
         });
 
         return json({ success: true, id: Number(id), caseId, isDraft: !!isDraftFlag });
@@ -171,17 +224,29 @@ export async function onRequestPost({ request, env }) {
         `INSERT INTO case_repository
             (case_id, client_name, phase, is_draft, owner_username, owner_batch_id,
              submitted_by, submitted_by_batch, submitted_at, content, med_total, content_bytes,
-             created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, ?, datetime('now'), datetime('now'))
+             created_at, updated_at, date_of_loss, sol_bar, sol_litigation, complaint_filed,
+             discovery_cutoff, trial_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, ?, datetime('now'), datetime('now'), ?, ?, ?, ?, ?, ?)
          RETURNING id`
     ).bind(
         caseId, clientName || '', phase || null, isDraftFlag, session.username, session.batchId || null,
-        submitterName, session.batchId || null, serializedContent, medTotal || null, contentBytes
+        submitterName, session.batchId || null, serializedContent, medTotal || null, contentBytes,
+        dateOfLoss, solBar, solLitigation, complaintFiled, discoveryCutoff, trialDate
     ).first();
 
     await snapshotVersion(db, {
         caseRepositoryId: result.id, caseId, clientName, phase, isDraft: isDraftFlag,
         content: serializedContent, medTotal, savedBy: session.username, savedByBatch: session.batchId
+    });
+
+    await recordAutomatedReview(db, {
+        caseRepositoryId: result.id, caseId, ownerUsername: session.username,
+        row: {
+            client_name: clientName || '', date_of_loss: dateOfLoss, sol_bar: solBar,
+            sol_litigation: solLitigation, complaint_filed: complaintFiled,
+            discovery_cutoff: discoveryCutoff, trial_date: trialDate
+        },
+        content
     });
 
     return json({ success: true, id: result.id, caseId, isDraft: !!isDraftFlag });
