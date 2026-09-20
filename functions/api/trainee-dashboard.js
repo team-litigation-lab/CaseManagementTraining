@@ -27,7 +27,7 @@ export async function onRequestGet({ request, env }) {
 
     const { results } = await db.prepare(
         `SELECT id, case_repository_id, case_id, client_name, training_day,
-                automated_findings, trainer_comment, trainer_username,
+                automated_findings, changed_sections, trainer_comment, trainer_username,
                 comment_updated_at, created_at
          FROM case_reviews
          WHERE trainee_username = ?
@@ -37,6 +37,8 @@ export async function onRequestGet({ request, env }) {
     const entries = (results || []).map(row => {
         let findings = [];
         try { findings = JSON.parse(row.automated_findings); } catch (e) { findings = []; }
+        let changedSections = [];
+        try { changedSections = row.changed_sections ? JSON.parse(row.changed_sections) : []; } catch (e) { changedSections = []; }
         return {
             id: row.id,
             caseRepositoryId: row.case_repository_id,
@@ -44,6 +46,7 @@ export async function onRequestGet({ request, env }) {
             clientName: row.client_name,
             trainingDay: row.training_day,
             findings,
+            changedSections,
             trainerComment: row.trainer_comment,
             trainerUsername: row.trainer_username,
             commentUpdatedAt: row.comment_updated_at,
