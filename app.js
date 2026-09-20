@@ -958,6 +958,45 @@
                 });
         }
 
+        // Phase 2: renders the AI-powered document-vs-narrative review for
+        // one dashboard entry (see functions/_ai-review.js). Returns ''
+        // (nothing) when no AI review has ever been triggered for this
+        // entry — e.g. no document was uploaded/changed that day — so the
+        // dashboard doesn't show an empty box for every ordinary save.
+        function renderAiReviewBlock(e) {
+            const esc = s => String(s == null ? '' : s).replace(/</g, '&lt;');
+            if (!e.aiReviewStatus) {
+                // Doc Hub changed this save but the background AI call
+                // hasn't written its result yet (it runs after the save's
+                // response already returned) — only show this if we know
+                // one is actually expected, not for every ordinary entry.
+                const docsChanged = (e.changedSections || []).some(c => c.key === 'docs');
+                if (!docsChanged) return '';
+                return `<div class="review-ai-box review-ai-pending"><label>AI Document Review</label><div class="review-ai-pending-text">Running — check back in a moment.</div></div>`;
+            }
+            if (e.aiReviewStatus === 'skipped') {
+                return `<div class="review-ai-box review-ai-skipped"><label>AI Document Review</label><div class="review-ai-pending-text">${esc(e.aiReview && e.aiReview.reason)}</div></div>`;
+            }
+            if (e.aiReviewStatus === 'failed') {
+                return `<div class="review-ai-box review-ai-failed"><label>AI Document Review</label><div class="review-ai-pending-text">Could not complete: ${esc(e.aiReview && e.aiReview.reason)}</div></div>`;
+            }
+            const r = e.aiReview || {};
+            const score = r.writingQualityScore;
+            const stars = (typeof score === 'number') ? '★'.repeat(score) + '☆'.repeat(5 - score) : '';
+            const list = (items, cls) => (items && items.length)
+                ? `<ul class="review-ai-list ${cls}">${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`
+                : '';
+            return `
+                <div class="review-ai-box">
+                    <label>AI Document Review${stars ? ` <span class="review-ai-stars">${stars}</span>` : ''}</label>
+                    ${r.writingQualitySummary ? `<div class="review-ai-summary">${esc(r.writingQualitySummary)}</div>` : ''}
+                    ${(r.consistencyIssues && r.consistencyIssues.length) ? `<div class="review-ai-sublabel">Consistency Issues</div>${list(r.consistencyIssues, 'issues')}` : ''}
+                    ${(r.strengths && r.strengths.length) ? `<div class="review-ai-sublabel">Strengths</div>${list(r.strengths, 'strengths')}` : ''}
+                    ${(r.concerns && r.concerns.length) ? `<div class="review-ai-sublabel">Concerns</div>${list(r.concerns, 'concerns')}` : ''}
+                </div>
+            `;
+        }
+
         function renderTraineeDashboardEntries(entries, isAdminView) {
             const list = document.getElementById('trainee-dash-list');
             const empty = document.getElementById('trainee-dash-empty');
@@ -1014,6 +1053,7 @@
                                     </div>
                                 </div>
                             ` : ''}
+                            ${renderAiReviewBlock(e)}
                             <div class="review-comment-box">
                                 <label>Trainer Notes</label>
                                 ${isAdminView ? `
