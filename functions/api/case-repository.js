@@ -82,21 +82,26 @@ async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUserna
         const userRow = await db.prepare(`SELECT training_start_date FROM users WHERE username = ?`).bind(ownerUsername).first();
         const trainingDay = userRow ? computeTrainingDay(userRow.training_start_date) : null;
 
-        // One row per case, kept current — not a new history entry every
-        // save (a trainee saving 10 times shouldn't produce 10 near-
-        // identical dashboard entries). created_at is repurposed here to
-        // mean "last reviewed at" for this row. trainer_comment /
-        // trainer_username / comment_updated_at are deliberately left
-        // untouched on refresh so a trainer's note survives the trainee's
-        // next save instead of being wiped out.
-        const existing = await db.prepare(`SELECT id FROM case_reviews WHERE case_repository_id = ?`).bind(caseRepositoryId).first();
+        // One row per case PER TRAINING DAY — this is the key distinction:
+        // repeated saves on the SAME day update that day's row in place (no
+        // spam from someone saving 10 times in an afternoon), but a save on
+        // a NEW day creates a fresh row and leaves every prior day's row
+        // untouched. This is what actually preserves day-to-day progress
+        // across the training — collapsing to one row per case entirely
+        // would erase that history, which defeats the whole point.
+        // trainer_comment / trainer_username / comment_updated_at are only
+        // touched when this DAY's row is first created — an existing
+        // same-day comment is preserved across same-day re-saves.
+        const existing = await db.prepare(
+            `SELECT id FROM case_reviews WHERE case_repository_id = ? AND training_day IS ?`
+        ).bind(caseRepositoryId, trainingDay).first();
         if (existing) {
             await db.prepare(
                 `UPDATE case_reviews
-                 SET case_id = ?, trainee_username = ?, client_name = ?, training_day = ?,
+                 SET case_id = ?, trainee_username = ?, client_name = ?,
                      automated_findings = ?, created_at = datetime('now')
                  WHERE id = ?`
-            ).bind(caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings), existing.id).run();
+            ).bind(caseId || null, ownerUsername, row.client_name || '', JSON.stringify(findings), existing.id).run();
         } else {
             await db.prepare(
                 `INSERT INTO case_reviews
