@@ -1,4 +1,5 @@
 import { json, requireSession, nextCaseId, isOwnerOrAdmin, buildFullName, runAutomatedReview, computeTrainingDay, detectChangedSections } from '../_utils.js';
+import { runAiReview } from '../_ai-review.js';
 
 // Server-side Case Repository — replaces the old client-side localStorage
 // repository entirely, and also replaces the old append-only 'cases' sync
@@ -76,7 +77,7 @@ async function snapshotVersion(db, { caseRepositoryId, caseId, clientName, phase
 // create-case-reviews-table.sql) — silently no-ops (logs and continues) if
 // it doesn't exist yet, so this is safe to deploy before that migration
 // has been run.
-async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUsername, row, content, previousContent }) {
+async function recordAutomatedReview(db, waitUntil, env, { caseRepositoryId, caseId, ownerUsername, row, content, previousContent }) {
     try {
         const findings = runAutomatedReview(content, row);
         const changedSections = detectChangedSections(previousContent, content);
@@ -108,6 +109,10 @@ async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUserna
         // for uniqueness purposes. That's an acceptable gap for that
         // edge case; it does not affect real trainee accounts, which
         // always have a training_start_date set at registration.
+        //
+        // ai_review / ai_review_status / ai_reviewed_at are deliberately
+        // NOT touched here — Phase 2's AI review (see below) writes those
+        // itself, in the background, after this row already exists.
         await db.prepare(
             `INSERT INTO case_reviews
                 (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, changed_sections, created_at)
@@ -120,6 +125,17 @@ async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUserna
                 changed_sections = excluded.changed_sections,
                 created_at = excluded.created_at`
         ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings), JSON.stringify(changedSections)).run();
+
+        // Phase 2: only run the AI review when Doc Hub actually changed in
+        // THIS save — not on every save, and not just because a document
+        // already existed from before. Triggered via waitUntil() so a
+        // slow or failed AI call can never delay or break the response
+        // the trainee is waiting on; it writes its result into the row
+        // above a few seconds later, after the fact.
+        const docsChanged = changedSections.some(c => c.key === 'docs');
+        if (docsChanged && waitUntil) {
+            waitUntil(runAiReview(env, { caseRepositoryId, trainingDay, content, clientName: row.client_name }));
+        }
     } catch (e) {
         console.error('case_reviews automated review failed', e);
     }
@@ -156,7 +172,7 @@ export async function onRequestGet({ request, env }) {
     return json({ success: true, cases: (results || []).map(r => rowToListItem(r, session)) });
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
     const { session } = auth;
@@ -227,7 +243,7 @@ export async function onRequestPost({ request, env }) {
         let previousContent = null;
         try { previousContent = existing.content ? JSON.parse(existing.content) : null; } catch (e) { previousContent = null; }
 
-        await recordAutomatedReview(db, {
+        await recordAutomatedReview(db, waitUntil, env, {
             caseRepositoryId: id, caseId, ownerUsername: existing.owner_username,
             row: {
                 client_name: clientName || '', phase: phase || existing.phase, date_of_loss: dateOfLoss, sol_bar: solBar,
@@ -280,7 +296,7 @@ export async function onRequestPost({ request, env }) {
         content: serializedContent, medTotal, savedBy: session.username, savedByBatch: session.batchId
     });
 
-    await recordAutomatedReview(db, {
+    await recordAutomatedReview(db, waitUntil, env, {
         caseRepositoryId: result.id, caseId, ownerUsername: session.username,
         row: {
             client_name: clientName || '', phase: phase || 'Intake', date_of_loss: dateOfLoss, sol_bar: solBar,
