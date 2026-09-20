@@ -41,7 +41,7 @@ export async function onRequestGet({ request, env }) {
         try { changedSections = row.changed_sections ? JSON.parse(row.changed_sections) : []; } catch (e) { changedSections = []; }
         let aiReview = null;
         try { aiReview = row.ai_review ? JSON.parse(row.ai_review) : null; } catch (e) { aiReview = null; }
-        return {
+        const entry = {
             id: row.id,
             caseRepositoryId: row.case_repository_id,
             caseId: row.case_id,
@@ -52,11 +52,18 @@ export async function onRequestGet({ request, env }) {
             aiReview,
             aiReviewStatus: row.ai_review_status,
             aiReviewedAt: row.ai_reviewed_at,
-            trainerComment: row.trainer_comment,
-            trainerUsername: row.trainer_username,
-            commentUpdatedAt: row.comment_updated_at,
             createdAt: row.created_at,
         };
+        // Trainer notes are admin/trainer-only — a trainee reading their
+        // own dashboard never receives these fields at all, not just a
+        // UI that hides them. Restricted here, server-side, rather than
+        // relying on the frontend not to render what it was given.
+        if (session.userType === 'Admin') {
+            entry.trainerComment = row.trainer_comment;
+            entry.trainerUsername = row.trainer_username;
+            entry.commentUpdatedAt = row.comment_updated_at;
+        }
+        return entry;
     });
 
     return json({ success: true, username: targetUsername, entries }, 200, { 'Cache-Control': 'no-store' });
