@@ -1,4 +1,4 @@
-import { json, requireSession, nextCaseId, isOwnerOrAdmin, buildFullName, runAutomatedReview, computeTrainingDay } from '../_utils.js';
+import { json, requireSession, nextCaseId, isOwnerOrAdmin, buildFullName, runAutomatedReview, computeTrainingDay, detectChangedSections } from '../_utils.js';
 
 // Server-side Case Repository — replaces the old client-side localStorage
 // repository entirely, and also replaces the old append-only 'cases' sync
@@ -76,9 +76,10 @@ async function snapshotVersion(db, { caseRepositoryId, caseId, clientName, phase
 // create-case-reviews-table.sql) — silently no-ops (logs and continues) if
 // it doesn't exist yet, so this is safe to deploy before that migration
 // has been run.
-async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUsername, row, content }) {
+async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUsername, row, content, previousContent }) {
     try {
         const findings = runAutomatedReview(content, row);
+        const changedSections = detectChangedSections(previousContent, content);
         const userRow = await db.prepare(`SELECT training_start_date FROM users WHERE username = ?`).bind(ownerUsername).first();
         const trainingDay = userRow ? computeTrainingDay(userRow.training_start_date) : null;
 
@@ -97,6 +98,10 @@ async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUserna
         // deliberately left out of the DO UPDATE SET clause, so an
         // existing note is never overwritten by a same-day re-save.
         //
+        // changed_sections reflects the delta of THIS specific save (see
+        // detectChangedSections in _utils.js) — on a same-day re-save it's
+        // overwritten with that save's own delta, same as automated_findings.
+        //
         // NOTE: rows where training_day is NULL (no training_start_date
         // on the account — e.g. an Admin account) are NOT protected by
         // this constraint, since SQLite/D1 treat every NULL as distinct
@@ -105,15 +110,16 @@ async function recordAutomatedReview(db, { caseRepositoryId, caseId, ownerUserna
         // always have a training_start_date set at registration.
         await db.prepare(
             `INSERT INTO case_reviews
-                (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                (case_repository_id, case_id, trainee_username, client_name, training_day, automated_findings, changed_sections, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
              ON CONFLICT(case_repository_id, training_day) DO UPDATE SET
                 case_id = excluded.case_id,
                 trainee_username = excluded.trainee_username,
                 client_name = excluded.client_name,
                 automated_findings = excluded.automated_findings,
+                changed_sections = excluded.changed_sections,
                 created_at = excluded.created_at`
-        ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings)).run();
+        ).bind(caseRepositoryId, caseId || null, ownerUsername, row.client_name || '', trainingDay, JSON.stringify(findings), JSON.stringify(changedSections)).run();
     } catch (e) {
         console.error('case_reviews automated review failed', e);
     }
@@ -214,14 +220,21 @@ export async function onRequestPost({ request, env }) {
             content: serializedContent, medTotal, savedBy: session.username, savedByBatch: session.batchId
         });
 
+        // existing.content is the case's content as it was BEFORE this
+        // save overwrote it — exactly what's needed to diff against for
+        // changed_sections. Parsed defensively; a parse failure just
+        // means "no previous content to compare," not a broken save.
+        let previousContent = null;
+        try { previousContent = existing.content ? JSON.parse(existing.content) : null; } catch (e) { previousContent = null; }
+
         await recordAutomatedReview(db, {
             caseRepositoryId: id, caseId, ownerUsername: existing.owner_username,
             row: {
-                client_name: clientName || '', date_of_loss: dateOfLoss, sol_bar: solBar,
+                client_name: clientName || '', phase: phase || existing.phase, date_of_loss: dateOfLoss, sol_bar: solBar,
                 sol_litigation: solLitigation, complaint_filed: complaintFiled,
                 discovery_cutoff: discoveryCutoff, trial_date: trialDate
             },
-            content
+            content, previousContent
         });
 
         return json({ success: true, id: Number(id), caseId, isDraft: !!isDraftFlag });
@@ -270,11 +283,11 @@ export async function onRequestPost({ request, env }) {
     await recordAutomatedReview(db, {
         caseRepositoryId: result.id, caseId, ownerUsername: session.username,
         row: {
-            client_name: clientName || '', date_of_loss: dateOfLoss, sol_bar: solBar,
+            client_name: clientName || '', phase: phase || 'Intake', date_of_loss: dateOfLoss, sol_bar: solBar,
             sol_litigation: solLitigation, complaint_filed: complaintFiled,
             discovery_cutoff: discoveryCutoff, trial_date: trialDate
         },
-        content
+        content, previousContent: null
     });
 
     return json({ success: true, id: result.id, caseId, isDraft: !!isDraftFlag });
