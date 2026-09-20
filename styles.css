@@ -592,6 +592,26 @@
     .review-comment-readonly { font-size:12px; color:#334155; background:#f8fafc; border-radius:6px; padding:8px 10px; }
     .review-comment-meta { font-size:9.5px; color:#94a3b8; margin-top:4px; }
 
+    /* ===== TRAINER ROSTER (all-trainees-at-a-glance view) ===== */
+    .roster-table { width:100%; border-collapse:collapse; background:white; border-radius:10px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.04); }
+    .roster-table th { text-align:left; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; background:#f8fafc; padding:10px 14px; border-bottom:1px solid #e2e8f0; }
+    .roster-table td { padding:12px 14px; font-size:12.5px; color:#334155; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .roster-table tbody tr { cursor:pointer; transition:background .1s ease; }
+    .roster-table tbody tr:hover { background:#f8fafc; }
+    .roster-table tbody tr:last-child td { border-bottom:none; }
+    .roster-health-dot { display:inline-block; width:10px; height:10px; border-radius:50%; }
+    .roster-health-dot.red { background:#dc2626; }
+    .roster-health-dot.yellow { background:#f59e0b; }
+    .roster-health-dot.green { background:#16a34a; }
+    .roster-health-dot.none { background:#cbd5e1; }
+    .roster-name { font-weight:800; color:var(--navy); }
+    .roster-trend { display:flex; align-items:center; gap:6px; font-size:11.5px; }
+    .roster-trend-arrow { font-weight:900; }
+    .roster-trend-arrow.up { color:#16a34a; }
+    .roster-trend-arrow.down { color:#dc2626; }
+    .roster-trend-arrow.flat { color:#94a3b8; }
+    .roster-no-data { color:#94a3b8; font-size:11.5px; font-style:italic; }
+
     @media print {
         .no-print { display: none !important; }
         .pdf-card { border: 2px solid var(--orange) !important; break-inside: avoid; }
