@@ -2,31 +2,29 @@
 // _utils.js, so Cloudflare Pages Functions never maps a URL to this file.
 //
 // Phase 2 of the admin review system: reads whatever PDF/image was just
-// uploaded to Doc Hub and asks Gemini to (a) assess its writing quality
+// uploaded to Doc Hub and asks Claude to (a) assess its writing quality
 // and (b) flag anything in it that's inconsistent with what the trainee
 // has written elsewhere in the case (police report narrative, notes,
 // treatment chronology). This is layered ON TOP of Phase 1's rule-based
 // runAutomatedReview() in _utils.js, not a replacement for it.
 //
 // Called via context.waitUntil() from case-repository.js's onRequestPost
-// — deliberately NOT awaited inline, so a slow or failed API call can
+// — deliberately NOT awaited inline, so a slow or failed AI call can
 // never delay or break an actual case save. It runs after the save's
 // response has already gone back to the trainee; results show up on the
 // dashboard a few seconds later on next load.
 //
 // Requires:
-//   - env.GEMINI_API_KEY set as a Cloudflare secret
+//   - env.ANTHROPIC_API_KEY set as a Cloudflare secret
 //   - case_reviews table to have ai_review / ai_review_status /
-//     ai_reviewed_at columns (see add-ai-review-columns.sql) — column
-//     names are provider-agnostic on purpose, so switching providers
-//     again later wouldn't need another schema migration.
+//     ai_reviewed_at columns (see add-ai-review-columns.sql)
 
-const GEMINI_MODEL = 'gemini-3.6-flash';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const CLAUDE_MODEL = 'claude-sonnet-5';
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
-// Natively supported inline_data types for Gemini's generateContent —
-// anything else (e.g. .docx) is skipped with a clear "unsupported"
-// status rather than guessed at.
+// Only these are natively supported as Claude API content blocks without
+// extra text-extraction work — anything else (e.g. .docx) is skipped
+// with a clear "unsupported" status rather than guessed at.
 const SUPPORTED_MIME = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
 // Matches the exact anchor format handleDocUpload() in app.js generates:
@@ -95,18 +93,18 @@ async function storeAiReview(db, caseRepositoryId, trainingDay, review) {
              WHERE case_repository_id = ? AND training_day IS ?`
         ).bind(JSON.stringify(review), review.status, caseRepositoryId, trainingDay).run();
     } catch (e) {
-        console.error('Failed to store automated feedback', e);
+        console.error('Failed to store AI review', e);
     }
 }
 
 export async function runAiReview(env, { caseRepositoryId, trainingDay, content, clientName }) {
     try {
-        const apiKey = env.GEMINI_API_KEY;
+        const apiKey = env.ANTHROPIC_API_KEY;
         if (!apiKey) {
-            console.error('GEMINI_API_KEY not configured — skipping automated feedback');
+            console.error('ANTHROPIC_API_KEY not configured — skipping AI review');
             await storeAiReview(env.DB, caseRepositoryId, trainingDay, {
                 status: 'failed',
-                reason: 'Automated feedback is not configured yet (missing API key) — contact your admin.'
+                reason: 'Review is not configured yet (missing API key) — contact your admin.'
             });
             return;
         }
@@ -117,7 +115,7 @@ export async function runAiReview(env, { caseRepositoryId, trainingDay, content,
             await storeAiReview(env.DB, caseRepositoryId, trainingDay, {
                 status: 'skipped',
                 reason: docRefs.length
-                    ? 'The uploaded document type isn\'t supported for automated feedback yet (only PDF and image files are).'
+                    ? 'The uploaded document type isn\'t supported for review yet (only PDF and image files are).'
                     : 'No document found in Doc Hub to review.'
             });
             return;
@@ -130,6 +128,7 @@ export async function runAiReview(env, { caseRepositoryId, trainingDay, content,
         }
         const bytes = await object.arrayBuffer();
         const base64 = arrayBufferToBase64(bytes);
+        const blockType = doc.mime === 'application/pdf' ? 'document' : 'image';
         const narrative = gatherNarrative(content);
 
         const prompt = `You are reviewing a legal case file prepared by a trainee at a personal injury law firm, as part of a training exercise. You are given (1) an uploaded document from the case's Doc Hub and (2) the narrative text the trainee has written elsewhere in the case file.
@@ -151,51 +150,52 @@ Review the attached document and respond with ONLY a JSON object (no markdown, n
 If there are no consistency issues, return an empty array for consistencyIssues. Be specific and cite what you actually found in the document — do not invent issues that aren't there.`;
 
         const requestBody = {
-            contents: [{
-                parts: [
-                    { inline_data: { mime_type: doc.mime, data: base64 } },
-                    { text: prompt }
+            model: CLAUDE_MODEL,
+            max_tokens: 1024,
+            messages: [{
+                role: 'user',
+                content: [
+                    { type: blockType, source: { type: 'base64', media_type: doc.mime, data: base64 } },
+                    { type: 'text', text: prompt }
                 ]
             }]
         };
 
-        const res = await fetch(GEMINI_API_URL, {
+        const res = await fetch(CLAUDE_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify(requestBody)
         });
 
         if (!res.ok) {
             const errText = await res.text();
-            console.error('Gemini API error', res.status, errText);
-            await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'failed', reason: `Automated feedback service returned ${res.status}.` });
+            console.error('Claude API error', res.status, errText);
+            await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'failed', reason: `Review service returned ${res.status}.` });
             return;
         }
 
         const data = await res.json();
-        const textOut = data && data.candidates && data.candidates[0] && data.candidates[0].content
-            && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
-            && data.candidates[0].content.parts[0].text;
-
+        const textBlock = (data.content || []).find(b => b.type === 'text');
         let parsed;
         try {
-            let raw = (textOut || '').trim();
+            let raw = (textBlock && textBlock.text || '').trim();
             // Defensive: strip markdown fences if the model added them
             // despite the "no markdown" instruction.
             raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '');
             parsed = JSON.parse(raw);
         } catch (e) {
-            console.error('Could not parse automated feedback JSON', e, textOut);
-            await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'failed', reason: 'Automated feedback response could not be parsed.' });
+            console.error('Could not parse AI review JSON', e, textBlock);
+            await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'failed', reason: 'Review response could not be parsed.' });
             return;
         }
 
         await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'complete', ...parsed });
     } catch (e) {
-        console.error('Automated feedback failed unexpectedly', e);
-        try { await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'failed', reason: 'Unexpected error running automated feedback.' }); } catch (e2) {}
+        console.error('AI review failed unexpectedly', e);
+        try { await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'failed', reason: 'Unexpected error running review.' }); } catch (e2) {}
     }
 }
