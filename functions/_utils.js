@@ -78,11 +78,16 @@ export function getCookie(request, name) {
     const match = header.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='));
     return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
+// SameSite=None + Partitioned lets the CMS keep its session when it's opened
+// inside the LSH CM course (an iframe on another site). Partitioned (CHIPS)
+// keeps that embedded session separate per top-level site. Because the cookie
+// is no longer SameSite-protected, functions/_middleware.js blocks cross-site
+// state-changing API requests (CSRF). Clear with the same attributes.
 export function sessionCookie(token, maxAgeSeconds) {
-    return `lsh_session=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAgeSeconds}`;
+    return `lsh_session=${token}; HttpOnly; Secure; SameSite=None; Partitioned; Path=/; Max-Age=${maxAgeSeconds}`;
 }
 export function clearSessionCookie() {
-    return `lsh_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
+    return `lsh_session=; HttpOnly; Secure; SameSite=None; Partitioned; Path=/; Max-Age=0`;
 }
 
 /** Client heartbeat interval is 2s; grace window is 3× that. */
