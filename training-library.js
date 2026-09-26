@@ -90,6 +90,31 @@
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const findCase = (id) => (window.MOCK_CASES || []).find(c => c.id === String(id || '').toUpperCase());
+    // Everything a front-desk caller might give you: names (client, contacts, adjusters,
+    // other drivers), phone numbers, email, DOB, address, claim/policy/file numbers,
+    // report numbers, plates, and the narrative. Digits-only matching for numbers.
+    const searchText = (c) => {
+        const bits = [c.id, c.client.name, c.client.phone, c.client.email, c.client.dob, c.client.address,
+            c.client.emergency && c.client.emergency.name, c.client.emergency && c.client.emergency.phone,
+            c.caseType, c.caseTypeOther, c.phase, c.attorney, c.caseManager, c.narrative,
+            c.police && c.police.number];
+        (c.bi || []).concat(c.pipum || []).forEach(x => bits.push(x.holder, x.carrier, x.policy, x.claim, x.adjuster, x.contact));
+        (c.liens || []).forEach(x => bits.push(x.entity, x.file));
+        (c.facilities || []).forEach(x => bits.push(x.name));
+        if (c.pd) [c.pd.client, c.pd.tp].forEach(v => { if (v) bits.push(v.plate, v.owner, v.driver, v.make, v.model); });
+        (c.docs || []).forEach(x => bits.push(x.summary));
+        return bits.filter(Boolean).join(' | ');
+    };
+    const _idx = {};
+    function mockMatches(c, query) {
+        const q = norm(query); if (!q) return true;
+        const text = _idx[c.id] || (_idx[c.id] = searchText(c));
+        const t = norm(text);
+        if (q.split(' ').every(w => t.includes(w))) return true;
+        const digits = q.replace(/\D/g, '');
+        return digits.length >= 4 && text.replace(/\D/g, '').includes(digits);
+    }
+    window.mockSearch = (query) => (window.MOCK_CASES || []).filter(c => mockMatches(c, query));
     const isAdmin = () => { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); };
 
     /* ---------- styles ---------- */
@@ -208,13 +233,13 @@
             filters.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
                 ${[['all', 'All programs']].concat((window.MOCK_PROGRAMS || []).map(p => [p.id, p.label]))
                     .map(([k, l]) => `<button class="lib-chip ${libState.program === k ? 'on' : ''}" onclick="libSetProgram('${k}')">${esc(l)}</button>`).join('')}
-                <input type="search" placeholder="Search client, ID, type, phase…" value="${esc(libState.q)}" oninput="libSearch(this.value)" style="flex:1;min-width:180px;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
+                <input type="search" placeholder="Search name, phone, DOB, claim #, plate, case ID…" value="${esc(libState.q)}" oninput="libSearch(this.value)" style="flex:1;min-width:180px;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
             </div>`;
         }
         const q = norm(libState.q);
         const list = (window.MOCK_CASES || []).filter(c =>
             (libState.program === 'all' || c.programs.includes(libState.program)) &&
-            (!q || norm([c.id, c.client.name, c.caseType, c.caseTypeOther, c.phase, c.summary, c.attorney, c.caseManager].join(' ')).includes(q)));
+            (!q || mockMatches(c, q)));
         body.innerHTML = list.length ? list.map(c => `<div class="lib-row">
             <div class="id">${c.id}</div>
             <div><div class="nm">${esc(c.client.name)}</div><div class="sm">${esc(c.summary)}</div>
