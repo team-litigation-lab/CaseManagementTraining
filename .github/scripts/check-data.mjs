@@ -1,0 +1,81 @@
+// CMS Training Library checks (run by .github/workflows/checks.yml).
+// The mock cases and Front Desk Drill calls in mock-cases.js are hand-written
+// data that the drill scores against, so a typo silently breaks a trainee's
+// score. This fails the build when:
+//   - a case id repeats, or a case is missing a required field;
+//   - a phase, case type, lien type or facility specialty isn't one the CMS
+//     editor offers (it would load blank);
+//   - a drill call points at a case that doesn't exist, has an unknown auth
+//     code, or an answer index outside its options;
+//   - a caller the key says is verified gave details that don't match the file
+//     (or a "not verified" caller's details all match).
+import fs from 'fs';
+import path from 'path';
+import vm from 'vm';
+
+const ROOT = path.resolve(process.argv[2] || '.');
+const problems = [];
+const bad = (msg) => problems.push(msg);
+const ctx = { window: {} };
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'mock-cases.js'), 'utf8'), ctx);
+const { MOCK_CASES = [], DRILL_CALLS = [], MOCK_PROGRAMS = [], MOCK_FIRM = {} } = ctx.window;
+
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const app = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+const optionsIn = (src, id) => { const m = src.match(new RegExp(`id="${id}"[^>]*>([\\s\\S]*?)</select>`)); return m ? [...m[1].matchAll(/<option[^>]*?(?:value="([^"]*)")?[^>]*>([^<]*)</g)].map(o => o[1] || o[2].trim()) : []; };
+const PHASES = optionsIn(html, 'phase-selector');
+const TYPES = optionsIn(html, 'main-case-type');
+const LIEN_TYPES = ['Prior Atty Lien', 'Medical Lien', 'HI Subro', 'Funding', 'Other'];
+const SPECIALTIES = ((app.match(/<select id="sel-\$\{id\}"[\s\S]*?<\/select>/) || [''])[0].match(/<option[^>]*>([^<]*)</g) || []).map(o => o.replace(/<option[^>]*>|</g, ''));
+const PROGRAMS = new Set(MOCK_PROGRAMS.map(p => p.id));
+if (!PHASES.length || !TYPES.length || !SPECIALTIES.length) bad('Could not read the editor\'s phase / case type / specialty options from index.html and app.js; update check-data.mjs');
+
+const ids = new Set();
+for (const c of MOCK_CASES) {
+    const where = `${c.id || '(no id)'}`;
+    if (!/^MC-\d{2}$/.test(c.id || '')) bad(`${where}: id must look like MC-01`);
+    if (ids.has(c.id)) bad(`${where}: duplicate id`);
+    ids.add(c.id);
+    for (const k of ['summary', 'caseType', 'phase', 'dateOfLoss', 'sol', 'narrative']) if (!c[k]) bad(`${where}: missing ${k}`);
+    for (const k of ['name', 'phone', 'dob', 'ssn', 'address']) if (!(c.client || {})[k] && !(k === 'email')) bad(`${where}: client.${k} is missing`);
+    if (c.client && c.client.ssn && !/^XXX-XX-\d{4}$/.test(c.client.ssn)) bad(`${where}: SSN must stay masked (XXX-XX-1234)`);
+    if (!PHASES.includes(c.phase)) bad(`${where}: phase "${c.phase}" isn't an option in the CMS (${PHASES.join(', ')})`);
+    if (!TYPES.includes(c.caseType)) bad(`${where}: case type "${c.caseType}" isn't an option in the CMS`);
+    if (c.caseType === 'Others' && !c.caseTypeOther) bad(`${where}: caseType Others needs caseTypeOther`);
+    for (const p of c.programs || []) if (!PROGRAMS.has(p)) bad(`${where}: unknown program "${p}"`);
+    for (const l of c.liens || []) if (!LIEN_TYPES.includes(l.type)) bad(`${where}: lien type "${l.type}" isn't an option`);
+    for (const f of c.facilities || []) if (!SPECIALTIES.includes(f.specialty)) bad(`${where}: facility specialty "${f.specialty}" isn't an option`);
+    for (const k of ['dateOfLoss', 'sol']) if (c[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(c[k])) bad(`${where}: ${k} must be MM/DD/YYYY`);
+    if (!c.reception || !c.reception.verify || !(c.reception.calls || []).length) bad(`${where}: needs reception.verify and at least one reception call`);
+}
+
+const AUTH = ['client', 'authorized', 'failed', 'unauthorized', 'business', 'newcaller'];
+const dids = new Set();
+const has = (v) => v != null && String(v).trim() !== '';
+for (const d of DRILL_CALLS) {
+    const where = `Drill ${d.id || '(no id)'}`;
+    if (dids.has(d.id)) bad(`${where}: duplicate id`);
+    dids.add(d.id);
+    if (d.mock !== null && !ids.has(d.mock)) bad(`${where}: case ${d.mock} doesn't exist`);
+    if (!AUTH.includes(d.auth)) bad(`${where}: unknown auth "${d.auth}"`);
+    if (d.mock === null && d.auth !== 'newcaller') bad(`${where}: a caller who isn't on file must be auth "newcaller"`);
+    if (!Array.isArray(d.actions) || d.actions.length !== 4) bad(`${where}: needs exactly 4 actions`);
+    if (!(d.answer >= 0 && d.answer < (d.actions || []).length)) bad(`${where}: answer index ${d.answer} is out of range`);
+    if (!d.opening || !d.why) bad(`${where}: needs an opening line and a why`);
+    const c = MOCK_CASES.find(x => x.id === d.mock);
+    if (c && ['client', 'authorized', 'failed'].includes(d.auth)) {
+        const g = d.gives || {};
+        const dobOk = has(g.dob) && String(g.dob).includes(c.client.dob);
+        const ssnOk = has(g.ssn4) && String(g.ssn4).includes(c.client.ssn.slice(-4));
+        const street = has(g.address) ? String(g.address).split(',')[0].trim().toLowerCase() : '';
+        const addrOk = /^\d/.test(street) && c.client.address.toLowerCase().startsWith(street);
+        const verified = dobOk && (ssnOk || addrOk);
+        if (d.auth !== 'failed' && !verified) bad(`${where}: the key says "${d.auth}" but the caller's DOB plus address or SSN last 4 don't match ${c.id}`);
+        if (d.auth === 'failed' && verified) bad(`${where}: the key says "failed" but the caller's details match ${c.id}`);
+    }
+}
+
+console.log(`Checked ${MOCK_CASES.length} mock cases and ${DRILL_CALLS.length} drill calls.`);
+if (problems.length) { console.log(`\n${problems.length} problem(s):\n`); problems.forEach((p, i) => console.log(`${i + 1}. ${p}`)); process.exit(1); }
+console.log('All good.');

@@ -40,3 +40,24 @@ Link to the CMS with a program so it opens in that program's context:
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
+
+## Checks (GitHub Actions)
+
+`.github/workflows/checks.yml` runs on every pull request and every push to `main`. A red **Checks** status means something is broken, and the log says what:
+
+- **Syntax, files and build:**
+  - every JavaScript file and inline `<script>` must parse;
+  - every local file `index.html` loads must exist;
+  - the Pages Functions must build (nothing is deployed);
+  - **the Training Library data must be consistent** (`.github/scripts/check-data.mjs`):
+    - unique case ids;
+    - required fields present;
+    - phases, case types, lien types and facility specialties the editor actually offers;
+    - SSNs masked;
+    - every drill call pointing at a real case, with a valid auth code and answer;
+    - callers the key marks verified giving details that match the file (and "not verified" callers not matching).
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100.
+
+To run them locally: `node .github/scripts/check-site.mjs`, `node .github/scripts/check-data.mjs`, `node .github/scripts/smoke.cjs` (needs Playwright).
+
+`_redirects` keeps `wrangler.toml`, this README, `.github/` and the Functions source off the published site.
