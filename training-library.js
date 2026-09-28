@@ -16,8 +16,9 @@
       the whole editor editable; Save Case then creates the trainee's
       own case, stamped with content.trainingLibraryId.
       Only Admins see the Training Library button. Trainees find mock
-      cases by searching the Case Library (case-library.js), and every
-      way into the library (the banner, ?library=1) takes them there.
+      cases with the search bar above the case (case-library.js), and
+      every way into the library (the banner, ?library=1) takes them to
+      it; the firm directory opens in the Case Library window.
    3. Caller scenarios. For the front desk: how to verify the caller on
       this file, the calls it gets, and the model handling (hidden until
       the trainee reveals it; always shown to Admins).
@@ -246,7 +247,7 @@
     /* ---------- library modal ---------- */
     window.openTrainingLibrary = function (tab) {
         if (typeof hasAuthorizedAccess === 'function' && !hasAuthorizedAccess()) return;
-        if (!isAdmin() && typeof window.openCaseLibrary === 'function') { window.openCaseLibrary(tab === 'desk' ? 'desk' : 'search'); return; }
+        if (!isAdmin() && typeof window.focusCaseSearch === 'function') { if (tab === 'desk') window.openCaseLibrary('desk'); else window.focusCaseSearch(); return; }
         buildUI();
         libState.tab = tab || libState.tab || 'cases';
         renderLibraryList();
@@ -654,7 +655,7 @@
         const c = mockId && findCase(mockId);
         if (!c) { b.classList.remove('open'); b.innerHTML = ''; closeCallsPanel(); return; }
         b.classList.add('open');
-        const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="openCaseLibrary()">🔍 Search cases</button>`;
+        const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="focusCaseSearch()">🔍 Search cases</button>`;
         b.innerHTML = mockViewOnly
             ? `<span class="mb-tag">TRAINING LIBRARY · ${c.id}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span><span class="mb-sp"></span>
                <button onclick="openCallsPanel()">☎ Caller scenarios</button><button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
