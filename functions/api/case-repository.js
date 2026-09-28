@@ -44,6 +44,7 @@ function rowToListItem(row, session) {
         submittedByBatch: row.submitted_by_batch,
         submittedAt: row.submitted_at,
         medTotal: row.med_total,
+        dateOfLoss: row.date_of_loss || '',
         updatedAt: row.updated_at,
         createdAt: row.created_at,
         canEdit: isOwnerOrAdmin(session, row.owner_username)
@@ -163,7 +164,7 @@ export async function onRequestGet({ request, env }) {
     // specific case is actually opened.
     const { results } = await db.prepare(
         `SELECT id, case_id, client_name, phase, is_draft, owner_username, owner_batch_id,
-                submitted_by, submitted_by_batch, submitted_at, med_total, created_at, updated_at
+                submitted_by, submitted_by_batch, submitted_at, med_total, date_of_loss, created_at, updated_at
          FROM case_repository
          WHERE is_draft = 0 OR owner_username = ? OR ? = 'Admin'
          ORDER BY updated_at DESC`

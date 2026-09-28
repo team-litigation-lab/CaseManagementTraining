@@ -41,6 +41,8 @@
             // contenteditable-clearing loop just below already blanks the
             // actual field VALUES inside pane-police, which is all that's
             // needed here.
+            // Save any Notes/Tasks edits on a Training Library case before they're wiped.
+            if (window.mockFlushUpdates) window.mockFlushUpdates();
             ['passenger-container','facility-container','chrono-container','fin-body','pip-um-container',
              'bi-container','doc-body','lit-body','lien-container','note-body','task-body'
             ].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
@@ -1359,18 +1361,21 @@
         let _repoCache = [];
         let _activeUsersCache = []; // last-fetched Approved/Suspended users — feeds the Ping recipient dropdown
         async function refreshRepoCache() {
-            if (!hasAuthorizedAccess()) { _repoCache = []; renderRepo(); renderAllCasesModal(); return; }
+            if (!hasAuthorizedAccess()) { _repoCache = []; renderRepo(); if (window.renderCaseLibrary) renderCaseLibrary(); return; }
             try {
                 const res = await fetch('/api/case-repository', { credentials: 'include' });
                 const data = await res.json();
                 if (data && data.success) _repoCache = data.cases || [];
             } catch (e) { /* keep showing the last-known cache on a transient network error */ }
             renderRepo();
-            renderAllCasesModal();
+            if (window.renderCaseLibrary) renderCaseLibrary();
             renderCaseLogs();
         }
         setInterval(refreshRepoCache, 15000); // passive background refresh so shared changes show up without a manual reload
 
+        // The sidebar doesn't list everyone's cases. Saved cases go into the
+        // Case Library with the Training Library mock cases, and show here
+        // only as results of the sidebar search (case-library.js).
         function renderRepo() {
             const list = document.getElementById('repo-list');
             const countNote = document.getElementById('repo-count-note');
@@ -1380,25 +1385,7 @@
                 return;
             }
             if (list) delete list.dataset.blanked;
-            const searchEl = document.getElementById('repo-search');
-            const query = (searchEl ? searchEl.value : '').trim().toLowerCase();
-            let repo = _repoCache;
-            if (query) repo = repo.filter(item => (item.clientName || '').toLowerCase().includes(query));
-
-            const shown = repo.slice(0, 5);
-            list.innerHTML = shown.length ? shown.map(item => repoCardHTML(item)).join('') : '<p style="font-size:11px;color:#64748b;">No matching cases.</p>';
-
-            if (repo.length > 5) countNote.innerText = `Showing 5 of ${repo.length} matching cases.`;
-            else countNote.innerText = '';
-        }
-        function repoCardHTML(item) {
-            const badges = (!item.isDraft ? '' : ' <span style="font-size:9px;font-weight:800;color:#f97316;border:1px solid #f97316;border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle;">DRAFT</span>')
-                + (item.canEdit ? '' : ' <span style="font-size:9px;font-weight:800;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle;">VIEW ONLY</span>');
-            return `<div onclick="loadCase(${item.id})" class="repo-card group p-3 rounded-lg">
-                <span class="repo-name block font-bold text-xs mb-1">${item.clientName || 'Unnamed Client'}${badges}</span>
-                <span style="font-size:9px;color:#64748b;">By ${item.submittedBy || item.ownerUsername}</span>
-                ${item.canEdit ? `<button onclick="deleteCase(${item.id}, event)" class="absolute top-1 right-2 text-slate-500">×</button>` : ''}
-            </div>`;
+            if (window.renderCaseLibrarySidebar) window.renderCaseLibrarySidebar();
         }
         async function loadCase(id) {
             if (!hasAuthorizedAccess()) return; // blocked: not logged in, or site is locked
@@ -1407,6 +1394,7 @@
                 const data = await res.json();
                 if (!data || !data.success) { showToast((data && data.error) || 'Could not load that case.', 'error'); return; }
                 const c = data.case;
+                if (window.mockFlushUpdates) window.mockFlushUpdates(); // save Notes/Tasks edits on a library case first
                 if (window.mockReset) window.mockReset(); // leaving any Training Library case
                 applyCaseContentToDOM(c.content, document);
                 currentCaseId = c.id;
@@ -1419,7 +1407,7 @@
                 }
                 if (c.phase) updatePhaseDisplay(c.phase);
                 updateTotals(); toggleOwnerExtra(); toggleDriverInsuredExtra(); showTab('profile');
-                closeAllCasesModal();
+                if (window.closeCaseLibrary) closeCaseLibrary();
                 if (!c.canEdit) showToast('Viewing ' + c.ownerUsername + '\u2019s case — read-only (not the owner or an Admin).', 'info');
                 persistCurrentEditorState();
             } catch (e) {
@@ -1440,46 +1428,6 @@
             }
         }
 
-        function openAllCasesModal() {
-            document.getElementById('all-cases-search').value = '';
-            renderAllCasesModal();
-            document.getElementById('all-cases-modal').classList.add('open');
-        }
-        function closeAllCasesModal() { document.getElementById('all-cases-modal').classList.remove('open'); }
-        // Draft/Finalized separator + sort: Finalized cases (visible to everyone)
-        // listed first, sorted by most recently updated; Drafts (visible only
-        // to their owner or an Admin — already filtered server-side into
-        // _repoCache) grouped separately below, also most-recent-first.
-        function renderAllCasesModal() {
-            const list = document.getElementById('all-cases-list');
-            if (!hasAuthorizedAccess()) { if (list) list.innerHTML = ''; return; }
-            const query = document.getElementById('all-cases-search').value.trim().toLowerCase();
-            let repo = _repoCache;
-            if (query) repo = repo.filter(item => (item.clientName || '').toLowerCase().includes(query));
-            if (!repo.length) { list.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No matching cases.</p>'; return; }
-
-            const byUpdated = (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt);
-            const finalized = repo.filter(i => !i.isDraft).sort(byUpdated);
-            const drafts = repo.filter(i => i.isDraft).sort(byUpdated);
-
-            let html = '<div class="group-heading">Finalized Cases &middot; ' + finalized.length + ' &middot; visible to everyone</div>';
-            html += finalized.length ? finalized.map(allCasesRowHTML).join('') : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No finalized cases yet.</p>';
-
-            html += '<div class="group-heading">Drafts &middot; ' + drafts.length + ' &middot; visible to owner &amp; Admins only</div>';
-            html += drafts.length ? drafts.map(allCasesRowHTML).join('') : '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No drafts visible to you.</p>';
-
-            list.innerHTML = html;
-        }
-        function allCasesRowHTML(item) {
-            const viewOnly = item.canEdit ? '' : ' <span style="font-size:9px;font-weight:800;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:1px 4px;margin-left:4px;">VIEW ONLY</span>';
-            return `<div class="reg-row" style="cursor:pointer;" onclick="loadCase(${item.id})">
-                <div class="reg-info">
-                    <b>${item.clientName || 'Unnamed Client'}${viewOnly}</b>
-                    <div class="reg-meta">${item.caseId || 'DRAFT — no Case ID yet'} ${item.phase ? '&middot; ' + item.phase : ''} &middot; By ${item.submittedBy || item.ownerUsername} &middot; updated ${new Date(item.updatedAt).toLocaleString()}</div>
-                </div>
-                ${item.canEdit ? `<button class="mini-btn reject" onclick="deleteCase(${item.id}, event)">Delete</button>` : ''}
-            </div>`;
-        }
         // Export now downloads the currently visible case METADATA (name,
         // Case ID, phase, owner, timestamps) as a JSON reference list — full
         // field content lives server-side per case and is fetched on demand
