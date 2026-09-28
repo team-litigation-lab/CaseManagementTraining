@@ -52,8 +52,9 @@ const SAVED = [
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
 
-    // trainee view: no Training Library button, no list of everyone's cases, a search bar above the case
+    // trainee view: no Training Library or Front Desk Drill button, no list of everyone's cases, a search bar above the case
     if (await page.isVisible('#lib-open-btn')) fail('trainees can see the Training Library button');
+    if (await page.isVisible('#fdd-open-btn')) fail('trainees can see the Front Desk Drill button');
     if (!(await page.isVisible('#cl-bar-input'))) fail('the search bar above the case is missing');
     if (await page.isVisible('#export-repo-btn')) fail('trainees can export the list of every case');
     if (await page.locator('#repo-list .repo-card').count()) fail('the sidebar lists saved cases');

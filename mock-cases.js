@@ -66,12 +66,13 @@ const MOCK_PROGRAMS = [
     { id: 'reception', label: 'Receptionist / Front Desk' },
     { id: 'intake', label: 'Intake' },
     { id: 'cm', label: 'Case Management' },
-    { id: 'ea', label: 'EA / PA' }
+    { id: 'ea', label: 'EA / PA' },
+    { id: 'pd', label: 'Property Damage' }
 ];
 
 const MOCK_CASES = [
 {
-    id: 'MC-01', level: 'Starter', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-01', level: 'Starter', programs: ['reception', 'cm', 'ea', 'pd'],
     summary: 'Rear-end collision, in treatment. Client calls about her next appointment; a "cousin" asks about the settlement.',
     client: { name: 'Maria Santos', phone: '(555) 010-4417', email: 'maria.santos@example.com', dob: '03/22/1988', ssn: 'XXX-XX-4821',
         address: '1187 Willow Bend Dr, Riverton, GA 30301',
@@ -219,7 +220,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-04', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-04', level: 'Intermediate', programs: ['reception', 'cm', 'pd'],
     summary: 'Policy-limits demand is out. The adjuster calls with an offer that has a deadline.',
     client: { name: 'Robert Chen', phone: '(555) 010-4741', email: 'bobby.chen@example.com', dob: '01/30/1969', ssn: 'XXX-XX-2208',
         address: '88 Lantern Hill Rd, Riverton, GA 30307',
@@ -401,7 +402,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-08', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-08', level: 'Intermediate', programs: ['reception', 'cm', 'pd'],
     summary: 'Motorcycle crash, surgery scheduled. Spanish-speaking client; his daughter is authorized.',
     client: { name: 'Tomás Rivera', phone: '(555) 010-5188', email: '', dob: '04/18/1964', ssn: 'XXX-XX-8043',
         address: '905 Mission Road, Riverton, GA 30314',
@@ -543,7 +544,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-12', level: 'Starter', programs: ['reception', 'cm', 'intake'],
+    id: 'MC-12', level: 'Starter', programs: ['reception', 'cm', 'intake', 'pd'],
     summary: 'Early investigation. The body shop is charging storage and the client wants a rental car.',
     client: { name: 'William Harris', phone: '(555) 010-5520', email: 'will.harris@example.com', dob: '08/08/1958', ssn: 'XXX-XX-9136',
         address: '3 Colonial Drive, Riverton, GA 30322',
