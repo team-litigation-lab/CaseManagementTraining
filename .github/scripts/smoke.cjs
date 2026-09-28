@@ -3,9 +3,9 @@
 // mode blocks saving, saves a practice copy, and plays every Front Desk Drill
 // call with the answer key (must score 100). Also checks the Case Library:
 // trainees get no Training Library button and no list of everyone's cases,
-// the search (top bar and sidebar) finds saved and mock cases by name or DOL
-// and flags same-name files, and a library case's Notes and Tasks can be
-// edited, saved, reloaded and reset. Fails on any page error.
+// the search bar above the case (and the Case Library window) finds saved and
+// mock cases by name or DOL and flags same-name files, and a library case's
+// Notes and Tasks can be edited, saved, reloaded and reset. Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -52,15 +52,15 @@ const SAVED = [
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
 
-    // trainee view: no Training Library button, no list of everyone's cases, a search in the top bar
+    // trainee view: no Training Library button, no list of everyone's cases, a search bar above the case
     if (await page.isVisible('#lib-open-btn')) fail('trainees can see the Training Library button');
-    if (!(await page.isVisible('#cl-top-btn'))) fail('the top-bar case search is missing');
+    if (!(await page.isVisible('#cl-bar-input'))) fail('the search bar above the case is missing');
     if (await page.isVisible('#export-repo-btn')) fail('trainees can export the list of every case');
-    if (await page.locator('#repo-list .repo-card').count()) fail('the sidebar lists saved cases before any search');
+    if (await page.locator('#repo-list .repo-card').count()) fail('the sidebar lists saved cases');
     await page.evaluate(() => openTrainingLibrary());
-    if (await page.isVisible('#library-modal')) fail('openTrainingLibrary() opened the Training Library for a trainee');
-    if (!(await page.isVisible('#case-library-modal'))) fail('openTrainingLibrary() did not open the Case Library for a trainee');
-    await page.evaluate(() => closeCaseLibrary());
+    if (await page.isVisible('#library-modal') || await page.isVisible('#case-library-modal')) fail('openTrainingLibrary() opened a library window for a trainee');
+    if (await page.evaluate(() => document.activeElement && document.activeElement.id) !== 'cl-bar-input') fail('openTrainingLibrary() did not take a trainee to the search bar');
+    await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
 
     // every case loads with its sections filled, no duplicate element ids
     const cases = await page.evaluate(() => MOCK_CASES.map(c => {
@@ -86,21 +86,26 @@ const SAVED = [
     const s = saved[saved.length - 1];
     if (!s || s.content.trainingLibraryId !== 'MC-04' || s.content.program !== 'reception') fail(`practice copy did not save with its tags (${JSON.stringify(s && { lib: s.content.trainingLibraryId, program: s.content.program })})`);
 
-    // Case Library: saved and mock cases by name, same-name warning, search by DOL, open a result
-    await page.click('#cl-top-btn');
-    await page.fill('#cl-search', 'maria santos');
-    const found = await page.evaluate(() => [...document.querySelectorAll('#cl-body .cl-row .cl-tag')].map(t => t.textContent));
-    for (const want of ['MC-01', 'MC-21', 'MC-22', 'LSH-2026-MVA-000007']) if (!found.some(t => t.includes(want))) fail(`Case Library search "maria santos" did not find ${want} (${found.join(', ')})`);
-    if (!(await page.isVisible('#cl-body .cl-dup'))) fail('Case Library did not warn that several files share the name Maria Santos');
-    await page.fill('#cl-search', '07/28/2026');
-    const byDol = await page.evaluate(() => [...document.querySelectorAll('#cl-body .cl-tag.mock')].map(t => t.textContent.split('· ')[1]));
+    // search bar above the case: saved and mock cases by name, same-name warning, search by DOL, open a result
+    await page.fill('#cl-bar-input', 'maria santos');
+    const found = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .clb-row .cl-tag')].map(t => t.textContent));
+    for (const want of ['MC-01', 'MC-21', 'MC-22', 'LSH-2026-MVA-000007']) if (!found.some(t => t.includes(want))) fail(`search bar "maria santos" did not find ${want} (${found.join(', ')})`);
+    if (!(await page.isVisible('#cl-bar-results .cl-dup'))) fail('the search bar did not warn that several files share the name Maria Santos');
+    await page.fill('#cl-bar-input', '07/28/2026');
+    const byDol = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .cl-tag.mock')].map(t => t.textContent.split('· ')[1]));
     if (byDol.join() !== 'MC-22') fail(`searching the DOL 07/28/2026 found ${byDol.join(', ') || 'nothing'} instead of MC-22`);
-    await page.click('#cl-body .cl-row button:has-text("Open")'); await page.waitForTimeout(300);
-    if (await page.evaluate(() => mockCurrentId()) !== 'MC-22' || await page.isVisible('#case-library-modal')) fail('opening a Case Library result did not open MC-22');
-    await page.click('#repo-search'); await page.fill('#repo-search', 'wilson'); await page.waitForTimeout(100);
-    const side = await page.locator('#repo-list .repo-card').count();
-    if (side !== 3 || !(await page.isVisible('#repo-list .cl-side-dup'))) fail(`sidebar search "wilson" showed ${side} files (expected the 3 James Wilson files and a same-name warning)`);
-    await page.fill('#repo-search', '');
+    await page.click('#cl-bar-results .clb-row'); await page.waitForTimeout(300);
+    if (await page.evaluate(() => mockCurrentId()) !== 'MC-22' || await page.isVisible('#cl-bar-results')) fail('clicking a search result did not open MC-22');
+    // keyboard: Enter opens the first match (the newest James Wilson file, MC-24)
+    await page.click('#cl-bar-input'); await page.fill('#cl-bar-input', 'james wilson'); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+    if (await page.evaluate(() => mockCurrentId()) !== 'MC-24') fail(`Enter in the search bar opened ${await page.evaluate(() => mockCurrentId())} instead of MC-24`);
+    // the Case Library window (sidebar) still searches, filters and warns
+    await page.click('#sidebar-actions button:has-text("Open Case Library")');
+    await page.fill('#cl-search', 'wilson');
+    const inWindow = await page.locator('#cl-body .cl-row').count();
+    if (inWindow !== 3 || !(await page.isVisible('#cl-body .cl-dup'))) fail(`Case Library window search "wilson" showed ${inWindow} files (expected the 3 James Wilson files and a same-name warning)`);
+    await page.evaluate(() => closeCaseLibrary());
+    await page.evaluate(() => openMockCase('MC-22', { silent: true })); await page.waitForTimeout(300);
 
     // a library case's Notes and Tasks: editable (the rest stays view only), saved, reloaded, reset
     const origNotes = await page.evaluate(() => MOCK_CASES.find(c => c.id === 'MC-22').notes.length);
@@ -127,7 +132,7 @@ const SAVED = [
     await page.click('#pane-notes .mock-upd-bar button'); await page.waitForTimeout(600);
     if (await page.locator('#note-body tr').count() !== origNotes || updates['MC-22']) fail('"Reset to the original" did not restore MC-22\'s notes');
 
-    // the whole drill with the answer key (one call picks its case from the top-bar search)
+    // the whole drill with the answer key (one call picks its case from the search bar)
     await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(300);
     await page.selectOption('#fdd-len', { index: 3 });
     await page.click('button:has-text("Take the first call")');
@@ -138,10 +143,12 @@ const SAVED = [
         for (const a of ['Full name', 'Date of birth', 'Address', 'Last 4 of SSN', 'Callback number', 'Relationship to the client', 'Date of the accident (DOL)']) await page.click(`.fdd-asks button:has-text("${a}")`);
         if (c.mock && !topSearchUsed) {
             topSearchUsed = true;
-            await page.click('#cl-top-btn');
-            await page.fill('#cl-search', c.mock);
-            await page.locator('#cl-body .cl-row').filter({ has: page.locator('.cl-tag.mock', { hasText: new RegExp(`· ${c.mock}$`) }) }).locator('button:has-text("Open")').click();
-            if (!(await page.isVisible(`#fdd-panel p:has-text("Opened ${c.mock}")`))) fail(`opening ${c.mock} from the top-bar search during a drill call didn't count as the call's pick`);
+            await page.fill('#cl-bar-input', c.mock);
+            await page.locator('#cl-bar-results .clb-row').filter({ has: page.locator('.cl-tag.mock', { hasText: new RegExp(`· ${c.mock}$`) }) }).click();
+            if (!(await page.isVisible(`#fdd-panel p:has-text("Opened ${c.mock}")`))) {
+                fail(`opening ${c.mock} from the search bar during a drill call didn't count as the call's pick`);
+                await page.fill('.fdd-search', c.mock); await page.click(`.fdd-row:has(.id:text-is("${c.mock}"))`); // carry on with the drill
+            }
         } else {
             await page.fill('.fdd-search', c.mock || 'zzzz-no-match');
             if (c.mock) await page.click(`.fdd-row:has(.id:text-is("${c.mock}"))`); else await page.click('button:has-text("No matching case on file")');

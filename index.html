@@ -56,9 +56,6 @@
             <button onclick="openTraineeDashboard()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">📊 My Dashboard</button>
 
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Library</p>
-            <form autocomplete="off" onsubmit="return false;" style="margin:0;">
-                <input type="search" id="repo-search" class="repo-search-input" name="case-repo-filter-q" oninput="renderRepo()" placeholder="Search name, DOL, DOB, claim #..." aria-label="Search the Case Library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" style="width:100%; padding:8px 10px; margin-bottom:10px; border-radius:6px; border:1px solid #1e2c4d; background:#0d1c3d; color:white; font-size:11px; outline:none;">
-            </form>
             <div id="repo-list" class="space-y-3 mb-2"></div>
             <div id="repo-count-note" style="font-size:9.5px; color:#64748b; margin-bottom:8px;"></div>
             <button onclick="openCaseLibrary()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">🔍 Open Case Library</button>

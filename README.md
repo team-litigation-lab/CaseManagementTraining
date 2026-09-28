@@ -6,9 +6,10 @@ LSH Case Management System (CMS), the practice CRM used by every LSH training pr
 
 The sidebar no longer lists everyone's cases. Cases trainees save go into the **Case Library** together with the Training Library mock cases, and nothing is listed until you search, the way a front desk looks a caller up on a live call (`case-library.js`).
 
-- **Search from anywhere:** the **🔍 Search cases** button in the top bar (or **Ctrl/Cmd+K**), the sidebar search, or **🔍 Open Case Library** in the sidebar. Search by client name, date of the accident (DOL), date of birth, phone, claim/policy #, plate or case ID. Each result shows its DOL (and DOB for mock cases); **My cases** lists your own saved cases and drafts.
+- **Search bar above the case:** type in the 🔍 search bar at the top of the case workspace (or press **Ctrl/Cmd+K**) and matching files drop down under it; click one (or use the arrow keys and Enter) to open it. Trainees never need to open a library. Search by client name, date of the accident (DOL), date of birth, phone, claim/policy #, plate or case ID. Each result shows its DOL (and DOB for mock cases).
+- **Case Library window:** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**: your own saved cases and drafts) and the ☎ firm directory.
 - **Same name, different file:** when several results share a client name, the Case Library (and the drill's search) says so and asks for the DOL and DOB before you open one.
-- **During a Front Desk Drill call**, a mock case opened from the top-bar search counts as the call's pick, so receptionists never need the Training Library.
+- **During a Front Desk Drill call**, a mock case opened from the search bar counts as the call's pick, so receptionists never need the Training Library.
 - Drafts stay visible only to their owner and Admins (enforced server-side, as before). **Export Case List** is for Admins only, since it lists every trainee's cases. Admins still browse all cases in Master Control → Case Logs.
 
 ## Training Library (mock cases)
@@ -30,7 +31,7 @@ What the cases cover, from starter to advanced: every phase from Intake to Litig
 Sidebar → **📞 Front Desk Drill · scored** (or open the CMS with `?drill=1`). A drill is 5, 8, 12 or all 33 incoming calls, picked at random from `DRILL_CALLS` in `mock-cases.js`. For each call the trainee:
 
 1. **Asks the caller** for identifiers (full name, date of birth, address, SSN last 4, callback number, relationship, date of the accident). The caller answers from a script, and some answers are wrong on purpose: a wrong DOB, only two identifiers, a new address that isn't on file, a relative who knows the client's details.
-2. **Finds the case** with the search (or the 🔍 top-bar search), by whatever the caller gave: name, phone, DOB, DOL, claim or policy number, account number, plate, report number or case ID. Some callers only give a claim number or a plate. One is a brand-new caller who isn't in the system. Some names are on two or three files: the DOL and the DOB pick the right one. Opening a result loads the file view-only in the editor; **▭ Case** hides the panel to read it.
+2. **Finds the case** with the drill's search (or the 🔍 search bar above the case), by whatever the caller gave: name, phone, DOB, DOL, claim or policy number, account number, plate, report number or case ID. Some callers only give a claim number or a plate. One is a brand-new caller who isn't in the system. Some names are on two or three files: the DOL and the DOB pick the right one. Opening a result loads the file view-only in the editor; **▭ Case** hides the panel to read it.
 3. **Authenticates**: the client (or a minor's guardian), an authorized person on file (authorization, POA, estate administrator), not verified, not authorized, a business caller, or a new caller.
 4. **Handles the call**: four options, shuffled.
 
@@ -69,7 +70,7 @@ Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves 
     - every drill call pointing at a real case, with a valid auth code and answer;
     - callers the key marks verified giving details that match the file (and "not verified" callers not matching);
     - files that share a client name having different dates of loss.
-- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, a drill pick from the top-bar search, and editing, reloading and resetting a library case's notes.
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes.
 
 To run them locally: `node .github/scripts/check-site.mjs`, `node .github/scripts/check-data.mjs`, `node .github/scripts/smoke.cjs` (needs Playwright).
 
