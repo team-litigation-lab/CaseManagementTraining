@@ -55,13 +55,13 @@
             <button onclick="downloadTrainingCalendar()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-2">🗓️ Training Simulation Calendar (.ics)</button>
             <button onclick="openTraineeDashboard()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">📊 My Dashboard</button>
 
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Repository</p>
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Library</p>
             <form autocomplete="off" onsubmit="return false;" style="margin:0;">
-                <input type="search" id="repo-search" class="repo-search-input" name="case-repo-filter-q" oninput="renderRepo()" placeholder="Search by client name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" style="width:100%; padding:8px 10px; margin-bottom:10px; border-radius:6px; border:1px solid #1e2c4d; background:#0d1c3d; color:white; font-size:11px; outline:none;">
+                <input type="search" id="repo-search" class="repo-search-input" name="case-repo-filter-q" oninput="renderRepo()" placeholder="Search name, DOL, DOB, claim #..." aria-label="Search the Case Library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" style="width:100%; padding:8px 10px; margin-bottom:10px; border-radius:6px; border:1px solid #1e2c4d; background:#0d1c3d; color:white; font-size:11px; outline:none;">
             </form>
             <div id="repo-list" class="space-y-3 mb-2"></div>
             <div id="repo-count-note" style="font-size:9.5px; color:#64748b; margin-bottom:8px;"></div>
-            <button onclick="openAllCasesModal()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">View All Files</button>
+            <button onclick="openCaseLibrary()" class="w-full border border-slate-700 text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase hover:border-orange-500 hover:text-orange-500 mb-6">🔍 Open Case Library</button>
 
             <button onclick="saveCase()" class="w-full bg-[#10b981] hover:bg-emerald-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Save Case</button>
             <button onclick="archiveCaseAsDraft()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-black text-[11px] uppercase shadow-lg mb-2">Archive Case (Save as Draft)</button>
@@ -69,7 +69,7 @@
             <div id="autosave-indicator" style="font-size:9.5px; color:#64748b; text-align:center; margin-bottom:12px; opacity:0.55; transition:opacity 0.3s;">Autosave active — drafts only, not final</div>
 
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="exportRepo()" class="w-full h-9 flex items-center justify-center bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-black rounded uppercase leading-none col-span-2" style="box-sizing:border-box;">Export Case List</button>
+                <button id="export-repo-btn" onclick="exportRepo()" class="w-full h-9 flex items-center justify-center bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-black rounded uppercase leading-none col-span-2" style="box-sizing:border-box;">Export Case List</button>
             </div>
         </div>
         <div id="session-footer" style="margin:16px;"></div>
@@ -792,19 +792,6 @@
         </div>
     </div>
 
-    <!-- ===== ALL CASES MODAL ===== -->
-    <div class="modal-overlay no-print" id="all-cases-modal">
-        <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
-            <h2 class="serif">All Archived Cases</h2>
-            <div class="sub mono">Full Case Repository</div>
-            <input type="text" id="all-cases-search" oninput="renderAllCasesModal()" placeholder="Search by client name..." style="width:100%; padding:9px 12px; margin-bottom:12px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
-            <div id="all-cases-list" style="overflow-y:auto; flex:1;"></div>
-            <div class="modal-btn-row">
-                <button class="btn-ghost" onclick="closeAllCasesModal()">Close</button>
-            </div>
-        </div>
-    </div>
-
     <!-- ===== MONITOR CASE MODAL (Admin > Monitoring > click a trainee) ===== -->
     <div class="modal-overlay no-print" id="monitor-case-modal" style="z-index:2950;">
         <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
@@ -878,5 +865,6 @@
     <script src="mock-cases.js"></script>
     <script src="training-library.js"></script>
     <script src="front-desk-drill.js"></script>
+    <script src="case-library.js"></script>
 </body>
 </html>

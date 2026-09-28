@@ -9,9 +9,15 @@
       course a case came from.
    2. Training Library. The hardcoded mock cases in mock-cases.js open
       in the normal case editor as VIEW ONLY (nothing can be typed,
-      saved, archived or autosaved). "Work on a practice copy" makes the
-      editor editable; Save Case then creates the trainee's own case,
-      stamped with content.trainingLibraryId.
+      saved, archived or autosaved), except the Notes and Tasks tabs:
+      what a user adds or edits there (a call they logged, a task they
+      set) is saved for that user (/api/mock-case-updates) and comes
+      back when they reopen the case. "Work on a practice copy" makes
+      the whole editor editable; Save Case then creates the trainee's
+      own case, stamped with content.trainingLibraryId.
+      Only Admins see the Training Library button. Trainees find mock
+      cases by searching the Case Library (case-library.js), and every
+      way into the library (the banner, ?library=1) takes them there.
    3. Caller scenarios. For the front desk: how to verify the caller on
       this file, the calls it gets, and the model handling (hidden until
       the trainee reveals it; always shown to Admins).
@@ -59,9 +65,14 @@
     window.mockIsViewOnly = () => !!(mockId && mockViewOnly);
     window.mockCurrentId = () => mockId;
     // Called by the save/archive/update buttons. Returns true (and explains) when saving must be blocked.
+    // The case itself never saves; pending Notes and Tasks updates are saved right away instead.
     window.mockBlocksSave = function (silent) {
         if (!(mockId && mockViewOnly)) return false;
-        if (!silent && typeof showToast === 'function') showToast('This is a Training Library case (view only). Click "Work on a practice copy" to make your own copy you can save.', 'info', 5000);
+        const pending = updatesPending();
+        if (pending) saveUpdates();
+        if (!silent && typeof showToast === 'function') showToast(pending || upd.saved
+            ? 'Your Notes and Tasks on this Training Library case are saved to your account. The rest of the case is view only: click "Work on a practice copy" to save a full copy of your own.'
+            : 'This is a Training Library case (view only). You can add Notes and Tasks, or click "Work on a practice copy" to make your own copy you can save.', 'info', 5000);
         return true;
     };
     // Extra keys stamped on every saved case payload.
@@ -94,7 +105,7 @@
     // other drivers), phone numbers, email, DOB, address, claim/policy/file numbers,
     // report numbers, plates, and the narrative. Digits-only matching for numbers.
     const searchText = (c) => {
-        const bits = [c.id, c.client.name, c.client.phone, c.client.email, c.client.dob, c.client.address,
+        const bits = [c.id, c.client.name, c.client.phone, c.client.email, c.client.dob, c.client.address, c.dateOfLoss,
             c.client.emergency && c.client.emergency.name, c.client.emergency && c.client.emergency.phone,
             c.caseType, c.caseTypeOther, c.phase, c.attorney, c.caseManager, c.narrative,
             c.police && c.police.number];
@@ -131,6 +142,15 @@
     #capture-area.mock-ro .add-btn,#capture-area.mock-ro .hub-btn,#capture-area.mock-ro .revert-btn,#capture-area.mock-ro td button,#capture-area.mock-ro .pdf-card > button{display:none !important}
     #capture-area.mock-ro [contenteditable]{cursor:default;caret-color:transparent}
     #capture-area.mock-ro select:disabled,#capture-area.mock-ro input[readonly]{opacity:1;cursor:default}
+    #capture-area.mock-ro.mock-upd-ready .mock-upd .add-btn,#capture-area.mock-ro.mock-upd-ready .mock-upd td button{display:inline-block !important}
+    #capture-area.mock-ro.mock-upd-ready .mock-upd [contenteditable]{cursor:text;caret-color:auto}
+    .mock-upd-bar{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #f97316;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:#7c2d12;line-height:1.45}
+    #capture-area.mock-ro .mock-upd-bar{display:flex}
+    .mock-upd-bar .mub-text{flex:1;min-width:220px}
+    .mock-upd-bar .mub-state{font-weight:800;color:#047857;white-space:nowrap}
+    .mock-upd-bar .mub-state[data-state="error"]{color:#b91c1c;white-space:normal}
+    .mock-upd-bar button{font-size:10.5px;font-weight:800;text-transform:uppercase;background:#fff;border:1px solid #f97316;color:#c2410c;border-radius:6px;padding:6px 10px;cursor:pointer}
+    #capture-area:not(.mock-upd-ready) .mock-upd-bar button{display:none}
     .lib-btn{width:100%;border:1px solid #f97316;color:#fdba74;background:rgba(249,115,22,.08);padding:9px 0;border-radius:8px;font-size:10.5px;font-weight:800;text-transform:uppercase;cursor:pointer;margin-bottom:8px}
     .lib-btn:hover{background:#f97316;color:#fff}
     .lib-prog{width:100%;padding:7px 8px;border-radius:6px;border:1px solid #1e2c4d;background:#0d1c3d;color:#cbd5e1;font-size:10.5px;margin-bottom:22px}
@@ -199,7 +219,20 @@
             </div>
             <div id="mock-calls-panel" class="no-print" aria-hidden="true"></div>`);
         }
+        // Notes and Tasks stay editable on a library case (see "Notes & Tasks updates" below).
+        ['pane-notes', 'pane-tasks'].forEach(id => {
+            const pane = $id(id);
+            if (!pane || pane.querySelector('.mock-upd-bar')) return;
+            pane.classList.add('mock-upd');
+            pane.insertAdjacentHTML('afterbegin', `<div class="mock-upd-bar no-print"><span class="mub-text">✎ <b>Training Library case:</b> you can add and edit Notes and Tasks here (log the calls you take). They save to your account automatically and come back when you reopen this case.</span><span class="mub-state"></span><button onclick="mockResetUpdates()">↺ Reset to the original</button></div>`);
+        });
         paintProgramUI();
+        paintRoleUI();
+    }
+
+    // Trainees don't browse the Training Library: they search the Case Library.
+    function paintRoleUI() {
+        const btn = $id('lib-open-btn'); if (btn) btn.style.display = isAdmin() ? '' : 'none';
     }
 
     function paintProgramUI() {
@@ -213,6 +246,7 @@
     /* ---------- library modal ---------- */
     window.openTrainingLibrary = function (tab) {
         if (typeof hasAuthorizedAccess === 'function' && !hasAuthorizedAccess()) return;
+        if (!isAdmin() && typeof window.openCaseLibrary === 'function') { window.openCaseLibrary(tab === 'desk' ? 'desk' : 'search'); return; }
         buildUI();
         libState.tab = tab || libState.tab || 'cases';
         renderLibraryList();
@@ -249,6 +283,7 @@
         </div>`).join('') : '<p style="font-size:12px;color:#94a3b8">No mock cases match.</p>';
     }
 
+    window.mockDeskHTML = () => deskHTML();
     function deskHTML() {
         const f = window.MOCK_FIRM || { directory: [], rules: [] };
         return `<p style="font-size:13px;color:#0f2148;margin:0 0 4px"><b>${esc(f.name)}</b></p>
@@ -441,24 +476,21 @@
             addDocument(d.cat); const tr = added('doc-body'); if (!tr) return;
             setVal(editIn(cells(tr)[1]), d.summary);
         });
-        [['notes', 'note-body'], ['tasks', 'task-body']].forEach(([key, body]) => {
-            (c[key] || []).forEach(n => {
-                addRow(body); const tr = added(body); if (!tr) return;
-                const td = cells(tr);
-                setVal(editIn(td[0]), n.date); setVal(selIn(td[1]), n.staff); setVal(editIn(td[2]), n.text);
-            });
-        });
+        Object.entries(UPD_BODIES).forEach(([key, body]) => fillRows(body, c[key]));
         if (typeof toggleOwnerExtra === 'function') toggleOwnerExtra();
         if (typeof toggleDriverInsuredExtra === 'function') toggleDriverInsuredExtra();
         if (typeof updateTotals === 'function') updateTotals();
     }
 
     /* ---------- view-only mode ---------- */
-    const blockEdit = (e) => { if (mockId && mockViewOnly) { e.preventDefault(); e.stopPropagation(); } };
+    // The Notes and Tasks tabs (.mock-upd) are open for editing once the user's saved updates have loaded.
+    const updatesOpen = () => { const a = $id('capture-area'); return !!(a && a.classList.contains('mock-upd-ready')); };
+    const inUpdates = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('.mock-upd') && updatesOpen()); };
+    const blockEdit = (e) => { if (mockId && mockViewOnly && !inUpdates(e.target)) { e.preventDefault(); e.stopPropagation(); } };
     const blockKeys = (e) => {
         if (!(mockId && mockViewOnly)) return;
         const t = e.target;
-        if (!t || !t.closest || !t.closest('#capture-area [contenteditable]')) return;
+        if (!t || !t.closest || !t.closest('#capture-area [contenteditable]') || inUpdates(t)) return;
         if ((e.ctrlKey || e.metaKey) && /^[ca]$/i.test(e.key)) return; // copy / select all
         if (e.key.startsWith('Arrow') || e.key === 'Tab' || e.key === 'Home' || e.key === 'End' || e.key === 'Escape') return;
         e.preventDefault();
@@ -471,9 +503,14 @@
             area.addEventListener('paste', blockEdit, true);
             area.addEventListener('drop', blockEdit, true);
             area.addEventListener('keydown', blockKeys, true);
+            const changed = (e) => { if (inUpdates(e.target)) scheduleUpdateSave(); };
+            area.addEventListener('input', changed, true);
+            area.addEventListener('change', changed, true);
+            Object.values(UPD_BODIES).forEach(id => { const b = $id(id); if (b) new MutationObserver(scheduleUpdateSave).observe(b, { childList: true }); });
             listenersOn = true;
         }
         area.classList.toggle('mock-ro', !!on);
+        if (!on) area.classList.remove('mock-upd-ready');
         area.querySelectorAll('select').forEach(s => {
             if (s.closest('.tab-btn')) return;
             if (on) { if (!s.disabled) { s.disabled = true; s.dataset.mockRo = '1'; } }
@@ -482,14 +519,145 @@
         ['attorney-field', 'case-manager-field'].forEach(id => { const el = $id(id); if (el) el.readOnly = !!on; });
     }
 
+    /* ---------- Notes & Tasks updates on a library case ----------
+       The library original never changes, but its Notes and Tasks tabs are
+       editable so trainees can log the calls they take and the tasks they set.
+       What a user has there is saved for that user only (/api/mock-case-updates,
+       debounced, and flushed before the editor is cleared) and replaces the
+       original Notes and Tasks when they reopen the case. Editing opens only
+       after their saved updates have loaded, so a slow load can't lead to
+       saving over them. "Reset to the original" deletes them. */
+    const UPD_BODIES = { notes: 'note-body', tasks: 'task-body' };
+    const upd = { id: null, base: '', seq: 0, timer: null, pending: false, saved: false, chain: Promise.resolve() };
+    // A contenteditable cell's text with its line breaks, even when its tab is hidden
+    // (innerText drops <br> on elements that aren't rendered).
+    function cellText(el) {
+        if (!el) return '';
+        const c = el.cloneNode(true);
+        c.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+        c.querySelectorAll('div, p').forEach(d => d.prepend('\n'));
+        return c.textContent.replace(/\u00a0/g, ' ').replace(/^\n+/, '').trimEnd();
+    }
+    function readRows(bodyId) {
+        const box = $id(bodyId);
+        return box ? [...box.children].map(tr => {
+            const td = cells(tr);
+            return { date: cellText(editIn(td[0])).trim(), staff: (selIn(td[1]) || {}).value || '', text: cellText(editIn(td[2])) };
+        }) : [];
+    }
+    const snapshotRows = () => JSON.stringify({ notes: readRows(UPD_BODIES.notes), tasks: readRows(UPD_BODIES.tasks) });
+    function fillRows(bodyId, list) {
+        (list || []).forEach(n => {
+            addRow(bodyId); const tr = added(bodyId); if (!tr) return;
+            const td = cells(tr);
+            const date = editIn(td[0]); if (date) date.innerText = n.date || '';
+            setVal(selIn(td[1]), n.staff); setVal(editIn(td[2]), n.text);
+        });
+    }
+    const updatesPending = () => !!(mockId && mockViewOnly && upd.id === mockId && updatesOpen() && snapshotRows() !== upd.base);
+    function paintUpdState(state, detail) {
+        const text = { loading: 'Loading your updates…', loaded: '✓ Your saved updates are shown', saving: 'Saving…',
+            saved: `✓ Saved${detail ? ' ' + detail : ''}`, error: `⚠ Couldn't save${detail ? ` (${detail})` : ''}. Your changes are still on screen; they'll be saved with your next change.` }[state] || '';
+        document.querySelectorAll('.mub-state').forEach(el => { el.textContent = text; el.dataset.state = state || ''; });
+    }
+    function openUpdates() {
+        const area = $id('capture-area'); if (!area) return;
+        area.classList.add('mock-upd-ready');
+        area.querySelectorAll('.mock-upd select').forEach(s => { if (s.dataset.mockRo) { s.disabled = false; delete s.dataset.mockRo; } });
+    }
+    async function loadUpdates(id) {
+        const seq = ++upd.seq;
+        clearTimeout(upd.timer); upd.pending = false;
+        upd.id = id; upd.saved = false; upd.base = snapshotRows();
+        paintUpdState('loading');
+        let u = null;
+        try {
+            const res = await fetch('/api/mock-case-updates?mock=' + encodeURIComponent(id), { credentials: 'include' });
+            const data = await res.json();
+            u = data && data.success && data.updates;
+        } catch (e) { /* offline: keep the library original */ }
+        if (seq !== upd.seq || mockId !== id || !mockViewOnly) return;
+        if (u) {
+            Object.entries(UPD_BODIES).forEach(([key, bodyId]) => {
+                if (!Array.isArray(u[key])) return;
+                $id(bodyId).innerHTML = '';
+                fillRows(bodyId, u[key]);
+            });
+            upd.saved = true;
+        }
+        upd.base = snapshotRows();
+        openUpdates();
+        paintUpdState(u ? 'loaded' : '');
+    }
+    function scheduleUpdateSave() {
+        if (!(mockId && mockViewOnly) || upd.id !== mockId || !updatesOpen()) return;
+        clearTimeout(upd.timer); upd.pending = true;
+        upd.timer = setTimeout(() => saveUpdates(), 1200);
+    }
+    // Takes what's on screen now (before any await, so a flush just before the editor
+    // is cleared still has it) and queues it: saves reach the server in order, so the
+    // newest always lands last. On page exit it goes straight out with keepalive.
+    function saveUpdates(opts) {
+        opts = opts || {};
+        clearTimeout(upd.timer); upd.pending = false;
+        if (!updatesPending()) return upd.chain;
+        const id = mockId, snap = snapshotRows();
+        upd.base = snap;
+        const post = () => postUpdates(id, snap, !!opts.keepalive);
+        upd.chain = opts.keepalive ? post() : upd.chain.then(post);
+        return upd.chain;
+    }
+    async function postUpdates(id, snap, keepalive) {
+        const mine = () => upd.id === id;
+        if (mine()) paintUpdState('saving');
+        try {
+            const res = await fetch('/api/mock-case-updates', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', keepalive,
+                body: JSON.stringify(Object.assign({ mock: id }, JSON.parse(snap)))
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!(data && data.success)) throw new Error((data && data.error) || '');
+            if (mine()) { upd.saved = true; paintUpdState('saved', new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })); }
+        } catch (e) {
+            if (mine() && upd.base === snap) upd.base = ''; // not saved: the next change (or Save Case) sends it again
+            if (mine()) paintUpdState('error', e && e.message);
+        }
+    }
+    // Called before anything clears the editor (app.js: blankCaseEditorContent, loadCase).
+    window.mockFlushUpdates = function () { if (updatesPending()) saveUpdates(); };
+    const flushOnLeave = () => { if (upd.pending) saveUpdates({ keepalive: true }); };
+    window.addEventListener('pagehide', flushOnLeave);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushOnLeave(); });
+    const activeTab = () => { const p = document.querySelector('#capture-area .tab-pane.active'); return p ? p.id.replace(/^pane-/, '') : 'profile'; };
+    window.mockResetUpdates = async function () {
+        const id = mockId; if (!id || !mockViewOnly) return;
+        if (!confirm(`Reset the Notes and Tasks on ${id} to the Training Library original? Your saved updates on this case will be deleted.`)) return;
+        clearTimeout(upd.timer); upd.pending = false;
+        upd.base = snapshotRows();
+        await upd.chain; // a save still on its way must land before the delete, not after
+        try {
+            const res = await fetch('/api/mock-case-updates?mock=' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+            const data = await res.json().catch(() => ({}));
+            if (!(data && data.success)) throw new Error();
+        } catch (e) {
+            if (typeof showToast === 'function') showToast('Couldn\'t reset right now. Check your connection and try again.', 'error');
+            return;
+        }
+        if (mockId !== id || !mockViewOnly) return; // they moved on while it was resetting
+        upd.base = snapshotRows(); // nothing left to flush: the reopen below starts from the original
+        openMockCase(id, { silent: true, tab: activeTab() });
+        if (typeof showToast === 'function') showToast(`Notes and Tasks on ${id} are back to the original.`, 'success', 3000);
+    };
+
     function paintBanner() {
         const b = $id('mock-banner'); if (!b) return;
         const c = mockId && findCase(mockId);
         if (!c) { b.classList.remove('open'); b.innerHTML = ''; closeCallsPanel(); return; }
         b.classList.add('open');
+        const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="openCaseLibrary()">🔍 Search cases</button>`;
         b.innerHTML = mockViewOnly
-            ? `<span class="mb-tag">TRAINING LIBRARY · ${c.id}</span><span><b>${esc(c.client.name)}</b> — view only. Look things up the way you would on a live call.</span><span class="mb-sp"></span>
-               <button onclick="openCallsPanel()">☎ Caller scenarios</button><button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button><button onclick="openTrainingLibrary()">📚 Library</button><button onclick="closeMockCase()">✕ Close</button>`
+            ? `<span class="mb-tag">TRAINING LIBRARY · ${c.id}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span><span class="mb-sp"></span>
+               <button onclick="openCallsPanel()">☎ Caller scenarios</button><button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
             : `<span class="mb-tag">PRACTICE COPY · ${c.id}</span><span>Your own copy of <b>${esc(c.client.name)}</b>. Save Case adds it to your cases; the library original never changes.</span><span class="mb-sp"></span>
                <button onclick="openCallsPanel()">☎ Caller scenarios</button><button onclick="openMockCase('${c.id}')">↺ Back to the library original</button>`;
     }
@@ -509,14 +677,16 @@
         const idField = $id('case-id-field'); if (idField) idField.innerText = `${c.id} · TRAINING LIBRARY`;
         setReadOnly(true);
         paintBanner();
+        loadUpdates(c.id);
         closeTrainingLibrary();
-        if (typeof showTab === 'function') showTab('profile');
+        if (typeof showTab === 'function') showTab(opts.tab || 'profile');
         if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
         if (!opts.silent && typeof showToast === 'function') showToast(`Opened ${c.id}: ${c.client.name} (view only)`, 'info', 3000);
         return true;
     };
     window.startPracticeCopy = function () {
         if (!mockId) return;
+        if (updatesPending()) saveUpdates(); // keep the library-case notes too; the copy carries them as well
         mockViewOnly = false;
         setReadOnly(false);
         if (typeof currentCaseId !== 'undefined') { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }

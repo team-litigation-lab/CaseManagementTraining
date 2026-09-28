@@ -6,8 +6,9 @@
    incoming calls (DRILL_CALLS in mock-cases.js). For every call the
    trainee must:
      1. ask the caller for identifiers (name, DOB, address, SSN last 4,
-        callback number, relationship) — the caller answers from a
-        script, and some answers are wrong on purpose;
+        callback number, relationship, date of the accident) — the
+        caller answers from a script, and some answers are wrong on
+        purpose;
      2. FIND the caller's case with the CMS search (by name, phone,
         claim #, plate…), open it and read the file — or decide the
         caller isn't in the system;
@@ -15,7 +16,9 @@
         not authorized, business caller, or a new caller;
      4. HANDLE the call (one of four actions).
    Scoring per call (100): find 30 · authenticate 40 (decision 30 +
-   asked the right identifiers 10) · handle 30. Time per call is
+   asked the right identifiers 10; when two or more files share the
+   client's name, that includes the date of the accident) · handle 30.
+   Time per call is
    recorded. Results are saved to /api/drill-results; trainees see
    their history and Admins see the whole team.
    ========================================================= */
@@ -36,7 +39,8 @@
     ];
     const ASKS = [
         ['name', 'Full name'], ['dob', 'Date of birth'], ['address', 'Address'], ['ssn4', 'Last 4 of SSN'],
-        ['callback', 'Callback number'], ['relationship', 'Relationship to the client']
+        ['callback', 'Callback number'], ['relationship', 'Relationship to the client'],
+        ['dol', 'Date of the accident (DOL)']
     ];
     const PERSONAL = ['client', 'authorized', 'failed'];
 
@@ -69,7 +73,8 @@
     .fdd-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;margin-top:5px;cursor:pointer;background:#fff}
     .fdd-row:hover{border-color:#f97316}.fdd-row.sel{border-color:#10b981;background:#ecfdf5}
     .fdd-row .id{font-family:'IBM Plex Mono',monospace;font-weight:800;color:#f97316;font-size:11px;width:48px;flex-shrink:0}
-    .fdd-row .nm{font-weight:700;font-size:12.3px;flex:1;min-width:0}.fdd-row .mt{font-size:10.5px;color:#64748b}
+    .fdd-row .nm{font-weight:700;font-size:12.3px;flex:1;min-width:0}.fdd-row .mt{font-size:10.5px;color:#64748b}.fdd-row .mt b{color:#0f2148}
+    .fdd-dup{margin:6px 0 2px;font-size:11.5px;line-height:1.45;color:#7c2d12;background:#fff7ed;border-left:3px solid #f97316;border-radius:5px;padding:6px 8px}
     .fdd-opt{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border:1px solid #e2e8f0;border-radius:8px;margin-top:5px;cursor:pointer;background:#fff;font-size:12.3px;line-height:1.4}
     .fdd-opt input{margin-top:2px}
     #fdd-panel label.fdd-opt,#fdd-panel label.fdd-opt span{text-transform:none !important;letter-spacing:normal !important;color:#0f172a !important;font-size:12.3px !important;font-weight:500 !important;margin:0}
@@ -105,6 +110,10 @@
     const shuffle = (a) => { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
     const fmtSec = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const caseOf = (id) => (window.MOCK_CASES || []).find(c => c.id === id);
+    const nameKey = (c) => String(c.client.name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    // How many library files carry this case's client name (MC-01, MC-21 and MC-22 are all
+    // "Maria Santos"). With more than one, only the date of the accident tells them apart.
+    const sameNameCount = (id) => { const k = caseOf(id); return k ? (window.MOCK_CASES || []).filter(c => nameKey(c) === nameKey(k)).length : 0; };
 
     /* ---------- open / close ---------- */
     window.openFrontDeskDrill = function () {
@@ -164,6 +173,9 @@
         if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true });
         paint();
     };
+    // True while a call is on the line and not yet scored: the top-bar case search
+    // (case-library.js) then records the case it opens as this call's pick.
+    window.fddOnCall = () => !!(D && screen === 'call' && D.cur && !D.cur.submitted);
     window.fddSetAuth = function (v) { if (!D.cur.submitted) { D.cur.auth = v; paintButtons(); } };
     window.fddSetAction = function (v) { if (!D.cur.submitted) { D.cur.action = Number(v); paintButtons(); } };
 
@@ -175,6 +187,7 @@
         if (PERSONAL.includes(c.auth)) idsOk = cur.asked.includes('name') && cur.asked.includes('dob') && (cur.asked.includes('address') || cur.asked.includes('ssn4'));
         else if (c.auth === 'unauthorized') idsOk = cur.asked.includes('name') && cur.asked.includes('relationship');
         else idsOk = cur.asked.includes('name') && cur.asked.includes('callback');
+        if (c.mock && sameNameCount(c.mock) > 1) idsOk = idsOk && cur.asked.includes('dol');
         const actOk = cur.action === c.answer;
         const secs = Math.round((Date.now() - cur.t0) / 1000);
         return { id: c.id, mock: c.mock, find, authOk, idsOk, actOk, secs,
@@ -248,11 +261,11 @@
         return `<div class="fdd-sec"><h4>How it works</h4>
             <p style="margin:0 0 6px;line-height:1.5">A caller is on the line. For each call:</p>
             <ol style="margin:0 0 6px 18px;padding:0;line-height:1.55">
-              <li><b>Ask</b> the caller for what you need (name, date of birth, address, SSN last 4, callback, relationship).</li>
-              <li><b>Find</b> their case with the search (name, phone, claim #, plate…), open it and read the file. Some callers aren't in the system.</li>
+              <li><b>Ask</b> the caller for what you need (name, date of birth, address, SSN last 4, callback, relationship, date of the accident).</li>
+              <li><b>Find</b> their case with the search (name, phone, claim #, plate, DOL…), open it and read the file. Some callers aren't in the system, and some names are on more than one file: the date of the accident and the date of birth tell you which one.</li>
               <li><b>Authenticate</b>: compare what they told you with the file. Some callers get it wrong on purpose.</li>
               <li><b>Handle</b> the call.</li></ol>
-            <p style="margin:0;color:#64748b;font-size:12px">Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. Time per call is recorded. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The rules are in 📚 Training Library → ☎ Firm directory.</p></div>
+            <p style="margin:0;color:#64748b;font-size:12px">Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. Time per call is recorded. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The rules are in 🔍 Case Library → ☎ Firm directory.</p></div>
             <div class="fdd-sec"><h4>Start a drill</h4>
             <div style="display:flex;gap:8px;align-items:center"><select id="fdd-len" style="padding:8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px">
                 <option value="5">5 calls (~10 min)</option><option value="8" selected>8 calls (~15 min)</option><option value="12">12 calls (~25 min)</option><option value="${total}">All ${total} calls</option></select>
@@ -278,7 +291,8 @@
     }
 
     function answerFor(c, k) {
-        const v = c.gives[k];
+        let v = c.gives[k];
+        if (k === 'dol' && v == null && caseOf(c.mock)) v = caseOf(c.mock).dateOfLoss;
         if (v == null) return c.auth === 'business' ? 'Caller: "I\'m calling for the company; I don\'t have that."' : 'Caller: "I don\'t know / I\'d rather not say."';
         return `Caller: "${v}"`;
     }
@@ -307,17 +321,21 @@
         const cur = D.cur, q = (cur.q || '').trim();
         if (q.length < 2) { box.innerHTML = '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">Type at least 2 characters.</p>'; return; }
         const hits = (window.mockSearch ? window.mockSearch(q) : []).slice(0, 12);
-        box.innerHTML = hits.length ? hits.map(c => `<div class="fdd-row ${cur.selected === c.id ? 'sel' : ''}" onclick="fddPick('${c.id}')"><span class="id">${c.id}</span><span class="nm">${esc(c.client.name)}<br><span class="mt">${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)} · DOL ${esc(c.dateOfLoss)}</span></span></div>`).join('')
+        const dup = [...new Set(hits.map(nameKey))].filter(k => hits.filter(c => nameKey(c) === k).length > 1);
+        const warn = dup.length ? `<p class="fdd-dup">⚠ More than one file is named ${dup.map(k => `<b>${esc(hits.find(c => nameKey(c) === k).client.name)}</b>`).join(' and ')}. Match the date of the accident (DOL) and the date of birth before you open one.</p>` : '';
+        box.innerHTML = hits.length ? warn + hits.map(c => `<div class="fdd-row ${cur.selected === c.id ? 'sel' : ''}" onclick="fddPick('${c.id}')"><span class="id">${c.id}</span><span class="nm">${esc(c.client.name)}<br><span class="mt">DOL <b>${esc(c.dateOfLoss)}</b> · DOB ${esc(c.client.dob)} · ${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}</span></span></div>`).join('')
             : '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">No cases match.</p>';
     }
 
     function feedbackHTML(entry, r) {
         const c = entry.call, k = c.mock && caseOf(c.mock);
         const cls = r.score >= 85 ? 'ok' : r.score >= 60 ? 'mid' : 'bad';
-        const need = PERSONAL.includes(c.auth) ? 'name, date of birth, and address or SSN last 4'
-            : c.auth === 'unauthorized' ? 'their name and their relationship to the client' : 'their name and a callback number';
+        const same = c.mock ? sameNameCount(c.mock) : 0;
+        const need = (PERSONAL.includes(c.auth) ? 'name, date of birth, and address or SSN last 4'
+            : c.auth === 'unauthorized' ? 'their name and their relationship to the client' : 'their name and a callback number')
+            + (same > 1 ? `, plus the date of the accident (${same} files are named ${k.client.name})` : '');
         return `<div class="fdd-fb ${cls}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${r.score}/100</b><span>⏱ ${fmtSec(r.secs)}</span></div>
-            <div>${r.find ? '✓' : '✗'} <b>Find:</b> ${c.mock ? `${esc(c.mock)} · ${esc(k ? k.client.name : '')}` : 'not in the system'}${r.find ? '' : ` (you picked ${esc(r.picked.selected)})`}</div>
+            <div>${r.find ? '✓' : '✗'} <b>Find:</b> ${c.mock ? `${esc(c.mock)} · ${esc(k ? k.client.name : '')}${k ? ` (DOL ${esc(k.dateOfLoss)})` : ''}` : 'not in the system'}${r.find ? '' : ` (you picked ${esc(r.picked.selected)})`}</div>
             <div>${r.authOk ? '✓' : '✗'} <b>Authenticate:</b> ${esc((AUTH.find(a => a[0] === c.auth) || [])[1])}</div>
             <div>${r.idsOk ? '✓' : '✗'} <b>Asked for:</b> ${need}</div>
             <div>${r.actOk ? '✓' : '✗'} <b>Handle:</b> ${esc(c.actions[c.answer])}</div>

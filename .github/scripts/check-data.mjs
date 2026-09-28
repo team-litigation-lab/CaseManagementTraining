@@ -8,7 +8,9 @@
 //   - a drill call points at a case that doesn't exist, has an unknown auth
 //     code, or an answer index outside its options;
 //   - a caller the key says is verified gave details that don't match the file
-//     (or a "not verified" caller's details all match).
+//     (or a "not verified" caller's details all match);
+//   - two files with the same client name have the same date of loss (the DOL
+//     is how the front desk tells them apart, and the drill scores asking for it).
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
@@ -48,6 +50,13 @@ for (const c of MOCK_CASES) {
     for (const f of c.facilities || []) if (!SPECIALTIES.includes(f.specialty)) bad(`${where}: facility specialty "${f.specialty}" isn't an option`);
     for (const k of ['dateOfLoss', 'sol']) if (c[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(c[k])) bad(`${where}: ${k} must be MM/DD/YYYY`);
     if (!c.reception || !c.reception.verify || !(c.reception.calls || []).length) bad(`${where}: needs reception.verify and at least one reception call`);
+}
+const byName = {};
+for (const c of MOCK_CASES) {
+    const key = String((c.client || {}).name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const other = (byName[key] = byName[key] || []).find(o => o.dateOfLoss === c.dateOfLoss);
+    if (other) bad(`${c.id}: same client name and date of loss as ${other.id}; files that share a name need different DOLs`);
+    byName[key].push(c);
 }
 
 const AUTH = ['client', 'authorized', 'failed', 'unauthorized', 'business', 'newcaller'];

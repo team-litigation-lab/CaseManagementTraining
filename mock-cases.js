@@ -5,8 +5,16 @@
    (Receptionist / Front Desk, Intake, Case Management, EA/PA, …).
    They live in this file, not in the database, so they are identical
    for every trainee and can't be edited or deleted. Opening one loads
-   it into the case editor as VIEW ONLY; "Work on a practice copy"
-   lets a trainee save their own copy (a normal case they own).
+   it into the case editor as VIEW ONLY, except its Notes and Tasks:
+   what a trainee adds or edits there is saved for them only
+   (/api/mock-case-updates). "Work on a practice copy" lets a trainee
+   save their own copy (a normal case they own).
+
+   Some client names are on more than one file on purpose (the same
+   client with a second accident, or a different person with the same
+   name) so the front desk practices telling files apart by the date
+   of the accident and the date of birth. Files that share a name must
+   have different DOLs (.github/scripts/check-data.mjs checks it).
 
    All people, phone numbers (555-01xx), addresses, claim and policy
    numbers here are invented for training. SSNs are masked on purpose:
@@ -813,6 +821,187 @@ const MOCK_CASES = [
         verify: 'Administrator Carol Hammond only: her name, George Hammond\'s DOB (12/05/1949) and the address on file (8 Willow Creek Lane). Daniel Hammond and other relatives are NOT authorized.',
         calls: [{ from: 'Daniel Hammond (George\'s son)', ask: '"When does the family get the money from Dad\'s case?"', handle: 'Offer condolences. Not authorized (only the administrator, Carol). Don\'t discuss the case; take a message for Atty. Brooks (ext 202) / Priya Natarajan (ext 311) and suggest he speak with Carol.' }]
     }
+},
+/* ---------- Same name, different file: practice finding the right DOL ----------
+   MC-21 is Maria Santos's second file (same person as MC-01, older incident);
+   MC-22 is a different Maria Santos (different DOB). MC-23 and MC-24 do the
+   same for James Wilson (MC-06). A name search returns three files for each:
+   the caller's date of the accident (DOL) and date of birth pick the right one. */
+{
+    id: 'MC-21', level: 'Intermediate', programs: ['reception', 'cm'],
+    summary: 'Maria Santos\'s SECOND file (same client as MC-01): an older pharmacy slip and fall, settled, liens being negotiated. Her husband is authorized on this file only.',
+    client: { name: 'Maria Santos', phone: '(555) 010-4417', email: 'maria.santos@example.com', dob: '03/22/1988', ssn: 'XXX-XX-4821',
+        address: '1187 Willow Bend Dr, Riverton, GA 30301',
+        emergency: { name: 'Eduardo Santos', phone: '(555) 010-4418', relationship: 'Husband' },
+        employment: { status: 'Employed', employer: 'Brightside Dental Group', title: 'Dental Hygienist' } },
+    caseType: 'Slip and Fall', phase: 'Lien Negotiations', attorney: 'Atty. David Okafor', caseManager: 'Grace Kim',
+    dateOfLoss: '01/14/2025', sol: '01/14/2027', target: '$ 38,500.00',
+    narrative: 'Client slipped on a freshly mopped floor with no wet-floor sign at CareWay Pharmacy (Main St store) while picking up a prescription. Fell on her left knee and wrist. Torn meniscus treated with injections; no surgery. Settled 07/30/2026 for $38,500 (client accepted in writing). This is a different, older file from her 06/09/2026 car accident (MC-01).',
+    police: { agency: 'None (store incident report only)', number: 'CareWay IR-2025-0114-03', officer: 'Store manager Dana Kirk', narrative: 'Store incident report: customer fell near the pharmacy counter after the floor was mopped; no sign posted. Store took photos.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-88213340', group: 'GRP-55120' },
+    bi: [{ holder: 'CareWay Pharmacy Inc.', carrier: 'Summit Commercial Casualty', policy: 'SCC-GL-310477', claim: 'SCC-25-02281', adjuster: 'Owen Price', contact: '(555) 010-7722', liability: 'Yes', limits: '$1,000,000' }],
+    pipum: [],
+    liens: [
+        { type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-77120', amount: '$ 6,940.00' },
+        { type: 'Medical Lien', entity: 'Riverton Orthopedic Associates (LOP)', file: 'ROA-LOP-4417', amount: '$ 5,300.00' }
+    ],
+    facilities: [
+        { name: 'QuickCare Urgent Care', specialty: 'EMC', phone: '(555) 010-3301', email: 'records@quickcare.example.com', dates: '01/14/2025 – 01/14/2025', status: 'Discharged', charges: '$ 410.00' },
+        { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '01/28/2025 – 11/20/2025', status: 'Discharged', charges: '$ 8,900.00' },
+        { name: 'Motion Physical Therapy', specialty: 'Other', specialtyOther: 'Physical Therapy', phone: '(555) 010-3390', email: 'billing@motionpt.example.com', dates: '02/10/2025 – 06/30/2025', status: 'Discharged', charges: '$ 4,480.00' }
+    ],
+    chrono: [
+        { dos: ['01/14/2025'], facility: 'QuickCare Urgent Care', next: '', notes: 'Left knee and wrist pain after a fall. X-rays negative. Referred to orthopedics.' },
+        { dos: ['01/28/2025', '11/20/2025'], facility: 'Riverton Orthopedic Associates', next: '', notes: 'MRI: torn medial meniscus, left knee. Two injections. Released 11/20/2025; no surgery recommended.' }
+    ],
+    treatmentNotes: 'Treatment complete 11/20/2025. Specials $13,790.',
+    pd: null, lit: null,
+    finance: [{ date: '08/12/2026', staff: 'Lien Negotiator', desc: 'Settlement check $38,500 deposited to trust (cleared 08/19/2026)', amount: '$ 0.00' }],
+    docs: [
+        { cat: 'Case Files', summary: 'Retainer (01/20/2025). Communication authorization for husband Eduardo Santos, THIS FILE ONLY (02/03/2025). Signed release (07/30/2026).' },
+        { cat: 'Invoices', summary: 'Lien reduction requests sent 08/20/2026 to Peach State Health Plan and Riverton Orthopedic.' }
+    ],
+    notes: [
+        { date: '02/03/2025', staff: 'Intake Specialist', text: 'Client signed a communication authorization for her husband Eduardo Santos on this slip-and-fall file only.' },
+        { date: '08/20/2026', staff: 'Lien Negotiator', text: 'Reduction requests out to Peach State ($6,940) and the Riverton Ortho LOP ($5,300). Disbursement once both answer; no date promised to the client.' },
+        { date: '09/21/2026', staff: 'Case Manager', text: 'Client asked when she gets her money from the fall. Explained we are waiting on two lien reductions (Rosa Delgado). She knows her car-accident case is a separate file.' }
+    ],
+    tasks: [{ date: '09/21/2026', staff: 'Lien Negotiator', text: 'Follow up with Peach State subrogation on 10/05/2026 if no reply.' }],
+    reception: {
+        verify: 'Maria Santos · DOB 03/22/1988 · 1187 Willow Bend Dr or SSN last 4 (4821). SAME client as MC-01: ask for the date of the accident to open the right file. Husband Eduardo Santos is authorized on THIS file only, not on MC-01.',
+        calls: [
+            { from: 'Maria Santos (client)', ask: '"When do I get my money from my fall at the pharmacy?"', handle: 'Verify, then confirm the file by the date of the fall (01/14/2025), not the 2026 car accident. Settled; the firm is waiting on two lien reductions, so no date. Message Rosa Delgado (ext 341) / Grace Kim (ext 313). Log a Note on this file.' },
+            { from: 'Eduardo Santos (husband)', ask: '"I\'m calling about Maria\'s pharmacy fall. Did the health plan agree to lower its bill yet?"', handle: 'Verify him against this file (he is authorized here). Not yet: the reduction request went out 08/20; follow-up 10/05. Offer a callback from Rosa Delgado (ext 341). If he asks about her car-accident case, he is NOT authorized on that one.' }
+        ]
+    }
+},
+{
+    id: 'MC-22', level: 'Intermediate', programs: ['reception', 'cm'],
+    summary: 'A DIFFERENT Maria Santos (not MC-01 or MC-21): a neighbor\'s dog bit her while she was gardening. Check the DOB before you share anything.',
+    client: { name: 'Maria Santos', phone: '(555) 010-6412', email: 'msantos.garden@example.com', dob: '08/30/1971', ssn: 'XXX-XX-5307',
+        address: '402 Magnolia Court, Riverton, GA 30318',
+        emergency: { name: 'Lucia Santos', phone: '(555) 010-6413', relationship: 'Daughter' },
+        employment: { status: 'Employed', employer: 'Riverton Unified School District', title: 'Cafeteria Manager' } },
+    caseType: 'Dog Bite', phase: 'Investigation', attorney: 'Atty. David Okafor', caseManager: 'Luis Ortega',
+    dateOfLoss: '07/28/2026', sol: '07/28/2028', target: '',
+    narrative: 'Client was gardening in her front yard when her neighbor\'s German shepherd (owner Dale Fenton, 406 Magnolia Court) got through a broken fence and bit her right forearm and calf. ER stitches, then wound care. Client says the same dog bit a mail carrier in 2025. Speaks Spanish and English; Luis Ortega is her case manager.',
+    police: { agency: 'Riverton County Animal Control', number: 'RCAC-26-3318', officer: 'Officer M. Duran', narrative: 'Bite reported 07/28/2026. Dog quarantined 10 days at the owner\'s home. A prior bite report for the same dog is on file (2025).' },
+    health: { carrier: 'Georgia Educators Health Plan', memberId: 'GEHP-4471093', group: 'RUSD-02' },
+    bi: [{ holder: 'Dale Fenton', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-551902', claim: 'HFC-26-03390', adjuster: 'Monica Reyes-Hart', contact: '(555) 010-7640', liability: 'Pending', limits: '$300,000' }],
+    pipum: [], liens: [],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '07/28/2026 – 07/28/2026', status: 'Discharged', charges: '$ 2,860.00' },
+        { name: 'Riverton Wound Care Clinic', specialty: 'Other', specialtyOther: 'Wound Care', phone: '(555) 010-3420', email: 'records@rivertonwound.example.com', dates: '08/04/2026 – present', status: 'Ongoing', charges: '$ 1,150.00' }
+    ],
+    chrono: [
+        { dos: ['07/28/2026'], facility: 'St. Mary\'s Hospital', next: '', notes: 'Dog bite, right forearm (12 stitches) and right calf. Tetanus booster, antibiotics.' },
+        { dos: ['08/04/2026', '09/15/2026'], facility: 'Riverton Wound Care Clinic', next: '10/06/2026 9:00 AM', notes: 'Healing well; scarring on the forearm. Next visit Tuesday 10/06 at 9:00 AM.' }
+    ],
+    treatmentNotes: 'Client photographs the wounds weekly and sends them to Luis Ortega.',
+    pd: null, lit: null,
+    finance: [{ date: '08/06/2026', staff: 'Records Specialist', desc: 'Animal control bite report request fee', amount: '$ 10.00' }],
+    docs: [
+        { cat: 'Case Files', summary: 'Retainer and HIPAA authorization (08/01/2026). Only the client is authorized.' },
+        { cat: 'Medical Records', summary: 'St. Mary\'s ER record 07/28/2026.' }
+    ],
+    notes: [
+        { date: '08/01/2026', staff: 'Intake Specialist', text: 'Retainer signed. NOT the same client as the other Maria Santos files (DOB 03/22/1988): this client\'s DOB is 08/30/1971. Only the client is authorized.' },
+        { date: '08/06/2026', staff: 'Records Specialist', text: 'Requested the animal control bite report and the 2025 prior-bite report. Not received yet.' },
+        { date: '09/15/2026', staff: 'Case Manager', text: 'Spoke with client in Spanish. Wound care going well. Homestead has not accepted liability yet.' }
+    ],
+    tasks: [{ date: '09/15/2026', staff: 'Records Specialist', text: 'Follow up with Riverton County Animal Control on the bite reports by 10/02/2026.' }],
+    reception: {
+        verify: 'Maria Santos · DOB 08/30/1971 · 402 Magnolia Court or SSN last 4 (5307). Three files carry the name Maria Santos: this one is the dog bite (DOL 07/28/2026). Only the client is authorized.',
+        calls: [
+            { from: 'Maria Santos (client)', ask: '"Did you get the report from animal control yet?"', handle: 'A name search finds three Maria Santos files. Her DOB (08/30/1971) and the dog bite (07/28/2026) put her on MC-22. Not received yet: requested 08/06, follow-up by 10/02. Message Luis Ortega (ext 314). Log a Note.' },
+            { from: 'Monica Reyes-Hart, Homestead Fire & Casualty', ask: '"Claim HFC-26-03390, Maria Santos. Can you send me her medical records?"', handle: 'Business caller. The claim number puts the call on MC-22, not the other Maria Santos files. Never send records from the front desk: message Luis Ortega (ext 314) / Atty. Okafor (ext 203).' }
+        ]
+    }
+},
+{
+    id: 'MC-23', level: 'Intermediate', programs: ['reception', 'cm'],
+    summary: 'James Wilson\'s SECOND file (same client as MC-06): a garage handrail gave way. In treatment while his truck-crash case is being paid out.',
+    client: { name: 'James Wilson', phone: '(555) 010-4962', email: 'jwilson.rvt@example.com', dob: '09/17/1983', ssn: 'XXX-XX-3390',
+        address: '17 Birchwood Lane, Riverton, GA 30311',
+        emergency: { name: 'Nadia Wilson', phone: '(555) 010-4963', relationship: 'Wife' },
+        employment: { status: 'Employed', employer: 'Riverton Distribution Center', title: 'Forklift Operator' } },
+    caseType: 'Premise Liability', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
+    dateOfLoss: '05/16/2026', sol: '05/16/2028', target: '',
+    narrative: 'Client leaned on a stairwell handrail on level 3 of the Riverton Plaza parking garage; the rail was loose, gave way, and he fell about six steps. Lower-back injury and a right-wrist sprain. Garage management had an open work order on that rail since April. This is a different file from his 01/12/2025 truck crash (MC-06), which is in disbursement.',
+    police: { agency: 'Riverton Plaza Security', number: 'RPS-26-0516-2', officer: 'Guard K. Mensah', narrative: 'Security report: patron fell in stairwell C after the handrail detached. Maintenance ticket on the rail open since 04/22/2026.' },
+    health: { carrier: 'Distribution Workers Health Fund', memberId: 'DWHF-221907', group: 'DWHF-09' },
+    bi: [{ holder: 'Riverton Plaza Parking LLC', carrier: 'Keystone Commercial', policy: 'KC-CGL-448120', claim: 'KC-26-71540', adjuster: 'Paul Dreyer', contact: '(555) 010-7870', liability: 'Pending', limits: '$2,000,000' }],
+    pipum: [], liens: [],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '05/16/2026 – 05/16/2026', status: 'Discharged', charges: '$ 3,120.00' },
+        { name: 'Align Chiropractic', specialty: 'Chiro', phone: '(555) 010-3355', email: 'billing@alignchiro.example.com', dates: '05/26/2026 – present', status: 'Ongoing', charges: '$ 2,940.00' },
+        { name: 'Riverton Pain Institute', specialty: 'Pain Management', phone: '(555) 010-3450', email: 'intake@rivertonpain.example.com', dates: '08/19/2026 – present', status: 'Ongoing', charges: '$ 1,850.00' }
+    ],
+    chrono: [
+        { dos: ['05/16/2026'], facility: 'St. Mary\'s Hospital', next: '', notes: 'Lumbar strain, right wrist sprain. X-rays negative.' },
+        { dos: ['05/26/2026', '09/23/2026'], facility: 'Align Chiropractic', next: '09/30/2026 5:30 PM', notes: 'Chiropractic 2x/week. Next visit Wednesday 09/30 at 5:30 PM.' },
+        { dos: ['08/19/2026'], facility: 'Riverton Pain Institute', next: '10/07/2026 1:15 PM', notes: 'MRI: L4-L5 disc bulge. First lumbar injection Wednesday 10/07 at 1:15 PM.' }
+    ],
+    treatmentNotes: 'Treating consistently. The 10/07 injection decides whether more care is needed.',
+    pd: null, lit: null, finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'Retainer (05/20/2026). Only the client is authorized on this file.' },
+        { cat: 'Others', summary: 'Garage security report and the 04/22/2026 maintenance ticket on the handrail.' }
+    ],
+    notes: [
+        { date: '05/20/2026', staff: 'Intake Specialist', text: 'Retainer signed. Existing client (truck crash, DOL 01/12/2025). Keep the two files separate: always confirm the date of the accident.' },
+        { date: '09/23/2026', staff: 'Case Manager', text: 'Client doing chiropractic 2x/week; pain injection 10/07. Reminded him not to miss appointments.' }
+    ],
+    tasks: [{ date: '09/23/2026', staff: 'Case Manager', text: 'Call client after the 10/07 injection (by 10/09/2026).' }],
+    reception: {
+        verify: 'James Wilson · DOB 09/17/1983 · 17 Birchwood Lane or SSN last 4 (3390). SAME client as MC-06: ask for the date of the accident to open the right file. Only the client is authorized.',
+        calls: [
+            { from: 'James Wilson (client)', ask: '"When\'s my back injection? The one for the garage fall."', handle: 'Verify, then open the garage fall (DOL 05/16/2026), not the truck crash. Riverton Pain Institute, Wednesday 10/07/2026 at 1:15 PM (09/30 at 5:30 PM is chiropractic). Log a Note.' },
+            { from: 'Paul Dreyer, Keystone Commercial', ask: '"Claim KC-26-71540, James Wilson. Can he give us a recorded statement?"', handle: 'Business caller. No recorded statements. The claim number puts the call on MC-23. Message Tom Alvarez (ext 312) / Atty. Reyes (ext 201).' }
+        ]
+    }
+},
+{
+    id: 'MC-24', level: 'Advanced', programs: ['reception', 'cm', 'intake'],
+    summary: 'A DIFFERENT James Wilson (not MC-06 or MC-23): a retiree who fell on a hotel pool deck. His son is authorized. Check the DOB before you share anything.',
+    client: { name: 'James Wilson', phone: '(555) 010-6520', email: '', dob: '04/02/1956', ssn: 'XXX-XX-7718',
+        address: '5 Quarry Road, Riverton, GA 30325',
+        emergency: { name: 'Kevin Wilson', phone: '(555) 010-6521', relationship: 'Son' },
+        employment: { status: 'Retired', employer: '', title: 'Retired bus mechanic' } },
+    caseType: 'Slip and Fall', phase: 'Investigation', attorney: 'Atty. David Okafor', caseManager: 'Priya Natarajan',
+    dateOfLoss: '08/08/2026', sol: '08/08/2028', target: '',
+    narrative: 'Client slipped on algae-slick tiles at the edge of the pool at the Grandview Hotel (Lakeshore Blvd) while visiting his grandchildren. Fractured right hip; partial hip replacement 08/09/2026, then inpatient rehab. The hotel says the deck was cleaned that morning; his son photographed the tiles the same day.',
+    police: { agency: 'None (hotel incident report only)', number: 'Grandview IR-0808-21', officer: 'Night manager Alicia Grant', narrative: 'Hotel report: guest fell on the pool deck at about 4:40 PM; ambulance called. Copy requested; the hotel referred us to its insurer.' },
+    health: { carrier: 'Medicare (Part A & B)', memberId: 'MBI 7HX2-QP4-RT55', group: '—' },
+    bi: [{ holder: 'Grandview Hotel Group LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-902215', claim: 'ARC-26-51177', adjuster: 'Brent Kowalski', contact: '(555) 010-7931', liability: 'Pending', limits: '$1,000,000' }],
+    pipum: [], liens: [],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '08/08/2026 – 08/13/2026', status: 'Discharged', charges: '$ 52,700.00' },
+        { name: 'Riverton Rehabilitation Center', specialty: 'Other', specialtyOther: 'Inpatient Rehab', phone: '(555) 010-3470', email: 'records@rivertonrehab.example.com', dates: '08/13/2026 – 09/03/2026', status: 'Discharged', charges: '$ 18,300.00' },
+        { name: 'Motion Physical Therapy', specialty: 'Other', specialtyOther: 'Physical Therapy', phone: '(555) 010-3390', email: 'billing@motionpt.example.com', dates: '09/08/2026 – present', status: 'Ongoing', charges: '$ 960.00' }
+    ],
+    chrono: [
+        { dos: ['08/09/2026'], facility: 'St. Mary\'s Hospital', next: '', notes: 'Right hip hemiarthroplasty (partial hip replacement).' },
+        { dos: ['09/08/2026', '09/24/2026'], facility: 'Motion Physical Therapy', next: '10/01/2026 11:00 AM', notes: 'Outpatient PT 2x/week, walking with a cane. Next session Thursday 10/01 at 11:00 AM.' }
+    ],
+    treatmentNotes: 'Medicare is primary; conditional-payment letter requested 08/20/2026.',
+    pd: null, lit: null, finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'Retainer (08/18/2026, signed at the rehab center). Communication authorization for son Kevin Wilson (08/18/2026).' },
+        { cat: 'Others', summary: 'Kevin Wilson\'s photos of the pool-deck tiles (08/08/2026).' }
+    ],
+    notes: [
+        { date: '08/18/2026', staff: 'Intake Specialist', text: 'Retainer signed at the rehab center. Son Kevin Wilson is authorized. NOT the same client as the other James Wilson files (DOB 09/17/1983): this client\'s DOB is 04/02/1956. No email; call the home number.' },
+        { date: '09/24/2026', staff: 'Case Manager', text: 'Kevin called: his dad is home, walking with a cane, PT twice a week. The hotel\'s insurer (Allied Retail) hasn\'t answered about the pool-deck video.' }
+    ],
+    tasks: [{ date: '09/24/2026', staff: 'Paralegal', text: 'Send a preservation letter for the hotel pool-deck video to Allied Retail by 09/30/2026.' }],
+    reception: {
+        verify: 'James Wilson · DOB 04/02/1956 · 5 Quarry Road or SSN last 4 (7718). Three files carry the name James Wilson: this one is the hotel pool fall (DOL 08/08/2026). Son Kevin Wilson is authorized.',
+        calls: [
+            { from: 'Kevin Wilson (son, authorized)', ask: '"I\'m calling for my dad, James Wilson. When is his next physical therapy?"', handle: 'Three James Wilson files. His dad\'s DOB (04/02/1956) and the pool fall (08/08/2026) put the call on MC-24, where Kevin is authorized. Motion Physical Therapy, Thursday 10/01/2026 at 11:00 AM. Log a Note.' },
+            { from: 'Brent Kowalski, Allied Retail Casualty', ask: '"About James Wilson, the hotel pool fall. Can I talk to him directly?"', handle: 'Business caller. Never give out a client\'s number or put an adjuster in touch with a client. Message Priya Natarajan (ext 311) / Atty. Okafor (ext 203) with claim ARC-26-51177.' }
+        ]
+    }
 }
 ];
 /* =========================================================
@@ -821,29 +1010,33 @@ const MOCK_CASES = [
    CMS, (2) authenticate the caller by asking for identifiers and
    comparing them to the file, (3) choose how to handle it.
    `gives` is what the caller answers when asked (null = "I don't
-   know / I'd rather not say"). `mock: null` = not in the system.
+   know / I'd rather not say"). `gives.dol` is the caller's answer for
+   the date of the accident; without it they give the file's DOL.
+   When two or more files share the client's name, the trainee must
+   also ask for the DOL to earn the identifier points.
+   `mock: null` = not in the system.
    auth codes: client · authorized · failed · unauthorized ·
    business · newcaller (labels in front-desk-drill.js).
    ========================================================= */
 const DRILL_CALLS = [
     { id: 'D01', mock: 'MC-01', auth: 'client', level: 1,
       opening: '"Hi, I\'m calling about my case. I lost my appointment card. When\'s my next chiropractor visit?"',
-      gives: { name: 'Maria Santos', dob: '03/22/1988', address: '1187 Willow Bend Dr, Riverton', ssn4: '4821', callback: '(555) 010-4417', relationship: 'I\'m the client.' },
+      gives: { name: 'Maria Santos', dob: '03/22/1988', address: '1187 Willow Bend Dr, Riverton', ssn4: '4821', callback: '(555) 010-4417', relationship: 'I\'m the client.', dol: 'June 9th, the car accident.' },
       actions: ['Tuesday 09/29/2026 at 10:30 AM at City Spine & Rehab (suggest she confirm with the clinic)', 'Thursday 10/01/2026 at 4:00 PM at City Spine & Rehab', 'Take a message; the front desk can\'t give out appointments', 'Tell her to call the clinic because you can\'t see appointments'],
       answer: 0, why: 'Verified client. Treatment tab: next chiro visit 09/29 at 10:30 AM (10/01 at 4:00 PM is physical therapy).' },
     { id: 'D02', mock: 'MC-01', auth: 'unauthorized', level: 1,
       opening: '"Hi, this is Rosa. I\'m Maria Santos\'s cousin. Has her case settled yet? How much is she getting?"',
-      gives: { name: 'Rosa Santos', dob: 'Her birthday? March-something, 1988.', address: null, ssn4: null, callback: '(555) 010-4490', relationship: 'Cousin.' },
+      gives: { name: 'Rosa Santos', dob: 'Her birthday? March-something, 1988.', address: null, ssn4: null, callback: '(555) 010-4490', relationship: 'Cousin.', dol: 'The car accident, back in June I think.' },
       actions: ['Take a message only, without confirming the firm represents Maria', 'Say the case is still in treatment', 'Share the status since she knows Maria\'s birthday', 'Transfer her to Atty. Reyes'],
       answer: 0, why: 'Only the client is authorized (Notes 06/12). A relative is not authorized, whatever she knows.' },
     { id: 'D03', mock: 'MC-06', auth: 'failed', level: 2,
       opening: '"Yeah, this is James Wilson. Is my settlement check ready? I need it this week."',
-      gives: { name: 'James Wilson', dob: '09/17/1983', address: 'I\'m at a new place, I\'d rather not say.', ssn4: 'I don\'t know it offhand.', callback: '(555) 010-4999', relationship: 'It\'s my case.' },
+      gives: { name: 'James Wilson', dob: '09/17/1983', address: 'I\'m at a new place, I\'d rather not say.', ssn4: 'I don\'t know it offhand.', callback: '(555) 010-4999', relationship: 'It\'s my case.', dol: 'January of last year. The box truck on I-85.' },
       actions: ['Explain you need one more identifier that matches the file; offer a callback from the case manager to the number on file', 'Give the check status; name and date of birth are enough', 'Ask for his full Social Security number instead', 'Hang up'],
       answer: 0, why: 'Only two identifiers (name, DOB). Anyone can find a DOB online. The rule is name + DOB + one more on file. His callback number doesn\'t match the file either.' },
     { id: 'D04', mock: 'MC-06', auth: 'client', level: 2,
       opening: '"Hi, James Wilson. Quick one: can my buddy Troy pick up my settlement check for me?"',
-      gives: { name: 'James Wilson', dob: '09/17/1983', address: '17 Birchwood Lane', ssn4: '3390', callback: '(555) 010-4962', relationship: 'I\'m the client.' },
+      gives: { name: 'James Wilson', dob: '09/17/1983', address: '17 Birchwood Lane', ssn4: '3390', callback: '(555) 010-4962', relationship: 'I\'m the client.', dol: '01/12/2025, the truck crash.' },
       actions: ['Checks go only to the client with photo ID unless the attorney approves a signed written authorization; route to Accounting (ext 500) / Priya Natarajan', 'Yes, if Troy brings his ID', 'Yes, if James texts a photo of his ID', 'The check will be mailed, so it doesn\'t matter'],
       answer: 0, why: 'Verified client, but the front desk can\'t authorize a third-party pickup. (The check isn\'t ready yet anyway: Notes 09/24.)' },
     { id: 'D05', mock: 'MC-07', auth: 'client', level: 2,
@@ -923,7 +1116,7 @@ const DRILL_CALLS = [
       answer: 0, why: 'The account number matches Emily Nguyen\'s lien (MC-09). LOP on file; the lien negotiator handles it.' },
     { id: 'D20', mock: null, auth: 'newcaller', level: 1,
       opening: '"Hi, my name is Tyler Brooks. I was rear-ended yesterday on the highway and I think I need a lawyer."',
-      gives: { name: 'Tyler Brooks', dob: '07/30/1990', address: '45 Aspen Court', ssn4: null, callback: '(555) 010-8341', relationship: 'I\'m the one who was hit.' },
+      gives: { name: 'Tyler Brooks', dob: '07/30/1990', address: '45 Aspen Court', ssn4: null, callback: '(555) 010-8341', relationship: 'I\'m the one who was hit.', dol: 'Yesterday, on the highway.' },
       actions: ['Not in the system: transfer to Intake (ext 100) or take his details for Intake; no advice on the case', 'Open a case for him yourself', 'Tell him he has a strong case', 'Transfer him to Atty. Elena Brooks since they share a name'],
       answer: 0, why: 'No case on file (a search for "Brooks" finds Atty. Elena Brooks\'s cases, not him). New matters go to Intake.' },
     { id: 'D21', mock: 'MC-17', auth: 'client', level: 1,
@@ -960,7 +1153,39 @@ const DRILL_CALLS = [
       opening: '"Monica Reyes-Hart, Homestead Fire & Casualty, claim HFC-26-02117. When am I getting the demand?"',
       gives: { name: 'Monica Reyes-Hart', dob: null, address: null, ssn4: null, callback: '(555) 010-7640', relationship: 'Homeowner\'s insurer.' },
       actions: ['Take a message for Tom Alvarez (ext 312) with her claim number; no dates or details', 'Tell her 10/02', 'Tell her it\'s with the attorney', 'Transfer to Atty. Marcus Reyes because the names match'],
-      answer: 0, why: 'She also handles MC-10. Her claim number is Aisha Patel\'s (MC-03). No dates or details from the front desk.' }
+      answer: 0, why: 'She also handles MC-10 and MC-22. Her claim number is Aisha Patel\'s (MC-03). No dates or details from the front desk.' },
+    // Same name on several files (MC-01/21/22 Maria Santos, MC-06/23/24 James Wilson):
+    // the date of the accident and the DOB decide which file the call belongs to.
+    { id: 'D28', mock: 'MC-21', auth: 'client', level: 2,
+      opening: '"Hi, Maria Santos. When do I get my money from my fall at the pharmacy? It settled back in July."',
+      gives: { name: 'Maria Santos', dob: '03/22/1988', address: '1187 Willow Bend Dr, Riverton', ssn4: '4821', callback: '(555) 010-4417', relationship: 'I\'m the client.', dol: 'January 14th, 2025. I fell at CareWay Pharmacy.' },
+      actions: ['Settled; the firm is waiting on two lien reductions, so no date yet. Message Rosa Delgado (ext 341) / Grace Kim (ext 313)', 'Her case is still in treatment, so there\'s no money yet', 'The check will be ready this Friday', 'Transfer her to Accounting to pick up her check'],
+      answer: 0, why: 'She has two files. The date of the fall (01/14/2025) puts the call on MC-21, not her 2026 car accident (MC-01, still in treatment). Notes 08/20: waiting on two lien reductions.' },
+    { id: 'D29', mock: 'MC-01', auth: 'unauthorized', level: 3,
+      opening: '"Hi, this is Eduardo Santos, Maria\'s husband. You have my name on file. Did the other driver\'s insurance pay for her Civic yet?"',
+      gives: { name: 'Eduardo Santos', dob: 'Maria\'s birthday is 03/22/1988.', address: '1187 Willow Bend Dr', ssn4: null, callback: '(555) 010-4418', relationship: 'Her husband.', dol: 'The car accident, June 9th this year.' },
+      actions: ['He\'s authorized only on her 2025 pharmacy-fall file, not this car-accident file: take a message, share nothing', 'He\'s on file as authorized, so give the property-damage status', 'Tell him the claim is still open', 'Transfer him to Kevin Lam'],
+      answer: 0, why: 'The car accident (DOL 06/09/2026) is MC-01, where only the client is authorized (Notes 06/12). Eduardo\'s authorization is on MC-21, the pharmacy fall, only. Authorization is per file.' },
+    { id: 'D30', mock: 'MC-21', auth: 'authorized', level: 3,
+      opening: '"Eduardo Santos, calling for my wife Maria about her slip and fall at the pharmacy. Did the health plan agree to lower its bill yet?"',
+      gives: { name: 'Eduardo Santos', dob: 'Maria\'s birthday is 03/22/1988.', address: '1187 Willow Bend Dr, Riverton', ssn4: null, callback: '(555) 010-4418', relationship: 'Her husband. I signed a form for that case.', dol: 'January 14th, 2025.' },
+      actions: ['Authorized on this file: not yet (request sent 08/20, follow-up 10/05); offer a callback from Rosa Delgado (ext 341)', 'Not authorized: only Maria can get information', 'Yes, the health plan agreed to $3,000', 'Tell him the case is still in treatment'],
+      answer: 0, why: 'The pharmacy fall (DOL 01/14/2025) is MC-21, where Eduardo signed a communication authorization (02/03/2025). He gave Maria\'s DOB and the address on file.' },
+    { id: 'D31', mock: 'MC-22', auth: 'client', level: 2,
+      opening: '"Hi, this is Maria Santos. Did you get the report from animal control yet?"',
+      gives: { name: 'Maria Santos', dob: '08/30/1971', address: '402 Magnolia Court', ssn4: '5307', callback: '(555) 010-6412', relationship: 'It\'s my case.', dol: 'July 28th. My neighbor\'s dog.' },
+      actions: ['Not received yet (requested 08/06, follow-up by 10/02); message Luis Ortega (ext 314)', 'Not verified: her DOB doesn\'t match Maria Santos\'s file', 'Her chiropractor visit is Tuesday at 10:30 AM', 'Tell her the case settled and her money is coming'],
+      answer: 0, why: 'Three files are named Maria Santos. Her DOB (08/30/1971) and the dog bite (07/28/2026) match MC-22, not MC-01 or MC-21 (DOB 03/22/1988). Notes 08/06: report requested.' },
+    { id: 'D32', mock: 'MC-23', auth: 'client', level: 2,
+      opening: '"James Wilson here. When\'s my back injection? The one for the garage fall."',
+      gives: { name: 'James Wilson', dob: '09/17/1983', address: '17 Birchwood Lane', ssn4: '3390', callback: '(555) 010-4962', relationship: 'I\'m the client.', dol: 'May 16th, this year.' },
+      actions: ['Riverton Pain Institute, Wednesday 10/07/2026 at 1:15 PM', 'Wednesday 09/30/2026 at 5:30 PM', 'His case settled, so there are no more appointments', 'Take a message; the front desk can\'t give out appointments'],
+      answer: 0, why: 'He has two files. The garage fall (DOL 05/16/2026) is MC-23; the truck crash (MC-06) is settled. Treatment tab: injection 10/07 at 1:15 PM (09/30 is chiropractic).' },
+    { id: 'D33', mock: 'MC-24', auth: 'authorized', level: 3,
+      opening: '"Hi, I\'m calling for my dad, James Wilson. When is his next physical therapy?"',
+      gives: { name: 'Kevin Wilson', dob: 'Dad\'s birthday is 04/02/1956.', address: '5 Quarry Road', ssn4: null, callback: '(555) 010-6521', relationship: 'I\'m his son. I signed a form at the rehab center.', dol: 'August 8th. He fell at the hotel pool.' },
+      actions: ['Authorized: Motion Physical Therapy, Thursday 10/01/2026 at 11:00 AM', 'Not authorized: only the client can get information', 'Wednesday 09/30/2026 at 5:30 PM', 'His settlement check isn\'t ready yet'],
+      answer: 0, why: 'Three files are named James Wilson. The DOB (04/02/1956) and the pool fall (08/08/2026) match MC-24, where his son Kevin is authorized (08/18/2026).' }
 ];
 
 
