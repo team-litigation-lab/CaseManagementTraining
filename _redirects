@@ -1,0 +1,6 @@
+# Keep repository files that aren't part of the site off the web.
+# (Cloudflare Pages publishes everything in the output directory, which is the repo root.)
+/wrangler.toml / 302
+/README.md / 302
+/.github/* / 302
+/functions/* / 302
