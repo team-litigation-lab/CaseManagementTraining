@@ -28,7 +28,7 @@ What the cases cover, from starter to advanced: every phase from Intake to Litig
 
 ## 📞 Front Desk Drill (measures the VA)
 
-Sidebar → **📞 Front Desk Drill · scored** (or open the CMS with `?drill=1`). A drill is 5, 8, 12 or all 33 incoming calls, picked at random from `DRILL_CALLS` in `mock-cases.js`. For each call the trainee:
+Admins: sidebar → **📞 Front Desk Drill · scored**. Trainees don't get the sidebar button (like the Training Library's); they open the drill from their course's link, `?drill=1`. A drill is 5, 8, 12 or all 33 incoming calls, picked at random from `DRILL_CALLS` in `mock-cases.js`. For each call the trainee:
 
 1. **Asks the caller** for identifiers (full name, date of birth, address, SSN last 4, callback number, relationship, date of the accident). The caller answers from a script, and some answers are wrong on purpose: a wrong DOB, only two identifiers, a new address that isn't on file, a relative who knows the client's details.
 2. **Finds the case** with the drill's search (or the 🔍 search bar above the case), by whatever the caller gave: name, phone, DOB, DOL, claim or policy number, account number, plate, report number or case ID. Some callers only give a claim number or a plate. One is a brand-new caller who isn't in the system. Some names are on two or three files: the DOL and the DOB pick the right one. Opening a result loads the file view-only in the editor; **▭ Case** hides the panel to read it.
@@ -47,12 +47,44 @@ Link to the CMS with a program so it opens in that program's context:
 
 | Link | Effect |
 |---|---|
-| `…/?program=reception` | Header shows *Receptionist / Front Desk Training*; the Training Library lists that program's cases. Also `intake`, `cm`, `ea` (EA/PA). The choice lasts for the browser tab and can be changed in the sidebar. |
+| `…/?program=reception` | Header shows *Receptionist / Front Desk Training*; the Training Library lists that program's cases. Also `intake`, `cm`, `ea` (EA/PA) and `pd` (Property Damage: the vehicle cases MC-01, MC-04, MC-08, MC-12). The choice lasts for the browser tab and can be changed in the sidebar. |
 | `…/?mock=MC-04` | Opens that Training Library case right after sign-in (use it in a lesson step). |
 | `…/?library=1` | Opens the Training Library after sign-in (Admins); trainees get the Case Library search. |
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
+
+## 👤 Name-only access from other training platforms
+
+Trainees who open the CMS from another LSH training platform don't need a CMS account. The sign-in screen asks only for their **name** (and batch, optional), and **Continue** signs them in (`guest-access.js` → `/api/guest-login`).
+
+**Which platforms:**
+
+| Platform | Link sends |
+|---|---|
+| LSH Training Portal: the Training Directory's **🗂 Case Management System** banner and the Call Simulator's case links | `from=portal` |
+| Property Damage Claims Training | `from=pd` |
+| Standard Foundational Training | `from=standard` |
+| EA/PA Training | `from=ea` |
+
+The links also send `name=` and `batch=`, which fill in the form. A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses. The platform is remembered for the browser tab. The CM course isn't on the list: its trainees keep their CMS accounts. A direct visit gets the usual username and password sign-in, and **Have a CMS account? Sign in with it** switches to it from the name form.
+
+**What they get:** an ordinary, approved **Trainee** account, created the first time and reused whenever the same name and batch come back, from any of the platforms. So everything the CMS does for trainees works for them:
+- saved cases get the automated review and the AI review;
+- Front Desk Drill scores are saved;
+- Notes and Tasks on library cases are kept;
+- trainers see them in the **trainer roster**, labelled *via Property Damage Claims Training* (or the platform they last came from).
+
+**How it's kept safe:**
+- Name-only accounts have usernames starting `guest-` (e.g. `guest-jane-doe--b050225`). Registration refuses that prefix, so typing a name can never reach a registered account.
+- They have no usable password, so `/api/login` can't open them.
+- Admins manage them like any other account: they can suspend or revoke them (a revoked name can't come back).
+- At most 10 new names per connection per hour; returning trainees aren't limited.
+- Admin access still needs an admin account and password.
+
+This is convenience, not a security boundary: anyone who opens the CMS from one of those platforms (the Training Directory is public) can sign in with a name, the same as the portal's Simulators.
+
+**Data** (D1, created on first use): the `users` row (email `<username>@guest.invalid`, a CMS Batch ID from the usual counter), `guest_accounts` (their name, course batch, the platforms they came from, program, first and last visit) and `guest_login_rate`. Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
 ## Checks (GitHub Actions)
 

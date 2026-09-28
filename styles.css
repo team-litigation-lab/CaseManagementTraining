@@ -391,6 +391,8 @@
         transition: background 0.25s ease, color 0.25s ease;
     }
     .portal-tab.active { background: var(--auth-accent); color:#0f2148; }
+    /* the sign-in views switch with .hidden; don't depend on the Tailwind CDN for it */
+    .auth-box .hidden { display:none !important; }
     .auth-field { margin-bottom:12px; }
     .auth-field label { color:#94a3b8; font-size:9.5px; }
     .auth-field input, .auth-field select {
@@ -421,6 +423,8 @@
     .auth-submit:hover { background: var(--auth-accent-hover); }
     .auth-switch { text-align:center; margin-top:16px; font-size:11px; color:#94a3b8; }
     .auth-switch a { color: var(--auth-accent); cursor:pointer; font-weight:700; text-decoration:underline; }
+    .auth-guest-from { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#0f2148; background: var(--auth-accent); border-radius:999px; padding:4px 10px; margin-bottom:10px; }
+    .auth-guest-lead { font-size:12px; color:#cbd5e1; line-height:1.5; margin:0 0 14px; }
     .auth-msg { font-size:11px; font-weight:700; margin-bottom:12px; padding:9px 12px; border-radius:6px; display:none; }
     .auth-msg.error { background:rgba(185,28,28,0.15); color:#fca5a5; display:block; animation: msgPop .25s ease; }
     .auth-msg.success { background:rgba(22,101,52,0.2); color:#86efac; display:block; animation: msgPop .25s ease; }
@@ -605,6 +609,8 @@
     .roster-health-dot.green { background:#16a34a; }
     .roster-health-dot.none { background:#cbd5e1; }
     .roster-name { font-weight:800; color:var(--navy); }
+    .session-via { color:#94a3b8; font-weight:700; }
+    .roster-via { display:inline-block; margin-left:6px; font-size:10.5px; font-weight:700; color:#475569; background:#eef2f7; border-radius:999px; padding:1px 8px; }
     .roster-trend { display:flex; align-items:center; gap:6px; font-size:11.5px; }
     .roster-trend-arrow { font-weight:900; }
     .roster-trend-arrow.up { color:#16a34a; }

@@ -2,7 +2,7 @@
    LSH CMS — TRAINING LIBRARY + PROGRAM CONTEXT
    ---------------------------------------------------------
    1. Program context. Every LSH training program can open the CMS
-      with ?program=<id> (reception, intake, cm, ea). It's remembered
+      with ?program=<id> (reception, intake, cm, ea, pd). It's remembered
       for the browser tab, shown in the header, used as the Training
       Library's default filter, and stamped on any practice copy a
       trainee saves (content.program), so trainers can tell which
@@ -33,7 +33,8 @@
     const PROGRAM_ALIASES = {
         reception: 'reception', receptionist: 'reception', frontdesk: 'reception', 'front-desk': 'reception',
         intake: 'intake', cm: 'cm', casemanagement: 'cm', 'case-management': 'cm',
-        ea: 'ea', pa: 'ea', eapa: 'ea', 'ea-pa': 'ea'
+        ea: 'ea', pa: 'ea', eapa: 'ea', 'ea-pa': 'ea',
+        pd: 'pd', propertydamage: 'pd', 'property-damage': 'pd'
     };
     function normProgram(p) {
         const k = String(p || '').trim().toLowerCase().replace(/\s+/g, '');

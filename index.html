@@ -422,6 +422,17 @@
                 </div>
             </div>
 
+            <!-- NAME-ONLY VIEW: opened from another LSH training platform (guest-access.js) -->
+            <div id="auth-guest-view" class="hidden">
+                <div class="auth-guest-from" id="auth-guest-from">Opened from your training platform</div>
+                <p class="auth-guest-lead">No CMS account needed. Enter your name so your cases, reviews and drill scores are saved for your trainer.</p>
+                <div id="auth-guest-msg" class="auth-msg"></div>
+                <div class="auth-field"><label>Full name</label><input type="text" id="guest-name" autocomplete="name" maxlength="60" placeholder="First and last name"></div>
+                <div class="auth-field"><label>Batch <span style="text-transform:none;">(optional)</span></label><input type="text" id="guest-batch" autocomplete="off" maxlength="24" placeholder="e.g., B050225"></div>
+                <button class="auth-submit" id="guest-submit" onclick="guestContinue()">Continue</button>
+                <div class="auth-switch">Have a CMS account? <a onclick="showLoginView()">Sign in with it</a></div>
+            </div>
+
             <!-- LOGIN VIEW -->
             <div id="auth-login-view">
                 <div class="portal-tabs">
@@ -863,5 +874,6 @@
     <script src="training-library.js"></script>
     <script src="front-desk-drill.js"></script>
     <script src="case-library.js"></script>
+    <script src="guest-access.js"></script>
 </body>
 </html>

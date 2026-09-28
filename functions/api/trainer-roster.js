@@ -1,4 +1,5 @@
 import { json, requireSession } from '../_utils.js';
+import { guestVia } from '../_guest.js';
 
 // GET /api/trainer-roster
 //
@@ -30,6 +31,10 @@ export async function onRequestGet({ request, env }) {
         `SELECT trainee_username, training_day, automated_findings, ai_review, ai_review_status, case_repository_id
          FROM case_reviews ORDER BY trainee_username, training_day ASC`
     ).all();
+
+    // Trainees who signed in with just their name from another platform: which one.
+    let via = {};
+    try { via = await guestVia(db); } catch (e) { via = {}; }
 
     const byTrainee = {};
     for (const r of (reviews || [])) {
@@ -71,6 +76,7 @@ export async function onRequestGet({ request, env }) {
         return {
             username: u.username,
             fullName: u.full_name || u.username,
+            via: via[u.username] || null,
             trainingStartDate: u.training_start_date,
             distinctCases,
             entryCount: rows.length,

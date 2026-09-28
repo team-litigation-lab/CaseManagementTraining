@@ -985,7 +985,7 @@
             body.innerHTML = roster.map(t => `
                 <tr onclick="drillIntoTrainee('${t.username.replace(/'/g, "\\'")}')">
                     <td><span class="roster-health-dot ${t.health}"></span></td>
-                    <td><span class="roster-name">${esc(t.fullName)}</span></td>
+                    <td><span class="roster-name">${esc(t.fullName)}</span>${t.via ? ` <span class="roster-via" title="Signed in with just their name from this training platform">via ${esc(t.via)}</span>` : ''}</td>
                     <td>${t.distinctCases}</td>
                     <td>${t.lastActiveDay ? 'Day ' + t.lastActiveDay : '—'}</td>
                     <td>${completenessTrend(t.completeness)}</td>
