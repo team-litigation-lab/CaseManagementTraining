@@ -15,7 +15,7 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Export current database (schema + data)
         run: npx wrangler d1 export lshcasemanagementtraining-trainingcrmlogins --remote --output=backup.sql
