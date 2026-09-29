@@ -1,13 +1,13 @@
-// Name-only access for trainees who open the CMS from another LSH training
+// Name-only sign-in for trainees who open the CMS from another LSH training
 // platform (the LSH Training Portal / Training Directory, Property Damage
-// Claims Training, Standard Foundational Training, EA/PA Training).
+// Claims Training, Standard Foundational Training, EA/PA Training, Case
+// Management Training).
 //
-// They type their name (and batch) instead of registering, and get an
-// ordinary, already-approved Trainee account, so everything the CMS does for
-// trainees works for them too: saved cases get the automated review and the
-// AI review, Front Desk Drill scores are saved, and trainers see them in the
-// trainer roster. Admins still manage these accounts like any other
-// (suspend, revoke).
+// Trainees register in the CMS once (so their trainer can monitor their work);
+// from a platform, typing their name signs them in to that registered account
+// (functions/api/guest-login.js). Name-only accounts made before registration
+// was required (usernames starting guest-) keep working. Admins still manage
+// every account like any other (suspend, revoke).
 //
 // This is convenience, not security: the platforms that link here are open
 // to their trainees without a password, so the name is all the CMS asks.
@@ -20,7 +20,8 @@ export const GUEST_SOURCES = {
     portal: 'LSH Training Portal',
     pd: 'Property Damage Claims Training',
     standard: 'Standard Foundational Training',
-    ea: 'EA/PA Training'
+    ea: 'EA/PA Training',
+    cm: 'Case Management Training'
 };
 
 // Every name-only account's username starts with this. register.js refuses it,

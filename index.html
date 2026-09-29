@@ -530,12 +530,12 @@
             <!-- NAME-ONLY VIEW: opened from another LSH training platform (guest-access.js) -->
             <div id="auth-guest-view" class="hidden">
                 <div class="auth-guest-from" id="auth-guest-from">Opened from your training platform</div>
-                <p class="auth-guest-lead">No CMS account needed. Enter your name so your cases, reviews and drill scores are saved for your trainer.</p>
+                <p class="auth-guest-lead">Type your name the way you registered it in the CMS, and you're in. Your cases, reviews and drill scores are saved for your trainer.</p>
                 <div id="auth-guest-msg" class="auth-msg"></div>
                 <div class="auth-field"><label>Full name</label><input type="text" id="guest-name" autocomplete="name" maxlength="60" placeholder="First and last name"></div>
-                <div class="auth-field"><label>Batch <span style="text-transform:none;">(optional)</span></label><input type="text" id="guest-batch" autocomplete="off" maxlength="24" placeholder="e.g., B050225"></div>
+                <div class="auth-field"><label>CMS Batch ID <span style="text-transform:none;">(only if asked)</span></label><input type="text" id="guest-batch" autocomplete="off" maxlength="24" placeholder="e.g., B050225"></div>
                 <button class="auth-submit" id="guest-submit" onclick="guestContinue()">Continue</button>
-                <div class="auth-switch">Have a CMS account? <a onclick="showLoginView()">Sign in with it</a></div>
+                <div class="auth-switch">Not registered yet? <a onclick="guestRegister()">Register here</a> · <a onclick="showLoginView()">Sign in with username</a></div>
             </div>
 
             <!-- LOGIN VIEW -->
@@ -553,6 +553,7 @@
 
             <!-- REGISTER VIEW -->
             <div id="auth-register-view" class="hidden">
+                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. Your trainer approves it; after that, opening the CMS from your training platform signs you in with just your name.</p>
                 <div id="auth-register-msg" class="auth-msg"></div>
                 <div class="auth-field" style="display:grid; grid-template-columns: 2fr 0.7fr; gap:8px;">
                     <div><label>First Name</label><input type="text" id="reg-firstname" autocomplete="off" data-allow="name" placeholder="e.g., Juan"></div>
