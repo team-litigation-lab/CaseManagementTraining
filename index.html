@@ -448,10 +448,10 @@
                     <div class="portal-tab" id="portal-tab-admin" onclick="switchPortalTab('Admin')">Admin Portal</div>
                 </div>
                 <div id="auth-login-msg" class="auth-msg"></div>
-                <div class="auth-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" placeholder="Enter your username"></div>
-                <div class="auth-field"><label>Password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter your password"></div>
+                <div class="auth-field login-username-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" placeholder="Enter your username"></div>
+                <div class="auth-field"><label id="login-password-label">Password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter your password"></div>
                 <button class="auth-submit" onclick="attemptLogin()">Log In</button>
-                <div class="auth-switch">No account yet? <a onclick="showRegisterView()">Register here</a></div>
+                <div class="auth-switch auth-register-link">No account yet? <a onclick="showRegisterView()">Register here</a></div>
             </div>
 
             <!-- REGISTER VIEW -->
@@ -469,7 +469,6 @@
                 <div class="auth-field"><label>Type of User</label>
                     <select id="reg-usertype" onchange="onRegUserTypeChange()">
                         <option value="Trainee">Trainee</option>
-                        <option value="Admin">Admin</option>
                     </select>
                 </div>
                 <div class="auth-field" id="reg-training-date-wrap"><label>Start of Training Date</label><input type="date" id="reg-training-date" autocomplete="off"></div>

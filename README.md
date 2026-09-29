@@ -55,6 +55,19 @@ Link to the CMS with a program so it opens in that program's context:
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
 
+## 🔑 Admin Portal (admin password only)
+
+The sign-in screen's **Admin Portal** tab asks only for the **admin password**, with no username. It signs in as the **Master Account** (`LSHADMIN123`), which keeps all of its powers, including being the only account that can revoke another Admin. New registrations are for trainees only. Admin accounts made earlier can't sign in from the Admin tab any more.
+
+**Setting or changing the admin password** (it is never in the code):
+1. Cloudflare → Workers & Pages → the CMS Pages project → **Settings → Variables and Secrets**.
+2. Add a secret, for both Production and Preview:
+   - **Variable name:** `ADMIN_PORTAL_PASSWORD`
+   - **Value:** the admin password
+3. Redeploy, or wait for the next deploy. The new password works right away.
+
+Until the secret is set, the Admin tab says the admin password isn't set up yet. Trainee sign-in doesn't change.
+
 ## 👤 Name-only access from other training platforms
 
 Trainees who open the CMS from another LSH training platform don't need a CMS account. The sign-in screen asks only for their **name** (and batch, optional), and **Continue** signs them in (`guest-access.js` → `/api/guest-login`).
@@ -178,6 +191,12 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - files that share a client name having different dates of loss.
 - **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
+- **Sign-in** (`.github/scripts/login.cjs`, in the same job): the real login code on SQLite. It checks:
+  - the Admin tab asks for the admin password only and signs in as the Master Account;
+  - a wrong or unset admin password is refused;
+  - trainees still sign in with username and password;
+  - registration is for trainees only and scrolls on a small screen;
+  - a tab still running the old Training Calendar is told to reload.
 - **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
   - the tab's place and the sidebar timer;
   - starting, counting, pausing, resuming, and surviving a reload;

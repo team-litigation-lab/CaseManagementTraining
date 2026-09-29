@@ -363,8 +363,14 @@
         background: radial-gradient(circle at 30% 20%, var(--auth-glow), var(--navy-deep) 70%);
         color: white; padding: 20px;
         transition: background 0.4s ease;
+        /* the registration form is taller than a small screen: scroll it (margin:auto on the box keeps it centred when it fits) */
+        overflow-y: auto; -webkit-overflow-scrolling: touch; align-items: flex-start;
     }
     #auth-gate.open { display: flex; }
+    #auth-gate > .auth-box { margin: auto; }
+    @media (max-width: 480px) { #auth-gate { padding: 12px; } .auth-box { padding: 22px 18px; } }
+    /* Admin Portal: the admin password only (no username, no registration) */
+    #auth-gate.mode-admin .login-username-field, #auth-gate.mode-admin .auth-register-link { display: none; }
     #auth-gate.mode-admin {
         --auth-accent: #ef4444;
         --auth-accent-hover: #f87171;
