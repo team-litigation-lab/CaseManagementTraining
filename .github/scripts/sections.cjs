@@ -120,7 +120,13 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.click('#kx-settlement [data-s="costs"]'); await page.keyboard.type('1000');
     await page.click('#kx-settlement [data-s="liens"]'); await page.keyboard.type('4000');
     const net = await page.textContent('#settlement-calc');
-    if (!/\$ 15,001\.00/.test(net)) fail(`the settlement net (30,000 − 33⅓% − 1,000 − 4,000) is wrong (${net})`);
+    if (!/\$ 15,001\.00/.test(net)) fail(`the BI settlement net (30,000 − 33⅓% − 1,000 − 4,000) is wrong (${net})`);
+    // UM/UIM is its own settlement (own carrier, fee, costs, liens), and the totals add both
+    await page.selectOption('#kx-settlement-um select[data-k="coverage"]', 'UIM (underinsured)');
+    await page.click('#kx-settlement-um [data-s="gross"]'); await page.keyboard.type('20000');
+    const umNet = await page.textContent('#settlement-calc-um'), total = await page.textContent('#settlement-total');
+    if (!/UM\/UIM net to client\$ 13,334\.00/.test(umNet.replace(/\s+/g, ' ').replace(/client \$/, 'client$'))) fail(`the UM/UIM net (20,000 − 33⅓%) is wrong (${umNet})`);
+    if (!/\$ 50,000\.00/.test(total) || !/\$ 28,335\.00/.test(total)) fail(`the BI + UM/UIM totals are wrong (${total})`);
     await page.click('#tab-police');
     await page.selectOption('#kx-report-kind select', 'Incident Report');
     const tab = await page.textContent('#tab-police'), head = await page.textContent('#police-body .section-head');
@@ -135,6 +141,7 @@ const failures = []; const fail = (m) => failures.push(m);
         return { parties: t('#kx-parties [contenteditable]'), roles: [...document.querySelectorAll('#kx-parties select[data-role]')].map(s => s.value).join(','),
             auth: t('#kx-authorized [contenteditable]'), loc: document.getElementById('kf-incident-location').innerText, pay: document.querySelector('#kx-wages [data-w="type"]').value,
             est: document.getElementById('wages-estimate').innerText, demand: t('#kx-demand [contenteditable]'), net: document.getElementById('settlement-calc').innerText,
+            umNet: document.getElementById('settlement-calc-um').innerText, cov: document.querySelector('#kx-settlement-um select[data-k="coverage"]').value, total: document.getElementById('settlement-total').innerText,
             tab: document.getElementById('tab-police').textContent };
     }, saved);
     if (!/Paula Passenger/.test(back.parties) || !/Walt Witness/.test(back.parties) || back.roles !== 'Passenger,Witness') fail(`Parties Involved didn't load back (${back.parties} / ${back.roles})`);
@@ -142,7 +149,8 @@ const failures = []; const fail = (m) => failures.push(m);
     if (back.loc !== 'Main St & 5th Ave, Riverton') fail(`Location of Incident didn't load back (${back.loc})`);
     if (back.pay !== 'Hourly' || !/1,600\.00/.test(back.est)) fail('Lost Wages didn\'t load back');
     if (!/Progressive/.test(back.demand)) fail('Demand didn\'t load back');
-    if (!/15,001\.00/.test(back.net)) fail('Settlement didn\'t load back');
+    if (!/15,001\.00/.test(back.net)) fail('the BI settlement didn\'t load back');
+    if (!/13,334\.00/.test(back.umNet) || back.cov !== 'UIM (underinsured)' || !/28,335\.00/.test(back.total)) fail(`the UM/UIM settlement didn't load back (${back.cov} / ${back.umNet} / ${back.total})`);
     if (back.tab !== 'Incident Report') fail('the Report Type didn\'t load back');
 
     // 4. Medical Chronology: sort by date, and drag a row

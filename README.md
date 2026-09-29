@@ -138,9 +138,12 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - One entry per demand sent (BI, UM, UIM, PIP, policy limits, pre-suit).
 - Each entry has the carrier, adjuster, claim number, date sent and how, amount, response due date, whether it's time-limited, status, the response received, and enclosures.
 
-**Settlement** (tab)
-- Status, carrier or party, date, gross amount, attorney fee %, case costs, liens and payoffs, release, check and disbursement dates, the offer and counter history, and notes.
-- It shows gross − fee − costs − liens = **net to client**, and warns when the net is below zero.
+**Settlement (BI / UM)** (tab)
+- **BI** and **UM/UIM** are separate claims, so each has its own card. BI is the at-fault party's carrier; UM/UIM is the client's own policy, and its card says which coverage.
+- Each card has its status, carrier or party, date, gross amount, attorney fee %, case costs, liens and payoffs, release, check and disbursement dates, the offer and counter history, and notes.
+- Each card shows gross − fee − costs − liens = **net to client**, and warns when the net is below zero.
+- A total line adds both: total gross, fees, costs, liens and **total net to client**.
+- Cases saved before the split keep their settlement as the BI settlement.
 
 **Smaller additions**
 - **Options:**
