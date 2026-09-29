@@ -148,7 +148,7 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
   - The Doc Hub has an **Intake** category.
   - The new phases are Discovery, Mediation, Trial Prep, Trial, Post Trial, Settled, Dropped Case, Referred Out and Closed.
   - Employment Status now defaults to **N/A**, and has Self-Employed and Student.
-  - **Start a New Case** now resets every dropdown to its default.
+  - Clearing the editor for a new case resets every dropdown to its default.
 - **Treatment tab:** its notes are now **Other Treatment Notes**, so they aren't confused with the Notes tab.
 - **Medical Chronology:**
   - Drag a row by its left edge (⠿) to move it.
