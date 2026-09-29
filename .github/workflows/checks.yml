@@ -62,3 +62,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/login.cjs
+      - name: Case editor sections (keyed saves, new tabs, reorder, drop, task accept)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/sections.cjs

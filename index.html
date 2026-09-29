@@ -93,7 +93,7 @@
                         <div class="flex items-center gap-3 mb-2 justify-end"><label class="mb-0">Case ID:</label><div id="case-id-field" contenteditable="false" class="text-xs font-bold text-slate-500 min-w-[160px] bg-slate-100 px-2 py-0.5 rounded mono">LSH-----</div></div>
                         <div class="flex items-center gap-2">
                             <select id="phase-selector" onchange="updatePhaseDisplay(this.value)" class="bg-orange-50 text-orange-700 text-[10px] font-black uppercase px-2 py-1 rounded border border-orange-100 cursor-pointer">
-                                <option value="Intake">Intake</option><option value="Investigation">Investigation</option><option value="Treatment">Treatment</option><option value="Demand Review">Demand Review</option><option value="Bi Demand">Bi Demand</option><option value="BI Settlement Nego">BI Settlement Nego</option><option value="UM Demand">UM Demand</option><option value="UM settlement">UM settlement</option><option value="Lien Negotiations">Lien Negotiations</option><option value="Disbursement">Disbursement</option><option value="Litigation">Litigation</option>
+                                <option value="Intake">Intake</option><option value="Investigation">Investigation</option><option value="Treatment">Treatment</option><option value="Demand Review">Demand Review</option><option value="Bi Demand">Bi Demand</option><option value="BI Settlement Nego">BI Settlement Nego</option><option value="UM Demand">UM Demand</option><option value="UM settlement">UM settlement</option><option value="Lien Negotiations">Lien Negotiations</option><option value="Disbursement">Disbursement</option><option value="Litigation">Litigation</option><option value="Discovery">Discovery</option><option value="Mediation">Mediation</option><option value="Trial Prep">Trial Prep</option><option value="Trial">Trial</option><option value="Post Trial">Post Trial</option><option value="Settled">Settled</option><option value="Dropped Case">Dropped Case</option><option value="Referred Out">Referred Out</option><option value="Closed">Closed</option>
                             </select>
                             <div id="display-phase" class="text-orange-600 font-black text-3xl uppercase italic leading-none min-w-[280px] serif">INTAKE</div>
                         </div>
@@ -109,6 +109,11 @@
                         <div class="bar-box sol-box">
                             <label>STATUTE (SOL)</label>
                             <div id="sol-bar-field" contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div>
+                        </div>
+                        <!-- data-keyed: saved by id, not by position (see keyed sections in app.js) -->
+                        <div class="bar-box" style="min-width:240px;">
+                            <label>LOCATION OF INCIDENT</label>
+                            <div id="kf-incident-location" data-keyed data-k="location" contenteditable="true" data-ph="Street / intersection, city, state"></div>
                         </div>
                     </div>
 
@@ -128,13 +133,17 @@
                     </div>
                 </div>
 
-                <div class="flex gap-6 mt-6 no-print overflow-x-auto pb-2">
+                <div class="flex flex-wrap gap-x-6 gap-y-1 mt-6 no-print pb-2">
                     <div onclick="showTab('profile')" id="tab-profile" class="tab-btn active-tab">Profile</div>
+                    <div onclick="showTab('parties')" id="tab-parties" class="tab-btn">Parties Involved</div>
                     <div onclick="showTab('police')" id="tab-police" class="tab-btn">Police Report</div>
                     <div onclick="showTab('matrix')" id="tab-matrix" class="tab-btn">Insurance</div>
                     <div onclick="showTab('liens')" id="tab-liens" class="tab-btn">Liens</div>
                     <div onclick="showTab('medical')" id="tab-medical" class="tab-btn">Treatment</div>
+                    <div onclick="showTab('wages')" id="tab-wages" class="tab-btn">Lost Wages</div>
                     <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Property Damage</div>
+                    <div onclick="showTab('demand')" id="tab-demand" class="tab-btn">Demand</div>
+                    <div onclick="showTab('settlement')" id="tab-settlement" class="tab-btn">Settlement</div>
                     <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
                     <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Finance</div>
                     <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
@@ -156,10 +165,14 @@
                             <div class="mb-4"><label>Full Name</label><div contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
                             <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div><div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse"></div></div></div>
                         </div>
+                        <div class="pdf-card border-l-4 border-emerald-500 shadow-sm"><div class="flex justify-between items-center mb-2"><div class="section-head" style="margin-bottom:0;background:#ecfdf5;color:#047857;">Authorized to Access Case</div><button onclick="addAuthorized()" class="add-btn no-print">+ Add Person</button></div>
+                            <p class="kx-hint no-print">People the client has authorized to receive updates or discuss the case (spouse, parent, guardian, interpreter…). Check the signed authorization before sharing anything.</p>
+                            <div id="kx-authorized" data-keyed="rows" class="space-y-3"></div>
+                        </div>
                     </div>
                     <div class="space-y-6">
                         <div class="pdf-card shadow-sm"><div class="section-head">Employment Details</div>
-                            <div class="mb-4"><label>Status</label><select class="prof-input"><option>Employed</option><option>Unemployed</option><option>Retired</option></select></div>
+                            <div class="mb-4"><label>Status</label><select class="prof-input"><option>N/A</option><option>Employed</option><option>Self-Employed</option><option>Unemployed</option><option>Retired</option><option>Student</option></select></div>
                             <div class="mb-4"><label>Employer Name</label><div contenteditable="true" data-ph="Enter employer" data-fmt="name"></div></div>
                             <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true" data-ph="Enter title"></div></div>
                         </div>
@@ -173,6 +186,14 @@
             </div>
 
             <div id="pane-police" class="tab-pane">
+                <!-- Report type: Incident Report for premises cases with no police report. Saved by id (data-keyed);
+                     the report's own fields stay in #police-body, saved as before (content.html.police). -->
+                <div class="pdf-card flex items-center gap-4 flex-wrap" style="padding:14px 20px;">
+                    <label class="mb-0">Report Type</label>
+                    <div id="kx-report-kind" data-keyed><select class="prof-input" data-k="kind" onchange="applyReportKind()" style="min-width:260px;"><option value="Police Report">Police Report</option><option value="Incident Report">Incident Report (premises: no police report)</option><option value="No Report">No report available</option></select></div>
+                    <span class="kx-hint" style="margin:0;">Premises liability (slip and fall, store, apartment): use the business's incident report when there's no police report.</span>
+                </div>
+                <div id="police-body">
                 <div class="pdf-card border-l-8 border-blue-500">
                     <div class="section-head" style="background:#0f172a;color:#60a5fa;">Police Report Details</div>
                     <div class="grid grid-cols-3 gap-8 mb-8">
@@ -182,6 +203,7 @@
                     </div>
                     <label>Officer's Narrative Summary</label>
                     <div contenteditable="true" data-ph="Type police summary here..." class="multiline-field min-h-[420px] bg-slate-50 p-6 rounded text-sm italic leading-relaxed text-slate-700"></div>
+                </div>
                 </div>
             </div>
 
@@ -227,7 +249,7 @@
                 <div class="pdf-card mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <div class="section-head" style="margin-bottom:0;">Medical Chronology</div>
-                        <button onclick="addChronology()" class="add-btn no-print">+ Add Chronology Entry</button>
+                        <div class="flex items-center gap-2"><span class="kx-hint no-print" style="margin:0;">Drag a row by its left edge (⠿) to reorder</span><button onclick="sortChronology()" class="add-btn no-print" title="Order the entries by their first date of service">⇅ Sort by Date</button><button onclick="addChronology()" class="add-btn no-print">+ Add Chronology Entry</button></div>
                     </div>
                     <table class="treat-table w-full">
                         <thead>
@@ -268,7 +290,7 @@
                     <span id="med-total" class="text-4xl font-black text-green-800 mono">$ 0.00</span>
                 </div>
                 <div class="pdf-card mt-4">
-                    <div class="section-head">Treatment Notes</div>
+                    <div class="section-head">Other Treatment Notes</div>
                     <div contenteditable="true" data-ph="Enter treatment notes, gaps in care, referrals, or other clinical observations..." class="multiline-field min-h-[160px] text-sm italic leading-relaxed text-slate-600"></div>
                 </div>
             </div>
@@ -374,7 +396,8 @@
             <div id="pane-docs" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <div class="section-head">Documents</div>
-                    <div class="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-8 no-print">
+                    <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-3 mb-4 no-print">
+                        <button onclick="addDocument('Intake Documents')" class="hub-btn">Intake</button>
                         <button onclick="addDocument('Medical Records')" class="hub-btn">Medical</button>
                         <button onclick="addDocument('Police Report')" class="hub-btn">Police</button>
                         <button onclick="addDocument('Case Files')" class="hub-btn">Case Files</button>
@@ -383,6 +406,10 @@
                         <button onclick="addDocument('Property Damage')" class="hub-btn">PD</button>
                         <button onclick="addDocument('Litigation Documents')" class="hub-btn">Litigation</button>
                         <button onclick="addDocument('Others')" class="hub-btn">Others</button>
+                    </div>
+                    <div id="doc-drop" class="doc-drop no-print" ondragover="docDragOver(event)" ondragleave="docDragLeave(event)" ondrop="docDrop(event)">
+                        <b>⬆ Drag &amp; drop files here</b> — each file becomes a document row under the category picked below (or drop a file on a row's Upload button).
+                        <div class="doc-drop-cats" id="doc-drop-cats"></div>
                     </div>
                     <table class="treat-table w-full">
                         <thead><tr><th width="200">Category</th><th>Summary</th><th width="150" class="no-print">Attachment</th><th width="40"></th></tr></thead>
@@ -409,6 +436,76 @@
                     </table>
                 </div>
             </div>
+            <!-- New case sections. They sit after every older section in the page on purpose, and each saves
+                 by id ([data-keyed], see keyed sections in app.js), so cases saved before they existed load unchanged. -->
+            <div id="pane-parties" class="tab-pane">
+                <div class="pdf-card border-l-8 border-orange-500">
+                    <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                        <div class="section-head" style="margin-bottom:0;">Parties Involved</div>
+                        <div class="flex gap-2 flex-wrap no-print">
+                            <button onclick="addParty('Passenger')" class="add-btn">+ Passenger</button>
+                            <button onclick="addParty('At-Fault Party')" class="add-btn">+ At-Fault Party</button>
+                            <button onclick="addParty('Witness')" class="add-btn">+ Witness</button>
+                            <button onclick="addParty('Other')" class="add-btn">+ Other</button>
+                        </div>
+                    </div>
+                    <p class="kx-hint no-print">Everyone involved in the incident, with their role: passengers, the at-fault party (and their vehicle owner or business), witnesses, property owners, and anyone else the case may need to contact.</p>
+                    <div id="parties-summary" class="kx-summary no-print"></div>
+                    <div id="kx-parties" data-keyed="rows" class="space-y-3"></div>
+                </div>
+            </div>
+            <div id="pane-wages" class="tab-pane">
+                <div class="pdf-card border-l-8 border-emerald-500">
+                    <div class="section-head" style="background:#ecfdf5;color:#047857;">Lost Wages</div>
+                    <div id="kx-wages" data-keyed oninput="calcWages()" onchange="calcWages()">
+                        <div class="grid grid-cols-3 gap-6 mb-6">
+                            <div><label>Employer</label><div contenteditable="true" data-k="employer" data-ph="Employer name" data-fmt="name"></div></div>
+                            <div><label>Position / Title</label><div contenteditable="true" data-k="position-title" data-ph="Job title"></div></div>
+                            <div><label>Employer Contact (HR / Payroll)</label><div contenteditable="true" data-k="employer-contact-hr-payroll" data-ph="Name, phone, email"></div></div>
+                            <div><label>Pay Type</label><select class="prof-input" data-k="pay-type" data-w="type"><option>N/A</option><option>Hourly</option><option>Salary (annual)</option><option>Self-Employed</option><option>Commission</option></select></div>
+                            <div><label>Rate of Pay</label><div contenteditable="true" data-k="rate-of-pay" data-w="rate" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Hours per Week</label><div contenteditable="true" data-k="hours-per-week" data-w="hours" data-ph="e.g. 40"></div></div>
+                            <div><label>Off Work From</label><div contenteditable="true" data-k="off-work-from" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>Returned to Work</label><div contenteditable="true" data-k="returned-to-work" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>Work Days Missed</label><div contenteditable="true" data-k="work-days-missed" data-w="days" data-ph="e.g. 12"></div></div>
+                            <div><label>Doctor's Off-Work Note</label><select class="prof-input" data-k="doctor-s-off-work-note"><option>Pending</option><option>Received</option><option>Not needed</option><option>Not available</option></select></div>
+                            <div><label>Wage Verification</label><select class="prof-input" data-k="wage-verification"><option>Not requested</option><option>Requested from employer</option><option>Received</option><option>Sent to adjuster</option></select></div>
+                            <div><label>Lost Wages Claimed</label><div contenteditable="true" data-k="lost-wages-claimed" data-ph="$ 0.00" data-fmt="currency" class="font-black text-emerald-700"></div></div>
+                        </div>
+                        <label>Notes</label><div contenteditable="true" data-k="notes" data-ph="PTO used, light duty offered, pay stubs or tax returns received…" class="multiline-field min-h-[100px] text-sm italic leading-relaxed text-slate-600"></div>
+                    </div>
+                    <div id="wages-estimate" class="kx-calc no-print"></div>
+                </div>
+            </div>
+            <div id="pane-demand" class="tab-pane">
+                <div class="pdf-card border-l-8 border-blue-600">
+                    <div class="flex justify-between items-center mb-3"><div class="section-head" style="margin-bottom:0;background:#eff6ff;color:#1d4ed8;">Demand Info</div><button onclick="addDemand()" class="add-btn no-print">+ Add Demand</button></div>
+                    <p class="kx-hint no-print">One entry per demand sent (BI, UM/UIM, PIP, policy limits…): who it went to, when, how much, and when the carrier must answer.</p>
+                    <div id="kx-demand" data-keyed="rows" class="space-y-4"></div>
+                </div>
+            </div>
+            <div id="pane-settlement" class="tab-pane">
+                <div class="pdf-card border-l-8 border-green-600">
+                    <div class="section-head" style="background:#f0fdf4;color:#15803d;">Settlement Info</div>
+                    <div id="kx-settlement" data-keyed oninput="calcSettlement()" onchange="calcSettlement()">
+                        <div class="grid grid-cols-3 gap-6 mb-6">
+                            <div><label>Settlement Status</label><select class="prof-input" data-k="settlement-status"><option>Not settled</option><option>Negotiating</option><option>Offer received</option><option>Accepted</option><option>Release signed</option><option>Check received</option><option>Disbursed</option></select></div>
+                            <div><label>Settled With (Carrier / Party)</label><div contenteditable="true" data-k="settled-with-carrier-party" data-ph="e.g. State Farm (BI)"></div></div>
+                            <div><label>Date Settled</label><div contenteditable="true" data-k="date-settled" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>Gross Settlement</label><div contenteditable="true" data-k="gross-settlement" data-s="gross" data-ph="$ 0.00" data-fmt="currency" class="font-black text-green-700"></div></div>
+                            <div><label>Attorney Fee %</label><select class="prof-input" data-k="attorney-fee" data-s="pct"><option value="33.33">33⅓%</option><option value="40">40%</option><option value="25">25%</option><option value="35">35%</option><option value="0">Other / none</option></select></div>
+                            <div><label>Case Costs</label><div contenteditable="true" data-k="case-costs" data-s="costs" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Medical Liens / Payoffs</label><div contenteditable="true" data-k="medical-liens-payoffs" data-s="liens" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Release Signed</label><div contenteditable="true" data-k="release-signed" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>Check Received / Disbursed</label><div contenteditable="true" data-k="check-received-disbursed" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        </div>
+                        <label>Offer &amp; Counter History</label><div contenteditable="true" data-k="offer-and-counter-history" data-ph="MM/DD — Offer $… (adjuster) · MM/DD — Counter $… (attorney)…" class="multiline-field min-h-[90px] text-sm leading-relaxed text-slate-600"></div>
+                        <label>Notes</label><div contenteditable="true" data-k="notes" data-ph="Conditions, Medicare/Medicaid clearance, structured payments…" class="multiline-field min-h-[70px] text-sm italic leading-relaxed text-slate-600"></div>
+                    </div>
+                    <div id="settlement-calc" class="kx-calc"></div>
+                </div>
+            </div>
+
             <!-- Firm Calendar (firm-calendar.js fills it). Not part of the saved case: no .pdf-card,
                  no select/contenteditable, and data-free-edit keeps it typeable on view-only library cases. -->
             <div id="pane-calendar" class="tab-pane no-print" data-free-edit></div>
@@ -704,6 +801,7 @@
                     <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Message</label>
                     <textarea id="ping-text-input" placeholder="Type the ping message..." style="width:100%;min-height:56px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin:6px 0 14px;"></textarea>
 
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:-4px 0 14px;cursor:pointer;"><input type="checkbox" id="ping-as-task"> Send as a <b>task</b>: the trainee gets an <b>Accept</b> button that adds it to the open case's Tasks list</label>
                     <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="sendPing()">📣 Send Ping</button>
                 </div>
             </div>
@@ -881,6 +979,7 @@
     <script src="training-library.js"></script>
     <script src="front-desk-drill.js"></script>
     <script src="case-library.js"></script>
+    <script src="case-sections.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>
     <script src="guest-access.js"></script>
