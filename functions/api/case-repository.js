@@ -185,9 +185,9 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const serializedContent = JSON.stringify(content || {});
     const contentBytes = new TextEncoder().encode(serializedContent).length;
 
-    // Calendar-export date fields, pulled out of `content` (where
+    // Case-deadline date fields, pulled out of `content` (where
     // buildCaseContentPayload() already puts them) into their own columns
-    // so /api/export-calendar can query them directly instead of parsing
+    // so the calendars (functions/_calendar.js, functions/_training_calendar.js) can query them directly instead of parsing
     // them back out of stored HTML. Never trust these as anything but
     // free-text strings the user typed (e.g. "MM/DD/YYYY") — no date
     // validation happens client-side today.
