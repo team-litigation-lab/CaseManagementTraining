@@ -7,8 +7,9 @@
    calendar, each already holding that attorney's working schedule
    (court, depositions, mediations, client meetings, blocked time).
 
-   Trainees schedule on the attorney's calendar from the case they
-   are working (📅 Schedule, next to the case tabs): the event is
+   It is a tab of the case, 📅 Calendar next to Tasks (the sidebar's
+   📅 Firm Calendar button opens the same tab). Trainees schedule on
+   the attorney's calendar from the case they are working: the event is
    linked to the case, the attorney's availability is checked as they
    type, and a conflict is flagged with the next free times before
    anything is saved. The case's date deadlines (SOL, trial date,
@@ -80,6 +81,20 @@
         const ref = /^LSH-\d{4}-/.test(idText) && !/-----/.test(idText) ? idText : '';
         return { ref, label, attorney: $id('attorney-field') ? $id('attorney-field').value : '', repoId: typeof currentCaseId !== 'undefined' ? currentCaseId : null };
     }
+    function caseEvents(oc) {
+        if (!S.data || !oc) return [];
+        const label = oc.label.toLowerCase();
+        return S.data.events.filter(e => e.source !== 'case' && ((oc.ref && e.caseRef === oc.ref) || (!oc.ref && e.caseLabel && e.caseLabel.toLowerCase() === label)))
+            .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)).slice(0, 6);
+    }
+    // A new event is linked to the open case, on that case's attorney's calendar ("Unlink" in the form).
+    function caseDefaults() {
+        const oc = openCase(), over = {};
+        if (!oc) return over;
+        Object.assign(over, { caseRef: oc.ref, caseLabel: oc.label, repoId: oc.repoId || null });
+        const c = calendarForAttorney(oc.attorney); if (c) over.calendar = c;
+        return over;
+    }
     function calendarForAttorney(name) {
         const n = String(name || '').toLowerCase();
         const hit = cals().find(c => c.id !== 'firm' && n.includes(c.id));
@@ -132,104 +147,106 @@
     const shownCal = (e) => (!S.hidden[e.calendar] ? e.calendar : (e.invite || []).find(c => !S.hidden[c])) || e.calendar;
 
     /* ---------- shell ---------- */
+    // The case's Calendar tab pane (index.html: #pane-calendar, next to Tasks).
+    const pane = () => $id('pane-calendar');
     function ensureDom() {
-        if ($id('fc-modal')) return;
+        if ($id('fc-root') || !pane()) return;
         const css = document.createElement('style');
         css.textContent = `
-        #fc-modal .fc-box{background:#fff;border-radius:12px;width:min(1320px,97vw);height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;border-top:6px solid var(--orange,#f97316);box-shadow:0 20px 60px rgba(0,0,0,.45)}
-        #fc-modal .fc-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
-        #fc-modal .fc-head h2{margin:0;font-size:20px;color:#0f172a}
-        #fc-modal .fc-sub{font-size:11px;color:#64748b}
-        #fc-modal .fc-btn{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer}
-        #fc-modal .fc-btn:hover{border-color:#f97316;color:#c2410c}
-        #fc-modal .fc-btn.on{background:#0f172a;color:#fff;border-color:#0f172a}
-        #fc-modal .fc-btn.primary{background:#f97316;border-color:#f97316;color:#fff}
-        #fc-modal .fc-btn.danger{color:#b91c1c;border-color:#fecaca}
-        #fc-modal .fc-title{font-size:15px;font-weight:800;color:#0f172a;min-width:190px}
-        #fc-modal .fc-live{font-size:11px;color:#059669;font-weight:700}
-        #fc-modal .fc-live.err{color:#b91c1c}
-        #fc-modal .fc-body{flex:1;display:flex;min-height:0}
-        #fc-modal .fc-rail{width:230px;border-right:1px solid #e2e8f0;padding:14px;overflow-y:auto;flex:0 0 auto}
-        #fc-modal .fc-rail h4{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:12px 0 8px}
-        #fc-modal .fc-layer{display:flex;gap:8px;align-items:flex-start;padding:6px;border-radius:7px;cursor:pointer;user-select:none}
-        #fc-modal .fc-layer:hover{background:#f1f5f9}
-        #fc-modal .fc-layer .sw{width:14px;height:14px;border-radius:4px;flex:0 0 auto;margin-top:2px;border:2px solid}
-        #fc-modal .fc-layer.off .sw{background:#fff!important}
-        #fc-modal .fc-layer b{display:block;font-size:12.5px;color:#0f172a}
-        #fc-modal .fc-layer span{font-size:10.5px;color:#64748b}
-        #fc-modal .fc-main{flex:1;overflow:auto;position:relative;min-width:0}
-        #fc-modal .fc-side{width:380px;border-left:1px solid #e2e8f0;overflow-y:auto;padding:16px;flex:0 0 auto;background:#fcfcfd}
-        #fc-modal .wk{display:grid;min-width:640px}
-        #fc-modal .wk-h{position:sticky;top:0;background:#fff;z-index:3;border-bottom:1px solid #e2e8f0;padding:8px 6px;font-size:12px;font-weight:800;color:#334155;text-align:center}
-        #fc-modal .wk-h.today{color:#c2410c}
-        #fc-modal .wk-h small{display:block;font-size:18px;font-weight:800}
-        #fc-modal .wk-ad{border-bottom:1px solid #e2e8f0;padding:3px;min-height:26px;background:#f8fafc}
-        #fc-modal .wk-t{font-size:10px;color:#94a3b8;text-align:right;padding-right:6px;position:relative}
-        #fc-modal .wk-col{position:relative;border-left:1px solid #eef2f7;cursor:copy}
-        #fc-modal .wk-col.today{background:#fff7ed}
-        #fc-modal .wk-line{position:absolute;left:0;right:0;border-top:1px solid #eef2f7}
-        #fc-modal .wk-line.half{border-top-style:dashed;border-color:#f5f7fa}
-        #fc-modal .ev{position:absolute;border-radius:6px;padding:3px 5px;font-size:11px;line-height:1.25;overflow:hidden;cursor:pointer;color:#0f172a;border-left:4px solid;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-        #fc-modal .ev:hover{z-index:5;box-shadow:0 4px 12px rgba(0,0,0,.18)}
-        #fc-modal .ev b{display:block;font-weight:800}
-        #fc-modal .ev.mine{outline:2px solid #f97316;outline-offset:-1px}
-        #fc-modal .ev.dim{opacity:.28}
-        #fc-modal .ev.ghost{pointer-events:none;z-index:4;border:2px dashed #f97316;border-left-width:2px;background:rgba(249,115,22,.14);color:#9a3412;box-shadow:none}
-        #fc-modal .chip{display:block;border-radius:5px;padding:2px 6px;font-size:10.5px;margin:2px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid}
-        #fc-modal .chip.mine{font-weight:800}
-        #fc-modal .chip.dl{background:#fef2f2;border-color:#dc2626;color:#991b1b}
-        #fc-modal .mo{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:640px}
-        #fc-modal .mo-h{font-size:11px;font-weight:800;color:#64748b;text-align:center;padding:6px;border-bottom:1px solid #e2e8f0}
-        #fc-modal .mo-c{min-height:112px;min-width:0;overflow:hidden;border-right:1px solid #eef2f7;border-bottom:1px solid #eef2f7;padding:4px;cursor:copy}
-        #fc-modal .mo-c.other{background:#f8fafc;color:#94a3b8}
-        #fc-modal .mo-c.today .mo-n{background:#f97316;color:#fff;border-radius:999px;padding:0 6px}
-        #fc-modal .mo-n{font-size:11px;font-weight:800}
-        #fc-modal .more{font-size:10.5px;color:#2563eb;cursor:pointer;font-weight:700}
-        #fc-modal .ag{padding:10px 18px}
-        #fc-modal .ag-d{font-size:12px;font-weight:800;color:#c2410c;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.05em}
-        #fc-modal .ag-r{display:flex;gap:10px;padding:8px;border-radius:8px;cursor:pointer;border-left:4px solid;margin-bottom:4px;background:#f8fafc}
-        #fc-modal .ag-r:hover{background:#f1f5f9}
-        #fc-modal .ag-r .tm{width:130px;font-size:11.5px;font-weight:700;color:#334155;flex:0 0 auto}
-        #fc-modal .ag-r .tt{font-size:12.5px;color:#0f172a}
-        #fc-modal .ag-r .tt small{display:block;color:#64748b;font-size:11px}
-        #fc-modal .fl{display:block;font-size:10.5px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 5px}
-        #fc-modal .fi{width:100%;border:1px solid #cbd5e1;border-radius:7px;padding:7px 9px;font-size:13px;color:#0f172a;background:#fff;box-sizing:border-box}
-        #fc-modal .fi:focus{outline:none;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.15)}
-        #fc-modal .pills{display:flex;flex-wrap:wrap;gap:5px}
-        #fc-modal .pill{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:#334155}
-        #fc-modal .pill.on{color:#fff;border-color:transparent}
-        #fc-modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-        #fc-modal .avail{margin-top:10px;border-radius:8px;padding:9px 10px;font-size:12px;background:#f1f5f9;color:#334155}
-        #fc-modal .avail.ok{background:#ecfdf5;color:#065f46}
-        #fc-modal .avail.bad{background:#fef2f2;color:#991b1b}
-        #fc-modal .avail ul{margin:5px 0 0;padding-left:16px}
-        #fc-modal .avail li{margin:2px 0}
-        #fc-modal .slot{display:inline-block;margin:4px 4px 0 0;border:1px solid currentColor;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;background:#fff}
-        #fc-modal .det h3{margin:0 0 4px;font-size:17px;color:#0f172a}
-        #fc-modal .det .kv{font-size:12.5px;color:#334155;margin:7px 0}
-        #fc-modal .det .kv b{display:inline-block;width:92px;color:#64748b;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
-        #fc-modal .note{font-size:11.5px;color:#64748b;background:#f8fafc;border-radius:8px;padding:9px 10px;margin-top:10px}
-        #fc-modal .feed{border:1px solid #e2e8f0;border-radius:9px;padding:10px;margin:8px 0}
-        #fc-modal .feed code{display:block;font-size:10.5px;word-break:break-all;background:#f8fafc;padding:6px;border-radius:6px;margin:6px 0;color:#334155}
-        #fc-modal .fc-status{padding:30px;text-align:center;color:#64748b;font-size:13px}
-        .cal-tab-btn{color:#c2410c !important;border-color:#fed7aa !important}
-        @media (max-width:1100px){#fc-modal .fc-rail{display:none}#fc-modal .fc-side{position:absolute;right:0;top:0;bottom:0;box-shadow:-10px 0 30px rgba(0,0,0,.15);z-index:10}}`;
+        #app-shell > main,#pane-calendar{min-width:0}
+        #fc-root .fc-box{background:#fff;border-radius:10px;width:100%;max-width:100%;height:max(620px,calc(100vh - 120px));display:flex;flex-direction:column;overflow:hidden;border-left:8px solid var(--orange,#f97316);box-shadow:0 4px 18px rgba(15,23,42,.08)}
+        #fc-root .fc-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
+        #fc-root .fc-head h2{margin:0;font-size:20px;color:#0f172a}
+        #fc-root .fc-sub{font-size:11px;color:#64748b}
+        #fc-root .fc-btn{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer}
+        #fc-root .fc-btn:hover{border-color:#f97316;color:#c2410c}
+        #fc-root .fc-btn.on{background:#0f172a;color:#fff;border-color:#0f172a}
+        #fc-root .fc-btn.primary{background:#f97316;border-color:#f97316;color:#fff}
+        #fc-root .fc-btn.danger{color:#b91c1c;border-color:#fecaca}
+        #fc-root .fc-title{font-size:15px;font-weight:800;color:#0f172a;min-width:190px}
+        #fc-root .fc-live{font-size:11px;color:#059669;font-weight:700}
+        #fc-root .fc-live.err{color:#b91c1c}
+        #fc-root .fc-body{flex:1;display:flex;min-height:0}
+        #fc-root .fc-rail{width:230px;border-right:1px solid #e2e8f0;padding:14px;overflow-y:auto;flex:0 0 auto}
+        #fc-root .fc-rail h4{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:12px 0 8px}
+        #fc-root .fc-layer{display:flex;gap:8px;align-items:flex-start;padding:6px;border-radius:7px;cursor:pointer;user-select:none}
+        #fc-root .fc-layer:hover{background:#f1f5f9}
+        #fc-root .fc-layer .sw{width:14px;height:14px;border-radius:4px;flex:0 0 auto;margin-top:2px;border:2px solid}
+        #fc-root .fc-layer.off .sw{background:#fff!important}
+        #fc-root .fc-layer b{display:block;font-size:12.5px;color:#0f172a}
+        #fc-root .fc-layer span{font-size:10.5px;color:#64748b}
+        #fc-root .fc-main{flex:1;overflow:auto;position:relative;min-width:0}
+        #fc-root .fc-side{width:370px;border-left:1px solid #e2e8f0;overflow-y:auto;padding:16px;flex:0 0 auto;background:#fcfcfd}
+        #fc-root .fc-body.side-open .fc-rail{display:none}
+        #fc-root .wk{display:grid;min-width:640px}
+        #fc-root .wk-h{position:sticky;top:0;background:#fff;z-index:3;border-bottom:1px solid #e2e8f0;padding:8px 6px;font-size:12px;font-weight:800;color:#334155;text-align:center}
+        #fc-root .wk-h.today{color:#c2410c}
+        #fc-root .wk-h small{display:block;font-size:18px;font-weight:800}
+        #fc-root .wk-ad{border-bottom:1px solid #e2e8f0;padding:3px;min-height:26px;background:#f8fafc}
+        #fc-root .wk-t{font-size:10px;color:#94a3b8;text-align:right;padding-right:6px;position:relative}
+        #fc-root .wk-col{position:relative;border-left:1px solid #eef2f7;cursor:copy}
+        #fc-root .wk-col.today{background:#fff7ed}
+        #fc-root .wk-line{position:absolute;left:0;right:0;border-top:1px solid #eef2f7}
+        #fc-root .wk-line.half{border-top-style:dashed;border-color:#f5f7fa}
+        #fc-root .ev{position:absolute;border-radius:6px;padding:3px 5px;font-size:11px;line-height:1.25;overflow:hidden;cursor:pointer;color:#0f172a;border-left:4px solid;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+        #fc-root .ev:hover{z-index:5;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+        #fc-root .ev b{display:block;font-weight:800}
+        #fc-root .ev.mine{outline:2px solid #f97316;outline-offset:-1px}
+        #fc-root .ev.dim{opacity:.28}
+        #fc-root .ev.ghost{pointer-events:none;z-index:4;border:2px dashed #f97316;border-left-width:2px;background:rgba(249,115,22,.14);color:#9a3412;box-shadow:none}
+        #fc-root .chip{display:block;border-radius:5px;padding:2px 6px;font-size:10.5px;margin:2px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid}
+        #fc-root .chip.mine{font-weight:800}
+        #fc-root .chip.dl{background:#fef2f2;border-color:#dc2626;color:#991b1b}
+        #fc-root .mo{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:640px}
+        #fc-root .mo-h{font-size:11px;font-weight:800;color:#64748b;text-align:center;padding:6px;border-bottom:1px solid #e2e8f0}
+        #fc-root .mo-c{min-height:112px;min-width:0;overflow:hidden;border-right:1px solid #eef2f7;border-bottom:1px solid #eef2f7;padding:4px;cursor:copy}
+        #fc-root .mo-c.other{background:#f8fafc;color:#94a3b8}
+        #fc-root .mo-c.today .mo-n{background:#f97316;color:#fff;border-radius:999px;padding:0 6px}
+        #fc-root .mo-n{font-size:11px;font-weight:800}
+        #fc-root .more{font-size:10.5px;color:#2563eb;cursor:pointer;font-weight:700}
+        #fc-root .ag{padding:10px 18px}
+        #fc-root .ag-d{font-size:12px;font-weight:800;color:#c2410c;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.05em}
+        #fc-root .ag-r{display:flex;gap:10px;padding:8px;border-radius:8px;cursor:pointer;border-left:4px solid;margin-bottom:4px;background:#f8fafc}
+        #fc-root .ag-r:hover{background:#f1f5f9}
+        #fc-root .ag-r .tm{width:130px;font-size:11.5px;font-weight:700;color:#334155;flex:0 0 auto}
+        #fc-root .ag-r .tt{font-size:12.5px;color:#0f172a}
+        #fc-root .ag-r .tt small{display:block;color:#64748b;font-size:11px}
+        #fc-root .fl{display:block;font-size:10.5px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 5px}
+        #fc-root .fi{width:100%;border:1px solid #cbd5e1;border-radius:7px;padding:7px 9px;font-size:13px;color:#0f172a;background:#fff;box-sizing:border-box}
+        #fc-root .fi:focus{outline:none;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.15)}
+        #fc-root .pills{display:flex;flex-wrap:wrap;gap:5px}
+        #fc-root .pill{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:#334155}
+        #fc-root .pill.on{color:#fff;border-color:transparent}
+        #fc-root .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        #fc-root .avail{margin-top:10px;border-radius:8px;padding:9px 10px;font-size:12px;background:#f1f5f9;color:#334155}
+        #fc-root .avail.ok{background:#ecfdf5;color:#065f46}
+        #fc-root .avail.bad{background:#fef2f2;color:#991b1b}
+        #fc-root .avail ul{margin:5px 0 0;padding-left:16px}
+        #fc-root .avail li{margin:2px 0}
+        #fc-root .slot{display:inline-block;margin:4px 4px 0 0;border:1px solid currentColor;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;background:#fff}
+        #fc-root .det h3{margin:0 0 4px;font-size:17px;color:#0f172a}
+        #fc-root .det .kv{font-size:12.5px;color:#334155;margin:7px 0}
+        #fc-root .det .kv b{display:inline-block;width:92px;color:#64748b;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+        #fc-root .note{font-size:11.5px;color:#64748b;background:#f8fafc;border-radius:8px;padding:9px 10px;margin-top:10px}
+        #fc-root .feed{border:1px solid #e2e8f0;border-radius:9px;padding:10px;margin:8px 0}
+        #fc-root .feed code{display:block;font-size:10.5px;word-break:break-all;background:#f8fafc;padding:6px;border-radius:6px;margin:6px 0;color:#334155}
+        #fc-root .fc-status{padding:30px;text-align:center;color:#64748b;font-size:13px}
+        @media (max-width:1100px){#fc-root .fc-rail{display:none}#fc-root .fc-side{position:absolute;right:0;top:0;bottom:0;box-shadow:-10px 0 30px rgba(0,0,0,.15);z-index:10}}`;
         document.head.appendChild(css);
-        document.body.insertAdjacentHTML('beforeend', `
-        <div class="modal-overlay no-print" id="fc-modal" style="z-index:2950;">
-            <div class="fc-box" role="dialog" aria-label="Firm Calendar">
+        pane().innerHTML = `
+        <div id="fc-root">
+            <div class="fc-box" aria-label="Firm Calendar">
                 <div class="fc-head" id="fc-head"></div>
-                <div class="fc-body">
+                <div class="fc-body" id="fc-body">
                     <div class="fc-rail" id="fc-rail"></div>
                     <div class="fc-main" id="fc-main"></div>
                     <div class="fc-side" id="fc-side" style="display:none"></div>
                 </div>
             </div>
-        </div>`);
-        $id('fc-modal').addEventListener('mousedown', (e) => { if (e.target.id === 'fc-modal') closeFirmCalendar(); });
+        </div>`;
         document.addEventListener('keydown', (e) => {
-            if (!S.open || e.key !== 'Escape') return;
-            if (S.panel) { S.panel = null; render(); } else closeFirmCalendar();
+            if (!S.open || e.key !== 'Escape' || !S.panel) return;
+            S.panel = null; render();
         });
         document.addEventListener('visibilitychange', () => { if (S.open && !document.hidden) load(true); });
     }
@@ -266,7 +283,6 @@
             <div style="margin-left:auto;display:flex;gap:8px">
                 <button class="fc-btn primary" onclick="fcNew()">+ New event</button>
                 <button class="fc-btn" onclick="fcSubscribe()">🔗 Sync to Google / Outlook</button>
-                <button class="fc-btn" onclick="closeFirmCalendar()" aria-label="Close">✕</button>
             </div>`;
         renderStatus();
     }
@@ -282,7 +298,9 @@
             <div class="fc-layer ${S.showDeadlines ? '' : 'off'}" onclick="fcDeadlines()">
                 <div class="sw" style="background:#dc2626;border-color:#dc2626"></div>
                 <div><b>Case deadlines</b><span>SOL, trial, discovery cut-off… from saved cases</span></div></div>
-            ${oc ? `<h4>Open case</h4><div class="note" style="margin-top:0"><b style="color:#0f172a">${esc(oc.label)}</b>${oc.ref ? ' · ' + esc(oc.ref) : ''}<br>
+            ${oc ? `<h4>This case</h4><div class="note" style="margin-top:0"><b style="color:#0f172a">${esc(oc.label)}</b>${oc.ref ? ' · ' + esc(oc.ref) : ''}
+                ${caseEvents(oc).map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:5px 7px;margin-top:6px;background:#fff" onclick="fcOpen('${esc(e.id)}')"><div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)} · ${esc(cal(e.calendar).name)}</small></div></div>`).join('')
+                  || '<div style="margin-top:4px">Nothing on the calendar for this case in this range.</div>'}
                 <button class="fc-btn primary" style="margin-top:8px;width:100%" onclick="fcNew({fromCase:true})">📅 Schedule for this case</button></div>` : ''}
             <h4>Your upcoming events</h4>
             ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:6px" onclick="fcOpen('${esc(e.id)}')">
@@ -380,6 +398,7 @@
     /* ---------- side panel: details, form, subscribe ---------- */
     function renderSide() {
         const side = $id('fc-side');
+        const body = $id('fc-body'); if (body) body.classList.toggle('side-open', !!S.panel);
         if (!S.panel) { side.style.display = 'none'; side.innerHTML = ''; return; }
         side.style.display = 'block';
         if (S.panel.kind === 'detail') side.innerHTML = detailHtml(S.panel.ev);
@@ -499,17 +518,32 @@
 
     /* ---------- actions ---------- */
     function setAnchorToday() { S.anchor = S.data ? S.data.today : firmToday(); }
-    window.openFirmCalendar = function (opts) {
+    // Opening the Calendar tab (or the sidebar button) shows the calendar; leaving the tab stops the live refresh.
+    function enter(opts) {
         if (!signedIn()) { toast('Sign in to use the Firm Calendar.', 'error'); return; }
         ensureDom();
-        S.open = true; S._scrolled = false;
+        const first = !S.open;
+        S.open = true;
+        if (first) {
+            S._scrolled = false;
+            // bring the calendar's toolbar to the top of the case area
+            // (scroll only the case area: scrollIntoView could also move the page shell and hide the sidebar)
+            setTimeout(() => {
+                const area = $id('capture-area'), p = pane();
+                if (area && p && area.scrollHeight > area.clientHeight) area.scrollTo({ top: Math.max(0, p.offsetTop - 12), behavior: 'smooth' });
+            }, 30);
+        }
         if (!S.anchor) setAnchorToday();
-        $id('fc-modal').classList.add('open');
         render();
         load(true).then(() => { if (opts && opts.fromCase) window.fcNew({ fromCase: true }); });
         startPolling();
+    }
+    function leave() { if (!S.open) return; S.open = false; stopPolling(); }
+    window.openFirmCalendar = function (opts) {
+        if (typeof showTab === 'function' && pane()) showTab('calendar');   // enters through the showTab hook below
+        if (opts && opts.fromCase) { const f = () => window.fcNew({ fromCase: true }); if (S.data) f(); else setTimeout(f, 600); }
     };
-    window.closeFirmCalendar = function () { S.open = false; S.panel = null; stopPolling(); const m = $id('fc-modal'); if (m) m.classList.remove('open'); };
+    window.closeFirmCalendar = function () { S.panel = null; if (typeof showTab === 'function') showTab('profile'); };
     window.fcNav = function (dir) {
         if (!dir) setAnchorToday();
         else if (S.view === 'month') { const d = D(S.anchor.slice(0, 8) + '01'); d.setUTCMonth(d.getUTCMonth() + dir); S.anchor = iso(d); }
@@ -526,22 +560,16 @@
     window.fcOpen = function (id) { const e = findEvent(id); if (!e) return; S.panel = { kind: 'detail', ev: e }; render(); };
     window.fcSubscribe = function () { S.panel = { kind: 'subscribe' }; render(); };
     window.fcNew = function (opts) {
-        const over = {};
-        if (opts && opts.fromCase) {
-            const oc = openCase();
-            if (oc) {
-                Object.assign(over, { caseRef: oc.ref, caseLabel: oc.label, repoId: oc.repoId || null });
-                const c = calendarForAttorney(oc.attorney); if (c) over.calendar = c;
-            } else toast('Open a case first to link the event to it.', 'info');
-        }
+        const over = caseDefaults();
+        if (!over.caseLabel && opts && opts.fromCase) toast('Open a case first to link the event to it.', 'info');
         S.panel = { kind: 'form', form: blankForm(over) }; render();
         setTimeout(() => { const t = $id('fcf-title'); if (t) t.focus(); }, 30);
     };
-    window.fcNewOn = function (date) { S.panel = { kind: 'form', form: blankForm({ date, start: '09:00', end: '10:00' }) }; render(); };
+    window.fcNewOn = function (date) { S.panel = { kind: 'form', form: blankForm(Object.assign(caseDefaults(), { date, start: '09:00', end: '10:00' })) }; render(); };
     window.fcSlot = function (ev, date) {
         const col = ev.currentTarget, y = ev.clientY - col.getBoundingClientRect().top;
         const m = Math.min(DAY_END - 60, Math.max(DAY_START, DAY_START + Math.floor(y / PX_PER_MIN / 30) * 30));
-        S.panel = { kind: 'form', form: blankForm({ date, start: hhmm(m), end: hhmm(m + 60) }) }; render();
+        S.panel = { kind: 'form', form: blankForm(Object.assign(caseDefaults(), { date, start: hhmm(m), end: hhmm(m + 60) })) }; render();
         setTimeout(() => { const t = $id('fcf-title'); if (t) t.focus(); }, 30);
     };
     window.fcEdit = function (id) {
@@ -610,10 +638,10 @@
     };
     window.fcOpenCase = function (id) {
         const e = findEvent(id); if (!e) return;
-        if (/^MC-\d{2}$/.test(e.caseRef || '') && typeof window.openMockCase === 'function') { closeFirmCalendar(); window.openMockCase(e.caseRef); return; }
+        if (/^MC-\d{2}$/.test(e.caseRef || '') && typeof window.openMockCase === 'function') { S.panel = null; window.openMockCase(e.caseRef); return; }
         let repoId = e.repoId;
         if (!repoId && e.caseRef && typeof _repoCache !== 'undefined' && Array.isArray(_repoCache)) { const hit = _repoCache.find(r => r.caseId === e.caseRef); if (hit) repoId = hit.id; }
-        if (repoId && typeof loadCase === 'function') { closeFirmCalendar(); loadCase(repoId); return; }
+        if (repoId && typeof loadCase === 'function') { S.panel = null; loadCase(repoId); return; }
         toast('That case isn\'t in your Case Library. Search for it with the 🔍 bar above the case.', 'info', 5000);
     };
     window.fcCopy = function (text) {
@@ -628,10 +656,20 @@
     };
 
     /* ---------- entry points in the CMS ---------- */
-    function addCaseButton() {
-        const notesTab = $id('tab-notes');
-        if (!notesTab || $id('tab-calendar')) return;
-        notesTab.parentElement.insertAdjacentHTML('beforeend', `<div onclick="openFirmCalendar({fromCase:true})" id="tab-calendar" class="tab-btn cal-tab-btn" title="Schedule on the attorney's calendar for this case">📅 Schedule</div>`);
+    // showTab (app.js) switches the case tabs: hook it so the Calendar tab loads and
+    // refreshes while it's showing, and stops when another tab is picked.
+    const baseShowTab = window.showTab;
+    if (typeof baseShowTab === 'function') {
+        window.showTab = function (id) {
+            const r = baseShowTab.apply(this, arguments);
+            if (id === 'calendar') enter(); else leave();
+            return r;
+        };
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addCaseButton); else addCaseButton();
+    // A different case was opened while the tab is showing: its links and deadlines change.
+    ['openMockCase', 'loadCase', 'newCase'].forEach(name => {
+        const fn = window[name];
+        if (typeof fn !== 'function') return;
+        window[name] = function () { const r = fn.apply(this, arguments); if (S.open) setTimeout(() => { renderRail(); }, 50); return r; };
+    });
 })();

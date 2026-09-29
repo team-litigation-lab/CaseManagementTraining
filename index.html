@@ -138,6 +138,7 @@
                     <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
                     <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
                     <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
+                    <div onclick="showTab('calendar')" id="tab-calendar" class="tab-btn">📅 Calendar</div>
                 </div>
             </div>
 
@@ -405,6 +406,9 @@
                     </table>
                 </div>
             </div>
+            <!-- Firm Calendar (firm-calendar.js fills it). Not part of the saved case: no .pdf-card,
+                 no select/contenteditable, and data-free-edit keeps it typeable on view-only library cases. -->
+            <div id="pane-calendar" class="tab-pane no-print" data-free-edit></div>
 
         </div>
     </main>
