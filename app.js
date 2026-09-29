@@ -527,6 +527,7 @@
         // Builds just the FIELD CONTENT of the current case (no metadata —
         // clientName/phase/medTotal/ownership are tracked separately and
         // sent alongside this on save).
+        function textOf(id) { const el = document.getElementById(id); return el ? el.innerText.trim() : ''; }
         function buildCaseContentPayload() {
             return {
                 // trainingLibraryId / program (training-library.js): which mock case a
@@ -564,6 +565,14 @@
                 complaintFiled: document.getElementById('complaint-filed-field') ? document.getElementById('complaint-filed-field').innerText.trim() : '',
                 discoveryCutoff: document.getElementById('discovery-cutoff-field') ? document.getElementById('discovery-cutoff-field').innerText.trim() : '',
                 trialDate: document.getElementById('trial-date-field') ? document.getElementById('trial-date-field').innerText.trim() : '',
+                // Intake essentials, captured by id (same additive capture as the
+                // date fields above) so the Intake folder's automatic checklist
+                // (functions/_intake.js) reads them reliably.
+                intake: {
+                    phone: textOf('client-phone-field'), dob: textOf('client-dob-field'), email: textOf('client-email-field'),
+                    address: textOf('client-address-field'), narrative: textOf('case-narrative-field'),
+                    emergencyName: textOf('emergency-name-field'), emergencyPhone: textOf('emergency-phone-field')
+                },
                 html: {
                     pass: document.getElementById('passenger-container').innerHTML,
                     facs: document.getElementById('facility-container').innerHTML,

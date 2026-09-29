@@ -80,7 +80,7 @@
                     <div class="space-y-1">
                         <div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div>
                         <div class="flex items-center gap-6">
-                            <div class="flex items-center gap-2"><label class="mb-0 contact-label">Contact:</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" style="min-width:140px" class="text-xs font-bold text-slate-700"></div></div>
+                            <div class="flex items-center gap-2"><label class="mb-0 contact-label">Contact:</label><div id="client-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" style="min-width:140px" class="text-xs font-bold text-slate-700"></div></div>
                             <div class="flex items-center gap-2"><label class="mb-0 text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" style="min-width:120px" class="target-settlement-display"></div></div>
                         </div>
                         <div id="attorney-cm-container" class="flex items-center gap-6 mt-1">
@@ -146,12 +146,12 @@
                 <div class="grid grid-cols-3 gap-8">
                     <div class="space-y-6">
                         <div class="pdf-card shadow-sm"><div class="section-head">Identity</div>
-                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
-                            <div class="mb-4"><label>Email Address</label><div contenteditable="true" data-ph="name@example.com" data-fmt="email"></div></div><div><label>Home Address</label><div contenteditable="true" data-ph="Street, City, State, ZIP"></div></div>
+                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div id="client-dob-field" contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
+                            <div class="mb-4"><label>Email Address</label><div id="client-email-field" contenteditable="true" data-ph="name@example.com" data-fmt="email"></div></div><div><label>Home Address</label><div id="client-address-field" contenteditable="true" data-ph="Street, City, State, ZIP"></div></div>
                         </div>
                         <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><div class="section-head" style="background:#fff7ed;color:#c2410c;">Emergency Contact</div>
-                            <div class="mb-4"><label>Full Name</label><div contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
-                            <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div><div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse"></div></div></div>
+                            <div class="mb-4"><label>Full Name</label><div id="emergency-name-field" contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
+                            <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div id="emergency-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div><div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse"></div></div></div>
                         </div>
                     </div>
                     <div class="space-y-6">
@@ -161,7 +161,7 @@
                             <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true" data-ph="Enter title"></div></div>
                         </div>
                     </div>
-                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div></div>
+                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div></div>
                 </div>
                 <div class="mt-6">
                     <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase mb-0">Passenger Records</label><button onclick="addPassenger()" class="add-btn no-print">+ Add Passenger</button></div>
@@ -874,6 +874,7 @@
     <script src="training-library.js"></script>
     <script src="front-desk-drill.js"></script>
     <script src="case-library.js"></script>
+    <script src="intake-folder.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="training-calendar.js"></script>
     <script src="guest-access.js"></script>

@@ -9,6 +9,8 @@
 // Calendar (month, week and agenda), saves an event with the double-booking
 // warning, copies events to and disconnects a mocked Google Calendar, and
 // deletes wrong entries (a trainee's own, and an Admin deleting a trainee's).
+// Intake folder: a typed intake saved from Intake mode (autosave and Save Case file
+// it there, never as a case), reviewed, moved to the case files; a document uploaded.
 // Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -45,7 +47,8 @@ const CAL = {
     const fail = (msg) => failures.push(msg);
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     page.on('dialog', d => d.accept());
-    const saved = [], drills = [], updates = {}, calPosts = [], gPosts = [];
+    const saved = [], drills = [], updates = {}, calPosts = [], gPosts = [], intakePosts = [], intakeRows = [];
+    const intake = await import(require('url').pathToFileURL(path.join(ROOT, 'functions/_intake.js')).href);
     const apiMock = async route => {
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
@@ -59,6 +62,23 @@ const CAL = {
             if (m === 'POST') { const b = JSON.parse(route.request().postData()); updates[b.mock] = { notes: b.notes, tasks: b.tasks }; return j({ success: true }); }
             if (m === 'DELETE') { delete updates[mock]; return j({ success: true }); }
             return j({ success: true, updates: updates[mock] || null });
+        }
+        if (u.pathname === '/api/upload') return j({ success: true, key: 'documents/0f8fad5b-d9cb-469f-a165-70867728950e-intake.pdf', filename: 'intake.pdf' });
+        if (u.pathname === '/api/intake-files') {
+            const sess = { username: 'ci', userType: 'Trainee' };
+            if (m === 'GET') return j({ success: true, reviewConfigured: true, files: intakeRows.map(r => intake.rowToItem(r, sess)) });
+            const b = JSON.parse(route.request().postData()); intakePosts.push(b);
+            let r = intakeRows.find(x => x.id === b.id);
+            if (b.action === 'save') {
+                const c = intake.checkForm(b.content, b.clientName);
+                if (!r) { r = { id: intakeRows.length + 1, kind: 'form', owner_username: 'ci' }; intakeRows.push(r); }
+                Object.assign(r, { client_name: b.clientName, content: JSON.stringify(b.content), content_hash: 'h', check_score: c.score, check_findings: JSON.stringify(c.findings) });
+                return j({ success: true, file: intake.rowToItem(r, sess), needsReview: true });
+            }
+            if (b.action === 'document') { r = { id: intakeRows.length + 1, kind: 'document', owner_username: 'ci', client_name: b.clientName, doc_key: b.key, doc_name: b.filename, doc_mime: b.mime, doc_size: b.size, check_findings: '[]' }; intakeRows.push(r); return j({ success: true, file: intake.rowToItem(r, sess), needsReview: true }); }
+            if (b.action === 'review') { Object.assign(r, { ai_status: 'complete', ai_review: JSON.stringify({ status: 'complete', score: 4, summary: 'Good intake.', missing: [], redFlags: [], followUps: ['Ask about lost wages'], strengths: [], concerns: [] }), reviewed_hash: r.content_hash }); return j({ success: true, file: intake.rowToItem(r, sess) }); }
+            if (b.action === 'moved') { r.moved_case_id = b.caseRepositoryId; return j({ success: true, file: intake.rowToItem(r, sess) }); }
+            return j({ success: true });
         }
         if (u.pathname === '/api/training-calendar') {
             if (m === 'GET' && u.searchParams.get('action') === 'trainees') return j({ success: true, trainees: [{ username: 'ci', name: 'CI Trainee', batchId: 'B1', count: CAL.events.length, lastChange: '2026-09-29 12:00:00' }] });
@@ -286,8 +306,37 @@ const CAL = {
     if (await admin.isVisible('.tcm-t tr:has-text("Wrong entry by trainee")')) fail('the trainee\'s deleted entry is still listed');
     await admin.close();
 
+    // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files
+    await page.click('#intake-open-btn'); await page.waitForTimeout(400);
+    if (!(await page.isVisible('#cl-tabs button.on:has-text("Intake folder")'))) fail('the Intake folder button did not open the Intake folder tab');
+    await page.click('[data-if="new"]'); await page.waitForTimeout(300);
+    if (!(await page.evaluate(() => document.body.classList.contains('intake-mode'))) || !(await page.isVisible('#intake-bar'))) fail('New intake did not switch the editor to Intake mode');
+    await page.click('#client-name-field'); await page.keyboard.type('Intake Client');
+    await page.click('#client-phone-field'); await page.keyboard.type('5550100');
+    await page.click('#date-of-loss-field'); await page.keyboard.type('01152026');
+    const casesBefore = saved.length;
+    await page.evaluate(() => autoSaveProgress('interval')); await page.waitForTimeout(400);
+    await page.click('#sidebar-actions button:has-text("Save Case")'); await page.waitForTimeout(800);
+    if (saved.length !== casesBefore) fail('autosave or Save Case in Intake mode saved a case instead of the intake');
+    const intakeSave = intakePosts.filter(b => b.action === 'save').pop();
+    if (!intakeSave || intakeSave.clientName.toLowerCase() !== 'intake client' || intakeSave.content.dateOfLoss !== '01/15/2026' || intakeSave.content.intake.phone.replace(/\D/g, '') !== '5550100') fail(`the intake was not saved with its fields (${JSON.stringify(intakeSave && { n: intakeSave.clientName, dol: intakeSave.content.dateOfLoss, phone: intakeSave.content.intake && intakeSave.content.intake.phone })})`);
+    if (!intakePosts.some(b => b.action === 'review')) fail('saving the intake did not start the automatic review');
+    if (!/checklist \d+%/.test(await page.textContent('#ib-state'))) fail('the Intake bar does not show the checklist score');
+    await page.click('#intake-bar [data-ib="move"]'); await page.waitForTimeout(800);
+    const moved = saved[saved.length - 1];
+    if (saved.length !== casesBefore + 1 || !moved.finalize || !intakePosts.some(b => b.action === 'moved' && b.caseRepositoryId === 1)) fail('Move to case files did not save the case and mark the intake as moved');
+    if (await page.evaluate(() => document.body.classList.contains('intake-mode'))) fail('the editor stayed in Intake mode after Move to case files');
+    // an uploaded intake document is filed and reviewed
+    await page.evaluate(() => openIntakeFolder()); await page.waitForTimeout(300);
+    await page.setInputFiles('#if-file', { name: 'intake.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 ci') });
+    await page.fill('#if-up-name', 'Doc Client');
+    await page.click('[data-if="upgo"]'); await page.waitForTimeout(800);
+    if (!intakePosts.some(b => b.action === 'document' && b.clientName === 'Doc Client' && b.mime === 'application/pdf') || intakePosts.filter(b => b.action === 'review').length < 2) fail('the uploaded intake document was not filed and reviewed');
+    if (await page.locator('#if-list .if-row').count() !== 2) fail(`the Intake folder lists ${await page.locator('#if-list .if-row').count()} files instead of 2`);
+    await page.evaluate(() => closeCaseLibrary());
+
     await browser.close(); server.close();
-    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls; checked the Case Library, library-case notes and the Training Calendar.`);
+    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls; checked the Case Library, library-case notes, the Training Calendar and the Intake folder.`);
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
     console.log('Smoke test passed.');
 })().catch(e => { console.error(e); process.exit(1); });

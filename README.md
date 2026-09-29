@@ -95,6 +95,44 @@ Until the setup below is done, the panel says so, and every event has an **Add t
 - `calendar_google_links`: the Google account, the chosen calendar, and its tokens, encrypted with a key derived from `SESSION_SECRET`;
 - `calendar_google_sync`: which events were copied to which calendar.
 
+## 📥 Intake folder (automatically checked and reviewed)
+
+A separate folder in the Case Repository for **intake files**, kept apart from the case files. Open it from the sidebar (**📥 Intake Folder**), from the Case Library window's **📥 Intake folder** tab, or with a course link ending `?intake=1`. Trainees see only their own intake files; Admins see every trainee's, with the trainee's name on each. Code: `intake-folder.js`, `functions/_intake.js` (checklist), `functions/_intake-review.js` (review), `/api/intake-files`.
+
+**Two kinds of intake file:**
+- **Typed intakes.** **📝 New intake** opens the case editor in **Intake mode**, shown by the orange bar above the case. The trainee fills in the new client's details as usual.
+  - **💾 Save to Intake folder** files it in the folder. **Save Case**, **Archive** and the one-minute autosave also save the intake while the bar shows, so an intake never lands in the case files by accident.
+  - **📂 Move to case files** saves an accepted intake as a regular case (it gets a Case ID). The intake file stays in the folder, marked as moved.
+  - **✕ Close intake** leaves Intake mode.
+  - **Open** on a typed intake loads it back into the editor.
+- **Intake documents.** **⬆ Upload intake document** files a PDF or image (PNG, JPG, GIF, WEBP) of an intake sheet, up to 2 MB, with the client's name, the date of loss and a note if known. Save Word files as PDF first.
+
+**Checked automatically.** Every save or upload is scored against the intake checklist (the % badge on each file):
+- **Essentials** (missing = fail): client name, phone, date of birth, date of loss, SOL date, what happened, injuries and treatment, insurance.
+- **Recommended** (missing = warning): home address, email, police or incident report, emergency contact, intake call notes, attorney assigned.
+- **Also flagged:** an SOL that has passed, falls on or before the date of loss, or is within 90 days; a date of loss in the future; a minor client; an account of what happened under 25 words.
+
+**Reviewed automatically.** Right after each save or upload, Claude reviews the intake and the file shows:
+- a 1–5 score and a short summary;
+- red flags (deadlines, liability, coverage gaps, treatment gaps, prior injuries, inconsistencies);
+- what's missing;
+- questions to ask the client next;
+- what was done well and what to improve.
+
+For an uploaded document, the reviewer reads the file itself and reports which checklist details it contains, so the document's checklist score is filled in after the review. A typed intake is reviewed again only when it has changed. **↻ Review again** re-runs a review, and a review that never finished (for example, the page was closed) shows as *didn't finish* after 3 minutes. The **Needs attention** filter lists files with a missing essential, a red flag or a failed review.
+
+**Setup.** The review uses the `ANTHROPIC_API_KEY` secret on the Pages project, the same one the Doc Hub review uses. Without it, the checklist still runs and the folder says the review isn't set up. The review asks Claude Opus 5.5 for structured JSON output and opts into Anthropic's server-side fallback, so a request declined by a safety classifier is retried on Anthropic's recommended fallback model.
+
+**Data** (D1, created on first use): `intake_files`, one row per file:
+- whose it is and its kind;
+- the client name and date of loss;
+- the typed intake's content (the same shape a saved case has), or the uploaded file's R2 key, name and type;
+- the checklist findings and score;
+- the review and its status;
+- the case it was moved to.
+
+Deleting an intake document also deletes its file from storage.
+
 ## Using the CMS from any training program
 
 Link to the CMS with a program so it opens in that program's context:
@@ -106,6 +144,7 @@ Link to the CMS with a program so it opens in that program's context:
 | `…/?library=1` | Opens the Training Library after sign-in (Admins); trainees get the Case Library search. |
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
 | `…/?calendar=1` | Opens the Training Calendar after sign-in. |
+| `…/?intake=1` | Opens the Intake folder after sign-in. |
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
 
@@ -174,7 +213,7 @@ The CMS keeps the fictional firm's calendars, the way a firm's case management s
     - every drill call pointing at a real case, with a valid auth code and answer;
     - callers the key marks verified giving details that match the file (and "not verified" callers not matching);
     - files that share a client name having different dates of loss.
-- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. Finally it opens the Training Calendar: the month, week and agenda views, the double-booking warning, saving an event, copying events to and removing them from a mocked Google Calendar, disconnecting it, the Add to Google Calendar link, a trainee deleting a wrong entry from Manage my entries, and an Admin deleting a trainee's entry from Trainees' entries.
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. Finally it opens the Training Calendar: the month, week and agenda views, the double-booking warning, saving an event, copying events to and removing them from a mocked Google Calendar, disconnecting it, the Add to Google Calendar link, a trainee deleting a wrong entry from Manage my entries, and an Admin deleting a trainee's entry from Trainees' entries. Then the Intake folder: a typed intake saved from Intake mode (autosave and Save Case file it there, never as a case), reviewed automatically, moved to the case files, and an intake document uploaded and reviewed.
 
 - **Firm Calendar** (`.github/scripts/calendar.cjs`, in the same job): runs the real calendar API code on an in-memory SQLite database standing in for D1, through the real page. It schedules from a case (the case is linked and its attorney picked), then checks:
   - the live availability warning;
