@@ -1,6 +1,6 @@
-import { json, requireSession } from '../_utils.js';
+import { json, requireSession, buildFullName, logActivity } from '../_utils.js';
 import {
-    ensureCalendarTables, readPrefs, trainingSchedule, caseDeadlines, googleStatus,
+    ensureCalendarTables, readPrefs, trainingSchedule, caseDeadlines, googleStatus, readLink, gcal,
     CATEGORIES, WALL_RE, DATE_RE, validTimeZone, pickFlags, DEFAULT_LAYERS, DEFAULT_SYNC, addDays,
 } from '../_training_calendar.js';
 
@@ -9,8 +9,13 @@ import {
 //
 // GET  /api/training-calendar
 //   → { events, simulation, deadlines, tz, layers, syncLayers, google, synced }
+// GET  /api/training-calendar?action=entries[&user=<username>]
+//   → { entries } my events, for Manage entries; Admins pass user= for any trainee's
+// GET  /api/training-calendar?action=trainees          (Admins)
+//   → { trainees } everyone with entries: name, batch, count, last change
 // POST /api/training-calendar  { action: 'save', event }     create or update one of my events
-//                              { action: 'delete', id }       delete one of my events
+//                              { action: 'delete', ids }      delete entries: trainees their own,
+//                                                             Admins anyone's (wrong input); logged
 //                              { action: 'prefs', tz?, layers?, syncLayers? }
 //
 // Times are wall-clock strings ('YYYY-MM-DDTHH:MM') in the event's own IANA
@@ -18,14 +23,43 @@ import {
 // 'YYYY-MM-DD' (end date inclusive). See _training_calendar.js for the tables.
 
 const MAX_EVENTS = 2000;
+// Deleting also removes each entry's copy from the attorney's Google Calendar, one
+// outgoing request apiece, and a Pages Function may make only 50: the page sends batches.
+const DELETE_MAX = 40;
 const clip = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 
 function rowToEvent(r) {
     return {
         id: r.id, key: `ev:${r.id}`, title: r.title, category: r.category || 'other', allDay: !!r.all_day,
         start: r.start_at, end: r.end_at, tz: r.tz, location: r.location || '', attendees: r.attendees || '',
-        notes: r.notes || '', caseRef: r.case_ref || '', updatedAt: r.updated_at,
+        notes: r.notes || '', caseRef: r.case_ref || '', updatedAt: r.updated_at, createdAt: r.created_at,
     };
+}
+
+// Removes the Google copies of deleted entries, using the owner's own connection (an Admin
+// deleting a trainee's entry has no Google access of their own to that calendar). A copy that
+// can't be removed keeps its sync row, so the owner's next Sync now removes it.
+async function removeGoogleCopies(env, db, owner, keys) {
+    const out = { removed: 0, failed: 0 };
+    if (!keys.length) return out;
+    const { results } = await db.prepare(`SELECT * FROM calendar_google_sync WHERE username = ? AND local_key IN (${keys.map(() => '?').join(',')})`)
+        .bind(owner, ...keys).all();
+    if (!results || !results.length) return out;
+    const link = await readLink(db, owner);
+    for (const row of results) {
+        let gone = false;
+        if (link) {
+            try {
+                const res = await gcal(env, db, link, 'DELETE', `/calendars/${encodeURIComponent(row.calendar_id)}/events/${row.google_id}`);
+                gone = res.ok || res.status === 404 || res.status === 410;
+            } catch (e) { gone = false; }
+        }
+        if (gone) {
+            out.removed++;
+            await db.prepare(`DELETE FROM calendar_google_sync WHERE username = ? AND calendar_id = ? AND local_key = ?`).bind(owner, row.calendar_id, row.local_key).run();
+        } else out.failed++;
+    }
+    return out;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -34,6 +68,30 @@ export async function onRequestGet({ request, env }) {
     const { session } = auth;
     const db = env.DB;
     await ensureCalendarTables(db);
+    const admin = session.userType === 'Admin';
+    const url = new URL(request.url);
+    const action = url.searchParams.get('action');
+
+    if (action === 'trainees') {
+        if (!admin) return json({ success: false, error: 'Admin access required.' }, 403);
+        const { results } = await db.prepare(
+            `SELECT e.username, COUNT(*) AS n, MAX(e.updated_at) AS last_change, u.first_name, u.mi, u.last_name, u.suffix, u.batch_id, u.user_type
+             FROM training_calendar_events e LEFT JOIN users u ON u.username = e.username
+             GROUP BY e.username ORDER BY last_change DESC LIMIT 1000`
+        ).all();
+        return json({
+            success: true,
+            trainees: (results || []).map(r => ({
+                username: r.username, name: buildFullName(r) || r.username, batchId: r.batch_id || '',
+                userType: r.user_type || '', count: r.n, lastChange: r.last_change,
+            })),
+        });
+    }
+    if (action === 'entries') {
+        const user = admin && url.searchParams.get('user') ? String(url.searchParams.get('user')).slice(0, 120) : session.username;
+        const { results } = await db.prepare(`SELECT * FROM training_calendar_events WHERE username = ? ORDER BY start_at DESC LIMIT ${MAX_EVENTS}`).bind(user).all();
+        return json({ success: true, user, entries: (results || []).map(rowToEvent) });
+    }
 
     const [prefs, eventsRes, userRow, deadlines, google] = await Promise.all([
         readPrefs(db, session.username),
@@ -66,6 +124,10 @@ function validateEvent(ev) {
     const start = String(ev.start || ''), end = String(ev.end || start);
     const re = allDay ? DATE_RE : WALL_RE;
     if (!re.test(start) || !re.test(end)) return { error: allDay ? 'Pick a date.' : 'Pick a date and a start and end time.' };
+    // Real dates and times only (no November 31 or 25:00), however the request was made.
+    const realDate = (d) => { const t = new Date(d + 'T00:00:00Z'); return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d; };
+    const realTime = (w) => w.length === 10 || (+w.slice(11, 13) < 24 && +w.slice(14, 16) < 60);
+    if (![start, end].every(w => realDate(w.slice(0, 10)) && realTime(w))) return { error: 'That date or time doesn\'t exist. Check it and try again.' };
     // Same zone for both ends, so the strings compare in time order.
     if (end < start) return { error: 'The event ends before it starts.' };
     if (allDay && end > addDays(start, 366)) return { error: 'An all-day event can span at most a year.' };
@@ -113,10 +175,30 @@ export async function onRequestPost({ request, env }) {
     }
 
     if (body.action === 'delete') {
-        const id = parseInt(body.id, 10);
-        const res = await db.prepare(`DELETE FROM training_calendar_events WHERE id = ? AND username = ?`).bind(id || 0, session.username).run();
-        if (!res.meta || !res.meta.changes) return json({ success: false, error: 'Event not found.' }, 404);
-        return json({ success: true });
+        // Trainees delete their own entries; Admins delete anyone's (a trainee's wrong input).
+        const admin = session.userType === 'Admin';
+        const ids = [...new Set((Array.isArray(body.ids) ? body.ids : [body.id]).map(v => parseInt(v, 10)).filter(v => v > 0))];
+        if (!ids.length) return json({ success: false, error: 'Which entries?' }, 400);
+        if (ids.length > DELETE_MAX) return json({ success: false, error: `Delete at most ${DELETE_MAX} entries at a time.` }, 400);
+        const marks = ids.map(() => '?').join(',');
+        const { results: rows } = await db.prepare(
+            `SELECT id, username, title, start_at FROM training_calendar_events WHERE id IN (${marks})${admin ? '' : ' AND username = ?'}`
+        ).bind(...ids, ...(admin ? [] : [session.username])).all();
+        if (!rows || !rows.length) return json({ success: false, error: ids.length === 1 ? 'Event not found.' : 'Those entries were not found.' }, 404);
+        await db.prepare(`DELETE FROM training_calendar_events WHERE id IN (${rows.map(() => '?').join(',')})`).bind(...rows.map(r => r.id)).run();
+        const google = { removed: 0, failed: 0 };
+        const byOwner = {};
+        rows.forEach(r => { (byOwner[r.username] = byOwner[r.username] || []).push(r); });
+        for (const [owner, list] of Object.entries(byOwner)) {
+            const g = await removeGoogleCopies(env, db, owner, list.map(r => `ev:${r.id}`));
+            google.removed += g.removed; google.failed += g.failed;
+            if (owner !== session.username) {
+                await logActivity(db, session.username, session.batchId, 'training-calendar-delete', {
+                    owner, count: list.length, entries: list.slice(0, 20).map(r => ({ id: r.id, title: r.title, start: r.start_at })),
+                });
+            }
+        }
+        return json({ success: true, deleted: rows.map(r => r.id), missing: ids.length - rows.length, google });
     }
 
     if (body.action === 'prefs') {

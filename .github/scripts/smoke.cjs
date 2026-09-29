@@ -7,7 +7,8 @@
 // mock cases by name or DOL and flags same-name files, and a library case's
 // Notes and Tasks can be edited, saved, reloaded and reset. Opens the Training
 // Calendar (month, week and agenda), saves an event with the double-booking
-// warning, and copies events to and disconnects a mocked Google Calendar.
+// warning, copies events to and disconnects a mocked Google Calendar, and
+// deletes wrong entries (a trainee's own, and an Admin deleting a trainee's).
 // Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -45,7 +46,7 @@ const CAL = {
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     page.on('dialog', d => d.accept());
     const saved = [], drills = [], updates = {}, calPosts = [], gPosts = [];
-    await page.route('**/api/**', async route => {
+    const apiMock = async route => {
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
@@ -60,9 +61,12 @@ const CAL = {
             return j({ success: true, updates: updates[mock] || null });
         }
         if (u.pathname === '/api/training-calendar') {
+            if (m === 'GET' && u.searchParams.get('action') === 'trainees') return j({ success: true, trainees: [{ username: 'ci', name: 'CI Trainee', batchId: 'B1', count: CAL.events.length, lastChange: '2026-09-29 12:00:00' }] });
+            if (m === 'GET' && u.searchParams.get('action') === 'entries') return j({ success: true, entries: CAL.events });
             if (m === 'GET') return j(Object.assign({ success: true }, CAL));
             const b = JSON.parse(route.request().postData()); calPosts.push(b);
             if (b.action === 'save') { const ev = Object.assign({}, b.event, { id: b.event.id || CAL.events.length + 1 }); ev.key = `ev:${ev.id}`; CAL.events = CAL.events.filter(e => e.id !== ev.id).concat(ev); return j({ success: true, event: ev }); }
+            if (b.action === 'delete') { const del = CAL.events.filter(e => b.ids.includes(e.id)).map(e => e.id); CAL.events = CAL.events.filter(e => !del.includes(e.id)); return j({ success: true, deleted: del, missing: 0, google: { removed: 0, failed: 0 } }); }
             return j({ success: true });
         }
         if (u.pathname === '/api/calendar-google') {
@@ -75,7 +79,8 @@ const CAL = {
             return j({ success: true });
         }
         return j({ success: true });
-    });
+    };
+    await page.route('**/api/**', apiMock);
     await page.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'ci', fullName: 'CI Trainee', batchId: 'B1', userType: 'Trainee' })));
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
@@ -253,8 +258,33 @@ const CAL = {
     await page.click('.tcal-ag-row:has-text("Client Intake Meeting")');
     const href = await page.getAttribute('#tcal-box a[href*="calendar.google.com"]', 'href').catch(() => '');
     if (!/action=TEMPLATE/.test(href || '') || !/ctz=UTC/.test(href || '')) fail(`the "Add to Google Calendar" link is wrong (${href})`);
+    // Manage my entries: tick the wrong one and delete it
+    await page.keyboard.press('Escape');
+    await page.click('#tcal-rail [data-act="manage"]'); await page.waitForTimeout(300);
+    if (!(await page.isVisible('.tcm-t tbody tr:has-text("CI prep call")'))) fail('Manage my entries does not list the trainee\'s event');
+    await page.check('.tcm-t [data-pick="1"]');
+    await page.click('#tcal-box [data-act="delsel"]');
+    await page.click('#tcal-box [data-act="delyes"]'); await page.waitForTimeout(500);
+    if (!calPosts.some(b => b.action === 'delete' && JSON.stringify(b.ids) === '[1]')) fail('Manage my entries did not delete the ticked entry');
+    if (await page.locator('.tcm-t tbody tr').count() || await page.evaluate(() => trainingCalendarState().events.length)) fail('the deleted entry is still listed or still on the calendar');
     await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
     if (await page.isVisible('#tcal-page')) fail('Escape did not close the Training Calendar');
+
+    // An Admin deletes a trainee's wrong entry from Trainees' entries
+    CAL.events.push({ id: 7, key: 'ev:7', title: 'Wrong entry by trainee', category: 'other', allDay: false, start: `${TODAY}T15:00`, end: `${TODAY}T16:00`, tz: 'UTC', location: '', attendees: '', notes: '', caseRef: '', updatedAt: '2026-09-29 12:00:00' });
+    const admin = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    admin.on('pageerror', e => fail(`page error (Admin): ${e.message}`));
+    admin.on('dialog', d => d.accept());
+    await admin.route('**/api/**', apiMock);
+    await admin.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'boss', fullName: 'CI Admin', batchId: 'A1', userType: 'Admin' })));
+    await admin.goto(base + '?calendar=1', { waitUntil: 'load' }); await admin.waitForTimeout(1500);
+    await admin.click('#tcal-rail [data-act="manage"]'); await admin.waitForTimeout(300);
+    await admin.selectOption('#tcm-user', 'ci'); await admin.waitForTimeout(300);
+    await admin.click('.tcm-t tr:has-text("Wrong entry by trainee") [data-act="del1"]');
+    await admin.click('#tcal-box [data-act="delyes"]'); await admin.waitForTimeout(500);
+    if (!calPosts.some(b => b.action === 'delete' && JSON.stringify(b.ids) === '[7]')) fail('an Admin could not delete a trainee\'s wrong entry');
+    if (await admin.isVisible('.tcm-t tr:has-text("Wrong entry by trainee")')) fail('the trainee\'s deleted entry is still listed');
+    await admin.close();
 
     await browser.close(); server.close();
     console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls; checked the Case Library, library-case notes and the Training Calendar.`);

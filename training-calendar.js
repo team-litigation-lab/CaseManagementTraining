@@ -19,6 +19,8 @@
    Connected trainees choose which layers are copied into the
    attorney's calendar; without a connection every event still has
    an "Add to Google Calendar" link.
+   🗂 Manage entries lists a trainee's entries to delete wrong input,
+   several at a time: trainees their own, Admins any trainee's.
    ========================================================= */
 (function () {
     'use strict';
@@ -256,6 +258,8 @@
     .tcal-gbtn[disabled]{opacity:.6;cursor:wait}
     .tcal-btn2{width:100%;border:1px solid #0b8043;color:#0b8043;background:#f0fdf4;border-radius:8px;padding:7px 10px;font-weight:800;font-size:12px;cursor:pointer;margin:8px 0 6px}
     .tcal-btn2:hover{background:#0b8043;color:#fff}
+    .tcal-btn2.navy{border-color:#0f2148;color:#0f2148;background:#f1f5f9}
+    .tcal-btn2.navy:hover{background:#0f2148;color:#fff}
     .tcal-link{border:0;background:none;color:#b91c1c;font-weight:700;font-size:11.5px;cursor:pointer;padding:4px 0;text-decoration:underline}
     .tcal-progress{height:6px;border-radius:99px;background:#e2e8f0;overflow:hidden;margin:10px 0 4px}
     .tcal-progress div{height:100%;background:#0b8043;transition:width .2s}
@@ -326,6 +330,28 @@
     .tcal-modal.open{display:flex}
     .tcal-box{background:#fff;border-radius:12px;width:min(520px,100%);box-shadow:0 20px 50px rgba(0,0,0,.3);padding:18px 20px;position:relative}
     .tcal-box h3{margin:0 30px 10px 0;font-size:17px;font-weight:800;color:#0f2148;line-height:1.3}
+    .tcal-box.wide{width:min(900px,100%)}
+    .tcm-note{font-size:12.5px;color:#475569;margin:0 0 10px;line-height:1.5}
+    #tcm select,.tcm-bar input{border:1px solid #cbd5e1;border-radius:7px;padding:7px 9px;font-size:13px;color:#0f172a;background:#fff;font-family:inherit}
+    #tcm select{width:100%}
+    .tcm-bar{display:flex;gap:10px;align-items:center;margin:10px 0 8px;flex-wrap:wrap}
+    .tcm-bar input{flex:1;min-width:180px}
+    .tcm-bar span{font-size:11.5px;color:#64748b;font-weight:700}
+    .tcm-wrap{max-height:50vh;overflow:auto;border:1px solid #e2e8f0;border-radius:8px}
+    .tcm-t{width:100%;border-collapse:collapse;font-size:12.5px}
+    .tcm-t th{position:sticky;top:0;z-index:1;background:#f8fafc;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#64748b;padding:7px 8px;border-bottom:1px solid #e2e8f0}
+    .tcm-t td{padding:7px 8px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+    .tcm-t tr.sel td{background:#fff7ed}
+    .tcm-t input{margin:2px 0 0;accent-color:#b91c1c}
+    .tcm-t .w{white-space:nowrap;color:#334155;font-weight:600;font-size:12px}
+    .tcm-t .c,.tcm-t .n{display:block;font-size:11.5px;color:#64748b;margin-top:2px}
+    .tcm-t .n{white-space:pre-wrap}
+    .tcm-t .ch{white-space:nowrap;font-size:11.5px;color:#94a3b8}
+    .tcm-t .x{border:1px solid #fecaca;background:#fff;color:#b91c1c;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px}
+    .tcm-t .x:hover{background:#fef2f2}
+    .tcm-empty{padding:26px 10px;text-align:center;color:#64748b;font-size:12.5px}
+    .tcm-confirm{margin-top:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#7f1d1d;line-height:1.45}
+    .tcm-confirm .tcal-acts{margin-top:8px}
     .tcal-x{position:absolute;top:12px;right:12px;border:0;background:none;font-size:17px;color:#64748b;cursor:pointer;padding:4px 7px;border-radius:6px}
     .tcal-x:hover{background:#f1f5f9}
     .tcal-tags{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
@@ -378,6 +404,8 @@
       .tcal-ag-row .t{width:auto}
       .tcal-ag-row .l{max-width:100%;flex-basis:100%}
       .tcal-f .two{grid-template-columns:1fr}
+      .tcm-t .ch{display:none}
+      .tcm-t .w{white-space:normal}
     }`;
     document.head.appendChild(css);
 
@@ -574,6 +602,12 @@
                     ? 'Your account has no training start date, so the training schedule starts this week.'
                     : `The training schedule starts ${fmtDate(sim.anchor, true)}, your first training day.`}</p>
             </section>
+            <section class="tcal-card"><h4>🗂 Entries</h4>
+                <p class="tcal-note">${isAdmin()
+                    ? 'Review what trainees put on their Training Calendars and delete anything entered wrongly.'
+                    : 'Review everything you\'ve put on this calendar and delete wrong entries, one or several at a time.'}</p>
+                <button type="button" class="tcal-btn2 navy" data-act="manage">${isAdmin() ? '🗂 Trainees\' entries' : '🗂 Manage my entries'}</button>
+            </section>
             <section class="tcal-card" id="tcal-gcard"><h4>${GLOGO} Attorney's Google Calendar</h4>${googleCard()}</section>
             <section class="tcal-card"><h4>Time zones</h4>
                 <p class="tcal-note">The calendar shows the attorney's time: <b>${esc(tzName(S.tz))}</b>, now ${fmtTime(msToWall(Date.now(), S.tz))} ${esc(tzAbbr(S.tz))}.
@@ -648,6 +682,7 @@
         else if (act === 'disconnect') disconnectGoogle();
         else if (act === 'greload') loadGoogleEvents(true);
         else if (act === 'calreload') { calendarsError = ''; calendars = null; paintRail(); }
+        else if (act === 'manage') openManage();
     }
     function onRailChange(e) {
         const t = e.target;
@@ -664,6 +699,7 @@
     /* ---------- modal ---------- */
     function openModal(html, onAct, onClose) {
         const box = $id('tcal-box');
+        box.classList.remove('wide'); box.oninput = null; box.onchange = null;
         box.innerHTML = `<button type="button" class="tcal-x" data-act="close" aria-label="Close">✕</button>${html}`;
         box.onclick = (e) => {
             const a = e.target.closest('[data-act]');
@@ -862,15 +898,172 @@
         });
         if (!ok) return;
         try {
-            await api(API, { action: 'delete', id: ev.id });
+            // The server also removes the copy on the attorney's Google Calendar.
+            const r = await api(API, { action: 'delete', ids: [ev.id] });
+            const failed = r.google && r.google.failed;
             S.events = S.events.filter(x => x.id !== ev.id);
-            if (onGoogle && googleReady()) {
-                try { await api(GAPI, { action: 'remove', keys: [ev.key] }); delete S.synced[ev.key]; }
-                catch (e) { toast(`Deleted here, but not from ${S.google.calendarName}: ${e.message}`, 'error'); }
-            }
+            if (!failed) delete S.synced[ev.key];   // a copy that couldn't go stays listed, so Sync now removes it
             paint(); loadGoogleEvents(true);
-            toast('Event deleted.', 'info');
+            toast(failed ? `Deleted here, but the copy on ${S.google.calendarName || 'the attorney\'s calendar'} couldn't be removed yet. Sync now will remove it.` : 'Event deleted.', failed ? 'error' : 'info');
         } catch (e) { toast(e.message, 'error'); }
+    }
+
+    /* ---------- Manage entries: find and delete wrong input ----------
+       Trainees see their own entries; Admins pick any trainee. Tick several and
+       delete them together. Copies on the attorney's Google Calendar go too, and
+       the server logs an Admin's deletions. */
+    let M = null;   // { user, trainees, entries, q, selected, confirm, busy, error }
+    const sessionNow = () => (typeof getSession === 'function' ? getSession() : null);
+    const isAdmin = () => { const s = sessionNow(); return !!(s && s.userType === 'Admin'); };
+    const myName = () => { const s = sessionNow(); return s ? s.username : ''; };
+    const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    function entryWhen(ev) {
+        if (ev.allDay) return `${fmtDate(ev.start, true)}${ev.end !== ev.start ? ' – ' + fmtDate(ev.end) : ''} · all day`;
+        const sameDay = ev.start.slice(0, 10) === ev.end.slice(0, 10);
+        return `${fmtDate(ev.start.slice(0, 10), true)} · ${fmtTime(ev.start)} – ${sameDay ? '' : fmtDate(ev.end.slice(0, 10)) + ' '}${fmtTime(ev.end)} ${esc(tzAbbr(ev.tz, wallToMs(ev.start, ev.tz)))}`;
+    }
+    function shownEntries() {
+        const q = M.q.trim().toLowerCase();
+        return (M.entries || []).filter(ev => !q || [ev.title, ev.location, ev.notes, ev.attendees, ev.caseRef, CAT[ev.category]].join(' ').toLowerCase().includes(q));
+    }
+    const ownerLabel = () => {
+        if (!isAdmin() || M.user === myName()) return 'your';
+        const t = (M.trainees || []).find(x => x.username === M.user);
+        return `${esc(t ? t.name : M.user)}'s`;
+    };
+
+    function openManage() {
+        M = { user: isAdmin() ? '' : myName(), trainees: null, entries: null, q: '', selected: new Set(), confirm: false, busy: false, error: '' };
+        openModal('<div id="tcm"></div>', onManageAct, () => { M = null; });
+        const box = $id('tcal-box');
+        box.classList.add('wide');
+        box.onchange = (e) => {
+            const t = e.target;
+            if (!M) return;
+            if (t.id === 'tcm-user') {
+                Object.assign(M, { user: t.value, q: '', selected: new Set(), confirm: false, entries: null, error: '' });
+                paintManage();
+                if (M.user) loadEntries();
+            } else if (t.dataset.pick) {
+                const id = +t.dataset.pick;
+                if (t.checked) M.selected.add(id); else M.selected.delete(id);
+                M.confirm = false; paintManageList();
+            } else if (t.hasAttribute('data-all')) {
+                shownEntries().forEach(ev => { if (t.checked) M.selected.add(ev.id); else M.selected.delete(ev.id); });
+                M.confirm = false; paintManageList();
+            }
+        };
+        box.oninput = (e) => {
+            if (!M || e.target.id !== 'tcm-q') return;
+            M.q = e.target.value;
+            const visible = new Set(shownEntries().map(ev => ev.id));   // never delete what the search hides
+            M.selected = new Set([...M.selected].filter(id => visible.has(id)));
+            M.confirm = false; paintManageList();
+        };
+        paintManage();
+        if (isAdmin()) loadTrainees(); else loadEntries();
+    }
+    function onManageAct(act, e) {
+        if (!M || M.busy) return;
+        if (act === 'delsel' && M.selected.size) M.confirm = true;
+        else if (act === 'del1') { M.selected = new Set([+e.target.closest('[data-id]').dataset.id]); M.confirm = true; }
+        else if (act === 'delno') M.confirm = false;
+        else if (act === 'delyes') return deleteSelected();
+        else if (act === 'mreload') return M.user ? loadEntries() : loadTrainees();
+        else return;
+        paintManageList();
+    }
+    async function loadTrainees() {
+        try { M.trainees = (await api(`${API}?action=trainees`)).trainees || []; }
+        catch (e) { if (M) M.error = e.message; }
+        if (M) paintManage();
+    }
+    async function loadEntries() {
+        const user = M.user;
+        try {
+            const r = await api(`${API}?action=entries${isAdmin() ? '&user=' + encodeURIComponent(user) : ''}`);
+            if (M && M.user === user) M.entries = r.entries || [];
+        } catch (e) { if (M && M.user === user) M.error = e.message; }
+        if (M && M.user === user) paintManageList();
+    }
+    function paintManage() {
+        const el = $id('tcm');
+        if (!el || !M) return;
+        const admin = isAdmin();
+        let picker = '';
+        if (admin) {
+            const list = M.trainees;
+            picker = `<label class="tcal-lbl" for="tcm-user">Trainee</label>${list === null
+                ? '<p class="tcal-note">Loading trainees…</p>'
+                : list.length
+                    ? `<select id="tcm-user"><option value="">Choose a trainee…</option>${list.map(t => `<option value="${esc(t.username)}"${t.username === M.user ? ' selected' : ''}>${esc(t.name)}${t.batchId ? ' · ' + esc(t.batchId) : ''} (${plural(t.count, 'entry', 'entries')})</option>`).join('')}</select>`
+                    : '<p class="tcal-note">No one has put anything on the Training Calendar yet.</p>'}`;
+        }
+        el.innerHTML = `<h3>${admin ? 'Trainees\' calendar entries' : 'My calendar entries'}</h3>
+            <p class="tcm-note">${admin
+                ? 'Pick a trainee to see everything they put on their Training Calendar, and delete what was entered wrongly. Copies on the attorney\'s Google Calendar are removed too, and each deletion is recorded in the activity log.'
+                : 'Everything you put on your Training Calendar, newest first. Tick the wrong ones and delete them together. Copies on the attorney\'s Google Calendar are removed too.'}</p>
+            ${picker}
+            ${M.user ? `<div class="tcm-bar"><input type="search" id="tcm-q" placeholder="Search title, place, notes…" value="${esc(M.q)}" aria-label="Search entries"><span id="tcm-count"></span></div>` : ''}
+            <div id="tcm-list"></div>`;
+        paintManageList();
+    }
+    function paintManageList() {
+        const el = $id('tcm-list');
+        if (!el || !M) return;
+        const err = M.error ? `<p class="tcal-err">${esc(M.error)} <button type="button" class="tcal-link" data-act="mreload">Try again</button></p>` : '';
+        if (!M.user) { el.innerHTML = err; return; }
+        if (M.entries === null) { el.innerHTML = err || '<div class="tcm-empty">Loading entries…</div>'; return; }
+        const list = shownEntries(), n = M.selected.size;
+        const count = $id('tcm-count');
+        if (count) count.textContent = `${list.length} of ${plural(M.entries.length, 'entry', 'entries')}${n ? ` · ${n} selected` : ''}`;
+        const allOn = list.length > 0 && list.every(ev => M.selected.has(ev.id));
+        const rows = list.map(ev => `<tr class="${M.selected.has(ev.id) ? 'sel' : ''}">
+                <td><input type="checkbox" data-pick="${ev.id}" aria-label="Select ${esc(ev.title)}"${M.selected.has(ev.id) ? ' checked' : ''}${M.busy ? ' disabled' : ''}></td>
+                <td class="w">${entryWhen(ev)}</td>
+                <td><b>${esc(ev.title)}</b><span class="c">${esc(CAT[ev.category] || 'Other')}${ev.location ? ' · 📍 ' + esc(ev.location) : ''}${ev.caseRef ? ' · 🗂 ' + esc(ev.caseRef) : ''}</span>${ev.notes ? `<span class="n">${esc(ev.notes.length > 160 ? ev.notes.slice(0, 160) + '…' : ev.notes)}</span>` : ''}</td>
+                <td class="ch" title="${esc(ev.updatedAt || '')} UTC">${esc(ago(ev.updatedAt || ''))}</td>
+                <td><button type="button" class="x" data-act="del1" data-id="${ev.id}" title="Delete this entry" aria-label="Delete ${esc(ev.title)}"${M.busy ? ' disabled' : ''}>🗑</button></td>
+            </tr>`).join('');
+        const table = list.length
+            ? `<div class="tcm-wrap"><table class="tcm-t"><thead><tr><th><input type="checkbox" data-all aria-label="Select all shown"${allOn ? ' checked' : ''}${M.busy ? ' disabled' : ''}></th><th>When</th><th>Entry</th><th>Changed</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+            : `<div class="tcm-empty">${M.entries.length ? 'No entries match the search.' : `Nothing on ${ownerLabel()} Training Calendar.`}</div>`;
+        const footer = M.confirm
+            ? `<div class="tcm-confirm">Delete ${plural(n, 'entry', 'entries')} from ${ownerLabel()} calendar? ${isAdmin() && M.user !== myName() ? 'The trainee will no longer see them. ' : ''}This can't be undone.
+                <div class="tcal-acts"><button type="button" class="danger" data-act="delyes"${M.busy ? ' disabled' : ''}>${M.busy ? 'Deleting…' : `🗑 Delete ${plural(n, 'entry', 'entries')}`}</button><button type="button" data-act="delno"${M.busy ? ' disabled' : ''}>Cancel</button></div></div>`
+            : `<div class="tcal-acts"><button type="button" class="danger" data-act="delsel"${n ? '' : ' disabled'}>🗑 Delete selected${n ? ` (${n})` : ''}</button><button type="button" data-act="close">Done</button></div>`;
+        el.innerHTML = err + table + footer;
+    }
+    async function deleteSelected() {
+        const ids = [...M.selected];
+        if (!ids.length) return;
+        const user = M.user;
+        M.busy = true; M.error = ''; paintManageList();
+        let deleted = [], removed = 0, failed = 0;
+        try {
+            for (let i = 0; i < ids.length; i += 40) {
+                const r = await api(API, { action: 'delete', ids: ids.slice(i, i + 40) });
+                deleted = deleted.concat(r.deleted || []);
+                removed += (r.google && r.google.removed) || 0; failed += (r.google && r.google.failed) || 0;
+            }
+        } catch (e) { if (M) M.error = e.message; }
+        const gone = new Set(deleted);
+        // Keep the calendar behind the window in step when these were the viewer's own entries.
+        if (S && user === myName() && gone.size) {
+            S.events = S.events.filter(ev => !gone.has(ev.id));
+            if (!failed) deleted.forEach(id => { delete S.synced['ev:' + id]; });
+            paint();
+        }
+        if (!M || M.user !== user) return;
+        M.entries = (M.entries || []).filter(ev => !gone.has(ev.id));
+        const t = (M.trainees || []).find(x => x.username === user);
+        if (t) t.count = M.entries.length;
+        M.selected = new Set([...M.selected].filter(id => !gone.has(id)));
+        M.busy = false; M.confirm = false;
+        paintManage();
+        if (deleted.length) {
+            toast(`${plural(deleted.length, 'entry', 'entries')} deleted${removed ? `, and ${removed} removed from the attorney's Google Calendar` : ''}.${failed ? ` ${plural(failed, 'Google copy', 'Google copies')} couldn't be removed yet; the next Sync now removes ${failed === 1 ? 'it' : 'them'}.` : ''}`, failed ? 'error' : 'success');
+        }
     }
 
     /* ---------- preferences ---------- */
