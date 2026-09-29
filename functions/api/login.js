@@ -1,20 +1,57 @@
-import { json, logActivity, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName } from '../_utils.js';
+import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName } from '../_utils.js';
+// The Admin Portal signs in with the admin password only (no username), as the
+// Master Account (MASTER_USERNAME in _utils.js), which keeps every admin power it
+// has. The password is the ADMIN_PORTAL_PASSWORD secret on the Pages project,
+// never the code (README → Admin Portal).
+async function adminPasswordOk(env, password) {
+    const want = String(env.ADMIN_PORTAL_PASSWORD || '');
+    if (!want) return false;
+    const enc = new TextEncoder();
+    const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', enc.encode(password)), crypto.subtle.digest('SHA-256', enc.encode(want))]);
+    const x = new Uint8Array(a), y = new Uint8Array(b);
+    let diff = 0;
+    for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+    return diff === 0;
+}
+// The Master Account's row, created on first use (with no usable password of its own).
+async function adminPortalUser(db) {
+    let user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(MASTER_USERNAME).first();
+    if (!user) {
+        await db.prepare(
+            `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
+             VALUES ('LSH', NULL, 'Admin', NULL, ?, 'Admin', NULL, ?, ?, 'Approved', NULL)`
+        ).bind(`${MASTER_USERNAME.toLowerCase()}@admin.invalid`, MASTER_USERNAME, 'disabled:' + crypto.randomUUID() + crypto.randomUUID()).run();
+    } else if (user.user_type !== 'Admin' || user.status !== 'Approved') {
+        await db.prepare(`UPDATE users SET user_type = 'Admin', status = 'Approved' WHERE username = ?`).bind(MASTER_USERNAME).run();
+    }
+    return db.prepare(`SELECT * FROM users WHERE username = ?`).bind(MASTER_USERNAME).first();
+}
+
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const { username, password, portalMode } = body;
-    if (!username || !password) {
-        return json({ success: false, error: 'Please enter both username and password.' }, 400);
+    let user;
+    if (portalMode === 'Admin' && !username) {
+        // Admin Portal: the admin password only
+        if (!password) return json({ success: false, error: 'Please enter the admin password.' }, 400);
+        if (!env.ADMIN_PORTAL_PASSWORD) return json({ success: false, error: 'The admin password isn\'t set up yet. Add ADMIN_PORTAL_PASSWORD to the Cloudflare Pages project (README → Admin Portal).' }, 503);
+        if (!(await adminPasswordOk(env, String(password)))) return json({ success: false, error: 'Incorrect admin password.' }, 401);
+        user = await adminPortalUser(db);
+    } else {
+        if (!username || !password) {
+            return json({ success: false, error: 'Please enter both username and password.' }, 400);
+        }
+        // Fetch by username only — password is checked in JS via verifyPassword()
+        // so we can support hashed rows (and transparently upgrade legacy
+        // plaintext rows) instead of comparing with `password = ?` in SQL.
+        user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
+        if (!user || String(user.password || '').startsWith('disabled:') || !(await verifyPassword(password, user.password))) {
+            return json({ success: false, error: 'Incorrect username or password.' }, 401);
+        }
     }
-    // Fetch by username only — password is checked in JS via verifyPassword()
-    // so we can support hashed rows (and transparently upgrade legacy
-    // plaintext rows) instead of comparing with `password = ?` in SQL.
-    const user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
-    if (!user || !(await verifyPassword(password, user.password))) {
-        return json({ success: false, error: 'Incorrect username or password.' }, 401);
-    }
-    if (isLegacyPlaintext(user.password)) {
+    if (isLegacyPlaintext(user.password) && !String(user.password).startsWith('disabled:')) {
         await upgradePasswordHash(db, user.id, password);
     }
     if (portalMode && user.user_type !== portalMode) {

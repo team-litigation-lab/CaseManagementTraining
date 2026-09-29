@@ -1809,7 +1809,7 @@
         function showRegisterView() {
             document.getElementById('auth-login-view').classList.add('hidden');
             document.getElementById('auth-register-view').classList.remove('hidden');
-            document.getElementById('reg-usertype').value = currentPortalTab;
+            document.getElementById('reg-usertype').value = 'Trainee';   // admins sign in with the admin password; only trainees register
             onRegUserTypeChange();
         }
         const REG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,}$/;

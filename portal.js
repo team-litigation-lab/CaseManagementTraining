@@ -9,6 +9,10 @@ function switchPortalTab(mode) {
     const traineeTab = document.getElementById('portal-tab-trainee');
     const adminTab = document.getElementById('portal-tab-admin');
     const authGate = document.getElementById('auth-gate');
+    // Admin Portal: the shared admin password only (functions/api/login.js)
+    const pwLabel = document.getElementById('login-password-label'), pw = document.getElementById('login-password');
+    if (pwLabel) pwLabel.textContent = mode === 'Admin' ? 'Admin password' : 'Password';
+    if (pw) pw.placeholder = mode === 'Admin' ? 'Enter the admin password' : 'Enter your password';
     if (mode === 'Admin') {
         if (adminTab) adminTab.classList.add('active');
         if (traineeTab) traineeTab.classList.remove('active');
@@ -93,10 +97,11 @@ function attemptLogin() {
     const loginMsgDiv = document.getElementById('auth-login-msg');
     if (loginMsgDiv) { loginMsgDiv.innerText = ""; loginMsgDiv.className = "auth-msg"; loginMsgDiv.style.display = "none"; }
 
-    const usernameInput = document.getElementById('login-username')?.value?.trim() || "";
+    const adminMode = currentPortalMode === 'Admin';
+    const usernameInput = adminMode ? "" : (document.getElementById('login-username')?.value?.trim() || "");
     const passwordInput = document.getElementById('login-password')?.value || "";
 
-    if (!usernameInput) {
+    if (!usernameInput && !adminMode) {
         if (loginMsgDiv) { loginMsgDiv.innerText = "Username is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
         return;
     }
