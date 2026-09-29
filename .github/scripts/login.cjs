@@ -1,0 +1,115 @@
+// Sign-in test: the real login and registration code (functions/api/login.js,
+// register.js) on an in-memory SQLite database standing in for D1, and the
+// sign-in screen in a browser.
+//
+// Checks: the Admin Portal tab asks for the admin password only (no username,
+// no Register link) and signs in as the Master Account; a wrong admin password
+// and an unset ADMIN_PORTAL_PASSWORD are refused; trainees still sign in with
+// username and password; registration offers Trainee only; the registration form
+// scrolls on a small screen; a browser tab still running the old Training
+// Calendar gets told to reload. The admin password here is a test value.
+// Usage: node .github/scripts/login.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
+const { chromium } = require('playwright');
+const { DatabaseSync } = require('node:sqlite');
+const http = require('http'); const fs = require('fs'); const path = require('path'); const { pathToFileURL } = require('url');
+const ROOT = process.cwd();
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
+const server = http.createServer((req, res) => {
+    let f = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname)); if (f.endsWith('/')) f += 'index.html';
+    if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));
+});
+function d1(db) {
+    return {
+        prepare(sql) {
+            const make = (args) => ({
+                bind: (...a) => make(a),
+                async run() { const r = db.prepare(sql).run(...args); return { success: true, meta: { changes: r.changes } }; },
+                async first() { const r = db.prepare(sql).get(...args); return r === undefined ? null : { ...r }; },
+                async all() { return { results: db.prepare(sql).all(...args).map(r => ({ ...r })) }; }
+            });
+            return make([]);
+        }
+    };
+}
+const failures = []; const fail = (m) => failures.push(m);
+
+(async () => {
+    const utils = await import(pathToFileURL(path.join(ROOT, 'functions/_utils.js')).href);
+    const loginApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/login.js')).href);
+    const oldCal = await import(pathToFileURL(path.join(ROOT, 'functions/api/training-calendar.js')).href);
+    const sql = new DatabaseSync(':memory:');
+    sql.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT, email TEXT, user_type TEXT,
+            batch_id TEXT, username TEXT UNIQUE, password TEXT, status TEXT, training_start_date TEXT);
+        CREATE TABLE heartbeats (username TEXT PRIMARY KEY, full_name TEXT, batch_id TEXT, user_type TEXT, current_case TEXT, last_seen TEXT);
+        CREATE TABLE activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_username TEXT, actor_batch TEXT, action TEXT, details TEXT, created_at TEXT DEFAULT (datetime('now')));`);
+    sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Tia', 'Trainee', 't@x.io', 'Trainee', 'B1', 'tia', ?, 'Approved')`)
+        .run(await utils.hashPassword('trainee123'));
+    const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret' };
+    const post = async (body) => { const r = await loginApi.onRequestPost({ request: new Request('http://x/api/login', { method: 'POST', body: JSON.stringify(body) }), env }); return { status: r.status, cookie: r.headers.get('set-cookie') || '', data: await r.json() }; };
+
+    // the API
+    let r = await post({ portalMode: 'Admin', password: 'anything' });
+    if (r.status !== 503) fail(`without ADMIN_PORTAL_PASSWORD the admin sign-in should say it isn't set up (got ${r.status})`);
+    env.ADMIN_PORTAL_PASSWORD = 'ci-admin-pass';
+    r = await post({ portalMode: 'Admin', password: 'wrong-pass' });
+    if (r.status !== 401) fail(`a wrong admin password was not refused (${r.status})`);
+    r = await post({ portalMode: 'Admin', password: 'ci-admin-pass' });
+    if (r.status !== 200 || !r.data.success || r.data.user.username !== utils.MASTER_USERNAME || r.data.user.user_type !== 'Admin' || !/lsh_session=/.test(r.cookie)) fail(`the admin password did not sign in as the Master Account: ${r.status} ${JSON.stringify(r.data)}`);
+    const master = sql.prepare('SELECT * FROM users WHERE username = ?').get(utils.MASTER_USERNAME);
+    if (!master || master.status !== 'Approved' || !/^disabled:/.test(master.password)) fail(`the Master Account row is wrong: ${JSON.stringify(master)}`);
+    r = await post({ username: utils.MASTER_USERNAME, password: master.password, portalMode: 'Admin' });
+    if (r.status === 200) fail('the Master Account could be reached with its placeholder password');
+    r = await post({ username: 'tia', password: 'trainee123', portalMode: 'Trainee' });
+    if (r.status !== 200 || r.data.user.username !== 'tia') fail(`a trainee could not sign in with username and password (${r.status})`);
+    r = await post({ portalMode: 'Trainee', password: 'ci-admin-pass' });
+    if (r.status === 200) fail('the admin password signed in from the Trainee tab without a username');
+    const moved = await oldCal.onRequestGet({ request: new Request('http://x/api/training-calendar'), env });
+    const mj = await moved.json();
+    if (moved.status !== 410 || !/Reload the page/.test(mj.error || '')) fail('the old Training Calendar endpoint does not tell the tab to reload');
+
+    // the sign-in screen
+    await new Promise(res => server.listen(0, res));
+    const base = `http://localhost:${server.address().port}/`;
+    const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    page.on('pageerror', e => fail(`page error: ${e.message}`));
+    const posted = [];
+    await page.route('**/api/**', async route => {
+        const u = new URL(route.request().url());
+        const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+        if (u.pathname === '/api/login') { const b = JSON.parse(route.request().postData()); posted.push(b); return j({ success: false, error: 'CI stops here.' }, 401); }
+        if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
+        return j({ success: true });
+    });
+    await page.goto(base, { waitUntil: 'load' });
+    await page.waitForSelector('#auth-login-view', { state: 'visible' });
+    if (!(await page.isVisible('#login-username'))) fail('the Trainee tab lost its username field');
+    await page.click('#portal-tab-admin');
+    if (await page.isVisible('#login-username')) fail('the Admin Portal tab still asks for a username');
+    if (await page.isVisible('#auth-login-view .auth-register-link')) fail('the Admin Portal tab still offers registration');
+    if ((await page.textContent('#login-password-label')) !== 'Admin password') fail('the Admin tab\'s password field is not labelled "Admin password"');
+    await page.fill('#login-password', 'some-password');
+    await page.click('#auth-login-view .auth-submit'); await page.waitForTimeout(400);
+    const last = posted[posted.length - 1] || {};
+    if (last.portalMode !== 'Admin' || last.username !== '' || last.password !== 'some-password') fail(`the Admin tab sent the wrong sign-in: ${JSON.stringify(last)}`);
+    // registration: trainees only, and it scrolls on a phone
+    await page.click('#portal-tab-trainee');
+    await page.setViewportSize({ width: 375, height: 560 });
+    await page.click('#auth-login-view .auth-register-link a');
+    const opts = await page.$$eval('#reg-usertype option', os => os.map(o => o.value));
+    if (opts.join() !== 'Trainee') fail(`registration still offers ${opts.join(', ')}`);
+    await page.locator('#auth-register-view .auth-submit').scrollIntoViewIfNeeded();
+    const box = await page.locator('#auth-register-view .auth-submit').boundingBox();
+    const top = await page.locator('#auth-gate .auth-brand').boundingBox().catch(() => null);
+    if (!box || box.y + box.height > 560 || box.y < 0) fail(`on a small screen the Submit Registration button can't be scrolled into view (${JSON.stringify(box)})`);
+    const scrolls = await page.evaluate(() => { const g = document.getElementById('auth-gate'); return g.scrollHeight > g.clientHeight && getComputedStyle(g).overflowY === 'auto'; });
+    if (!scrolls) fail('the registration screen does not scroll on a small screen');
+    await page.evaluate(() => { document.getElementById('auth-gate').scrollTop = 0; });
+    const brand = await page.locator('#auth-gate .auth-brand').boundingBox();
+    if (!brand || brand.y < 0) fail(`the top of the registration form is cut off on a small screen (${JSON.stringify(brand || top)})`);
+
+    await browser.close(); server.close();
+    if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
+    console.log('Sign-in test passed.');
+})().catch(e => { console.error(e); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); });
