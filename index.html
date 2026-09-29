@@ -143,7 +143,7 @@
                     <div onclick="showTab('wages')" id="tab-wages" class="tab-btn">Lost Wages</div>
                     <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Property Damage</div>
                     <div onclick="showTab('demand')" id="tab-demand" class="tab-btn">Demand</div>
-                    <div onclick="showTab('settlement')" id="tab-settlement" class="tab-btn">Settlement</div>
+                    <div onclick="showTab('settlement')" id="tab-settlement" class="tab-btn">Settlement (BI / UM)</div>
                     <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
                     <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Finance</div>
                     <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
@@ -486,7 +486,7 @@
             </div>
             <div id="pane-settlement" class="tab-pane">
                 <div class="pdf-card border-l-8 border-green-600">
-                    <div class="section-head" style="background:#f0fdf4;color:#15803d;">Settlement Info</div>
+                    <div class="section-head" style="background:#f0fdf4;color:#15803d;">BI Settlement (Bodily Injury: the at-fault party's carrier)</div>
                     <div id="kx-settlement" data-keyed oninput="calcSettlement()" onchange="calcSettlement()">
                         <div class="grid grid-cols-3 gap-6 mb-6">
                             <div><label>Settlement Status</label><select class="prof-input" data-k="settlement-status"><option>Not settled</option><option>Negotiating</option><option>Offer received</option><option>Accepted</option><option>Release signed</option><option>Check received</option><option>Disbursed</option></select></div>
@@ -504,6 +504,28 @@
                     </div>
                     <div id="settlement-calc" class="kx-calc"></div>
                 </div>
+                <div class="kx-hint no-print" style="margin:6px 2px 14px;">BI and UM/UIM are separate claims: each settles with its own carrier, release and check, so they're tracked separately. The totals below add them up.</div>
+                <div class="pdf-card border-l-8 border-blue-600">
+                    <div class="section-head" style="background:#eff6ff;color:#1d4ed8;">UM / UIM Settlement (the client's own policy)</div>
+                    <div id="kx-settlement-um" data-keyed oninput="calcSettlement()" onchange="calcSettlement()">
+                        <div class="grid grid-cols-3 gap-6 mb-6">
+                            <div><label>Coverage</label><select class="prof-input" data-k="coverage"><option>UM (uninsured)</option><option>UIM (underinsured)</option></select></div>
+                            <div><label>Settlement Status</label><select class="prof-input" data-k="settlement-status"><option>Not settled</option><option>Negotiating</option><option>Offer received</option><option>Accepted</option><option>Release signed</option><option>Check received</option><option>Disbursed</option></select></div>
+                            <div><label>Settled With (Carrier / Party)</label><div contenteditable="true" data-k="settled-with-carrier-party" data-ph="e.g. GEICO (client's UM/UIM)"></div></div>
+                            <div><label>Date Settled</label><div contenteditable="true" data-k="date-settled" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>Gross Settlement</label><div contenteditable="true" data-k="gross-settlement" data-s="gross" data-ph="$ 0.00" data-fmt="currency" class="font-black text-blue-700"></div></div>
+                            <div><label>Attorney Fee %</label><select class="prof-input" data-k="attorney-fee" data-s="pct"><option value="33.33">33⅓%</option><option value="40">40%</option><option value="25">25%</option><option value="35">35%</option><option value="0">Other / none</option></select></div>
+                            <div><label>Case Costs</label><div contenteditable="true" data-k="case-costs" data-s="costs" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Medical Liens / Payoffs</label><div contenteditable="true" data-k="medical-liens-payoffs" data-s="liens" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Release Signed</label><div contenteditable="true" data-k="release-signed" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>Check Received / Disbursed</label><div contenteditable="true" data-k="check-received-disbursed" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                        </div>
+                        <label>Offer &amp; Counter History</label><div contenteditable="true" data-k="offer-and-counter-history" data-ph="MM/DD — Offer $… (adjuster) · MM/DD — Counter $… (attorney)…" class="multiline-field min-h-[90px] text-sm leading-relaxed text-slate-600"></div>
+                        <label>Notes</label><div contenteditable="true" data-k="notes" data-ph="Conditions, Medicare/Medicaid clearance, structured payments…" class="multiline-field min-h-[70px] text-sm italic leading-relaxed text-slate-600"></div>
+                    </div>
+                    <div id="settlement-calc-um" class="kx-calc"></div>
+                </div>
+                <div id="settlement-total" class="kx-calc" style="background:#0f2148;color:#fff;"></div>
             </div>
 
             <!-- Firm Calendar (firm-calendar.js fills it). Not part of the saved case: no .pdf-card,

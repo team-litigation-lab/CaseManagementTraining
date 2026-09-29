@@ -116,18 +116,33 @@
         else out.innerHTML = '<span class="kx-hint" style="margin:0;">Enter the pay type, rate and work days missed for an estimate.</span>';
     };
 
-    /* ---------- Settlement ---------- */
-    window.calcSettlement = function () {
-        const box = $id('kx-settlement'), out = $id('settlement-calc'); if (!box || !out) return;
+    /* ---------- Settlement: BI and UM/UIM, each on its own, then both together ---------- */
+    const SETTLEMENTS = [['kx-settlement', 'settlement-calc', 'BI'], ['kx-settlement-um', 'settlement-calc-um', 'UM/UIM']];
+    function settlementMath(box) {
         const f = (k) => box.querySelector(`[data-s="${k}"]`);
         const gross = money(f('gross')), pct = parseFloat(f('pct') ? f('pct').value : '0') || 0, costs = money(f('costs')), liens = money(f('liens'));
-        const fee = gross * pct / 100, net = gross - fee - costs - liens;
-        out.innerHTML = gross ? `<div class="kx-calc-grid">
-                <div><span>Gross</span><b>${fmt$(gross)}</b></div><div><span>Attorney fee${pct ? ` (${pct === 33.33 ? '33⅓' : pct}%)` : ''}</span><b>− ${fmt$(fee)}</b></div>
-                <div><span>Case costs</span><b>− ${fmt$(costs)}</b></div><div><span>Liens / payoffs</span><b>− ${fmt$(liens)}</b></div>
-                <div class="net"><span>Net to client</span><b>${fmt$(net)}</b></div></div>
-                ${net < 0 ? '<div class="kx-warn">The fee, costs and liens are more than the settlement: liens may need to be negotiated down.</div>' : ''}`
-            : '<span class="kx-hint" style="margin:0;">Enter the gross settlement to see the fee, costs, liens and the net to the client.</span>';
+        const fee = gross * pct / 100;
+        return { gross, pct, fee, costs, liens, net: gross - fee - costs - liens };
+    }
+    window.calcSettlement = function () {
+        const sums = { gross: 0, fee: 0, costs: 0, liens: 0, net: 0, n: 0 };
+        SETTLEMENTS.forEach(([boxId, outId, label]) => {
+            const box = $id(boxId), out = $id(outId); if (!box || !out) return;
+            const x = settlementMath(box);
+            if (x.gross) { ['gross', 'fee', 'costs', 'liens', 'net'].forEach(k => { sums[k] += x[k]; }); sums.n++; }
+            out.innerHTML = x.gross ? `<div class="kx-calc-grid">
+                    <div><span>${label} gross</span><b>${fmt$(x.gross)}</b></div><div><span>Attorney fee${x.pct ? ` (${x.pct === 33.33 ? '33⅓' : x.pct}%)` : ''}</span><b>− ${fmt$(x.fee)}</b></div>
+                    <div><span>Case costs</span><b>− ${fmt$(x.costs)}</b></div><div><span>Liens / payoffs</span><b>− ${fmt$(x.liens)}</b></div>
+                    <div class="net"><span>${label} net to client</span><b>${fmt$(x.net)}</b></div></div>
+                    ${x.net < 0 ? '<div class="kx-warn">The fee, costs and liens are more than this settlement: liens may need to be negotiated down.</div>' : ''}`
+                : `<span class="kx-hint" style="margin:0;">Enter the ${label} gross settlement to see the fee, costs, liens and the net to the client.</span>`;
+        });
+        const tot = $id('settlement-total'); if (!tot) return;
+        tot.style.display = sums.n ? '' : 'none';
+        tot.innerHTML = sums.n ? `<div class="kx-calc-grid"><div><span style="color:#cbd5e1;">Total gross (BI + UM/UIM)</span><b style="color:#fff;">${fmt$(sums.gross)}</b></div>
+                <div><span style="color:#cbd5e1;">Attorney fees</span><b style="color:#fff;">− ${fmt$(sums.fee)}</b></div><div><span style="color:#cbd5e1;">Case costs</span><b style="color:#fff;">− ${fmt$(sums.costs)}</b></div>
+                <div><span style="color:#cbd5e1;">Liens / payoffs</span><b style="color:#fff;">− ${fmt$(sums.liens)}</b></div>
+                <div class="net"><span style="color:#cbd5e1;">Total net to client</span><b style="color:#86efac;">${fmt$(sums.net)}</b></div></div>` : '';
     };
 
     /* ---------- Police Report tab: report type ---------- */
