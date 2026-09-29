@@ -1,17 +1,17 @@
 import { json, requireSession } from '../_utils.js';
 import {
-    ensureCalendarTables, googleConfigured, googleStatus, readLink, exchangeCode, revokeToken, seal, unseal,
+    ensureGoogleTables, googleConfigured, googleStatus, readLink, exchangeCode, revokeToken, seal, unseal,
     gcal, googleMessage, googleEventId, contentHash, GoogleError, GOOGLE_SCOPES, WRITE_ROLES,
     WALL_RE, DATE_RE, validTimeZone, addDays,
-} from '../_training_calendar.js';
+} from '../_google_calendar.js';
 
-// Connects the Training Calendar to the attorney's Google Calendar.
+// Connects the Firm Calendar (the Calendar tab) to the attorney's Google Calendar.
 //
 // The trainee signs in to Google in a popup (Google Identity Services, code
 // model) and picks the attorney's calendar from the calendars their Google
 // account can see (the attorney shares it with them). Then:
-//   - the attorney's events show in the embedded calendar (GET ?action=events);
-//   - the layers the trainee chooses are copied into that calendar
+//   - the attorney's events show in the Calendar tab (GET ?action=events);
+//   - the events the trainee schedules there are copied into that calendar
 //     (POST push / remove). Each copy has a fixed id per trainee and event, so
 //     syncing again updates it instead of adding a duplicate.
 //
@@ -56,7 +56,7 @@ function toGoogleEvent(ev, id, origin) {
         start: ev.allDay ? { date: ev.start } : { dateTime: `${ev.start}:00`, timeZone: ev.tz },
         end: ev.allDay ? { date: addDays(ev.end, 1) } : { dateTime: `${ev.end}:00`, timeZone: ev.tz },
         extendedProperties: { private: { lshTraining: '1', lshKey: ev.key } },
-        source: { title: 'LSH Training Calendar', url: origin + '/?calendar=1' },
+        source: { title: 'LSH Firm Calendar', url: origin + '/?calendar=1' },
     };
     return body;
 }
@@ -76,7 +76,7 @@ export async function onRequestGet({ request, env }) {
     const { session } = auth;
     const db = env.DB;
     if (!googleConfigured(env)) return fail('Google Calendar isn\'t set up on this site yet.', 501, 'GOOGLE_NOT_CONFIGURED');
-    await ensureCalendarTables(db);
+    await ensureGoogleTables(db);
     const link = await readLink(db, session.username);
     if (!link) return fail('Connect Google Calendar first.', 409, 'GOOGLE_NOT_CONNECTED');
     const url = new URL(request.url);
@@ -128,7 +128,7 @@ export async function onRequestPost({ request, env }) {
     if (!googleConfigured(env)) return fail('Google Calendar isn\'t set up on this site yet.', 501, 'GOOGLE_NOT_CONFIGURED');
     let body;
     try { body = await request.json(); } catch (e) { return fail('Invalid request body.'); }
-    await ensureCalendarTables(db);
+    await ensureGoogleTables(db);
     const username = session.username;
 
     try {

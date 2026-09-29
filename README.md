@@ -41,54 +41,6 @@ Admins: sidebar → **📞 Front Desk Drill · scored**. Trainees don't get the 
 
 To add or change a case, edit `mock-cases.js` (the comment at the top explains the fields). Course drills are keyed to these facts (e.g. the CM course's Front Desk Lookup), so update those when you change a fact.
 
-## 📅 Training Calendar
-
-Sidebar → **📅 Training Calendar** (or a course link with `?calendar=1`) opens the trainee's own calendar inside the CMS. It sits next to the **📅 Firm Calendar** (the attorneys' calendars, which keeps the two `.ics` downloads). Code: `training-calendar.js`, `functions/_training_calendar.js`, `/api/training-calendar`, `/api/calendar-google`.
-
-- **Views:** Month, Week (an hour grid with 8 AM–6 PM business hours shaded) and Agenda (30 days). ‹ › and **Today** move through them.
-- **Layers** (tick to show or hide):
-  - **My events:** what the trainee schedules. Each event has a title, a type (meeting, client call, court hearing, deposition, mediation, deadline, travel, other), all-day or start and end times, a location, attendees, a case and notes. Events are saved to the trainee's account.
-  - **Training schedule:** the same mock attorney caseload the `.ics` had: 17 events over five weeks, from intake through filing, discovery, a deposition, hearings, mediation and a settlement conference to trial. It's dated from the trainee's training start date (from today when the account has none).
-  - **Case deadlines:** the SOL, Litigation-tab SOL, complaint-filed, discovery cut-off and trial dates on the trainee's own saved cases.
-  - **Attorney's Google Calendar:** appears once the trainee connects it (see below).
-- **Attorney's time zone:** the calendar shows the attorney's time (Eastern by default). Each trainee's choice is saved. Events and the event form also show the trainee's own local time.
-- **Checks when scheduling:** the event form warns about double-booking (against every layer, including the attorney's Google events), weekends, times outside 8 AM–6 PM in the attorney's zone, deadlines on that day, and times that have already passed. It warns but doesn't block.
-
-### Connecting the attorney's Google Calendar
-
-In the calendar's side panel, **Connect Google Calendar** opens Google's sign-in in a popup. The trainee signs in with the Google account the attorney shared their calendar with, then picks the attorney's calendar from the list. Calendars shared with them come first; ones they can only view are marked. After that:
-
-- The attorney's events show in the calendar (green) and count in the double-booking check.
-- **Copy to this calendar** chooses what goes onto the attorney's calendar:
-  - **My events** (on by default);
-  - **Training schedule** (titles start with `[TRAINING SIM]`);
-  - **Case deadlines**.
-- Syncing:
-  - New and edited events are copied when they're saved, and deleted events are removed.
-  - **Sync now** makes the attorney's calendar match the ticked layers. Unticking a layer removes its copies.
-  - Each copy keeps a fixed id, so syncing again updates it instead of adding a duplicate. The CMS never changes events it didn't copy.
-- Copying needs the calendar shared with **Make changes to events**. With view-only sharing the trainee still sees the attorney's events, but can't copy to the calendar.
-- **Disconnect Google** revokes the access. The trainee can choose to remove the copies first.
-
-Until the setup below is done, the panel says so, and every event has an **Add to Google Calendar** link instead. It opens Google's own event form, filled in, where the trainee picks the attorney's calendar.
-
-**Setup (once, by an admin):**
-
-1. console.cloud.google.com → pick or create a project → APIs & Services → Library → enable the **Google Calendar API**.
-2. Set up the **OAuth consent screen**:
-   - **User type Internal** if trainees sign in with the firm's Google Workspace accounts. No Google review is needed.
-   - Otherwise **External**. While it's in *Testing*, only the test users you add can connect, and Google makes them reconnect every 7 days. Opening it to everyone needs Google to verify the calendar scopes.
-   - Scopes: `openid`, `email`, `.../auth/calendar.events`, `.../auth/calendar.readonly`.
-3. Credentials → Create credentials → **OAuth client ID** → *Web application*. Under **Authorized JavaScript origins** add `https://lshcasemanagementtraining-trainingcrm.pages.dev` (and any custom domain). No redirect URI is needed, because sign-in happens in a popup.
-4. Cloudflare → this Pages project → Settings → Variables and Secrets: add `GOOGLE_CLIENT_ID` (text) and `GOOGLE_CLIENT_SECRET` (secret), then redeploy.
-
-**Data** (D1, created on first use):
-
-- `training_calendar_events`: the trainee's events (the Firm Calendar's `calendar_events` is a different table);
-- `calendar_prefs`: time zone, shown layers and copied layers;
-- `calendar_google_links`: the Google account, the chosen calendar, and its tokens, encrypted with a key derived from `SESSION_SECRET`;
-- `calendar_google_sync`: which events were copied to which calendar.
-
 ## Using the CMS from any training program
 
 Link to the CMS with a program so it opens in that program's context:
@@ -99,7 +51,7 @@ Link to the CMS with a program so it opens in that program's context:
 | `…/?mock=MC-04` | Opens that Training Library case right after sign-in (use it in a lesson step). |
 | `…/?library=1` | Opens the Training Library after sign-in (Admins); trainees get the Case Library search. |
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
-| `…/?calendar=1` | Opens the Training Calendar after sign-in. |
+| `…/?calendar=1` | Opens the 📅 Calendar tab (Firm Calendar) after sign-in. |
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
 
@@ -137,20 +89,44 @@ This is convenience, not a security boundary: anyone who opens the CMS from one 
 
 ## 📅 Firm Calendar (attorney calendars)
 
-The CMS keeps the fictional firm's calendars, the way a firm's case management system does: one calendar for each attorney (**Atty. Marcus Reyes**, pre-litigation; **Atty. Elena Brooks**, litigation; **Atty. David Okafor**, intake) and a **Firm / Staff** calendar. It's a tab of the case, **📅 Calendar**, right after **Tasks**. The sidebar's **📅 Firm Calendar** button opens the same tab. All times are the firm's, Eastern.
+The CMS keeps the fictional firm's calendars, the way a firm's case management system does: one calendar for each attorney (**Atty. Marcus Reyes**, pre-litigation; **Atty. Elena Brooks**, litigation; **Atty. David Okafor**, intake) and a **Firm / Staff** calendar. It's a tab of the case, **📅 Calendar**, right after **Tasks**. The sidebar's **📅 Firm Calendar** button, and a course link with `?calendar=1`, open the same tab. All times are the firm's, Eastern; when the trainee's computer is on another time zone, events and the event form also show the trainee's own time (e.g. *9:00 PM – 10:00 PM GMT+8 your time*).
+
+This is the CMS's only calendar. It replaced the separate Training Calendar (and its `.ics` downloads): the attorney's Google Calendar connection moved here, and events trainees had saved in the Training Calendar are copied onto the **Firm / Staff** calendar, at the same moments in firm time, the first time they open this one. The Training Calendar's dated training schedule was dropped; the attorneys' standing schedule below plays that part.
 
 - **The attorneys are already busy.** Each calendar holds that attorney's standing schedule, week after week: Monday motion calendar in court, deposition days, mediations, settlement and adjuster calls, client meetings, intake reviews, blocked writing time, the firm huddle, and some out-of-office Fridays. It references the Training Library cases each attorney handles (e.g. Brooks: Mendoza MC-14, Garcia MC-05). Trainees schedule around it, the way they would on a real attorney's calendar.
 - **Schedule from the case.** In the Calendar tab, a new event (**+ New event**, **📅 Schedule for this case**, or a click on an empty time) is linked to the open case (client name and case ID or MC number) and goes on the case's attorney's calendar (from the Attorney field); **Unlink** removes the link. The tab's left rail lists the case's own events. Pick the type (deposition, mediation, court hearing, trial, client meeting, medical/IME, deadline, call…), whose calendar it goes on, other attorneys to invite, date, time, location and notes.
-- **Availability as you type.** The form lists what the chosen attorneys already have that day and says straight away whether the time is free. The week view jumps to that day, fades the other calendars, and outlines the proposed time.
+- **Availability as you type.** The form lists what the chosen attorneys already have that day and says straight away whether the time is free, including on the attorney's Google Calendar when it's connected. It also flags weekends and times outside business hours (8 AM–6 PM Eastern). The week view jumps to that day, fades the other calendars, and outlines the proposed time.
 - **Conflicts are caught.** Saving over something already on an attorney's calendar is refused with the conflicts listed and the next free times offered (click one to move the event there). **Book it anyway** double-books on purpose.
 - **Live.** The calendar refreshes every 20 seconds while its tab is showing, and when you come back to the browser tab. Other open browser tabs update as soon as an event is saved or deleted. The calendar isn't part of the saved case: typing in it doesn't count as a case edit, and it stays typeable on view-only Training Library cases.
 - **Case deadlines layer:** the SOL, complaint filed, discovery cut-off, trial date and date of loss on the saved cases you can see, as all-day items. **Open the case** on any linked event loads it (a library case opens view-only).
 - **Views:** week (weekend optional), month and a 30-day agenda. Each calendar can be switched off in the left rail. Your upcoming events are listed there too.
 - **Who sees what:** a trainee sees the attorneys' standing schedule, events an Admin shared firm-wide, and their own events. Other trainees' events stay private. Trainees change or delete only their own events. Admins get **👥 All trainees** to see everyone's, and a **Share firm-wide** option that puts an event on every trainee's calendar (e.g. a hearing the whole batch must schedule around).
+- **The attorney's Google Calendar** (left rail → **Google Calendar**): see *Connecting the attorney's Google Calendar* below.
 - **Sync to Google / Outlook:** **🔗 Sync to Google / Outlook** gives each person a private subscribe link for the whole firm or one attorney. It has **Add to Google** and **Add to Outlook** buttons. The subscribed calendar shows the same events and follows changes made in the CMS. Google and Outlook re-read subscribed calendars on their own schedule (Outlook about hourly, Google every few hours), so the CMS is where changes appear first. **Reset links** turns the old links off. This is a one-way feed: events are created in the CMS, not in Google or Outlook.
-- **Exports** (in the Calendar tab's left rail): **My case deadlines (.ics)** and **Training simulation (.ics)**, the two downloads that used to be sidebar buttons. *My case deadlines* works again: its endpoint had been sitting outside `functions/api/`.
+- **Add to Google Calendar:** every event also has this link. It opens Google's own event form, filled in (at firm time), for a one-off copy.
 
-**Data** (D1, created on first use): `calendar_events` (one row per event: owner, calendar, invitees, type, date, start and end, location, linked case, notes, shared flag) and `calendar_feeds` (each person's subscribe token). The standing schedule isn't stored; it's built from a weekly pattern in `functions/_calendar.js`, so it never runs out. Code: `firm-calendar.js`, `functions/api/calendar.js`, `functions/api/calendar-feed.js`, `functions/_calendar.js`. The calendar adds no `<select>` or contenteditable to the page, because the case editor saves those by position.
+### Connecting the attorney's Google Calendar
+
+In the Calendar tab's left rail, **Connect Google Calendar** opens Google's sign-in in a popup. The trainee signs in with the Google account the attorney shared their calendar with, then picks the attorney's calendar from the list. Calendars they can add events to come first; view-only ones are marked. After that:
+
+- The attorney's real events show in the calendar (green, 📆), next to the firm's calendars. They can be switched off like any calendar, and the event form flags a time the attorney is busy there.
+- Everything the trainee schedules in the Calendar tab is copied into that calendar when it's saved, updated when it's edited, and removed when it's deleted. **Sync now** makes the attorney's calendar match (it also removes copies of the old Training Calendar's training schedule). Each copy keeps a fixed id, so syncing again updates it instead of adding a duplicate. The CMS never changes events it didn't copy.
+- Copying needs the calendar shared with **Make changes to events**. With view-only sharing the trainee still sees the attorney's events.
+- **Change** picks another calendar (offering to remove the copies from the old one). **Disconnect** revokes the access, and can remove the copies first.
+
+Until the setup below is done, the rail says so, and the subscribe links and **Add to Google Calendar** links still work.
+
+**Setup (once, by an admin):**
+
+1. console.cloud.google.com → pick or create a project → APIs & Services → Library → enable the **Google Calendar API**.
+2. Set up the **OAuth consent screen**:
+   - **User type Internal** if trainees sign in with the firm's Google Workspace accounts. No Google review is needed.
+   - Otherwise **External**. While it's in *Testing*, only the test users you add can connect, and Google makes them reconnect every 7 days. Opening it to everyone needs Google to verify the calendar scopes.
+   - Scopes: `openid`, `email`, `.../auth/calendar.events`, `.../auth/calendar.readonly`.
+3. Credentials → Create credentials → **OAuth client ID** → *Web application*. Under **Authorized JavaScript origins** add `https://lshcasemanagementtraining-trainingcrm.pages.dev` (and any custom domain). No redirect URI is needed, because sign-in happens in a popup.
+4. Cloudflare → this Pages project → Settings → Variables and Secrets: add `GOOGLE_CLIENT_ID` (text) and `GOOGLE_CLIENT_SECRET` (secret), then redeploy. `SESSION_SECRET` must be set too (it already is for sign-in).
+
+**Data** (D1, created on first use): `calendar_events` (one row per event: owner, calendar, invitees, type, date, start and end, location, linked case, notes, shared flag), `calendar_feeds` (each person's subscribe token), `calendar_imports` (whose Training Calendar events were copied over), `calendar_google_links` (the Google account, the chosen calendar, and its tokens, encrypted with a key derived from `SESSION_SECRET`) and `calendar_google_sync` (which events were copied to which Google calendar). The old `training_calendar_events` table is only read, for that one-time copy. The standing schedule isn't stored; it's built from a weekly pattern in `functions/_calendar.js`, so it never runs out. Code: `firm-calendar.js`, `functions/api/calendar.js`, `functions/api/calendar-feed.js`, `functions/api/calendar-google.js`, `functions/_calendar.js`, `functions/_google_calendar.js`. The calendar adds no `<select>` or contenteditable to the page, because the case editor saves those by position.
 
 ## Checks (GitHub Actions)
 
@@ -168,7 +144,7 @@ The CMS keeps the fictional firm's calendars, the way a firm's case management s
     - every drill call pointing at a real case, with a valid auth code and answer;
     - callers the key marks verified giving details that match the file (and "not verified" callers not matching);
     - files that share a client name having different dates of loss.
-- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. Finally it opens the Training Calendar: the month, week and agenda views, the double-booking warning, saving an event, copying events to and removing them from a mocked Google Calendar, disconnecting it, and the Add to Google Calendar link.
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
 - **Firm Calendar** (`.github/scripts/calendar.cjs`, in the same job): runs the real calendar API code on an in-memory SQLite database standing in for D1, through the real page. It opens the Calendar tab next to Tasks and schedules from a view-only library case (the case is linked, its attorney picked, typing works), then checks:
   - the live availability warning;
