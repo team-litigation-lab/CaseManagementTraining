@@ -3,8 +3,9 @@
 // D1, driven through the real page in a browser. Other /api/ calls are answered
 // by the test, as in smoke.cjs.
 //
-// Checks: the calendar opens from a case with the case linked and the case's
-// attorney picked; the attorney's standing schedule is there; availability is
+// Checks: the calendar is a tab of the case (📅 Calendar, next to Tasks; the
+// sidebar button opens the same tab), and scheduling from it links the case and
+// picks the case's attorney, even on a view-only library case; the attorney's standing schedule is there; availability is
 // checked live; a conflicting time is refused with free times offered; picking
 // one saves the event (linked to the case, in the database, on the grid);
 // double-booking works only when asked for; the case deadlines layer; month and
@@ -84,6 +85,9 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
         if (u.pathname === '/api/case-repository') return j({ success: true, cases: [] });
         return j({ success: true });
     });
+    // The page's layout classes come from the Tailwind CDN, which tests can't reach: stand in for the few
+    // that make the case area its own scroll container, so the page lays out as it does live.
+    await page.route(/cdn\.tailwindcss\.com/, r => r.fulfill({ contentType: 'text/javascript', body: `document.head.insertAdjacentHTML('beforeend','<style>.flex{display:flex}.flex-1{flex:1 1 0%}.flex-col{flex-direction:column}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.hidden{display:none}</style>')` }));
     await page.route(/\/api\/calendar(-feed)?(\?|$)/, async route => {
         const r = route.request(), u = new URL(r.url());
         const res = await call(u.pathname === '/api/calendar-feed' ? feedApi : calApi, r.method(), r.url(), r.postData());
@@ -100,9 +104,14 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     // 1. From a case: Carlos Mendoza (MC-14), Atty. Brooks's litigation file
     await page.evaluate(() => openMockCase('MC-14', { silent: true }));
     const fieldsBefore = await pageFields();
+    const tabOrder = await page.evaluate(() => [...document.querySelectorAll('.tab-btn')].map(t => t.id).slice(-2).join(','));
+    if (tabOrder !== 'tab-tasks,tab-calendar') fail(`the Calendar tab isn't right after Tasks (${tabOrder})`);
     await page.click('#tab-calendar');
-    await page.waitForSelector('#fc-modal.open #fcf-title');
+    await page.waitForSelector('#pane-calendar #fc-root', { state: 'visible' });
     await page.waitForFunction(() => document.querySelectorAll('#fc-main .ev').length > 5);
+    if (!(await page.isVisible('#pane-calendar #fc-rail button:has-text("Schedule for this case")'))) fail('the Calendar tab has no "Schedule for this case" for the open case');
+    await page.click('#pane-calendar #fc-rail button:has-text("Schedule for this case")');
+    await page.waitForSelector('#fcf-title');
     const form = await page.evaluate(() => ({ link: (document.querySelector('#fc-side .note b') || {}).textContent, cal: [...document.querySelectorAll('#fc-side .pill.on')].map(p => p.textContent).join(' | ') }));
     if (form.link !== 'Carlos Mendoza') fail(`scheduling from MC-14 didn't link the case (got ${form.link})`);
     if (!/Brooks/.test(form.cal || '')) fail(`scheduling from MC-14 didn't pick Atty. Brooks's calendar (got ${form.cal})`);
@@ -110,7 +119,9 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     if (!/Motion calendar|Intake review/.test(standing)) fail(`the attorneys' standing schedule isn't on the week view (${standing.slice(0, 120)})`);
 
     // 2. Brooks is in court 9:00–11:30 on Mondays: a 10:00 deposition conflicts
-    await page.fill('#fcf-title', 'Deposition of the Redline Freight driver');
+    // typed for real: MC-14 is a view-only library case, and the calendar must still take input
+    await page.click('#fcf-title'); await page.keyboard.type('Deposition of the Redline Freight driver');
+    if (await page.inputValue('#fcf-title') !== 'Deposition of the Redline Freight driver') fail('typing in the calendar form is blocked on a view-only library case');
     await page.click('#fc-side .pill:has-text("Deposition")');
     await page.fill('#fcf-date', mon); await page.dispatchEvent('#fcf-date', 'change');
     await page.fill('#fcf-start', '10:00'); await page.dispatchEvent('#fcf-start', 'change');
@@ -179,6 +190,19 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     // 9. the page still has the same selects and contenteditables (the case editor saves them by position)
     const fieldsAfter = await pageFields();
     if (fieldsAfter.join() !== fieldsBefore.join()) fail(`the calendar changed the number of selects/contenteditables on the page (${fieldsBefore} → ${fieldsAfter})`);
+    // the sidebar button opens the same tab; another tab closes it
+    await page.evaluate(() => showTab('profile'));
+    if (await page.isVisible('#pane-calendar')) fail('the Calendar tab stayed open after switching to Profile');
+    await page.click('#sidebar-actions button:has-text("Firm Calendar")'); await page.waitForTimeout(300);
+    if (!(await page.isVisible('#pane-calendar #fc-root')) || !(await page.evaluate(() => document.getElementById('tab-calendar').classList.contains('active-tab')))) fail('the sidebar Firm Calendar button did not open the Calendar tab');
+    // typing in the calendar isn't a case edit: the in-progress case snapshot doesn't change
+    await page.waitForTimeout(900); // let the tab switch's own snapshot (it changes the tab buttons) land first
+    const snapBefore = await page.evaluate(() => localStorage.getItem('LSH_CURRENT_EDITOR_DRAFT_V1'));
+    await page.evaluate(() => fcNew()); await page.click('#fcf-title'); await page.keyboard.type('scratch'); await page.waitForTimeout(900);
+    const snapAfter = await page.evaluate(() => localStorage.getItem('LSH_CURRENT_EDITOR_DRAFT_V1'));
+    // (the app re-snapshots on its own every few seconds, so compare the case content, not the timestamp)
+    const content = (snap) => { const o = JSON.parse(snap || '{}'); delete o.savedAt; return JSON.stringify(o); };
+    if (content(snapBefore) !== content(snapAfter)) fail('typing in the Calendar tab was saved as an edit to the case');
     await page.evaluate(() => closeFirmCalendar());
 
     await browser.close(); server.close();

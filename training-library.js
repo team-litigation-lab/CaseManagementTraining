@@ -488,7 +488,9 @@
     // The Notes and Tasks tabs (.mock-upd) are open for editing once the user's saved updates have loaded.
     const updatesOpen = () => { const a = $id('capture-area'); return !!(a && a.classList.contains('mock-upd-ready')); };
     const inUpdates = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('.mock-upd') && updatesOpen()); };
-    const blockEdit = (e) => { if (mockId && mockViewOnly && !inUpdates(e.target)) { e.preventDefault(); e.stopPropagation(); } };
+    // Parts of the page that aren't the case (the Calendar tab) stay typeable on a view-only case.
+    const freeEdit = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('[data-free-edit]')); };
+    const blockEdit = (e) => { if (mockId && mockViewOnly && !inUpdates(e.target) && !freeEdit(e.target)) { e.preventDefault(); e.stopPropagation(); } };
     const blockKeys = (e) => {
         if (!(mockId && mockViewOnly)) return;
         const t = e.target;
