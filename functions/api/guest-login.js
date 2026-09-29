@@ -1,17 +1,57 @@
 // POST /api/guest-login  { name, batch?, from, program? }
 //
-// Name-only sign-in for trainees who open the CMS from another LSH training
-// platform (see _guest.js). Creates their Trainee account the first time
-// (approved, no password) and signs them in, exactly like /api/login.
-import { json, logActivity, hashPassword, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, isUsernameTombstoned, nextBatchId } from '../_utils.js';
-import { GUEST_SOURCES, NEW_GUESTS_PER_HOUR, ensureGuestTables, cleanGuestName, cleanGuestBatch, guestUsername, splitName } from '../_guest.js';
+// Name-only sign-in for trainees who open the CMS from one of our other training
+// platforms (see _guest.js). They registered in the CMS once, so their trainer
+// can monitor their work; from a platform, typing their name is enough:
+//   - the registered, approved Trainee account with that name (first + last, with
+//     or without M.I. / suffix) is signed in, exactly like /api/login;
+//   - two registered trainees with the same name: the batch (their CMS Batch ID)
+//     picks the right one;
+//   - a name-only account made before this (guest-…) keeps working;
+//   - no registered trainee with that name: they're asked to register first.
+// Admin accounts are never reached this way (Trainee accounts only).
+import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName } from '../_utils.js';
+import { GUEST_SOURCES, ensureGuestTables, cleanGuestName, cleanGuestBatch, guestUsername } from '../_guest.js';
 
 const BLOCKED = {
-    Pending: 'This account is waiting for an administrator.',
-    Rejected: 'Access for this name was declined. Please contact your trainer.',
+    Pending: 'Your registration is still waiting for your trainer\'s approval. You can sign in with your name once it\'s approved.',
+    Rejected: 'Your registration was declined. Please contact your trainer.',
     Revoked: 'Access for this name has been revoked by an administrator.',
     Suspended: 'Access for this name has been temporarily revoked by an administrator.'
 };
+const LOOKUPS_PER_HOUR = 30;   // failed name look-ups per connection per hour
+
+const normName = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+// How a registered trainee's name may be typed: first + last, with or without M.I. and suffix.
+function nameVariants(u) {
+    const f = normName(u.first_name), m = normName(u.mi), l = normName(u.last_name), x = normName(u.suffix);
+    const out = new Set([`${f} ${l}`]);
+    if (m) out.add(`${f} ${m} ${l}`);
+    if (x) { out.add(`${f} ${l} ${x}`); if (m) out.add(`${f} ${m} ${l} ${x}`); }
+    return out;
+}
+async function registeredByName(db, name) {
+    const typed = normName(name);
+    const { results } = await db.prepare(
+        `SELECT * FROM users WHERE user_type = 'Trainee' AND username NOT LIKE 'guest-%' LIMIT 5000`
+    ).all();
+    return (results || []).filter(u => nameVariants(u).has(typed));
+}
+const batchKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+// A failed look-up counts against the connection (slows down guessing names).
+async function countFailure(db, request) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const hour = Math.floor(Date.now() / 3600000);
+    const rate = await db.prepare(`SELECT window_start, count FROM guest_login_rate WHERE ip = ?`).bind(ip).first();
+    const count = rate && rate.window_start === hour ? rate.count : 0;
+    await db.prepare(`INSERT INTO guest_login_rate (ip, window_start, count) VALUES (?, ?, ?)
+                      ON CONFLICT(ip) DO UPDATE SET window_start = excluded.window_start, count = excluded.count`).bind(ip, hour, count + 1).run();
+}
+async function tooManyFailures(db, request) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const rate = await db.prepare(`SELECT window_start, count FROM guest_login_rate WHERE ip = ?`).bind(ip).first();
+    return !!(rate && rate.window_start === Math.floor(Date.now() / 3600000) && rate.count >= LOOKUPS_PER_HOUR);
+}
 
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
@@ -19,7 +59,7 @@ export async function onRequestPost({ request, env }) {
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const from = String(body.from || '').toLowerCase();
     if (!GUEST_SOURCES[from]) {
-        return json({ success: false, error: 'Signing in with just your name works when you open the CMS from your training platform. Otherwise, sign in with your CMS username and password.' }, 403);
+        return json({ success: false, code: 'NOT_FROM_PLATFORM', error: 'Signing in with just your name works when you open the CMS from your training platform. Otherwise, sign in with your CMS username and password, or register.' }, 403);
     }
     const name = cleanGuestName(body.name);
     if (!name) return json({ success: false, error: 'Enter your first and last name (letters, spaces, hyphens or apostrophes; up to 60 characters).' }, 400);
@@ -28,50 +68,38 @@ export async function onRequestPost({ request, env }) {
     const program = String(body.program || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20) || null;
 
     await ensureGuestTables(db);
-    const username = guestUsername(name, batch);
-    const now = new Date().toISOString();
-    let user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
-    const guest = await db.prepare(`SELECT username FROM guest_accounts WHERE username = ?`).bind(username).first();
-    if (user && !guest) {
-        // Never happens for names typed here (register.js reserves the prefix), but a
-        // registered account must never be reachable without its password.
-        return json({ success: false, error: 'That name belongs to a registered CMS account. Sign in with its username and password.' }, 409);
+    if (await tooManyFailures(db, request)) {
+        return json({ success: false, error: 'Too many names tried from this connection. Please wait an hour, or ask your trainer.' }, 429);
     }
+    const now = new Date().toISOString();
+    let user = null, registered = false;
 
-    if (!user) {
-        if (await isUsernameTombstoned(db, username)) {
-            return json({ success: false, error: 'Access for this name was removed by an administrator. Please contact your trainer.' }, 403);
+    // 1. the trainee's registered account
+    const matches = await registeredByName(db, name);
+    if (matches.length) {
+        let pick = matches;
+        if (matches.length > 1) {
+            pick = batch ? matches.filter(u => u.batch_id && batchKey(u.batch_id).includes(batchKey(batch))) : [];
+            if (pick.length !== 1) {
+                return json({ success: false, code: 'NEED_BATCH', error: batch
+                    ? 'That batch doesn\'t match any of the registered trainees with this name. Check your CMS Batch ID with your trainer.'
+                    : 'More than one registered trainee has this name. Add your CMS Batch ID and try again.' }, 409);
+            }
         }
-        // New accounts per connection per hour (returning trainees are never limited).
-        const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-        const hour = Math.floor(Date.now() / 3600000);
-        const rate = await db.prepare(`SELECT window_start, count FROM guest_login_rate WHERE ip = ?`).bind(ip).first();
-        const count = rate && rate.window_start === hour ? rate.count : 0;
-        if (count >= NEW_GUESTS_PER_HOUR) {
-            return json({ success: false, error: 'Too many new names from this connection. Please wait an hour, or ask your trainer.' }, 429);
+        user = pick[0];
+        if (user.status !== 'Approved') {
+            return json({ success: false, code: 'NOT_APPROVED', error: BLOCKED[user.status] || 'Access for this name is not available. Please contact your trainer.' }, 403);
         }
-        await db.prepare(`INSERT INTO guest_login_rate (ip, window_start, count) VALUES (?, ?, ?)
-                          ON CONFLICT(ip) DO UPDATE SET window_start = excluded.window_start, count = excluded.count`).bind(ip, hour, count + 1).run();
-
-        const { first, last } = splitName(name);
-        const today = now.slice(0, 10);
-        // A unique CMS Batch ID, like every approved trainee's (the course batch is kept in guest_accounts).
-        let batchId;
-        try { batchId = await nextBatchId(db, 'Trainee', today); }
-        catch (e) { batchId = `B${today.slice(8, 10)}${today.slice(5, 7)}${today.slice(0, 4)}-LSHGUEST-${crypto.randomUUID().slice(0, 6).toUpperCase()}`; }
-        // No one knows this password, so the account can't be signed into with /api/login.
-        const password = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
-        await db.prepare(
-            `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
-             VALUES (?, NULL, ?, NULL, ?, 'Trainee', ?, ?, ?, 'Approved', ?)`
-        ).bind(first, last, `${username}@guest.invalid`, batchId, username, password, today).run();
-        await db.prepare(
-            `INSERT INTO guest_accounts (username, full_name, course_batch, first_via, last_via, program, created_at, last_seen)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(username, name, batch || null, from, from, program, now, now).run();
-        await logActivity(db, username, batchId, 'guest-register', { from, program, courseBatch: batch || null });
-        user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
+        registered = true;
     } else {
+        // 2. a name-only account made before registration was required
+        const username = guestUsername(name, batch);
+        const guest = await db.prepare(`SELECT username FROM guest_accounts WHERE username = ?`).bind(username).first();
+        user = guest ? await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first() : null;
+        if (!user) {
+            await countFailure(db, request);
+            return json({ success: false, code: 'NOT_REGISTERED', error: `We couldn't find a registered trainee named ${name}. Register first (your trainer approves it), then come back and type your name.` }, 404);
+        }
         if (user.status !== 'Approved') {
             return json({ success: false, error: BLOCKED[user.status] || 'Access for this name is not available. Please contact your trainer.' }, 403);
         }
@@ -79,15 +107,16 @@ export async function onRequestPost({ request, env }) {
             .bind(from, program, now, username).run();
     }
 
-    await logActivity(db, user.username, user.batch_id, 'login', { guest: true, from, program });
+    await logActivity(db, user.username, user.batch_id, 'login', { nameOnly: true, guest: !registered, from, program });
     const fullName = buildFullName(user);
     await upsertSessionHeartbeat(db, { username: user.username, fullName, batchId: user.batch_id, userType: 'Trainee' });
     const token = await createSessionToken(
-        { sub: user.id, username: user.username, batchId: user.batch_id, userType: 'Trainee', fullName, guest: true },
+        registered ? { sub: user.id, username: user.username, batchId: user.batch_id, userType: 'Trainee', fullName }
+            : { sub: user.id, username: user.username, batchId: user.batch_id, userType: 'Trainee', fullName, guest: true },
         env.SESSION_SECRET
     );
     return json({
         success: true,
-        user: { username: user.username, fullName, batchId: user.batch_id, userType: 'Trainee', guest: true, via: GUEST_SOURCES[from] }
+        user: { username: user.username, fullName, batchId: user.batch_id, userType: 'Trainee', guest: !registered, registered, via: GUEST_SOURCES[from] }
     }, 200, { 'Set-Cookie': sessionCookie(token, 43200) });
 }

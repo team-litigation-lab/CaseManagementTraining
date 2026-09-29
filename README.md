@@ -51,6 +51,7 @@ Link to the CMS with a program so it opens in that program's context:
 | `…/?mock=MC-04` | Opens that Training Library case right after sign-in (use it in a lesson step). |
 | `…/?library=1` | Opens the Training Library after sign-in (Admins); trainees get the Case Library search. |
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
+| `…/?from=ea` (or `portal`, `pd`, `standard`, `cm`) | Opened from that platform: trainees sign in with just their name (see Name sign-in). |
 | `…/?calendar=1` | Opens the 📅 Calendar tab (Firm Calendar) after sign-in. |
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
@@ -68,9 +69,9 @@ The sign-in screen's **Admin Portal** tab asks only for the **admin password**, 
 
 Until the secret is set, the Admin tab says the admin password isn't set up yet. Trainee sign-in doesn't change.
 
-## 👤 Name-only access from other training platforms
+## 👤 Name sign-in from our other training platforms
 
-Trainees who open the CMS from another LSH training platform don't need a CMS account. The sign-in screen asks only for their **name** (and batch, optional), and **Continue** signs them in (`guest-access.js` → `/api/guest-login`).
+Trainees **register in the CMS once**, so their trainer can follow their work. After an Admin approves them, opening the CMS **from one of our training platforms** signs them in with **just their name** (`guest-access.js` → `/api/guest-login`).
 
 **Which platforms:**
 
@@ -80,25 +81,36 @@ Trainees who open the CMS from another LSH training platform don't need a CMS ac
 | Property Damage Claims Training | `from=pd` |
 | Standard Foundational Training | `from=standard` |
 | EA/PA Training | `from=ea` |
+| Case Management Training | `from=cm` |
 
-The links also send `name=` and `batch=`, which fill in the form. A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses. The platform is remembered for the browser tab. The CM course isn't on the list: its trainees keep their CMS accounts. A direct visit gets the usual username and password sign-in, and **Have a CMS account? Sign in with it** switches to it from the name form.
+- The links also send `name=` and `batch=`, which fill in the form.
+- A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses.
+- The platform is remembered for the browser tab.
 
-**What they get:** an ordinary, approved **Trainee** account, created the first time and reused whenever the same name and batch come back, from any of the platforms. So everything the CMS does for trainees works for them:
-- saved cases get the automated review and the AI review;
-- Front Desk Drill scores are saved;
-- Notes and Tasks on library cases are kept;
-- trainers see them in the **trainer roster**, labelled *via Property Damage Claims Training* (or the platform they last came from).
+**What typing a name does:**
+- **It matches the registered trainee's own account** (their first and last name, with or without the middle initial or suffix; capitalisation doesn't matter), and signs them in exactly as their username and password would.
+- **Two registered trainees with the same name:** the form asks for the **CMS Batch ID** to pick the right one.
+- **A registration still waiting for approval** is told to wait. Declined, suspended and revoked accounts get their usual message.
+- **Not registered yet:** they're told to register, and **Register now** opens the registration form with their name filled in.
+- **Name-only accounts** made before registration was required (usernames starting `guest-`) keep working.
+- **Admin accounts are never reached by name.** Only Trainee accounts are.
 
-**How it's kept safe:**
-- Name-only accounts have usernames starting `guest-` (e.g. `guest-jane-doe--b050225`). Registration refuses that prefix, so typing a name can never reach a registered account.
-- They have no usable password, so `/api/login` can't open them.
-- Admins manage them like any other account: they can suspend or revoke them (a revoked name can't come back).
-- At most 10 new names per connection per hour; returning trainees aren't limited.
-- Admin access still needs an admin account and password.
+**Opened directly** (not from a platform):
+- The **Register** form comes first. **Back to log in** switches to the usual sign-in.
+- Once a browser has signed in, it gets the sign-in screen from then on.
+- Name-only sign-in never works outside a platform.
 
-This is convenience, not a security boundary: anyone who opens the CMS from one of those platforms (the Training Directory is public) can sign in with a name, the same as the portal's Simulators.
+**The trade-off:**
+- On a platform page, anyone who types a registered trainee's name signs in as that trainee. That's the point of it: quick access, and the trainee's work still lands in their monitored account.
+- Failed name look-ups are limited to 30 per connection per hour.
+- Admin access still needs the admin password.
 
-**Data** (D1, created on first use): the `users` row (email `<username>@guest.invalid`, a CMS Batch ID from the usual counter), `guest_accounts` (their name, course batch, the platforms they came from, program, first and last visit) and `guest_login_rate`. Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
+**Data** (D1):
+- the trainee's own `users` row;
+- `guest_accounts`, for the older name-only accounts;
+- `guest_login_rate`, which counts failed look-ups.
+
+Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
 ## 🗂 Case editor: newer sections
 
@@ -246,6 +258,15 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - files that share a client name having different dates of loss.
 - **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
+- **Name sign-in** (`.github/scripts/guest.cjs`, in the same job): the real `guest-login.js` on SQLite. It checks that:
+  - a registered trainee's name signs in to their account, with or without the M.I.;
+  - duplicate names need the Batch ID;
+  - pending accounts wait for approval;
+  - Admins are never reached by name;
+  - older name-only accounts still work;
+  - an unknown name is sent to Register, with the name filled in;
+  - name sign-in is refused without a platform;
+  - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
 - **Sign-in** (`.github/scripts/login.cjs`, in the same job): the real login code on SQLite. It checks:
   - the Admin tab asks for the admin password only and signs in as the Master Account;
   - a wrong or unset admin password is refused;

@@ -66,3 +66,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/sections.cjs
+      - name: Name sign-in from our platforms (registered accounts, register prompt)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/guest.cjs

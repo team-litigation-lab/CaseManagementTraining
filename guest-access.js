@@ -1,12 +1,14 @@
 /* =========================================================
-   LSH CMS — NAME-ONLY ACCESS FROM ANOTHER TRAINING PLATFORM
+   LSH CMS — NAME-ONLY SIGN-IN FROM OUR OTHER TRAINING PLATFORMS
    Opened from the LSH Training Portal (Training Directory, Simulators),
-   Property Damage Claims Training, Standard Foundational Training or
-   EA/PA Training, the sign-in screen asks only for the trainee's name
-   (and batch). /api/guest-login signs them in to an ordinary Trainee
-   account (functions/_guest.js), so their saved cases get the automated
-   and AI reviews, their Front Desk Drill scores are saved, and trainers
-   see them in the trainer roster, like every other trainee.
+   Property Damage Claims Training, Standard Foundational Training,
+   EA/PA Training or Case Management Training, the sign-in screen asks
+   only for the trainee's name. /api/guest-login signs them in to their
+   registered CMS account (functions/api/guest-login.js), so their trainer
+   monitors their work as usual. Not registered yet: they're taken to the
+   registration form with their name filled in.
+   Opened directly (not from a platform): the Register form comes first,
+   until this browser has signed in once; then the usual sign-in.
    How the CMS knows where they came from:
      • ?from=portal|pd|standard|ea on the link (the platforms add it,
        with name= and batch= to fill in the form), or
@@ -20,7 +22,8 @@
         portal: 'LSH Training Portal',
         pd: 'Property Damage Claims Training',
         standard: 'Standard Foundational Training',
-        ea: 'EA/PA Training'
+        ea: 'EA/PA Training',
+        cm: 'Case Management Training'
     };
     // Each platform's Worker, including its preview addresses ("<version>-<name>.…").
     const worker = (name) => new RegExp('^([a-z0-9-]+-)?' + name + '\\.legalsupporthelp\\.workers\\.dev$');
@@ -28,9 +31,11 @@
         [/^([a-z0-9-]+\.)?cm-training-activity\.pages\.dev$/, 'portal'],
         [worker('propertydamageclaimstraining'), 'pd'],
         [worker('foundational-training'), 'standard'],
-        [worker('ea-pa-training'), 'ea']
+        [worker('ea-pa-training'), 'ea'],
+        [worker('case-management-training'), 'cm']
     ];
-    const FROM_KEY = 'LSH_CMS_GUEST_FROM', VIA_KEY = 'LSH_CMS_GUEST_VIA';
+    const FROM_KEY = 'LSH_CMS_GUEST_FROM', VIA_KEY = 'LSH_CMS_GUEST_VIA', KNOWN_KEY = 'LSH_CMS_SIGNED_IN_BEFORE';
+    const knownBrowser = () => { try { return !!localStorage.getItem(KNOWN_KEY); } catch (e) { return false; } };
     const params = new URLSearchParams(location.search);
 
     function detect() {
@@ -79,8 +84,11 @@
         window.applySessionUI = function () {
             const r = origApply.apply(this, arguments);
             const session = typeof getSession === 'function' ? getSession() : null;
-            if (!session) showGuestView();
-            else if (String(session.username || '').startsWith('guest-')) {
+            if (session) { try { localStorage.setItem(KNOWN_KEY, '1'); } catch (e) { /* storage blocked */ } }
+            if (!session && from) showGuestView();
+            // Opened directly, never signed in on this browser: register first (once per page load).
+            else if (!session && !knownBrowser() && !window.__cmsRegisterShown) { window.__cmsRegisterShown = true; if (typeof window.showRegisterView === 'function') window.showRegisterView(); }
+            else if (session && String(session.username || '').startsWith('guest-')) {
                 let via = ''; try { via = sessionStorage.getItem(VIA_KEY) || ''; } catch (e) {}
                 const tag = document.querySelector('#session-footer .session-user-tag');
                 if (tag && via && !tag.querySelector('.session-via')) {
@@ -109,7 +117,17 @@
                 body: JSON.stringify({ name, batch, from, program: typeof lshProgram === 'function' ? lshProgram() : '' })
             });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data.success) { say(data.error || 'We couldn’t sign you in. Please try again.', 'error'); return; }
+            if (!res.ok || !data.success) {
+                say(data.error || 'We couldn’t sign you in. Please try again.', 'error');
+                if (data.code === 'NEED_BATCH') $('guest-batch').focus();
+                if (data.code === 'NOT_REGISTERED') {
+                    const b = document.createElement('button');
+                    b.type = 'button'; b.className = 'auth-submit'; b.style.marginTop = '10px'; b.textContent = 'Register now';
+                    b.onclick = () => window.guestRegister();
+                    msg.appendChild(b);
+                }
+                return;
+            }
             const u = data.user;
             try { sessionStorage.setItem(VIA_KEY, u.via || SOURCES[from]); } catch (e) {}
             say('Welcome, ' + u.fullName + '!', 'success');
@@ -125,6 +143,18 @@
         } finally {
             btn.disabled = false;
         }
+    };
+    // Not registered yet: the registration form, with the typed name filled in.
+    window.guestRegister = function () {
+        const name = ($('guest-name') && $('guest-name').value || '').trim().replace(/\s+/g, ' ');
+        if (typeof window.showRegisterView === 'function') window.showRegisterView();
+        const parts = name.split(' ');
+        if (parts.length >= 2) {
+            const last = parts.pop();
+            if ($('reg-firstname') && !$('reg-firstname').value) $('reg-firstname').value = parts.join(' ');
+            if ($('reg-lastname') && !$('reg-lastname').value) $('reg-lastname').value = last;
+        }
+        setTimeout(() => { const el = $('reg-email'); if (el) el.focus(); }, 50);
     };
     ['guest-name', 'guest-batch'].forEach(id => {
         const el = $(id);
