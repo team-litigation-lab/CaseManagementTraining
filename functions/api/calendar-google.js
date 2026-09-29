@@ -3,7 +3,7 @@ import {
     ensureCalendarTables, googleConfigured, googleStatus, readLink, exchangeCode, revokeToken, seal, unseal,
     gcal, googleMessage, googleEventId, contentHash, GoogleError, GOOGLE_SCOPES, WRITE_ROLES,
     WALL_RE, DATE_RE, validTimeZone, addDays,
-} from '../_calendar.js';
+} from '../_training_calendar.js';
 
 // Connects the Training Calendar to the attorney's Google Calendar.
 //

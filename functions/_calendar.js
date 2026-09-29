@@ -1,355 +1,293 @@
-// Shared helpers for the embedded Training Calendar (training-calendar.js in
-// the page; /api/training-calendar and /api/calendar-google on the server).
+// Firm Calendar: shared logic for /api/calendar and /api/calendar-feed.
 //
-// Three layers show in the calendar:
-//   - the trainee's own events (calendar_events, saved here);
-//   - the training schedule: a curated, fictional attorney caseload (TEMPLATE
-//     below), dated from the trainee's users.training_start_date so every batch
-//     gets it on the right days without anyone re-dating it;
-//   - case deadlines from the trainee's own saved cases (case_repository's
-//     sol_bar / sol_litigation / complaint_filed / discovery_cutoff / trial_date).
-// A trainee can also connect a Google account and pick the attorney's calendar
-// (one shared with them): the attorney's events then show in the calendar, and
-// the layers they choose are copied into it (calendar_google_links / _sync).
+// The fictional firm (LSH Training Law Group, mock-cases.js) has one calendar per
+// attorney plus a firm/staff calendar. Each attorney already has a working
+// schedule (court, depositions, mediations, client meetings, blocked time) that
+// repeats week to week, built here from a weekly pattern, so trainees schedule
+// around a realistic, busy calendar and meet real conflicts. The pattern
+// references the Training Library cases each attorney handles.
 //
-// Tables are created on first use (CREATE TABLE IF NOT EXISTS), like
-// front_desk_drills, so there is no manual migration.
+// Events people create are stored in D1 (calendar_events). A trainee sees the
+// attorneys' schedule, events an Admin shared firm-wide, and their own events;
+// Admins can also see every trainee's. All times are the firm's local time
+// (Eastern): a date "YYYY-MM-DD" and "HH:MM" start/end.
 
-const enc = new TextEncoder();
+export const FIRM_TZ = 'America/New_York';
 
+export const CALENDARS = [
+    { id: 'reyes', name: 'Atty. Marcus Reyes', role: 'Lead Attorney (Pre-Litigation)', ext: '201', color: '#2563eb' },
+    { id: 'brooks', name: 'Atty. Elena Brooks', role: 'Lead Attorney (Litigation)', ext: '202', color: '#7c3aed' },
+    { id: 'okafor', name: 'Atty. David Okafor', role: 'Associate Attorney / Intake Attorney', ext: '203', color: '#059669' },
+    { id: 'firm', name: 'Firm / Staff', role: 'Firm meetings, case managers, office', ext: '', color: '#64748b' }
+];
+export const CALENDAR_IDS = CALENDARS.map(c => c.id);
+
+export const EVENT_TYPES = [
+    'Deposition', 'Mediation', 'Court Hearing', 'Trial', 'Client Meeting', 'Medical / IME',
+    'Deadline', 'Phone Call', 'Internal Meeting', 'Blocked Time', 'Out of Office', 'Other'
+];
+// All-day items of these types don't make the attorney unavailable.
+const NON_BLOCKING_ALL_DAY = new Set(['Deadline']);
+
+/* ---------- dates (all in firm-local calendar days, no clocks involved) ---------- */
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+export const isDate = (s) => DATE.test(String(s || '')) && !Number.isNaN(Date.parse(s + 'T00:00:00Z'));
+export const isTime = (s) => TIME.test(String(s || ''));
+const toDay = (s) => new Date(s + 'T00:00:00Z');
+const fmtDay = (d) => d.toISOString().slice(0, 10);
+export function addDays(s, n) { const d = toDay(s); d.setUTCDate(d.getUTCDate() + n); return fmtDay(d); }
+export function daysBetween(a, b) { return Math.round((toDay(b) - toDay(a)) / 86400000); }
+const minutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const hhmm = (mins) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+// ISO week number: alternates parts of the pattern from week to week.
+function isoWeek(s) {
+    const d = toDay(s);
+    const day = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+// Today's date at the firm (Eastern), for "today" and the feed window.
+export function firmToday(now = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: FIRM_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
+/* ---------- the attorneys' standing schedule ---------- */
+// [weekday 1-5 (Mon-Fri), calendar, start, end, type, title, extra]
+// extra: { weeks: n => bool, invite: [...], caseRef, caseLabel, location, allDay }
+const COURT = 'Riverton County Superior Court, Dept. 4';
+const OFFICE = '400 Commerce Street, Suite 1200 (Conference Room B)';
+const PATTERN = [
+    // Firm / staff
+    [1, 'firm', '08:30', '09:00', 'Internal Meeting', 'Firm huddle: this week\'s deadlines and hearings', { invite: ['reyes', 'brooks', 'okafor'], location: OFFICE }],
+    [5, 'firm', '16:00', '16:30', 'Internal Meeting', 'Weekly deadline review (case managers)', { location: OFFICE }],
+    // Atty. Marcus Reyes (pre-litigation)
+    [1, 'reyes', '09:30', '10:30', 'Internal Meeting', 'Pre-lit case review with the case managers', { location: OFFICE }],
+    [1, 'reyes', '14:00', '15:00', 'Internal Meeting', 'Demand review: Hannah Pierce', { weeks: w => w % 2 === 0, caseRef: 'MC-16', caseLabel: 'Hannah Pierce' }],
+    [1, 'reyes', '14:00', '15:00', 'Internal Meeting', 'Demand review: Aisha Patel', { weeks: w => w % 2 === 1, caseRef: 'MC-03', caseLabel: 'Aisha Patel' }],
+    [2, 'reyes', '10:00', '12:00', 'Phone Call', 'Settlement conference call: Emily Nguyen', { weeks: w => w % 2 === 0, caseRef: 'MC-09', caseLabel: 'Emily Nguyen' }],
+    [2, 'reyes', '10:00', '11:00', 'Phone Call', 'Lien negotiation call: Ngozi Okonkwo', { weeks: w => w % 2 === 1, caseRef: 'MC-11', caseLabel: 'Ngozi Okonkwo' }],
+    [2, 'reyes', '15:00', '15:30', 'Phone Call', 'Client update call: Maria Santos (treatment)', { caseRef: 'MC-01', caseLabel: 'Maria Santos' }],
+    [3, 'reyes', '09:30', '11:30', 'Client Meeting', 'Client meetings (walk-ins and signings)', { location: OFFICE }],
+    [3, 'reyes', '13:00', '14:00', 'Internal Meeting', 'UM demand strategy: Keisha Brown', { caseRef: 'MC-07', caseLabel: 'Keisha Brown' }],
+    [4, 'reyes', '13:00', '17:00', 'Mediation', 'Mediation: Robert Chen', { weeks: w => w % 3 === 0, caseRef: 'MC-04', caseLabel: 'Robert Chen', location: 'Riverton Mediation Center, 2nd floor' }],
+    [4, 'reyes', '14:00', '15:00', 'Phone Call', 'Adjuster call: Robert Chen (BI demand)', { weeks: w => w % 3 !== 0, caseRef: 'MC-04', caseLabel: 'Robert Chen' }],
+    [5, 'reyes', '09:00', '12:00', 'Blocked Time', 'Demand writing (do not book)', {}],
+    [5, 'reyes', '', '', 'Out of Office', 'Out of office', { weeks: w => w % 4 === 2, allDay: true }],
+    // Atty. Elena Brooks (litigation)
+    [1, 'brooks', '09:00', '11:30', 'Court Hearing', 'Motion calendar: Carlos Mendoza v. Redline Freight', { caseRef: 'MC-14', caseLabel: 'Carlos Mendoza', location: COURT }],
+    [2, 'brooks', '09:00', '17:00', 'Deposition', 'Deposition of the store manager: Linda Garcia', { weeks: w => w % 2 === 0, caseRef: 'MC-05', caseLabel: 'Linda Garcia', location: OFFICE }],
+    [2, 'brooks', '10:00', '12:00', 'Phone Call', 'Discovery meet-and-confer: Linda Garcia', { weeks: w => w % 2 === 1, caseRef: 'MC-05', caseLabel: 'Linda Garcia' }],
+    [3, 'brooks', '14:00', '15:00', 'Phone Call', 'Expert call (product defect): Rachel Donovan', { caseRef: 'MC-18', caseLabel: 'Rachel Donovan' }],
+    [4, 'brooks', '09:00', '12:00', 'Blocked Time', 'Trial prep: Mendoza (do not book)', { caseRef: 'MC-14', caseLabel: 'Carlos Mendoza' }],
+    [4, 'brooks', '13:30', '14:30', 'Client Meeting', 'Deposition prep with client: Carlos Mendoza', { caseRef: 'MC-14', caseLabel: 'Carlos Mendoza', location: OFFICE }],
+    [5, 'brooks', '10:00', '11:00', 'Internal Meeting', 'Litigation status meeting', { invite: ['reyes'], location: OFFICE }],
+    [5, 'brooks', '', '', 'Out of Office', 'Out of office', { weeks: w => w % 4 === 0, allDay: true }],
+    // Atty. David Okafor (intake)
+    [1, 'okafor', '10:00', '11:00', 'Internal Meeting', 'Intake review: new inquiries', {}],
+    [2, 'okafor', '09:00', '10:00', 'Internal Meeting', 'Intake review: new inquiries', {}],
+    [2, 'okafor', '14:00', '15:00', 'Client Meeting', 'New client consult: Nicole Adams', { weeks: w => w % 2 === 0, caseRef: 'MC-13', caseLabel: 'Nicole Adams', location: OFFICE }],
+    [2, 'okafor', '14:00', '15:00', 'Client Meeting', 'Retainer signing: Derek Thompson', { weeks: w => w % 2 === 1, caseRef: 'MC-02', caseLabel: 'Derek Thompson', location: OFFICE }],
+    [3, 'okafor', '09:00', '10:00', 'Internal Meeting', 'Intake review: new inquiries', {}],
+    [3, 'okafor', '11:00', '12:00', 'Internal Meeting', 'Accept / decline meeting', { location: OFFICE }],
+    [4, 'okafor', '09:00', '10:00', 'Internal Meeting', 'Intake review: new inquiries', {}],
+    [4, 'okafor', '15:00', '16:00', 'Phone Call', 'Investigation call (witness): William Harris', { caseRef: 'MC-12', caseLabel: 'William Harris' }],
+    [5, 'okafor', '09:00', '10:00', 'Internal Meeting', 'Intake review: new inquiries', {}],
+    [5, 'okafor', '13:00', '14:00', 'Client Meeting', 'Client meeting: Andre Coleman', { caseRef: 'MC-17', caseLabel: 'Andre Coleman', location: OFFICE }]
+];
+
+// The attorneys' schedule for every day from `from` to `to` (inclusive).
+export function standingEvents(from, to) {
+    const out = [];
+    const n = Math.min(daysBetween(from, to), 400);
+    for (let i = 0; i <= n; i++) {
+        const date = addDays(from, i);
+        const wd = toDay(date).getUTCDay();
+        if (wd === 0 || wd === 6) continue;
+        const w = isoWeek(date);
+        // An attorney who is out of office that day has nothing else booked.
+        const out_ = new Set(PATTERN.filter(p => p[0] === wd && p[4] === 'Out of Office' && (!p[6].weeks || p[6].weeks(w))).map(p => p[1]));
+        PATTERN.forEach(([day, cal, start, end, type, title, x]) => {
+            if (day !== wd || (x.weeks && !x.weeks(w))) return;
+            if (type !== 'Out of Office' && out_.has(cal)) return;
+            const invite = (x.invite || []).filter(c => !out_.has(c));
+            out.push({
+                id: `std-${cal}-${date}-${(start || 'allday').replace(':', '')}`,
+                calendar: cal, invite, title, type, date,
+                start: x.allDay ? '' : start, end: x.allDay ? '' : end, allDay: !!x.allDay,
+                location: x.location || '', caseRef: x.caseRef || '', caseLabel: x.caseLabel || '', notes: '',
+                source: 'attorney', readOnly: true
+            });
+        });
+    }
+    return out;
+}
+
+/* ---------- availability ---------- */
+const onCalendar = (e, cal) => e.calendar === cal || (Array.isArray(e.invite) && e.invite.includes(cal));
+const blocks = (e) => !(e.allDay && NON_BLOCKING_ALL_DAY.has(e.type));
+function overlap(a, b) {
+    if (a.date !== b.date || !blocks(a) || !blocks(b)) return false;
+    if (a.allDay || b.allDay) return true;
+    return minutes(a.start) < minutes(b.end) && minutes(b.start) < minutes(a.end);
+}
+// Events already on any calendar the new event books that overlap it.
+export function conflictsFor(ev, all) {
+    const cals = [ev.calendar].concat(ev.invite || []);
+    return all.filter(o => o.id !== ev.id && cals.some(c => onCalendar(o, c)) && overlap(ev, o))
+        .map(o => ({ id: o.id, title: o.title, type: o.type, date: o.date, start: o.start, end: o.end, allDay: o.allDay,
+            calendars: cals.filter(c => onCalendar(o, c)), source: o.source || 'user' }));
+}
+// The first few free slots of `duration` minutes during office hours (8:30-17:30),
+// on `date` and the next business days, for every calendar the event books.
+export function freeSlots(ev, all, count = 3) {
+    const dur = ev.allDay ? 60 : Math.max(15, minutes(ev.end) - minutes(ev.start));
+    const out = [];
+    for (let d = 0; d < 10 && out.length < count; d++) {
+        const date = addDays(ev.date, d);
+        const wd = toDay(date).getUTCDay();
+        if (wd === 0 || wd === 6) continue;
+        for (let t = 8 * 60 + 30; t + dur <= 17 * 60 + 30 && out.length < count; ) {
+            const probe = Object.assign({}, ev, { date, start: hhmm(t), end: hhmm(t + dur), allDay: false });
+            // after a free slot, look again once it has ended, so the suggestions don't overlap
+            if (!conflictsFor(probe, all).length) { out.push({ date, start: probe.start, end: probe.end }); t += Math.ceil(dur / 30) * 30; }
+            else t += 30;
+        }
+    }
+    return out;
+}
+
+/* ---------- validating what the browser sends ---------- */
+const clip = (s, n) => String(s == null ? '' : s).replace(/\s+$/g, '').slice(0, n);
+export function cleanEvent(body) {
+    const b = body || {};
+    const calendar = CALENDAR_IDS.includes(b.calendar) ? b.calendar : null;
+    if (!calendar) return { error: 'Pick whose calendar this goes on.' };
+    const title = clip(b.title, 140).trim();
+    if (!title) return { error: 'Give the event a title.' };
+    if (!isDate(b.date)) return { error: 'Pick a date.' };
+    const allDay = !!b.allDay;
+    let start = '', end = '';
+    if (!allDay) {
+        if (!isTime(b.start) || !isTime(b.end)) return { error: 'Pick a start and end time.' };
+        if (minutes(b.end) <= minutes(b.start)) return { error: 'The end time must be after the start time.' };
+        start = b.start; end = b.end;
+    }
+    const type = EVENT_TYPES.includes(b.type) ? b.type : 'Other';
+    const invite = [...new Set((Array.isArray(b.invite) ? b.invite : []).filter(c => CALENDAR_IDS.includes(c) && c !== calendar))];
+    return {
+        event: {
+            calendar, invite, title, type, date: b.date, start, end, allDay,
+            location: clip(b.location, 200), caseRef: clip(b.caseRef, 40), caseLabel: clip(b.caseLabel, 120),
+            notes: clip(b.notes, 4000), shared: !!b.shared
+        }
+    };
+}
+
+/* ---------- iCalendar (for the subscribe feed) ---------- */
+function icsText(s) {
+    return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+function fold(line) {
+    if (line.length <= 75) return line;
+    let out = line.slice(0, 75), rest = line.slice(75);
+    while (rest.length) { out += '\r\n ' + rest.slice(0, 74); rest = rest.slice(74); }
+    return out;
+}
+const icsDay = (date) => date.replace(/-/g, '');
+const icsLocal = (date, time) => `${icsDay(date)}T${time.replace(':', '')}00`;
+// US Eastern time rules (since 2007), so calendar apps place events at the firm's local time.
+const VTIMEZONE = [
+    'BEGIN:VTIMEZONE', `TZID:${FIRM_TZ}`,
+    'BEGIN:DAYLIGHT', 'TZOFFSETFROM:-0500', 'TZOFFSETTO:-0400', 'TZNAME:EDT', 'DTSTART:20070311T020000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU', 'END:DAYLIGHT',
+    'BEGIN:STANDARD', 'TZOFFSETFROM:-0400', 'TZOFFSETTO:-0500', 'TZNAME:EST', 'DTSTART:20071104T020000', 'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU', 'END:STANDARD',
+    'END:VTIMEZONE'
+];
+export function buildICS(events, calName, host) {
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Legal Support Help//CMS Firm Calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+        fold(`X-WR-CALNAME:${icsText(calName)}`), `X-WR-TIMEZONE:${FIRM_TZ}`, 'REFRESH-INTERVAL;VALUE=DURATION:PT15M', 'X-PUBLISHED-TTL:PT15M']
+        .concat(VTIMEZONE);
+    events.forEach(e => {
+        lines.push('BEGIN:VEVENT', fold(`UID:${e.id}@${host}`), `DTSTAMP:${stamp}`);
+        if (e.allDay) {
+            lines.push(`DTSTART;VALUE=DATE:${icsDay(e.date)}`, `DTEND;VALUE=DATE:${icsDay(addDays(e.date, 1))}`);
+        } else {
+            lines.push(`DTSTART;TZID=${FIRM_TZ}:${icsLocal(e.date, e.start)}`, `DTEND;TZID=${FIRM_TZ}:${icsLocal(e.date, e.end)}`);
+        }
+        const who = [e.calendar].concat(e.invite || []).map(id => (CALENDARS.find(c => c.id === id) || {}).name).filter(Boolean).join(', ');
+        const desc = [`${e.type}${who ? ' · ' + who : ''}`, e.caseLabel ? `Case: ${e.caseLabel}${e.caseRef ? ' (' + e.caseRef + ')' : ''}` : '',
+            e.notes || '', e.ownerName ? `Scheduled by ${e.ownerName} in the LSH CMS` : 'From the attorney\'s calendar (LSH CMS training firm)'].filter(Boolean).join('\n');
+        lines.push(fold(`SUMMARY:${icsText(e.title)}`), fold(`DESCRIPTION:${icsText(desc)}`));
+        if (e.location) lines.push(fold(`LOCATION:${icsText(e.location)}`));
+        if (e.type === 'Out of Office' || e.type === 'Blocked Time') lines.push('TRANSP:OPAQUE');
+        lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n') + '\r\n';
+}
+
+/* ---------- storage (D1) ---------- */
+// Tables are created on first use (CREATE TABLE IF NOT EXISTS is a cheap no-op
+// after that), so no manual migration is needed.
 const DDL = [
     `CREATE TABLE IF NOT EXISTS calendar_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
+        id TEXT PRIMARY KEY,
+        owner_username TEXT NOT NULL,
+        owner_name TEXT,
+        shared INTEGER NOT NULL DEFAULT 0,
+        calendar TEXT NOT NULL,
+        invitees TEXT NOT NULL DEFAULT '[]',
         title TEXT NOT NULL,
-        category TEXT,
+        type TEXT NOT NULL,
+        date TEXT NOT NULL,
+        start_time TEXT NOT NULL DEFAULT '',
+        end_time TEXT NOT NULL DEFAULT '',
         all_day INTEGER NOT NULL DEFAULT 0,
-        start_at TEXT NOT NULL,
-        end_at TEXT NOT NULL,
-        tz TEXT NOT NULL,
-        location TEXT,
-        attendees TEXT,
-        notes TEXT,
-        case_ref TEXT,
+        location TEXT NOT NULL DEFAULT '',
+        case_ref TEXT NOT NULL DEFAULT '',
+        case_label TEXT NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`,
-    `CREATE INDEX IF NOT EXISTS idx_calendar_events_user ON calendar_events(username, start_at)`,
-    `CREATE TABLE IF NOT EXISTS calendar_prefs (
-        username TEXT PRIMARY KEY,
-        tz TEXT,
-        layers TEXT,
-        sync_layers TEXT,
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )`,
-    `CREATE TABLE IF NOT EXISTS calendar_google_links (
-        username TEXT PRIMARY KEY,
-        google_email TEXT,
-        refresh_token TEXT NOT NULL,
-        access_token TEXT,
-        access_expires INTEGER,
-        scope TEXT,
-        calendar_id TEXT,
-        calendar_name TEXT,
-        calendar_tz TEXT,
-        can_write INTEGER NOT NULL DEFAULT 0,
-        connected_at TEXT NOT NULL DEFAULT (datetime('now')),
-        last_sync_at TEXT
-    )`,
-    `CREATE TABLE IF NOT EXISTS calendar_google_sync (
-        username TEXT NOT NULL,
-        calendar_id TEXT NOT NULL,
-        local_key TEXT NOT NULL,
-        google_id TEXT NOT NULL,
-        hash TEXT,
-        synced_at TEXT NOT NULL DEFAULT (datetime('now')),
-        PRIMARY KEY (username, calendar_id, local_key)
-    )`,
+    `CREATE INDEX IF NOT EXISTS idx_calendar_events_owner_date ON calendar_events (owner_username, date)`,
+    `CREATE INDEX IF NOT EXISTS idx_calendar_events_shared_date ON calendar_events (shared, date)`,
+    `CREATE TABLE IF NOT EXISTS calendar_feeds (
+        token TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`
 ];
-let tablesReady = false;
 export async function ensureCalendarTables(db) {
-    if (tablesReady) return;
-    await db.batch(DDL.map(s => db.prepare(s)));
-    tablesReady = true;
+    for (const sql of DDL) await db.prepare(sql).run();
 }
 
-/* ---------- validation ---------- */
-export const CATEGORIES = ['meeting', 'call', 'court', 'deposition', 'mediation', 'deadline', 'travel', 'other'];
-export const WALL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
-export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-export function validTimeZone(tz) {
-    if (!tz || typeof tz !== 'string' || tz.length > 64) return false;
-    try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch (e) { return false; }
+function parseInvite(text) {
+    try { const v = JSON.parse(text || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
 }
-export const DEFAULT_TZ = 'America/New_York';
-export const DEFAULT_LAYERS = { mine: true, sim: true, deadlines: true, google: true };
-export const DEFAULT_SYNC = { mine: true, sim: false, deadlines: false };
-export function pickFlags(input, defaults) {
-    const out = {};
-    for (const k of Object.keys(defaults)) out[k] = input && typeof input[k] === 'boolean' ? input[k] : defaults[k];
-    return out;
-}
-export async function readPrefs(db, username) {
-    const row = await db.prepare(`SELECT tz, layers, sync_layers FROM calendar_prefs WHERE username = ?`).bind(username).first();
-    const parse = (s) => { try { return JSON.parse(s || 'null'); } catch (e) { return null; } };
+export function rowToEvent(r, session) {
+    const mine = !!session && r.owner_username === session.username;
     return {
-        tz: row && validTimeZone(row.tz) ? row.tz : DEFAULT_TZ,
-        layers: pickFlags(row && parse(row.layers), DEFAULT_LAYERS),
-        syncLayers: pickFlags(row && parse(row.sync_layers), DEFAULT_SYNC),
+        id: r.id, calendar: r.calendar, invite: parseInvite(r.invitees), title: r.title, type: r.type, date: r.date,
+        start: r.start_time || '', end: r.end_time || '', allDay: !!r.all_day, location: r.location || '',
+        caseRef: r.case_ref || '', caseLabel: r.case_label || '', notes: r.notes || '', shared: !!r.shared,
+        owner: r.owner_username, ownerName: r.owner_name || r.owner_username, mine,
+        source: 'user', readOnly: !(mine || (session && session.userType === 'Admin')),
+        createdAt: r.created_at, updatedAt: r.updated_at
     };
 }
-
-/* ---------- the training schedule ----------
-   A realistic litigation caseload arc from intake through trial, ~5 weeks.
-   Fictional matters. `day` is a business-day offset from the trainee's start
-   date; h:m is the attorney's local time (the calendar's time zone). Keys
-   (sim:<day>-<hhmm>) stay stable so a copy in Google is updated, not doubled. */
-const TEMPLATE = [
-    { day: 0, h: 9, m: 0, dur: 60, cat: 'meeting', title: 'Client Intake Meeting — New Case Review', loc: 'Conference Room A', desc: 'Initial consultation and case intake for a newly assigned matter.' },
-    { day: 0, h: 14, m: 0, dur: 30, cat: 'meeting', title: 'Team Case Assignment Briefing', loc: 'Zoom', desc: 'Weekly briefing on new and ongoing case assignments.' },
-    { day: 1, h: 10, m: 0, dur: 90, cat: 'other', title: 'Draft Initial Complaint — Doe v. Smith', loc: '', desc: 'Draft and review the initial complaint prior to filing.' },
-    { day: 2, h: 13, m: 0, dur: 30, cat: 'deadline', title: 'File Complaint with Court — Doe v. Smith', loc: 'Superior Court e-filing', desc: 'Deadline to file the complaint with the court clerk.' },
-    { day: 4, h: 9, m: 30, dur: 60, cat: 'deadline', title: 'Discovery Requests Due — Johnson Matter', loc: '', desc: 'Respond to outstanding discovery requests.' },
-    { day: 6, h: 11, m: 0, dur: 30, cat: 'call', title: 'Client Status Call — Martinez Case', loc: 'Phone', desc: 'Scheduled update call with the client on case progress.' },
-    { day: 7, h: 14, m: 0, dur: 60, cat: 'meeting', title: 'Deposition Prep — Garcia', loc: 'Conference Room B', desc: 'Prepare questions and exhibits ahead of the Garcia deposition.' },
-    { day: 9, h: 9, m: 0, dur: 180, cat: 'deposition', title: 'Deposition — Garcia v. State Farm', loc: 'Court reporter office, Suite 400', desc: 'Deposition of the defendant\'s witness.' },
-    { day: 11, h: 15, m: 0, dur: 60, cat: 'court', title: 'Motion Hearing — Discovery Dispute', loc: 'Superior Court, Dept. 12', desc: 'Court hearing on a motion to compel discovery.' },
-    { day: 13, h: 10, m: 0, dur: 120, cat: 'mediation', title: 'Mediation Session — Thompson Claim', loc: 'Mediation center, 3rd floor', desc: 'Mediation session with opposing counsel.' },
-    { day: 14, h: 16, m: 0, dur: 30, cat: 'deadline', title: 'Discovery Cut-off — Johnson Matter', loc: '', desc: 'Deadline: all discovery must be complete.' },
-    { day: 16, h: 13, m: 0, dur: 30, cat: 'deadline', title: 'Expert Witness Disclosure Deadline', loc: '', desc: 'Deadline to disclose expert witnesses and reports.' },
-    { day: 17, h: 11, m: 0, dur: 90, cat: 'court', title: 'Settlement Conference — Doe v. Smith', loc: 'Superior Court, Dept. 4', desc: 'Settlement conference before the assigned judge.' },
-    { day: 19, h: 9, m: 0, dur: 60, cat: 'meeting', title: 'Trial Prep Meeting', loc: 'Conference Room A', desc: 'Internal trial preparation and strategy meeting.' },
-    { day: 20, h: 14, m: 0, dur: 60, cat: 'court', title: 'Pretrial Conference', loc: 'Superior Court, Dept. 12', desc: 'Final pretrial conference with the court.' },
-    { day: 21, h: 13, m: 0, dur: 120, cat: 'other', title: 'CLE Seminar — Ethics in Litigation', loc: 'Bar association, Room 210', desc: 'Continuing legal education seminar.' },
-    { day: 24, h: 9, m: 0, dur: 360, cat: 'court', title: 'Trial — Garcia v. State Farm (Mock)', loc: 'Superior Court, Dept. 12', desc: 'Simulated trial date for training purposes.' },
-];
-
-// Date-only arithmetic on 'YYYY-MM-DD' strings, done in UTC so it never drifts.
-const pad = (n) => String(n).padStart(2, '0');
-const ymd = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-const isWeekend = (d) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
-export function addDays(dateStr, n) {
-    const d = new Date(dateStr + 'T00:00:00Z');
-    d.setUTCDate(d.getUTCDate() + n);
-    return ymd(d);
-}
-function nextWeekday(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00Z');
-    while (isWeekend(d)) d.setUTCDate(d.getUTCDate() + 1);
-    return ymd(d);
-}
-function addBusinessDays(dateStr, n) {
-    const d = new Date(dateStr + 'T00:00:00Z');
-    while (n > 0) { d.setUTCDate(d.getUTCDate() + 1); if (!isWeekend(d)) n--; }
-    return ymd(d);
-}
-const wall = (dateStr, minutes) => `${dateStr}T${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
-
-// Falls back to today when the account has no training start date (e.g. an Admin previewing it).
-export function trainingSchedule(trainingStartDate) {
-    const usedFallback = !(trainingStartDate && DATE_RE.test(trainingStartDate));
-    const anchor = nextWeekday(usedFallback ? new Date().toISOString().slice(0, 10) : trainingStartDate);
-    const events = TEMPLATE.map(ev => {
-        const date = addBusinessDays(anchor, ev.day);
-        const start = ev.h * 60 + ev.m;
-        return {
-            key: `sim:${ev.day}-${pad(ev.h)}${pad(ev.m)}`,
-            title: ev.title, category: ev.cat, location: ev.loc, notes: ev.desc,
-            start: wall(date, start), end: wall(date, Math.min(start + ev.dur, 23 * 60 + 59)),
-        };
-    });
-    return { anchor, usedFallback, events };
-}
-
-/* ---------- case deadlines ---------- */
-const DEADLINE_FIELDS = [
-    ['sol_bar', 'SOL deadline'],
-    ['sol_litigation', 'SOL (Litigation tab)'],
-    ['complaint_filed', 'Complaint filed'],
-    ['discovery_cutoff', 'Discovery cut-off'],
-    ['trial_date', 'Trial date'],
-];
-// The case editor stores these as typed MM/DD/YYYY text; anything else is skipped.
-function mdyToDate(s) {
-    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '').trim());
-    return m ? `${m[3]}-${m[1]}-${m[2]}` : null;
-}
-export async function caseDeadlines(db, username) {
-    let rows = [];
-    try {
-        const r = await db.prepare(
-            `SELECT id, case_id, client_name, is_draft, sol_bar, sol_litigation, complaint_filed, discovery_cutoff, trial_date
-             FROM case_repository WHERE owner_username = ? ORDER BY updated_at DESC LIMIT 300`
-        ).bind(username).all();
-        rows = r.results || [];
-    } catch (e) {
-        // No case_repository yet (fresh database): no deadlines.
-        return [];
+// Events a user's calendar holds for [from, to]: the standing schedule, shared events, and their own.
+export async function visibleEvents(db, session, from, to, { scope = 'mine', user = '' } = {}) {
+    let sql = `SELECT * FROM calendar_events WHERE date BETWEEN ? AND ? AND (owner_username = ? OR shared = 1)`;
+    let args = [from, to, session.username];
+    if (session.userType === 'Admin' && scope === 'all') {
+        // Admins: one trainee's calendar (user=), or everyone's.
+        if (user) args = [from, to, user];
+        else { sql = `SELECT * FROM calendar_events WHERE date BETWEEN ? AND ?`; args = [from, to]; }
     }
-    const out = [];
-    for (const row of rows) {
-        const client = (row.client_name || '').trim() || 'Unnamed client';
-        for (const [col, label] of DEADLINE_FIELDS) {
-            const date = mdyToDate(row[col]);
-            if (!date) continue;
-            out.push({
-                key: `dl:${row.id}:${col}`, date, label, title: `${label} — ${client}`,
-                caseId: row.case_id || '', clientName: client, isDraft: !!row.is_draft,
-            });
-        }
-    }
-    return out;
+    const { results } = await db.prepare(sql + ' ORDER BY date, start_time').bind(...args).all();
+    return standingEvents(from, to).concat((results || []).map(r => rowToEvent(r, session)));
 }
 
-/* ---------- Google OAuth + Calendar API ----------
-   Needs two Pages settings (README → Training Calendar → Google setup):
-     GOOGLE_CLIENT_ID      (plain variable; the page needs it to open Google's sign-in)
-     GOOGLE_CLIENT_SECRET  (encrypted secret)
-   The page gets an authorization code from Google's sign-in popup (Google
-   Identity Services, popup mode) and posts it to /api/calendar-google with the
-   trainee's session, so the code can only ever be attached to the account that
-   asked for it. Tokens are stored encrypted (AES-GCM, key derived from
-   SESSION_SECRET). */
-export const GOOGLE_SCOPES = [
-    'openid', 'email',
-    'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/calendar.readonly',
-];
-export const googleConfigured = (env) => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
-const TOKEN_URL = 'https://oauth2.googleapis.com/token';
-const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
-const GCAL = 'https://www.googleapis.com/calendar/v3';
-
-function b64url(bytes) {
-    let s = ''; bytes.forEach(b => { s += String.fromCharCode(b); });
-    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-function unb64url(str) {
-    str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '=';
-    const bin = atob(str); const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
-}
-async function sealKey(env) {
-    if (!env.SESSION_SECRET) throw new Error('SESSION_SECRET is not configured.');
-    const raw = await crypto.subtle.digest('SHA-256', enc.encode('lsh-calendar-token|' + env.SESSION_SECRET));
-    return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
-}
-export async function seal(env, text) {
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await sealKey(env), enc.encode(text));
-    return `${b64url(iv)}.${b64url(new Uint8Array(ct))}`;
-}
-export async function unseal(env, sealed) {
-    const [iv, ct] = String(sealed || '').split('.');
-    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64url(iv) }, await sealKey(env), unb64url(ct));
-    return new TextDecoder().decode(pt);
-}
-async function sha256hex(s) {
-    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(s)));
-    return [...h].map(b => b.toString(16).padStart(2, '0')).join('');
-}
-// Google event ids allow a-v and 0-9, so a hex digest works. The same trainee
-// and event always get the same id, which makes a repeated sync an update.
-export async function googleEventId(username, key) {
-    return 'lsh' + (await sha256hex(`${username}|${key}`)).slice(0, 40);
-}
-export const contentHash = async (obj) => (await sha256hex(JSON.stringify(obj))).slice(0, 24);
-
-export class GoogleError extends Error {
-    constructor(message, status = 502, code = 'GOOGLE_ERROR') { super(message); this.status = status; this.code = code; }
-}
-
-async function tokenRequest(params) {
-    const r = await fetch(TOKEN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(params).toString(),
-    });
-    const data = await r.json().catch(() => ({}));
-    return { ok: r.ok, status: r.status, data };
-}
-
-export async function exchangeCode(env, code) {
-    const { ok, data } = await tokenRequest({
-        code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: 'postmessage', grant_type: 'authorization_code',
-    });
-    if (!ok) throw new GoogleError(`Google sign-in failed: ${data.error_description || data.error || 'unknown error'}`, 400);
-    let email = '';
-    try { email = JSON.parse(new TextDecoder().decode(unb64url(String(data.id_token || '').split('.')[1] || ''))).email || ''; } catch (e) { /* no id token */ }
-    return { accessToken: data.access_token, refreshToken: data.refresh_token || '', expiresIn: Number(data.expires_in) || 3600, scope: data.scope || '', email };
-}
-
-export async function revokeToken(token) {
-    if (!token) return;
-    try {
-        await fetch(REVOKE_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token }).toString() });
-    } catch (e) { /* best effort */ }
-}
-
-export async function readLink(db, username) {
-    return db.prepare(`SELECT * FROM calendar_google_links WHERE username = ?`).bind(username).first();
-}
-
-// A valid access token for this link, refreshed (and saved) when it is about to expire.
-async function accessToken(env, db, link, force = false) {
-    if (!force && link.access_token && Number(link.access_expires) > Date.now() + 60000) {
-        return unseal(env, link.access_token);
-    }
-    const refresh = await unseal(env, link.refresh_token);
-    const { ok, data } = await tokenRequest({
-        client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET,
-        refresh_token: refresh, grant_type: 'refresh_token',
-    });
-    if (!ok) {
-        if (data.error === 'invalid_grant') {
-            // Access was removed on Google's side (or expired): forget the link so the page offers Connect again.
-            await db.prepare(`DELETE FROM calendar_google_links WHERE username = ?`).bind(link.username).run();
-            throw new GoogleError('The Google connection has expired or was removed. Connect Google Calendar again.', 401, 'GOOGLE_RECONNECT');
-        }
-        throw new GoogleError(`Google refused to refresh access: ${data.error_description || data.error || 'unknown error'}`);
-    }
-    const expires = Date.now() + (Number(data.expires_in) || 3600) * 1000;
-    link.access_token = await seal(env, data.access_token);
-    link.access_expires = expires;
-    await db.prepare(`UPDATE calendar_google_links SET access_token = ?, access_expires = ? WHERE username = ?`)
-        .bind(link.access_token, expires, link.username).run();
-    return data.access_token;
-}
-
-// One Calendar API call; retries once with a fresh token if Google says the token is stale.
-export async function gcal(env, db, link, method, path, body) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-        const token = await accessToken(env, db, link, attempt > 0);
-        const r = await fetch(GCAL + path, {
-            method,
-            headers: Object.assign({ Authorization: `Bearer ${token}` }, body ? { 'Content-Type': 'application/json' } : {}),
-            body: body ? JSON.stringify(body) : undefined,
-        });
-        if (r.status === 401 && attempt === 0) continue;
-        const data = r.status === 204 ? {} : await r.json().catch(() => ({}));
-        return { status: r.status, ok: r.ok, data };
-    }
-}
-export const googleMessage = (res) => (res && res.data && res.data.error && res.data.error.message) || `Google Calendar error ${res ? res.status : ''}`.trim();
-
-export const WRITE_ROLES = ['owner', 'writer'];
-
-// What the page needs to know about the trainee's Google connection.
-export async function googleStatus(env, db, username) {
-    const configured = googleConfigured(env);
-    const link = configured ? await readLink(db, username) : null;
-    return {
-        configured,
-        clientId: configured ? env.GOOGLE_CLIENT_ID : '',
-        scopes: GOOGLE_SCOPES.join(' '),
-        connected: !!link,
-        email: link ? link.google_email || '' : '',
-        calendarId: link ? link.calendar_id || '' : '',
-        calendarName: link ? link.calendar_name || '' : '',
-        calendarTz: link ? link.calendar_tz || '' : '',
-        canWrite: !!(link && link.can_write),
-        lastSyncAt: link ? link.last_sync_at || null : null,
-    };
-}

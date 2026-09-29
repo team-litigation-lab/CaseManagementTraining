@@ -2,7 +2,7 @@ import { json, requireSession } from '../_utils.js';
 import {
     ensureCalendarTables, readPrefs, trainingSchedule, caseDeadlines, googleStatus,
     CATEGORIES, WALL_RE, DATE_RE, validTimeZone, pickFlags, DEFAULT_LAYERS, DEFAULT_SYNC, addDays,
-} from '../_calendar.js';
+} from '../_training_calendar.js';
 
 // The embedded Training Calendar (training-calendar.js), replacing the old
 // .ics downloads. Everything is the signed-in user's own:
@@ -15,7 +15,7 @@ import {
 //
 // Times are wall-clock strings ('YYYY-MM-DDTHH:MM') in the event's own IANA
 // time zone, the way Google Calendar stores them; all-day events use
-// 'YYYY-MM-DD' (end date inclusive). See _calendar.js for the tables.
+// 'YYYY-MM-DD' (end date inclusive). See _training_calendar.js for the tables.
 
 const MAX_EVENTS = 2000;
 const clip = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
@@ -37,7 +37,7 @@ export async function onRequestGet({ request, env }) {
 
     const [prefs, eventsRes, userRow, deadlines, google] = await Promise.all([
         readPrefs(db, session.username),
-        db.prepare(`SELECT * FROM calendar_events WHERE username = ? ORDER BY start_at LIMIT ${MAX_EVENTS}`).bind(session.username).all(),
+        db.prepare(`SELECT * FROM training_calendar_events WHERE username = ? ORDER BY start_at LIMIT ${MAX_EVENTS}`).bind(session.username).all(),
         db.prepare(`SELECT training_start_date FROM users WHERE username = ?`).bind(session.username).first(),
         caseDeadlines(db, session.username),
         googleStatus(env, db, session.username),
@@ -95,18 +95,18 @@ export async function onRequestPost({ request, env }) {
         const id = parseInt(body.event.id, 10);
         if (id) {
             const res = await db.prepare(
-                `UPDATE calendar_events SET title = ?, category = ?, all_day = ?, start_at = ?, end_at = ?, tz = ?, location = ?,
+                `UPDATE training_calendar_events SET title = ?, category = ?, all_day = ?, start_at = ?, end_at = ?, tz = ?, location = ?,
                         attendees = ?, notes = ?, case_ref = ?, updated_at = datetime('now')
                  WHERE id = ? AND username = ?`
             ).bind(v.title, v.category, v.allDay ? 1 : 0, v.start, v.end, v.tz, v.location, v.attendees, v.notes, v.caseRef, id, session.username).run();
             if (!res.meta || !res.meta.changes) return json({ success: false, error: 'Event not found.' }, 404);
-            const row = await db.prepare(`SELECT * FROM calendar_events WHERE id = ?`).bind(id).first();
+            const row = await db.prepare(`SELECT * FROM training_calendar_events WHERE id = ?`).bind(id).first();
             return json({ success: true, event: rowToEvent(row) });
         }
-        const count = await db.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE username = ?`).bind(session.username).first();
+        const count = await db.prepare(`SELECT COUNT(*) AS n FROM training_calendar_events WHERE username = ?`).bind(session.username).first();
         if (count && count.n >= MAX_EVENTS) return json({ success: false, error: `The calendar holds at most ${MAX_EVENTS} events. Delete some old ones first.` }, 409);
         const row = await db.prepare(
-            `INSERT INTO calendar_events (username, title, category, all_day, start_at, end_at, tz, location, attendees, notes, case_ref)
+            `INSERT INTO training_calendar_events (username, title, category, all_day, start_at, end_at, tz, location, attendees, notes, case_ref)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
         ).bind(session.username, v.title, v.category, v.allDay ? 1 : 0, v.start, v.end, v.tz, v.location, v.attendees, v.notes, v.caseRef).first();
         return json({ success: true, event: rowToEvent(row) });
@@ -114,7 +114,7 @@ export async function onRequestPost({ request, env }) {
 
     if (body.action === 'delete') {
         const id = parseInt(body.id, 10);
-        const res = await db.prepare(`DELETE FROM calendar_events WHERE id = ? AND username = ?`).bind(id || 0, session.username).run();
+        const res = await db.prepare(`DELETE FROM training_calendar_events WHERE id = ? AND username = ?`).bind(id || 0, session.username).run();
         if (!res.meta || !res.meta.changes) return json({ success: false, error: 'Event not found.' }, 404);
         return json({ success: true });
     }

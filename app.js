@@ -546,7 +546,8 @@
                 caseManager: document.getElementById('case-manager-field') ? document.getElementById('case-manager-field').value : '',
                 // Case-deadline date fields: same reasoning as attorney/
                 // caseManager above — captured explicitly by id so the
-                // Training Calendar (functions/_calendar.js) can query them directly as
+                // calendars (functions/_calendar.js, functions/_training_calendar.js)
+                // and /api/export-calendar can query them directly as
                 // real DB columns instead of parsing them back out of the
                 // saved HTML. These divs are STILL also contenteditable and
                 // still captured by the generic positional array below as
@@ -817,6 +818,76 @@
             generateCaseId();
             showTab('profile');
             renderRepo();
+        }
+
+        /* ---------- Export My Calendar (.ics) ----------
+           Not a live Google Calendar connection — generates a downloadable
+           .ics file of every date-bearing deadline across cases the
+           logged-in user can see (own cases + all finalized cases, or
+           everything if Admin), which they then import into their own
+           Google Calendar via Settings > Import & export > Import. See
+           functions/api/export-calendar.js for the generation side. */
+        async function exportMyCalendar() {
+            try {
+                const res = await fetch('/api/export-calendar', { credentials: 'include' });
+                if (!res.ok) {
+                    let msg = 'Could not generate calendar (' + res.status + ')';
+                    try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+                    showToast(msg, 'error');
+                    return;
+                }
+                const eventCount = res.headers.get('X-Event-Count');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'my-case-calendar.ics';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showToast(
+                    (eventCount !== null ? eventCount + ' event(s)' : 'Calendar') + ' downloaded — import it into Google Calendar via Settings > Import & export.',
+                    'info'
+                );
+            } catch (e) {
+                showToast('Network error generating calendar.', 'error');
+            }
+        }
+
+        /* ---------- Training Simulation Calendar (.ics) ----------
+           A CURATED, MOCK attorney schedule for the training exercise —
+           not real case data (that's exportMyCalendar() above). Dated
+           relative to the logged-in trainee's own registration
+           training_start_date server-side, so the same fixed template
+           keeps landing on the right days for every future batch without
+           ever being touched again. See functions/api/export-training-calendar.js. */
+        async function downloadTrainingCalendar() {
+            try {
+                const res = await fetch('/api/export-training-calendar', { credentials: 'include' });
+                if (!res.ok) {
+                    let msg = 'Could not generate training calendar (' + res.status + ')';
+                    try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+                    showToast(msg, 'error');
+                    return;
+                }
+                const usedFallback = res.headers.get('X-Used-Fallback-Date') === 'true';
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'training-simulation-calendar.ics';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showToast(
+                    'Training calendar downloaded' + (usedFallback ? ' (no training start date on file — dated from today instead)' : '') + ' — import it into Google Calendar via Settings > Import & export.',
+                    'info'
+                );
+            } catch (e) {
+                showToast('Network error generating training calendar.', 'error');
+            }
         }
 
         /* ---------- Trainee Dashboard (Phase 1: rule-based automated review) ----------
