@@ -47,6 +47,9 @@
              'bi-container','doc-body','lit-body','lien-container','note-body','task-body'
             ].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
             document.querySelectorAll('[contenteditable="true"]').forEach(el => { el.innerHTML = ''; });
+            // dropdowns back to their defaults too (e.g. Employment Status: N/A), so a new case doesn't inherit the last one's
+            document.querySelectorAll('#capture-area select').forEach(sel => { const d = Array.from(sel.options).findIndex(o => o.defaultSelected); sel.selectedIndex = d < 0 ? 0 : d; });
+            applyKeyed(null);
             const nameField = document.getElementById('client-name-field');
             if (nameField) nameField.innerText = '';
             // Attorney / Case Manager are plain <input> fields (see
@@ -362,7 +365,7 @@
                 <td><div contenteditable="true" class="text-xs" data-ph="Enter facility name"></div></td>
                 <td>
                     <div class="flex items-center gap-1">
-                        <select id="sel-${id}" onchange="handleOtherSystem(this.id, 'oth-${id}', 'rev-${id}')" class="prof-input text-xs"><option>Chiro</option><option>EMC</option><option>EMS</option><option>Emergency Hospital</option><option>Ortho</option><option>Surgery</option><option>Anesthesia</option><option>Pain Management</option><option value="Other">Other</option></select>
+                        <select id="sel-${id}" onchange="handleOtherSystem(this.id, 'oth-${id}', 'rev-${id}')" class="prof-input text-xs"><option>Chiro</option><option>EMC</option><option>EMS</option><option>Emergency Hospital</option><option>Ortho</option><option>Surgery</option><option>Anesthesia</option><option>Pain Management</option><option>MRI / Imaging</option><option>Physical Therapy (PT)</option><option value="Other">Other</option></select>
                         <div id="oth-${id}" contenteditable="true" data-ph="Specify" class="hidden text-xs px-2 py-1 bg-orange-50 border border-orange-200 min-w-[70px]"></div>
                         <button id="rev-${id}" onclick="revertOther('sel-${id}', 'oth-${id}', this.id)" class="revert-btn">↺</button>
                     </div>
@@ -527,6 +530,51 @@
         // Builds just the FIELD CONTENT of the current case (no metadata —
         // clientName/phase/medTotal/ownership are tracked separately and
         // sent alongside this on save).
+        /* ---------- Keyed sections: new case fields saved by id, not by position ----------
+           The case's older fields are saved by their position on the page (the
+           `inputs` / `sels` arrays below), so a field added in the middle would
+           shift every later field of every case saved before it. Newer sections
+           are marked [data-keyed] with an id and saved under that id instead
+           (content.keyed), and their fields are left out of the positional lists:
+             data-keyed="rows"  a list people add rows to: saved as its HTML plus its selects' values;
+             data-keyed         fixed fields: each saved under its data-k name.
+           A case saved before a section existed simply shows it empty. */
+        const posEdits = (root) => Array.from((root || document).querySelectorAll('[contenteditable="true"]')).filter(el => !el.closest('[data-keyed]'));
+        const posSels = (root) => Array.from((root || document).querySelectorAll('select')).filter(el => !el.closest('[data-keyed]'));
+        const _keyedTemplates = {};
+        document.querySelectorAll('[data-keyed="rows"][id]').forEach(el => { _keyedTemplates[el.id] = el.innerHTML; });
+        const keyedFields = (el) => (el.matches('[contenteditable="true"], select') ? [el] : []).concat(Array.from(el.querySelectorAll('[contenteditable="true"], select')));
+        function captureKeyed(root) {
+            const out = {};
+            (root || document).querySelectorAll('[data-keyed][id]').forEach(el => {
+                if (el.dataset.keyed === 'rows') { out[el.id] = { html: el.innerHTML, sels: Array.from(el.querySelectorAll('select')).map(x => x.value) }; return; }
+                const fields = {};
+                keyedFields(el).forEach((x, i) => { fields[x.dataset.k || i] = x.tagName === 'SELECT' ? x.value : x.innerHTML; });
+                out[el.id] = { fields };
+            });
+            return out;
+        }
+        // Puts saved keyed sections back; a section with nothing saved goes back to empty.
+        function applyKeyed(keyed, root) {
+            (root || document).querySelectorAll('[data-keyed][id]').forEach(el => {
+                const k = keyed && keyed[el.id];
+                if (el.dataset.keyed === 'rows') {
+                    el.innerHTML = k && typeof k.html === 'string' ? k.html : (_keyedTemplates[el.id] || '');
+                    const sels = el.querySelectorAll('select');
+                    ((k && k.sels) || []).forEach((v, i) => { if (sels[i]) sels[i].value = v; });
+                    return;
+                }
+                keyedFields(el).forEach((x, i) => {
+                    const v = k && k.fields ? k.fields[x.dataset.k || i] : undefined;
+                    if (x.tagName === 'SELECT') {
+                        if (v !== undefined) x.value = v;
+                        else { const d = Array.from(x.options).findIndex(o => o.defaultSelected); x.selectedIndex = d < 0 ? 0 : d; }
+                    } else x.innerHTML = v !== undefined ? v : '';
+                });
+            });
+            if (!root || root === document) { if (typeof window.afterKeyedApplied === 'function') window.afterKeyedApplied(); }
+        }
+
         function buildCaseContentPayload() {
             return {
                 // trainingLibraryId / program (training-library.js): which mock case a
@@ -576,10 +624,11 @@
                     liens: document.getElementById('lien-container').innerHTML,
                     notes: document.getElementById('note-body').innerHTML,
                     tasks: document.getElementById('task-body').innerHTML,
-                    police: document.getElementById('pane-police').innerHTML
+                    police: document.getElementById('police-body').innerHTML
                 },
-                inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
-                sels: Array.from(document.querySelectorAll('select')).map(el => el.value)
+                inputs: posEdits().map(el => el.innerHTML),
+                sels: posSels().map(el => el.value),
+                keyed: captureKeyed()
             };
         }
         // Applies a content payload (from buildCaseContentPayload / server) into
@@ -603,14 +652,16 @@
             $('lien-container').innerHTML = (content.html && content.html.liens) || '';
             $('note-body').innerHTML = (content.html && content.html.notes) || '';
             $('task-body').innerHTML = (content.html && content.html.tasks) || '';
-            if (content.html && content.html.police) $('pane-police').innerHTML = content.html.police;
+            // (html.police: the report's own fields, #police-body; cases saved before the Report Type choice have the same markup)
+            if (content.html && content.html.police) $('police-body').innerHTML = content.html.police;
             if ($('attorney-field')) $('attorney-field').value = content.attorney || '';
             if ($('case-manager-field')) $('case-manager-field').value = content.caseManager || '';
 
-            const edits = root.querySelectorAll('[contenteditable="true"]');
+            const edits = posEdits(root);
             (content.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
-            const selects = root.querySelectorAll('select');
+            const selects = posSels(root);
             (content.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
+            applyKeyed(content.keyed, root);
 
             const mainType = $('main-case-type'), mainOther = $('main-case-other'), mainRevert = $('main-revert');
             if (content.caseTypeOtherVisible && mainType && mainOther) {
@@ -705,10 +756,11 @@
                         liens: document.getElementById('lien-container').innerHTML,
                         notes: document.getElementById('note-body').innerHTML,
                         tasks: document.getElementById('task-body').innerHTML,
-                        police: document.getElementById('pane-police').innerHTML
+                        police: document.getElementById('police-body').innerHTML
                     },
-                    inputs: Array.from(document.querySelectorAll('[contenteditable="true"]')).map(el => el.innerHTML),
-                    sels: Array.from(document.querySelectorAll('select')).map(el => el.value),
+                    inputs: posEdits().map(el => el.innerHTML),
+                    sels: posSels().map(el => el.value),
+                    keyed: captureKeyed(),
                     currentCaseCanEdit,
                     caseIdFieldText: document.getElementById('case-id-field') ? document.getElementById('case-id-field').innerText : '',
                     mock: window.mockSnapshot ? window.mockSnapshot() : null,
@@ -769,12 +821,13 @@
                 document.getElementById('lien-container').innerHTML = (data.html && data.html.liens) || '';
                 document.getElementById('note-body').innerHTML = (data.html && data.html.notes) || '';
                 document.getElementById('task-body').innerHTML = (data.html && data.html.tasks) || '';
-                if (data.html && data.html.police) document.getElementById('pane-police').innerHTML = data.html.police;
+                if (data.html && data.html.police) document.getElementById('police-body').innerHTML = data.html.police;
 
-                const edits = document.querySelectorAll('[contenteditable="true"]');
+                const edits = posEdits();
                 (data.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
-                const selects = document.querySelectorAll('select');
+                const selects = posSels();
                 (data.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
+                applyKeyed(data.keyed);
 
                 if (data.caseTypeOtherVisible && document.getElementById('main-case-type') && document.getElementById('main-case-other')) {
                     document.getElementById('main-case-type').classList.add('hidden');
@@ -2199,9 +2252,10 @@
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No sessions recorded yet.</p>'; return; }
 
             function rowHtml(u) {
-                return '<div class="reg-row" style="cursor:pointer;" onclick="openMonitorCase(' + JSON.stringify(u.username) + ')"><div class="reg-info">' +
-                    '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + (u.full_name || u.username) + '</b>' +
-                    '<div class="reg-meta">' + (u.user_type || '') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + new Date(u.last_seen).toLocaleString()) + (u.current_case ? (' \u00B7 Working on: ' + u.current_case) : '') + '</div>' +
+                // (the username goes in a data attribute: JSON.stringify's double quotes inside onclick="…" cut the handler short, so the click did nothing)
+                return '<div class="reg-row" style="cursor:pointer;" data-username="' + escapeHtmlAttr(u.username) + '" onclick="openMonitorCase(this.dataset.username)"><div class="reg-info">' +
+                    '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + escapeHtmlAttr(u.full_name || u.username) + '</b>' +
+                    '<div class="reg-meta">' + escapeHtmlAttr(u.user_type || '') + ' \u00B7 @' + escapeHtmlAttr(u.username) + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + new Date(u.last_seen).toLocaleString()) + (u.current_case ? (' \u00B7 Working on: ' + escapeHtmlAttr(u.current_case)) : '') + '</div>' +
                     '</div><div style="font-size:11px;color:#64748b;">View Latest Saved \u2192</div></div>';
             }
 
@@ -2743,7 +2797,9 @@
             return trimmed.split(/\s+/)[0];
         }
         function sendPing() {
-            const text = document.getElementById('ping-text-input').value.trim();
+            const asTask = !!(document.getElementById('ping-as-task') && document.getElementById('ping-as-task').checked);
+            const typed = document.getElementById('ping-text-input').value.trim();
+            const text = typed && asTask ? '[TASK] ' + typed : typed;
             if (!text) { showToast('Please enter a ping message.', 'error'); return; }
             // target is '__all__' for a broadcast, a single username string for
             // one recipient, or an array of usernames when several are picked —
@@ -2845,7 +2901,10 @@
                 const isFresh = !state.ping.firedAt || (Date.now() - new Date(state.ping.firedAt).getTime()) < 10000;
                 if (isForMe && isFresh) {
                     const byLine = 'By: ' + (state.ping.by || 'System Administrator');
-                    showToast('📣 ' + (state.ping.text || 'You have been pinged by an Administrator.'), 'ping', 6000, byLine);
+                    // A ping sent as a task ("[TASK] …") waits for Accept, which adds it to the case's Tasks (case-sections.js).
+                    const taskText = /^\[TASK\]\s*/.test(state.ping.text || '') ? state.ping.text.replace(/^\[TASK\]\s*/, '') : null;
+                    if (taskText && typeof window.showTaskAssignment === 'function') window.showTaskAssignment({ id: state.ping.id, text: taskText, by: state.ping.by || 'System Administrator' });
+                    else showToast('📣 ' + (state.ping.text || 'You have been pinged by an Administrator.'), 'ping', 6000, byLine);
                 }
                 lastPingId = state.ping.id;
             }

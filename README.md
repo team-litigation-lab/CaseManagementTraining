@@ -87,6 +87,61 @@ This is convenience, not a security boundary: anyone who opens the CMS from one 
 
 **Data** (D1, created on first use): the `users` row (email `<username>@guest.invalid`, a CMS Batch ID from the usual counter), `guest_accounts` (their name, course batch, the platforms they came from, program, first and last visit) and `guest_login_rate`. Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
+## 🗂 Case editor: newer sections
+
+**Parties Involved** (tab after Profile)
+- Everyone involved in the incident, each with a role: client, passenger, client vehicle driver, at-fault party, at-fault driver, vehicle owner, property owner / business, witness, or other.
+- Each person has contact details, insurance and claim number, vehicle or location, whether a statement was taken, who represents them, and notes.
+- The **+ Passenger / + At-Fault Party / + Witness / + Other** buttons add a person, and a count of each role shows at the top.
+
+**Authorized to Access Case** (Profile)
+- The people the client authorized to discuss the case.
+- For each: their relationship, a phone number, whether the authorization is on file, and what they may discuss.
+
+**Location of Incident**: in the case's top bar, next to Date of Loss and SOL.
+
+**Report Type** (Police Report tab)
+- The choices are **Police Report**, **Incident Report** (premises cases with no police report), or **No report available**.
+- The choice relabels the tab and the report's fields. For example, *Property / Business* and *Incident Report Number* replace *Responding Agency* and *Report Number*.
+
+**Lost Wages** (tab after Treatment)
+- Employer and job, pay type and rate, hours, time off work, days missed, the doctor's off-work note, and wage verification.
+- It shows an estimate: hourly rate × hours ÷ 5 per day, or salary ÷ 260 work days, times the days missed.
+
+**Demand** (tab)
+- One entry per demand sent (BI, UM, UIM, PIP, policy limits, pre-suit).
+- Each entry has the carrier, adjuster, claim number, date sent and how, amount, response due date, whether it's time-limited, status, the response received, and enclosures.
+
+**Settlement** (tab)
+- Status, carrier or party, date, gross amount, attorney fee %, case costs, liens and payoffs, release, check and disbursement dates, the offer and counter history, and notes.
+- It shows gross − fee − costs − liens = **net to client**, and warns when the net is below zero.
+
+**Smaller additions**
+- **Options:**
+  - Treatment specialties now include **MRI / Imaging** and **Physical Therapy (PT)**.
+  - The Doc Hub has an **Intake** category.
+  - The new phases are Discovery, Mediation, Trial Prep, Trial, Post Trial, Settled, Dropped Case, Referred Out and Closed.
+  - Employment Status now defaults to **N/A**, and has Self-Employed and Student.
+  - **Start a New Case** now resets every dropdown to its default.
+- **Treatment tab:** its notes are now **Other Treatment Notes**, so they aren't confused with the Notes tab.
+- **Medical Chronology:**
+  - Drag a row by its left edge (⠿) to move it.
+  - **⇅ Sort by Date** orders the rows by their first date of service.
+- **Doc Hub:**
+  - Drag files onto the drop area to attach them. Each file becomes a document row, under the category picked there.
+  - A file dropped on a row attaches to that row.
+- **Tasks from an Admin:**
+  - In Master Control → Ping, **Send as a task** makes the ping stay on the trainee's screen with an **Accept** button, until they accept or dismiss it.
+  - **Accept** adds the task, with who assigned it, to the open case's **Tasks** list and opens that tab.
+  - Pending tasks are kept in that browser until the trainee acts on them.
+- **Monitoring:** *View Latest Saved* works again. The username was placed inside the click handler in a way that broke it. Names are now shown as text, not HTML.
+
+**How they're saved:**
+- The case's older fields are saved by their position on the page. A field inserted among them would shift every case saved before it.
+- The new sections are saved by id instead (`[data-keyed]`, stored in `content.keyed`), and they're left out of the positional lists.
+- A case saved before these sections existed loads unchanged, with the new sections empty. `sections.cjs` checks this with a case saved by the previous version (`.github/scripts/fixtures/case-before-keyed.json`), and it fails if the page's positional fields change.
+- Code: `case-sections.js`, and "Keyed sections" in `app.js`.
+
 ## 📅 Firm Calendar (attorney calendars)
 
 The CMS keeps the fictional firm's calendars, the way a firm's case management system does: one calendar for each attorney (**Atty. Marcus Reyes**, pre-litigation; **Atty. Elena Brooks**, litigation; **Atty. David Okafor**, intake) and a **Firm / Staff** calendar. It's a tab of the case, **📅 Calendar**, right after **Tasks**. The sidebar's **📅 Firm Calendar** button, and a course link with `?calendar=1`, open the same tab. All times are the firm's, Eastern; when the trainee's computer is on another time zone, events and the event form also show the trainee's own time (e.g. *9:00 PM – 10:00 PM GMT+8 your time*).
@@ -178,6 +233,15 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - files that share a client name having different dates of loss.
 - **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
+- **Case editor sections** (`.github/scripts/sections.cjs`, in the same job). It checks that:
+  - the page's positional fields are unchanged, and a case saved by the previous version loads field for field;
+  - the new sections save and load back;
+  - the lost wages and settlement math;
+  - the new options;
+  - Medical Chronology sorting and dragging;
+  - dropping files on the Doc Hub;
+  - a task ping waits for Accept and lands in Tasks;
+  - *View Latest Saved* opens the case.
 - **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
   - the tab's place and the sidebar timer;
   - starting, counting, pausing, resuming, and surviving a reload;
