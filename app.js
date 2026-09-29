@@ -544,9 +544,10 @@
                 // explicitly by id instead, so old saved cases are unaffected.
                 attorney: document.getElementById('attorney-field') ? document.getElementById('attorney-field').value : '',
                 caseManager: document.getElementById('case-manager-field') ? document.getElementById('case-manager-field').value : '',
-                // Calendar-export date fields: same reasoning as attorney/
+                // Case-deadline date fields: same reasoning as attorney/
                 // caseManager above — captured explicitly by id so the
-                // /api/export-calendar endpoint can query them directly as
+                // calendars (functions/_calendar.js, functions/_training_calendar.js)
+                // and /api/export-calendar can query them directly as
                 // real DB columns instead of parsing them back out of the
                 // saved HTML. These divs are STILL also contenteditable and
                 // still captured by the generic positional array below as
