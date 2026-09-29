@@ -7,7 +7,8 @@
 // and an unset ADMIN_PORTAL_PASSWORD are refused; trainees still sign in with
 // username and password; registration offers Trainee only; the registration form
 // scrolls on a small screen; a browser tab still running the old Training
-// Calendar gets told to reload. The admin password here is a test value.
+// Calendar gets told to reload; a link from a training platform asks only for a
+// name, and a direct visit opens on registration. The admin password here is a test value.
 // Usage: node .github/scripts/login.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
 const { chromium } = require('playwright');
 const { DatabaseSync } = require('node:sqlite');
@@ -82,8 +83,24 @@ const failures = []; const fail = (m) => failures.push(m);
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
         return j({ success: true });
     });
+    // opened from a training platform (here the Case Management course): name only
+    await page.goto(base + '?from=cm&name=Cara%20Mendez', { waitUntil: 'load' });
+    await page.waitForSelector('#auth-guest-view', { state: 'visible' });
+    if (!/Case Management Training/.test(await page.textContent('#auth-guest-from'))) fail('a link from the Case Management course does not open the name-only sign-in');
+    if ((await page.inputValue('#guest-name')) !== 'Cara Mendez') fail('the name from the course link is not filled in');
+    // a direct visit (new tab, no platform): registration first, with a way to log in
+    await page.evaluate(() => sessionStorage.clear());
+    await page.goto(base, { waitUntil: 'load' });
+    await page.waitForSelector('#auth-register-view', { state: 'visible' });
+    if (!(await page.isVisible('#auth-register-direct'))) fail('a direct visit does not say to register');
+    if (await page.isVisible('#auth-guest-view')) fail('a direct visit offers the name-only sign-in');
+    await page.click('#auth-register-view .auth-switch a');
+    await page.waitForSelector('#auth-login-view', { state: 'visible' });
+    // a browser that has signed in to a CMS account before opens on the log-in view
+    await page.evaluate(() => localStorage.setItem('LSH_CMS_HAS_ACCOUNT', '1'));
     await page.goto(base, { waitUntil: 'load' });
     await page.waitForSelector('#auth-login-view', { state: 'visible' });
+    if (await page.isVisible('#auth-register-view')) fail('a browser with a CMS account was asked to register again');
     if (!(await page.isVisible('#login-username'))) fail('the Trainee tab lost its username field');
     await page.click('#portal-tab-admin');
     if (await page.isVisible('#login-username')) fail('the Admin Portal tab still asks for a username');

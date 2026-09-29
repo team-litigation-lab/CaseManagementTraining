@@ -1,6 +1,7 @@
 // Name-only access for trainees who open the CMS from another LSH training
 // platform (the LSH Training Portal / Training Directory, Property Damage
-// Claims Training, Standard Foundational Training, EA/PA Training).
+// Claims Training, Standard Foundational Training, EA/PA Training, Case
+// Management Training).
 //
 // They type their name (and batch) instead of registering, and get an
 // ordinary, already-approved Trainee account, so everything the CMS does for
@@ -20,7 +21,8 @@ export const GUEST_SOURCES = {
     portal: 'LSH Training Portal',
     pd: 'Property Damage Claims Training',
     standard: 'Standard Foundational Training',
-    ea: 'EA/PA Training'
+    ea: 'EA/PA Training',
+    cm: 'Case Management Training'
 };
 
 // Every name-only account's username starts with this. register.js refuses it,

@@ -19,7 +19,7 @@ export async function onRequestPost({ request, env }) {
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const from = String(body.from || '').toLowerCase();
     if (!GUEST_SOURCES[from]) {
-        return json({ success: false, error: 'Signing in with just your name works when you open the CMS from your training platform. Otherwise, sign in with your CMS username and password.' }, 403);
+        return json({ success: false, error: 'Signing in with just your name works when you open the CMS from your training platform. Otherwise, register for a CMS account, or sign in with your CMS username and password.' }, 403);
     }
     const name = cleanGuestName(body.name);
     if (!name) return json({ success: false, error: 'Enter your first and last name (letters, spaces, hyphens or apostrophes; up to 60 characters).' }, 400);

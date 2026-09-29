@@ -80,8 +80,11 @@ Trainees who open the CMS from another LSH training platform don't need a CMS ac
 | Property Damage Claims Training | `from=pd` |
 | Standard Foundational Training | `from=standard` |
 | EA/PA Training | `from=ea` |
+| Case Management Training (its 🧰 Tools, Skill Builder and case links) | `from=cm` |
 
-The links also send `name=` and `batch=`, which fill in the form. A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses. The platform is remembered for the browser tab. The CM course isn't on the list: its trainees keep their CMS accounts. A direct visit gets the usual username and password sign-in, and **Have a CMS account? Sign in with it** switches to it from the name form.
+The links also send `name=` and `batch=`, which fill in the form. A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses. The platform is remembered for the browser tab. **Have a CMS account? Sign in with it** switches from the name form to the username and password sign-in, for trainees who registered a CMS account before and want its saved cases.
+
+**A direct visit** (not from one of these platforms) asks the trainee to **register**: the sign-in screen opens on the registration form with a note that opening the CMS from their training platform only needs their name, and **Already have an account? Log in** switches to the password sign-in. A browser that has signed in to a CMS account before (a registered trainee, or the admin) opens on the log-in view instead. Name-only sign-in is refused without a platform.
 
 **What they get:** an ordinary, approved **Trainee** account, created the first time and reused whenever the same name and batch come back, from any of the platforms. So everything the CMS does for trainees works for them:
 - saved cases get the automated review and the AI review;

@@ -553,6 +553,7 @@
 
             <!-- REGISTER VIEW -->
             <div id="auth-register-view" class="hidden">
+                <p class="auth-guest-lead hidden" id="auth-register-direct">You opened the CMS outside your training platform. Register for a CMS account to continue; an administrator approves it. Opening the CMS from your training platform only needs your name.</p>
                 <div id="auth-register-msg" class="auth-msg"></div>
                 <div class="auth-field" style="display:grid; grid-template-columns: 2fr 0.7fr; gap:8px;">
                     <div><label>First Name</label><input type="text" id="reg-firstname" autocomplete="off" data-allow="name" placeholder="e.g., Juan"></div>
@@ -574,7 +575,7 @@
                 <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="new-password" placeholder="Create a password" minlength="8"><p style="font-size:11px;color:#64748b;margin:4px 0 0;line-height:1.4;">At least 8 characters, letters and numbers only (must include at least one of each).</p></div>
                 <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="new-password" placeholder="Retype your password" minlength="8"></div>
                 <button class="auth-submit" onclick="submitRegistration()">Submit Registration</button>
-                <div class="auth-switch">Already have an account? <a onclick="showLoginView()">Back to log in</a></div>
+                <div class="auth-switch">Already have an account? <a onclick="showLoginView()">Log in</a></div>
             </div>
         </div>
     </div>

@@ -1,18 +1,19 @@
 /* =========================================================
    LSH CMS — NAME-ONLY ACCESS FROM ANOTHER TRAINING PLATFORM
    Opened from the LSH Training Portal (Training Directory, Simulators),
-   Property Damage Claims Training, Standard Foundational Training or
-   EA/PA Training, the sign-in screen asks only for the trainee's name
+   Property Damage Claims Training, Standard Foundational Training,
+   EA/PA Training or Case Management Training, the sign-in screen asks only for the trainee's name
    (and batch). /api/guest-login signs them in to an ordinary Trainee
    account (functions/_guest.js), so their saved cases get the automated
    and AI reviews, their Front Desk Drill scores are saved, and trainers
    see them in the trainer roster, like every other trainee.
    How the CMS knows where they came from:
-     • ?from=portal|pd|standard|ea on the link (the platforms add it,
+     • ?from=portal|pd|standard|ea|cm on the link (the platforms add it,
        with name= and batch= to fill in the form), or
      • the page that linked here (document.referrer) is one of them.
-   It's remembered for the browser tab. A direct visit gets the usual
-   username/password sign-in, and "Have a CMS account?" switches to it.
+   It's remembered for the browser tab. A direct visit (from none of them)
+   opens on registration, unless this browser has signed in to a CMS account
+   before; "Already have an account?" switches to the password sign-in.
    ========================================================= */
 (function () {
     'use strict';
@@ -20,7 +21,8 @@
         portal: 'LSH Training Portal',
         pd: 'Property Damage Claims Training',
         standard: 'Standard Foundational Training',
-        ea: 'EA/PA Training'
+        ea: 'EA/PA Training',
+        cm: 'Case Management Training'
     };
     // Each platform's Worker, including its preview addresses ("<version>-<name>.…").
     const worker = (name) => new RegExp('^([a-z0-9-]+-)?' + name + '\\.legalsupporthelp\\.workers\\.dev$');
@@ -28,9 +30,10 @@
         [/^([a-z0-9-]+\.)?cm-training-activity\.pages\.dev$/, 'portal'],
         [worker('propertydamageclaimstraining'), 'pd'],
         [worker('foundational-training'), 'standard'],
-        [worker('ea-pa-training'), 'ea']
+        [worker('ea-pa-training'), 'ea'],
+        [worker('case-management-training'), 'cm']
     ];
-    const FROM_KEY = 'LSH_CMS_GUEST_FROM', VIA_KEY = 'LSH_CMS_GUEST_VIA';
+    const FROM_KEY = 'LSH_CMS_GUEST_FROM', VIA_KEY = 'LSH_CMS_GUEST_VIA', ACCOUNT_KEY = 'LSH_CMS_HAS_ACCOUNT';
     const params = new URLSearchParams(location.search);
 
     function detect() {
@@ -65,6 +68,18 @@
     }
     window.showGuestView = showGuestView;
 
+    // A direct visit: ask them to register, once per page load. A browser that has
+    // signed in to a CMS account before (a registered trainee, an admin) keeps the log-in view.
+    let registerAsked = false;
+    function showRegisterFirst() {
+        if (registerAsked || from) return;
+        registerAsked = true;
+        let known = false; try { known = localStorage.getItem(ACCOUNT_KEY) === '1'; } catch (e) { /* storage blocked */ }
+        if (known || typeof window.showRegisterView !== 'function') return;
+        window.showRegisterView();
+        const note = $('auth-register-direct'); if (note) note.classList.remove('hidden');
+    }
+
     // "Have a CMS account?" and the register link hide the name-only view.
     ['showLoginView', 'showRegisterView'].forEach(fn => {
         const orig = window[fn];
@@ -72,14 +87,16 @@
         window[fn] = function () { const g = $('auth-guest-view'); if (g) g.classList.add('hidden'); return orig.apply(this, arguments); };
     });
 
-    // Signed out (first visit, log out, expired session): the name-only view.
-    // Signed in: note the platform next to the name in the session footer.
+    // Signed out (first visit, log out, expired session): the name-only view, or
+    // registration on a direct visit. Signed in: note the platform next to the name
+    // in the session footer, or remember that this browser has a CMS account.
     const origApply = window.applySessionUI;
     if (typeof origApply === 'function') {
         window.applySessionUI = function () {
             const r = origApply.apply(this, arguments);
             const session = typeof getSession === 'function' ? getSession() : null;
-            if (!session) showGuestView();
+            if (!session) { if (from) showGuestView(); else showRegisterFirst(); }
+            else if (!String(session.username || '').startsWith('guest-')) { try { localStorage.setItem(ACCOUNT_KEY, '1'); } catch (e) {} }
             else if (String(session.username || '').startsWith('guest-')) {
                 let via = ''; try { via = sessionStorage.getItem(VIA_KEY) || ''; } catch (e) {}
                 const tag = document.querySelector('#session-footer .session-user-tag');
