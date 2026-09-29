@@ -128,6 +128,38 @@ Until the setup below is done, the rail says so, and the subscribe links and **A
 
 **Data** (D1, created on first use): `calendar_events` (one row per event: owner, calendar, invitees, type, date, start and end, location, linked case, notes, shared flag), `calendar_feeds` (each person's subscribe token), `calendar_imports` (whose Training Calendar events were copied over), `calendar_google_links` (the Google account, the chosen calendar, and its tokens, encrypted with a key derived from `SESSION_SECRET`) and `calendar_google_sync` (which events were copied to which Google calendar). The old `training_calendar_events` table is only read, for that one-time copy. The standing schedule isn't stored; it's built from a weekly pattern in `functions/_calendar.js`, so it never runs out. Code: `firm-calendar.js`, `functions/api/calendar.js`, `functions/api/calendar-feed.js`, `functions/api/calendar-google.js`, `functions/_calendar.js`, `functions/_google_calendar.js`. The calendar adds no `<select>` or contenteditable to the page, because the case editor saves those by position.
 
+## ⏱ Time & Billing (billable and non-billable time)
+
+A timer for billable and non-billable hours, the way a firm's case management system tracks time.
+
+- **Sidebar timer** (under **📅 Firm Calendar**): **▶ Start timer** starts on the open case, billable, as *Case review & strategy*. With no case open, it starts non-billable, as *Filing & administrative*. The running time shows on every screen, with **⏸ Pause** / **▶ Resume**, **■ Stop**, and a **$ Billable / Non-billable** switch.
+- **⏱ Time tab** (right after **📅 Calendar**):
+  - **The timer's details:** the case (**Link to the open case**, **Unlink**, or type a client name), **$ Billable / Non-billable**, the activity and **What you did**. They can be changed while it runs. **Stop & save** saves it, and **Discard** throws it away.
+  - **Add time by hand:** date, hours (e.g. `0.5`), and the same details. Use it for work done away from the timer.
+  - **This case:** the time on the open case, with totals.
+  - **My timesheet:** one week at a time, with a bar for each day and totals for billable hours, non-billable hours, billable share and time worked.
+  - **👥 All trainees** (Admins): everyone's time for the week, with a total for each trainee.
+  - Entries can be edited (✎) and deleted (🗑). **⬇ Export CSV** downloads the list shown.
+- **Activities:**
+  - Usually billable: case review & strategy, client communication, medical records & bills review, drafting & correspondence, demand & negotiation, discovery, legal research, and court, hearing or deposition.
+  - Usually not billable: intake (before retainer), scheduling & calendaring, filing & administrative, internal meeting, and training. They show with a dashed outline.
+  - Picking an activity sets the billable switch. Marking clerical work billable shows a reminder that it usually isn't billable to the client.
+- **Billing rules** (the usual ones):
+  - Billable time is billed in tenths of an hour (6 minutes), each entry rounded up, with at least 0.1. For example, 7 minutes bills as 0.2 h.
+  - Billable time must be on a case and say what was done, because the client reads it on the invoice. Stopping without a description opens the Time tab on the description.
+  - Non-billable time is tracked the same way.
+- **The timer lives on the server:**
+  - It keeps counting across page reloads, browser tabs and sign-ins, and the other open tabs update when it changes.
+  - One timer per person. Starting another while one runs asks first, then stops and saves the first.
+- **Who sees what:** trainees see and change only their own time. Admins see everyone's.
+- **Not part of the case:** the Time tab isn't part of the saved case or the PDF. Typing in it doesn't count as a case edit, and it stays usable on view-only Training Library cases.
+
+**Data** (D1, created on first use):
+- `time_entries`: one row per entry, with the owner, case, billable flag, activity, description, work date, seconds, and whether it came from the timer or was added by hand.
+- `time_timers`: each person's running timer.
+
+Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the calendar, it adds no `<select>` or contenteditable to the page.
+
 ## Checks (GitHub Actions)
 
 `.github/workflows/checks.yml` runs on every pull request and every push to `main`. A red **Checks** status means something is broken, and the log says what:
@@ -146,6 +178,20 @@ Until the setup below is done, the rail says so, and the subscribe links and **A
     - files that share a client name having different dates of loss.
 - **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
+- **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
+  - the tab's place and the sidebar timer;
+  - starting, counting, pausing, resuming, and surviving a reload;
+  - billable time refused without a description;
+  - 7 minutes billed as 0.2 h;
+  - changing the activity while the timer runs;
+  - time added by hand;
+  - billable time without a case refused;
+  - totals, the weekly timesheet, editing and the CSV;
+  - switching cases while a timer runs;
+  - discarding;
+  - privacy between trainees and the Admin view;
+  - deleting;
+  - that the tab adds no select or contenteditable and isn't saved as a case edit.
 - **Firm Calendar** (`.github/scripts/calendar.cjs`, in the same job): runs the real calendar API code on an in-memory SQLite database standing in for D1, through the real page. It opens the Calendar tab next to Tasks and schedules from a view-only library case (the case is linked, its attorney picked, typing works), then checks:
   - the live availability warning;
   - a conflicting time is refused with free times offered, and picking one saves it;

@@ -735,8 +735,8 @@
         function initEditorPersistence() {
             const root = document.getElementById('capture-area');
             if (!root) return;
-            // The Calendar tab (#pane-calendar) isn't part of the case: its typing and redraws don't count as edits.
-            const inCalendar = (n) => { const el = n && (n.nodeType === 3 ? n.parentElement : n); return !!(el && el.closest && el.closest('#pane-calendar')); };
+            // The Calendar and Time tabs ([data-free-edit]) aren't part of the case: their typing and redraws don't count as edits.
+            const inCalendar = (n) => { const el = n && (n.nodeType === 3 ? n.parentElement : n); return !!(el && el.closest && el.closest('[data-free-edit]')); };
             root.addEventListener('input', (e) => { if (!inCalendar(e.target)) schedulePersistCurrentEditorState(); });
             root.addEventListener('change', (e) => { if (!inCalendar(e.target)) schedulePersistCurrentEditorState(); });
             const observer = new MutationObserver((muts) => { if (muts.some(m => !inCalendar(m.target))) schedulePersistCurrentEditorState(); });

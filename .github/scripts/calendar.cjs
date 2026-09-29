@@ -153,7 +153,7 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     // 1. From a case: Carlos Mendoza (MC-14), Atty. Brooks's litigation file
     await page.evaluate(() => openMockCase('MC-14', { silent: true }));
     const fieldsBefore = await pageFields();
-    const tabOrder = await page.evaluate(() => [...document.querySelectorAll('.tab-btn')].map(t => t.id).slice(-2).join(','));
+    const tabOrder = await page.evaluate(() => { const ids = [...document.querySelectorAll('.tab-btn')].map(t => t.id); const i = ids.indexOf('tab-tasks'); return ids.slice(i, i + 2).join(','); });
     if (tabOrder !== 'tab-tasks,tab-calendar') fail(`the Calendar tab isn't right after Tasks (${tabOrder})`);
     await page.click('#tab-calendar');
     await page.waitForSelector('#pane-calendar #fc-root', { state: 'visible' });
