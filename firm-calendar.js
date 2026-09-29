@@ -15,11 +15,18 @@
    anything is saved. The case's date deadlines (SOL, trial date,
    discovery cut-off…) show as a layer. Everything is live: the
    calendar refreshes while it's open, and other tabs update at once.
-   Each calendar has a subscribe link (Google Calendar / Outlook) so
-   the schedule also appears in a real calendar app.
+   It is also the one place for the attorney's real Google Calendar:
+   a trainee connects Google and picks the attorney's calendar (one
+   shared with them), its events show here next to the firm's, a time
+   they're busy there is flagged while scheduling, and what the trainee
+   schedules is copied into it. Without a connection, each calendar
+   has a subscribe link (Google Calendar / Outlook) and each event an
+   "Add to Google Calendar" link. Times show in firm time (Eastern),
+   with the trainee's own time next to them when it differs.
 
-   Server side: functions/api/calendar.js, functions/api/calendar-feed.js
-   and functions/_calendar.js. All times are the firm's (Eastern).
+   Server side: functions/api/calendar.js, functions/api/calendar-feed.js,
+   functions/api/calendar-google.js, functions/_calendar.js and
+   functions/_google_calendar.js.
 
    No <select> or contenteditable here on purpose: the case editor
    saves every select and contenteditable on the page by position
@@ -48,21 +55,58 @@
     const fmtWhen = (e) => e.allDay ? `${fmtDate(e.date, true)} · all day` : `${fmtDate(e.date, true)} · ${fmtTime(e.start)} – ${fmtTime(e.end)}`;
     const firmToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
+    /* ---------- moments: firm time, the trainee's own time, Google's times ---------- */
+    const FIRM_TZ = 'America/New_York';
+    const LOCAL_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || FIRM_TZ; } catch (e) { return FIRM_TZ; } })();
+    const wallFmt = {};
+    function wallIn(ms, tz) {
+        const f = wallFmt[tz] || (wallFmt[tz] = new Intl.DateTimeFormat('en-CA', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }));
+        const o = {}; f.formatToParts(new Date(ms)).forEach(p => { o[p.type] = p.value; });
+        return { date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour === '24' ? '00' : o.hour}:${o.minute}` };
+    }
+    // the moment a firm date and time stands for
+    function firmMs(date, time) {
+        const guess = Date.parse(`${date}T${time || '00:00'}:00Z`);
+        const off = (ms) => { const w = wallIn(ms, FIRM_TZ); return Date.parse(`${w.date}T${w.time}:00Z`) - ms; };
+        let ms = guess - off(guess);
+        const again = guess - off(ms);
+        if (again !== ms) ms = again;
+        return ms;
+    }
+    function tzAbbr(tz, ms) {
+        try { return new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(new Date(ms)).find(p => p.type === 'timeZoneName').value; }
+        catch (e) { return tz; }
+    }
+    // "9:00 PM – 10:00 PM PHT your time", when the trainee isn't on firm time
+    function yourTime(e) {
+        if (e.allDay || !e.start || LOCAL_TZ === FIRM_TZ) return '';
+        const s = firmMs(e.date, e.start), a = wallIn(s, LOCAL_TZ), b = wallIn(firmMs(e.date, e.end || e.start), LOCAL_TZ);
+        if (a.date === e.date && a.time === e.start) return '';
+        return `${fmtTime(a.time)} – ${fmtTime(b.time)} ${tzAbbr(LOCAL_TZ, s)} your time${a.date !== e.date ? ' (' + fmtDate(a.date) + ')' : ''}`;
+    }
+    const GLOGO = '<svg width="14" height="14" viewBox="0 0 48 48" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
+
     const TYPE_ICON = { 'Deposition': '🎙', 'Mediation': '🤝', 'Court Hearing': '⚖', 'Trial': '🏛', 'Client Meeting': '👤', 'Medical / IME': '🩺',
-        'Deadline': '⏰', 'Phone Call': '📞', 'Internal Meeting': '👥', 'Blocked Time': '⛔', 'Out of Office': '🌴', 'Other': '•' };
+        'Deadline': '⏰', 'Phone Call': '📞', 'Internal Meeting': '👥', 'Blocked Time': '⛔', 'Out of Office': '🌴', 'Other': '•', 'Google': '📆' };
     const DAY_START = 7 * 60, DAY_END = 19 * 60, PX_PER_MIN = 0.8;   // week grid: 7 AM – 7 PM
 
     let S = {
         open: false, view: 'week', anchor: null, data: null, loadedKey: '', loading: false, error: '',
         hidden: {}, showDeadlines: true, weekends: false, scope: 'mine',
         panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | null
-        dayCache: {}, lastSync: null, poll: null
+        dayCache: {}, lastSync: null, poll: null,
+        synced: {}        // keys of events already copied to the attorney's Google Calendar ('ev:<id>')
     };
+    // Google Calendar: the attorney's events for the visible range, the calendars to pick from, a sync in progress
+    let G = { key: '', at: 0, items: [], loading: false, error: '' };
+    let gCals = null, gCalsLoading = false, gCalsError = '', gPicking = false, gSync = null, gConnecting = false, gisLoading = false, gisFailed = false;
     let channel = null;
     try { channel = new BroadcastChannel('lsh-firm-calendar'); channel.onmessage = () => { if (S.open) load(true); }; } catch (e) { /* older browsers: polling only */ }
 
     const cals = () => (S.data && S.data.calendars) || [];
-    const cal = (id) => cals().find(c => c.id === id) || { id, name: id, color: '#64748b' };
+    const GOOGLE_COLOR = '#0b8043';
+    const cal = (id) => id === 'google' ? { id, name: `${(S.data && S.data.google && S.data.google.calendarName) || 'Google Calendar'} (Google)`, color: GOOGLE_COLOR }
+        : cals().find(c => c.id === id) || { id, name: id, color: '#64748b' };
     const types = () => (S.data && S.data.types) || Object.keys(TYPE_ICON);
     const me = () => (S.data && S.data.me) || {};
     const onCal = (e, id) => e.calendar === id || (e.invite || []).includes(id);
@@ -111,16 +155,20 @@
     async function load(force) {
         const [from, to] = range();
         const key = `${from}|${to}|${S.scope}`;
-        if (!force && S.loadedKey === key && S.data) { render(); return; }
+        if (!force && S.loadedKey === key && S.data) { render(); loadGoogleEvents(false); return; }
         S.loading = true; S.error = ''; renderStatus();
         try {
             const res = await fetch(`/api/calendar?from=${from}&to=${to}${S.scope === 'all' ? '&scope=all' : ''}`, { credentials: 'include' });
             const data = await res.json();
             if (!data || !data.success) throw new Error((data && data.error) || 'Could not load the calendar.');
             S.data = data; S.loadedKey = key; S.lastSync = new Date(); S.dayCache = {};
+            if (gSync) data.synced = Object.assign({}, data.synced, S.synced);   // a sync is running: keep what it has done
+            S.synced = data.synced || {};
+            if (googleReady()) gisFailed = false; else if (data.google && data.google.configured && !data.google.connected) preloadGis();
         } catch (e) { S.error = e.message || 'Could not load the calendar.'; }
         S.loading = false;
         render();
+        loadGoogleEvents(force === 'poll' ? false : !!force);
     }
     async function dayEvents(date) {
         if (S.dayCache[date] && Date.now() - S.dayCache[date].at < 15000) return S.dayCache[date].events;
@@ -133,18 +181,252 @@
     }
     function startPolling() {
         stopPolling();
-        S.poll = setInterval(() => { if (S.open && !document.hidden && !(S.panel && S.panel.kind === 'form')) load(true); }, 20000);
+        S.poll = setInterval(() => { if (S.open && !document.hidden && !(S.panel && S.panel.kind === 'form')) load('poll'); }, 20000);
     }
     function stopPolling() { if (S.poll) clearInterval(S.poll); S.poll = null; }
 
     /* ---------- which events show ---------- */
     function visible() {
         if (!S.data) return [];
-        const evs = S.data.events.filter(e => [e.calendar].concat(e.invite || []).some(c => !S.hidden[c]));
+        const evs = S.data.events.concat(googleEvents()).filter(e => [e.calendar].concat(e.invite || []).some(c => !S.hidden[c]));
         return S.showDeadlines ? evs.concat(S.data.deadlines || []) : evs;
     }
     // the calendar whose color an event takes: its own, or the first visible invitee
     const shownCal = (e) => (!S.hidden[e.calendar] ? e.calendar : (e.invite || []).find(c => !S.hidden[c])) || e.calendar;
+
+    /* ---------- Google Calendar (functions/api/calendar-google.js) ---------- */
+    const GAPI = '/api/calendar-google', PUSH_BATCH = 10, REMOVE_BATCH = 20;
+    const gs = () => (S.data && S.data.google) || { configured: false, connected: false };
+    const googleReady = () => !!(gs().connected && gs().calendarId);
+    const canPush = () => googleReady() && !!gs().canWrite;
+    async function gApi(url, body) {
+        const opts = body ? { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { credentials: 'include' };
+        let res, data = {};
+        try { res = await fetch(url, opts); } catch (e) { throw new Error('Network error. Check your connection and try again.'); }
+        try { data = await res.json(); } catch (e) { data = {}; }
+        if (!res.ok || data.success === false) {
+            const err = new Error(data.error || `Google Calendar request failed (${res.status}).`);
+            err.code = data.code;
+            if (S.data && (err.code === 'GOOGLE_RECONNECT' || err.code === 'GOOGLE_NOT_CONNECTED')) {
+                S.data.google = Object.assign({}, gs(), { connected: false, calendarId: '', calendarName: '' });
+                S.synced = {}; gCals = null; G = { key: '', at: 0, items: [], loading: false, error: '' };
+            }
+            throw err;
+        }
+        return data;
+    }
+    // The attorney's Google events as calendar events (firm time). Our own copies are skipped: the original shows.
+    function googleEvents() {
+        if (!googleReady()) return [];
+        const out = [];
+        G.items.forEach(g => {
+            if (g.lshKey) return;
+            const base = { id: 'g:' + g.id, calendar: 'google', invite: [], title: g.title || '(busy)', type: 'Google', location: g.location || '', link: g.link || '', source: 'google', readOnly: true, notes: '' };
+            if (g.allDay) {
+                const last = g.end > g.start ? addDays(g.end, -1) : g.start;
+                for (let d = g.start, i = 0; d <= last && i < 62; d = addDays(d, 1), i++) out.push(Object.assign({}, base, { id: `${base.id}:${d}`, date: d, allDay: true, start: '', end: '' }));
+                return;
+            }
+            const sMs = Date.parse(g.start), eMs = Date.parse(g.end) || sMs;
+            if (!sMs) return;
+            const a = wallIn(sMs, FIRM_TZ), b = wallIn(eMs, FIRM_TZ);
+            let end = b.date > a.date ? '23:59' : b.time;
+            if (mins(end) <= mins(a.time)) end = hhmm(Math.min(mins(a.time) + 30, 23 * 60 + 59));
+            out.push(Object.assign({}, base, { date: a.date, allDay: false, start: a.time, end }));
+        });
+        return out;
+    }
+    async function loadGoogleEvents(force) {
+        if (!S.open || !googleReady() || S.hidden.google) return;
+        const [from, to] = range();
+        const key = `${gs().calendarId}|${from}|${to}`;
+        if (G.loading && G.key === key) return;
+        if (!force && G.key === key && Date.now() - G.at < 60000) return;   // Google: at most once a minute unless asked
+        G = { key, at: Date.now(), items: G.key === key ? G.items : [], loading: true, error: '' };
+        const tMin = new Date(firmMs(addDays(from, -1), '00:00')).toISOString(), tMax = new Date(firmMs(addDays(to, 1), '00:00')).toISOString();
+        try {
+            const r = await gApi(`${GAPI}?action=events&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}`);
+            if (G.key === key) G.items = r.events || [];
+        } catch (e) { if (G.key === key) G.error = e.message; }
+        if (G.key === key) G.loading = false;
+        if (S.open) { renderRail(); renderMain(); if (S.panel && S.panel.kind === 'form') checkAvailability(); }
+    }
+    // An event as it is copied to Google (and for the "Add to Google Calendar" link).
+    function payload(e) {
+        const who = [e.calendar].concat(e.invite || []).map(c => cal(c).name).join(', ');
+        const lines = [`${e.type} · ${who}`, e.caseLabel ? `Case: ${e.caseLabel}${e.caseRef ? ' (' + e.caseRef + ')' : ''}` : '', e.notes || '',
+            '— Scheduled in the LSH CMS Firm Calendar (training).'];
+        return { key: 'ev:' + e.id, title: e.title, allDay: !!e.allDay, start: e.allDay ? e.date : `${e.date}T${e.start}`, end: e.allDay ? e.date : `${e.date}T${e.end}`,
+            tz: FIRM_TZ, location: e.location || '', description: lines.filter(Boolean).join('\n') };
+    }
+    function templateUrl(e) {
+        const p = payload(e);
+        const compact = (w) => w.replace(/[-:]/g, '') + (w.length > 10 ? '00' : '');
+        const q = new URLSearchParams({ action: 'TEMPLATE', text: p.title, details: p.description });
+        if (p.location) q.set('location', p.location);
+        if (p.allDay) q.set('dates', `${compact(p.start)}/${compact(addDays(p.end, 1))}`);
+        else { q.set('dates', `${compact(p.start)}/${compact(p.end)}`); q.set('ctz', p.tz); }
+        return 'https://calendar.google.com/calendar/render?' + q.toString();
+    }
+    function preloadGis() {
+        if (gisLoading || gisFailed || (window.google && google.accounts && google.accounts.oauth2)) return;
+        gisLoading = true;
+        const sc = document.createElement('script');
+        sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+        sc.onload = () => { gisLoading = false; };
+        sc.onerror = () => { gisLoading = false; gisFailed = true; if (S.open) renderRail(); };
+        document.head.appendChild(sc);
+    }
+    function googleRailHtml() {
+        const g = gs();
+        let body;
+        if (!S.data) return '';
+        if (!g.configured) {
+            body = `<div class="fc-sub">Connecting a Google account isn't switched on for this site yet (an admin sets it up: README → Firm Calendar → Google Calendar). Meanwhile the <a href="#" onclick="fcSubscribe();return false">subscribe links</a> put these calendars in Google or Outlook, and each event has an "Add to Google Calendar" link.</div>`;
+        } else if (!g.connected) {
+            body = `<div class="fc-sub" style="margin-bottom:6px">Connect the attorney's Google Calendar: their real events show here, and what you schedule is copied into it.</div>
+                <button class="fc-btn" style="width:100%" data-g="connect" onclick="fcGoogleConnect()" ${gConnecting ? 'disabled' : ''}>${GLOGO}${gConnecting ? 'Connecting…' : 'Connect Google Calendar'}</button>
+                ${gisFailed ? '<div class="fc-sub" style="color:#b91c1c;margin-top:6px">Google sign-in couldn\'t load. Check that accounts.google.com isn\'t blocked, then reopen the tab.</div>' : ''}`;
+        } else if (!g.calendarId || gPicking) {
+            if (!gCals && !gCalsLoading && !gCalsError) setTimeout(loadGoogleCalendars, 0);
+            body = `<div class="fc-sub">Signed in as <b>${esc(g.email || 'your Google account')}</b>. Pick the attorney's calendar (one they shared with you):</div>
+                ${gCalsLoading ? '<div class="fc-sub" style="margin-top:6px">Loading your calendars…</div>' : ''}
+                ${gCalsError ? `<div class="fc-sub" style="color:#b91c1c;margin-top:6px">${esc(gCalsError)} <a href="#" onclick="fcGoogleCalendars();return false">Try again</a></div>` : ''}
+                ${(gCals || []).map(c => `<button class="fc-btn" data-gcal="${esc(c.id)}" style="width:100%;margin-top:6px;text-align:left;${c.id === g.calendarId ? 'border-color:' + GOOGLE_COLOR : ''}" onclick="fcGoogleSelect(this.dataset.gcal)">${esc(c.name)}<span class="fc-sub" style="display:block;font-weight:400">${c.canWrite ? 'can add events' : 'view only'}${c.primary ? ' · your own' : ''}</span></button>`).join('')}
+                <div style="display:flex;gap:6px;margin-top:8px">${gPicking && g.calendarId ? '<button class="fc-btn" onclick="fcGooglePick(false)">Cancel</button>' : ''}<button class="fc-btn danger" data-g="disconnect" onclick="fcGoogleDisconnect()">Disconnect</button></div>`;
+        } else {
+            const n = Object.keys(S.synced || {}).filter(k => k.startsWith('ev:')).length;
+            body = `<div class="fc-layer ${S.hidden.google ? 'off' : ''}" onclick="fcLayer('google')">
+                    <div class="sw" style="background:${GOOGLE_COLOR};border-color:${GOOGLE_COLOR}"></div>
+                    <div><b>${esc(g.calendarName)}</b><span>${esc(g.email)} · Google${G.loading ? ' · loading…' : ''}</span></div></div>
+                ${G.error ? `<div class="fc-sub" style="color:#b91c1c">${esc(G.error)}</div>` : ''}
+                <div class="fc-sub" style="margin:4px 0 6px">${g.canWrite
+                    ? `What you schedule here is copied to it${gSync ? ` · copying ${gSync.done}/${gSync.total}…` : ` · ${n} copied`}.`
+                    : 'View only: ask the attorney to share it with "Make changes to events" so your events are copied to it.'}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    ${g.canWrite ? `<button class="fc-btn" data-g="sync" onclick="fcGoogleSync()" ${gSync ? 'disabled' : ''}>↻ Sync now</button>` : ''}
+                    <button class="fc-btn" onclick="fcGooglePick(true)">Change</button>
+                    <button class="fc-btn danger" data-g="disconnect" onclick="fcGoogleDisconnect()">Disconnect</button></div>`;
+        }
+        return `<h4>Google Calendar</h4>${body}`;
+    }
+    async function loadGoogleCalendars() {
+        gCalsLoading = true; gCalsError = ''; if (S.open) renderRail();
+        try { gCals = (await gApi(`${GAPI}?action=calendars`)).calendars || []; }
+        catch (e) { gCalsError = e.message; }
+        gCalsLoading = false; if (S.open) renderRail();
+    }
+    async function pushOne(e) {
+        if (!canPush()) return;
+        try {
+            const r = await gApi(GAPI, { action: 'push', events: [payload(e)], force: true });
+            const x = r.results && r.results[0];
+            if (!x || !x.ok) throw new Error((x && x.error) || 'not copied');
+            S.synced['ev:' + e.id] = true;
+        } catch (err) { toast(`Saved here, but not copied to ${gs().calendarName}: ${err.message}`, 'error', 6000); }
+        renderRail(); loadGoogleEvents(true);
+    }
+    async function removeOne(id) {
+        const key = 'ev:' + id;
+        if (!googleReady() || !S.synced[key]) return;
+        try { await gApi(GAPI, { action: 'remove', keys: [key] }); delete S.synced[key]; }
+        catch (err) { toast(`Deleted here, but the copy in ${gs().calendarName} is still there: ${err.message}`, 'error', 6000); }
+        renderRail(); loadGoogleEvents(true);
+    }
+    // Makes the attorney's Google Calendar match: every event you scheduled copied (added or updated),
+    // copies of deleted ones removed. Copies of the old Training Calendar's training schedule go too.
+    async function syncAll(quiet) {
+        if (!canPush() || gSync) return;
+        let mine;
+        try {
+            const res = await fetch('/api/calendar?list=mine', { credentials: 'include' });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Could not list your events.');
+            mine = data.events;
+        } catch (e) { toast(e.message, 'error'); return; }
+        const want = mine.map(payload), keep = new Set(want.map(p => p.key));
+        const stale = Object.keys(S.synced).filter(k => !keep.has(k) && /^(ev|sim):/.test(k));
+        gSync = { done: 0, total: want.length + stale.length };
+        renderRail();
+        let changed = 0, removed = 0; const failed = [];
+        try {
+            for (let i = 0; i < want.length; i += PUSH_BATCH) {
+                const chunk = want.slice(i, i + PUSH_BATCH);
+                const r = await gApi(GAPI, { action: 'push', events: chunk });
+                (r.results || []).forEach(x => { if (x.ok) { S.synced[x.key] = true; if (!x.unchanged) changed++; } else failed.push(x.error); });
+                gSync.done += chunk.length; renderRail();
+            }
+            for (let i = 0; i < stale.length; i += REMOVE_BATCH) {
+                const keys = stale.slice(i, i + REMOVE_BATCH);
+                const r = await gApi(GAPI, { action: 'remove', keys });
+                keys.forEach(k => { delete S.synced[k]; });
+                removed += r.removed || 0;
+                gSync.done += keys.length; renderRail();
+            }
+            const name = gs().calendarName;
+            if (failed.length) toast(`${failed.length} event${failed.length === 1 ? '' : 's'} couldn't be copied to ${name}: ${failed[0]}`, 'error', 6000);
+            else if (!quiet) toast(`${name} is up to date: ${want.length} event${want.length === 1 ? '' : 's'}${changed ? `, ${changed} added or updated` : ''}${removed ? `, ${removed} removed` : ''}.`, 'success');
+        } catch (e) { toast(e.message, 'error'); }
+        gSync = null;
+        renderRail(); loadGoogleEvents(true);
+    }
+    window.fcGoogleConnect = function () {
+        const oauth = window.google && google.accounts && google.accounts.oauth2;
+        if (!oauth) {
+            preloadGis();
+            toast(gisFailed ? 'Google sign-in couldn\'t load.' : 'Google sign-in is still loading. Click Connect again in a moment.', gisFailed ? 'error' : 'info');
+            return;
+        }
+        // Popup code flow: the one-time code comes back to this page, which hands it to the server under the trainee's own session.
+        oauth.initCodeClient({
+            client_id: gs().clientId, scope: gs().scopes, ux_mode: 'popup', select_account: true,
+            callback: async (resp) => {
+                if (!resp || resp.error || !resp.code) { toast(resp && resp.error === 'access_denied' ? 'Google access wasn\'t allowed.' : 'Google sign-in didn\'t finish.', 'error'); return; }
+                gConnecting = true; renderRail();
+                try {
+                    const r = await gApi(GAPI, { action: 'connect', code: resp.code });
+                    S.data.google = r.google; S.synced = {}; gCals = r.calendars || null; gCalsError = ''; gPicking = false;
+                    toast(`Connected as ${r.google.email || 'your Google account'}. Now pick the attorney's calendar.`, 'success');
+                } catch (e) { toast(e.message, 'error'); }
+                gConnecting = false; renderRail();
+            },
+            error_callback: (err) => {
+                const t = err && err.type;
+                toast(t === 'popup_closed' ? 'Google sign-in was closed before it finished.'
+                    : t === 'popup_failed_to_open' ? 'The browser blocked the Google sign-in window. Allow pop-ups for this site and try again.' : 'Google sign-in failed.', 'error');
+            }
+        }).requestCode();
+    };
+    window.fcGoogleCalendars = loadGoogleCalendars;
+    window.fcGooglePick = function (on) { gPicking = !!on; if (on) gCals = null; renderRail(); };
+    window.fcGoogleSelect = async function (id) {
+        if (!id) return;
+        if (id === gs().calendarId) { gPicking = false; renderRail(); return; }
+        try {
+            const r = await gApi(GAPI, { action: 'select', calendarId: id });
+            S.data.google = r.google; S.synced = r.synced || {}; gPicking = false; G = { key: '', at: 0, items: [], loading: false, error: '' };
+            renderRail(); loadGoogleEvents(true);
+            if (r.otherCalendarCopies > 0 && confirm(`${r.otherCalendarCopies} event(s) were copied to the calendar you used before. Remove them from that calendar?`)) {
+                for (let i = 0; i < 100; i++) { const x = await gApi(GAPI, { action: 'purge', scope: 'others' }); if (!x.remaining) break; }
+            }
+            if (canPush()) syncAll(false);
+            else toast(`${gs().calendarName}: you can see it, but not add events to it.`, 'info', 5000);
+        } catch (e) { toast(e.message, 'error'); renderRail(); }
+    };
+    window.fcGoogleSync = function () { syncAll(false); };
+    window.fcGoogleDisconnect = async function () {
+        if (!confirm('Disconnect Google Calendar? The attorney\'s events stop showing here and nothing more is copied to their calendar.')) return;
+        const n = Object.keys(S.synced || {}).length, name = gs().calendarName;
+        try {
+            if (n && name && confirm(`Also remove the ${n} event${n === 1 ? '' : 's'} copied to ${name}?`)) {
+                for (let i = 0; i < 100; i++) { const x = await gApi(GAPI, { action: 'purge', scope: 'all' }); if (!x.remaining) break; }
+            }
+            const r = await gApi(GAPI, { action: 'disconnect' });
+            S.data.google = r.google; S.synced = {}; gCals = null; gPicking = false; G = { key: '', at: 0, items: [], loading: false, error: '' };
+            toast('Google Calendar disconnected.', 'info');
+        } catch (e) { toast(e.message, 'error'); }
+        preloadGis(); render();
+    };
 
     /* ---------- shell ---------- */
     // The case's Calendar tab pane (index.html: #pane-calendar, next to Tasks).
@@ -298,6 +580,7 @@
             <div class="fc-layer ${S.showDeadlines ? '' : 'off'}" onclick="fcDeadlines()">
                 <div class="sw" style="background:#dc2626;border-color:#dc2626"></div>
                 <div><b>Case deadlines</b><span>SOL, trial, discovery cut-off… from saved cases</span></div></div>
+            ${googleRailHtml()}
             ${oc ? `<h4>This case</h4><div class="note" style="margin-top:0"><b style="color:#0f172a">${esc(oc.label)}</b>${oc.ref ? ' · ' + esc(oc.ref) : ''}
                 ${caseEvents(oc).map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:5px 7px;margin-top:6px;background:#fff" onclick="fcOpen('${esc(e.id)}')"><div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)} · ${esc(cal(e.calendar).name)}</small></div></div>`).join('')
                   || '<div style="margin-top:4px">Nothing on the calendar for this case in this range.</div>'}
@@ -305,10 +588,7 @@
             <h4>Your upcoming events</h4>
             ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:6px" onclick="fcOpen('${esc(e.id)}')">
                 <div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)} · ${esc(cal(e.calendar).name)}</small></div></div>`).join('')
-                : '<div class="fc-sub">Nothing scheduled by you in this range yet.</div>'}
-            <h4>Export</h4>
-            <button class="fc-btn" style="width:100%;margin-bottom:6px" onclick="exportMyCalendar()">⬇ My case deadlines (.ics)</button>
-            <button class="fc-btn" style="width:100%" onclick="downloadTrainingCalendar()">⬇ Training simulation (.ics)</button>`;
+                : '<div class="fc-sub">Nothing scheduled by you in this range yet.</div>'}`;
     }
     function renderMain() {
         const main = $id('fc-main');
@@ -329,7 +609,7 @@
         // while scheduling: the calendars being booked stand out, and the proposed time shows as an outline
         const f = S.panel && S.panel.kind === 'form' ? S.panel.form : null;
         const booked = f ? [f.calendar].concat(f.invite) : null;
-        const dim = (e) => booked && e.source !== 'case' && e.id !== f.id && !booked.some(c => onCal(e, c));
+        const dim = (e) => booked && e.source !== 'case' && e.source !== 'google' && e.id !== f.id && !booked.some(c => onCal(e, c));
         let html = `<div class="wk" style="grid-template-columns:56px repeat(${n},1fr)">`;
         html += `<div class="wk-h" style="position:sticky;left:0"></div>` + days.map(d => `<div class="wk-h ${d === today ? 'today' : ''}">${DOW[weekday(d)]}<small>${D(d).getUTCDate()}</small></div>`).join('');
         html += `<div class="wk-ad"></div>` + days.map(d => `<div class="wk-ad">${evs.filter(e => e.date === d && e.allDay).map(e =>
@@ -407,22 +687,29 @@
     }
     function findEvent(id) {
         if (!S.data) return null;
-        return S.data.events.concat(S.data.deadlines || []).find(e => e.id === id) || null;
+        return S.data.events.concat(S.data.deadlines || [], googleEvents()).find(e => e.id === id) || null;
     }
     function caseButton(e) {
         if (!e.caseRef && !e.repoId) return '';
         return `<button class="fc-btn" onclick="fcOpenCase('${esc(e.id)}')">📂 Open the case</button>`;
     }
+    function googleLine(e) {
+        if (e.source === 'google') return e.link ? `<a class="fc-btn" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(e.link)}">${GLOGO}Open in Google Calendar</a>` : '';
+        if (e.mine && S.synced['ev:' + e.id]) return `<span class="fc-sub" style="align-self:center">${GLOGO}Copied to ${esc(gs().calendarName)}</span>`;
+        return `<a class="fc-btn" style="text-decoration:none" data-g="template" target="_blank" rel="noopener" href="${esc(templateUrl(e))}">${GLOGO}Add to Google Calendar</a>`;
+    }
     function detailHtml(e) {
         const c = e.source === 'case' ? { color: '#dc2626', name: 'Case deadline (from the saved case)' } : cal(e.calendar);
+        const local = yourTime(e);
         const who = e.source === 'attorney' ? 'On the attorney\'s calendar (their standing schedule). Schedule around it.'
+            : e.source === 'google' ? `On the attorney's Google Calendar (${esc(gs().calendarName)}), their real schedule. Change it in Google Calendar.`
             : e.source === 'case' ? 'A date on the saved case. Change it on the case itself.'
             : `Scheduled by ${esc(e.mine ? 'you' : e.ownerName)}${e.shared ? ' · shared with every trainee' : ''}${e.updatedAt ? ' · ' + esc(String(e.updatedAt).slice(0, 16)) + ' UTC' : ''}`;
         return `<div class="det">
             <div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><h3>${esc(evTitle(e))}</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
             <div style="height:4px;border-radius:4px;background:${c.color};margin:6px 0 10px"></div>
-            <div class="kv"><b>When</b>${esc(fmtWhen(e))}</div>
-            <div class="kv"><b>Type</b>${esc(e.type)}</div>
+            <div class="kv"><b>When</b>${esc(fmtWhen(e))}${local ? `<div class="fc-sub" style="margin:2px 0 0 92px">${esc(local)}</div>` : ''}</div>
+            ${e.source === 'google' ? '' : `<div class="kv"><b>Type</b>${esc(e.type)}</div>`}
             <div class="kv"><b>Calendar</b>${esc(c.name)}${(e.invite || []).length ? ' · with ' + e.invite.map(i => esc(cal(i).name)).join(', ') : ''}</div>
             ${e.location ? `<div class="kv"><b>Where</b>${esc(e.location)}</div>` : ''}
             ${e.caseLabel ? `<div class="kv"><b>Case</b>${esc(e.caseLabel)}${e.caseRef ? ' · ' + esc(e.caseRef) : ''}</div>` : ''}
@@ -432,6 +719,7 @@
                 ${caseButton(e)}
                 ${e.source === 'user' && !e.readOnly ? `<button class="fc-btn primary" onclick="fcEdit('${esc(e.id)}')">✎ Edit</button><button class="fc-btn danger" onclick="fcDelete('${esc(e.id)}')">🗑 Delete</button>` : ''}
                 ${e.source === 'user' ? `<button class="fc-btn" onclick="fcDuplicate('${esc(e.id)}')">⧉ Duplicate</button>` : ''}
+                ${googleLine(e)}
             </div></div>`;
     }
     function blankForm(over) {
@@ -462,6 +750,7 @@
             ${f.allDay ? '' : `<div class="row2" style="margin-top:8px"><input class="fi" type="time" step="900" id="fcf-start" value="${esc(f.start)}" onchange="fcSet('start',this.value)">
                 <input class="fi" type="time" step="900" id="fcf-end" value="${esc(f.end)}" onchange="fcSet('end',this.value)"></div>
                 <div class="pills" style="margin-top:6px">${[[30, '30 min'], [60, '1 hr'], [90, '1½ hr'], [120, '2 hr'], [180, '3 hr'], [240, 'Half day']].map(([m, l]) => `<button type="button" class="pill" onclick="fcDuration(${m})">${l}</button>`).join('')}</div>`}
+            <div id="fcf-local" class="fc-sub" style="margin-top:6px">${esc(yourTime(f))}</div>
             <div id="fcf-avail" class="avail">Checking the attorney's availability…</div>
             <label class="fl">Location</label>
             <input class="fi" id="fcf-location" value="${esc(f.location)}" placeholder="Office, court and department, Zoom link…" oninput="fcSet('location',this.value)">
@@ -495,9 +784,19 @@
         const hits = busy.filter(e => f.allDay || e.allDay || (mins(f.start) < mins(e.end) && mins(e.start) < mins(f.end)));
         const names = booked.map(c => cal(c).name).join(' + ');
         const list = busy.length ? `<ul>${busy.map(e => `<li${hits.includes(e) ? ' style="font-weight:800"' : ''}>${e.allDay ? 'All day' : fmtTime(e.start) + '–' + fmtTime(e.end)} · ${esc(e.title)}${booked.length > 1 ? ' (' + esc(booked.filter(c => onCal(e, c)).map(c => cal(c).name.replace('Atty. ', '')).join(', ')) + ')' : ''}</li>`).join('')}</ul>` : '';
+        const local = $id('fcf-local'); if (local) local.textContent = yourTime(f);
         if (!f.allDay && mins(f.end) <= mins(f.start)) { box.className = 'avail bad'; box.innerHTML = 'The end time must be after the start time.'; return; }
-        if (hits.length) { box.className = 'avail bad'; box.innerHTML = `⚠ <b>${esc(names)}</b> ${booked.length > 1 ? 'are' : 'is'} not free then.${list}`; }
-        else { box.className = 'avail ok'; box.innerHTML = `✓ <b>${esc(names)}</b> ${booked.length > 1 ? 'are' : 'is'} free${f.allDay ? ' that day' : ` ${fmtTime(f.start)}–${fmtTime(f.end)}`}.${busy.length ? ' Also on ' + esc(fmtDate(f.date)) + ':' + list : ' Nothing else booked that day.'}`; }
+        // the attorney's real Google Calendar: busy there too?
+        const gHits = S.hidden.google ? [] : googleEvents().filter(e => e.date === f.date && (f.allDay || e.allDay || (mins(f.start) < mins(e.end) && mins(e.start) < mins(f.end))));
+        const gLine = gHits.length ? `<div style="margin-top:6px">⚠ Busy on <b>${esc(gs().calendarName)}</b> (Google Calendar) then:<ul>${gHits.map(e => `<li>${e.allDay ? 'All day' : fmtTime(e.start) + '–' + fmtTime(e.end)} · ${esc(e.title)}</li>`).join('')}</ul></div>` : '';
+        // what an EA/PA checks too: weekends and the attorney's business hours
+        const wd = weekday(f.date);
+        const hours = wd === 0 || wd === 6 ? `🕘 That's a ${wd === 0 ? 'Sunday' : 'Saturday'}.`
+            : !f.allDay && (mins(f.start) < 8 * 60 || mins(f.end) > 18 * 60) ? '🕘 Outside business hours (8 AM – 6 PM Eastern).' : '';
+        const extra = gLine + (hours ? `<div class="fcf-hours" style="margin-top:6px">${hours}</div>` : '');
+        if (hits.length) { box.className = 'avail bad'; box.innerHTML = `⚠ <b>${esc(names)}</b> ${booked.length > 1 ? 'are' : 'is'} not free then.${list}${extra}`; }
+        else if (gHits.length) { box.className = 'avail bad'; box.innerHTML = `✓ Free on <b>${esc(names)}</b>'s CMS calendar${busy.length ? ':' + list : '.'}${extra}`; }
+        else { box.className = 'avail ok'; box.innerHTML = `✓ <b>${esc(names)}</b> ${booked.length > 1 ? 'are' : 'is'} free${f.allDay ? ' that day' : ` ${fmtTime(f.start)}–${fmtTime(f.end)}`}.${busy.length ? ' Also on ' + esc(fmtDate(f.date)) + ':' + list : ' Nothing else booked that day.'}${googleReady() && !S.hidden.google ? ` Free on ${esc(gs().calendarName)} (Google) too.` : ''}${extra}`; }
     }
     function subscribeHtml() {
         const token = S.data && S.data.feedToken;
@@ -554,7 +853,7 @@
     window.fcGoWeek = function (d) { S.view = 'week'; S.anchor = d; S._scrolled = false; render(); load(); };
     window.fcWeekends = function () { S.weekends = !S.weekends; render(); };
     window.fcScope = function () { S.scope = S.scope === 'all' ? 'mine' : 'all'; load(true); };
-    window.fcLayer = function (id) { S.hidden[id] = !S.hidden[id]; render(); };
+    window.fcLayer = function (id) { S.hidden[id] = !S.hidden[id]; render(); if (id === 'google') loadGoogleEvents(false); };
     window.fcDeadlines = function () { S.showDeadlines = !S.showDeadlines; render(); };
     window.fcClose = function () { S.panel = null; render(); };
     window.fcOpen = function (id) { const e = findEvent(id); if (!e) return; S.panel = { kind: 'detail', ev: e }; render(); };
@@ -617,7 +916,8 @@
             const data = await res.json();
             if (res.status === 409 && data.code === 'CONFLICT') { f.conflict = data; renderSide(); const s = $id('fc-side'); if (s) s.scrollTop = s.scrollHeight; return; }
             if (!data.success) { toast(data.error || 'Could not save the event.', 'error'); return; }
-            toast(`${f.id ? 'Updated' : 'Added'} on ${cal(f.calendar).name}'s calendar${force ? ' (double-booked)' : ''}.`, 'success');
+            toast(`${f.id ? 'Updated' : 'Added'} on ${cal(f.calendar).name}'s calendar${force ? ' (double-booked)' : ''}${canPush() ? ` and copied to ${gs().calendarName}` : ''}.`, 'success');
+            pushOne(data.event);
             S.panel = { kind: 'detail', ev: data.event };
             if (channel) channel.postMessage('changed');
             if (data.event.date < range()[0] || data.event.date > range()[1]) S.anchor = data.event.date;
@@ -632,6 +932,7 @@
             const data = await res.json();
             if (!data.success) { toast(data.error || 'Could not delete it.', 'error'); return; }
             toast('Event deleted.', 'success'); S.panel = null;
+            removeOne(id);
             if (channel) channel.postMessage('changed');
             load(true);
         } catch (e) { toast('Could not reach the server. Try again.', 'error'); }
@@ -663,6 +964,18 @@
         window.showTab = function (id) {
             const r = baseShowTab.apply(this, arguments);
             if (id === 'calendar') enter(); else leave();
+            return r;
+        };
+    }
+    // The old Training Calendar's name (course links, bookmarks) opens this tab too.
+    window.openTrainingCalendar = window.openFirmCalendar;
+    // Signed out: stop and forget. Signed in with ?calendar=1 (course links): open the tab.
+    const baseApply = window.applySessionUI;
+    if (typeof baseApply === 'function') {
+        window.applySessionUI = function () {
+            const r = baseApply.apply(this, arguments);
+            if (!signedIn()) { leave(); S.data = null; S.loadedKey = ''; S.panel = null; S.synced = {}; gCals = null; gPicking = false; G = { key: '', at: 0, items: [], loading: false, error: '' }; }
+            else if (new URLSearchParams(location.search).get('calendar') && !window.__fcOpened) { window.__fcOpened = true; setTimeout(() => window.openFirmCalendar(), 80); }
             return r;
         };
     }

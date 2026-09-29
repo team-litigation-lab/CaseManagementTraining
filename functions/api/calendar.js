@@ -1,8 +1,9 @@
 import { json, requireSession } from '../_utils.js';
 import {
     CALENDARS, EVENT_TYPES, conflictsFor, freeSlots, cleanEvent, isDate, addDays, daysBetween, firmToday,
-    ensureCalendarTables, rowToEvent, visibleEvents
+    ensureCalendarTables, rowToEvent, visibleEvents, importTrainingEvents
 } from '../_calendar.js';
+import { ensureGoogleTables, googleStatus } from '../_google_calendar.js';
 
 // Firm Calendar (firm-calendar.js): the attorneys' calendars inside the CMS.
 //
@@ -10,7 +11,11 @@ import {
 //          The attorneys' standing schedule, events an Admin shared firm-wide, the
 //          caller's own events (Admins: scope=all adds every trainee's, user=
 //          narrows to one trainee), and the date deadlines on the cases the caller
-//          can see. Also returns the caller's subscribe-feed token.
+//          can see. Also returns the caller's subscribe-feed token and their Google
+//          Calendar connection (google, and which of their events are copied
+//          there: synced; see functions/api/calendar-google.js).
+//   GET    /api/calendar?list=mine   every event the caller scheduled (up to 500),
+//          for copying them all to Google Calendar.
 //   POST   /api/calendar  {event, id?, force?}   create or update an event. When it
 //          overlaps something already on an attorney's calendar it is refused with
 //          409 {conflicts, suggestions} unless force is true (the trainee chose to
@@ -71,6 +76,23 @@ async function feedToken(db, username, rotate) {
     return token;
 }
 
+// The caller's Google Calendar connection, and which events are already copied to the chosen calendar.
+async function googleLink(env, username) {
+    try {
+        await ensureGoogleTables(env.DB);
+        const google = await googleStatus(env, env.DB, username);
+        const synced = {};
+        if (google.connected && google.calendarId) {
+            const { results } = await env.DB.prepare(`SELECT local_key FROM calendar_google_sync WHERE username = ? AND calendar_id = ?`)
+                .bind(username, google.calendarId).all();
+            (results || []).forEach(r => { synced[r.local_key] = true; });
+        }
+        return { google, synced };
+    } catch (e) {
+        return { google: { configured: false, connected: false }, synced: {} };
+    }
+}
+
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
@@ -83,15 +105,24 @@ export async function onRequestGet({ request, env }) {
     if (daysBetween(from, to) < 0) return json({ success: false, error: 'The date range is backwards.' }, 400);
     if (daysBetween(from, to) > MAX_WINDOW_DAYS) to = addDays(from, MAX_WINDOW_DAYS);
     await ensureCalendarTables(env.DB);
+    if (url.searchParams.get('list') === 'mine') {
+        const { results } = await env.DB.prepare(`SELECT * FROM calendar_events WHERE owner_username = ? ORDER BY date, start_time LIMIT ${MAX_EVENTS_PER_USER}`)
+            .bind(session.username).all();
+        return json({ success: true, events: (results || []).map(r => rowToEvent(r, session)) });
+    }
+    // events saved in the old Training Calendar come over once
+    try { await importTrainingEvents(env.DB, session); } catch (e) { /* never block the calendar on it */ }
     const scope = url.searchParams.get('scope') === 'all' ? 'all' : 'mine';
     const user = String(url.searchParams.get('user') || '').slice(0, 80);
-    const [events, deadlines, token] = await Promise.all([
+    const [events, deadlines, token, google] = await Promise.all([
         visibleEvents(env.DB, session, from, to, { scope, user }),
         caseDeadlines(env.DB, session, from, to),
-        feedToken(env.DB, session.username, false)
+        feedToken(env.DB, session.username, false),
+        googleLink(env, session.username)
     ]);
     return json({
         success: true, today, from, to, calendars: CALENDARS, types: EVENT_TYPES, events, deadlines, feedToken: token,
+        google: google.google, synced: google.synced,
         me: { username: session.username, name: session.fullName || session.username, admin: session.userType === 'Admin' }
     });
 }

@@ -546,7 +546,7 @@
                 caseManager: document.getElementById('case-manager-field') ? document.getElementById('case-manager-field').value : '',
                 // Case-deadline date fields: same reasoning as attorney/
                 // caseManager above — captured explicitly by id so the
-                // calendars (functions/_calendar.js, functions/_training_calendar.js)
+                // calendars (functions/_calendar.js)
                 // and /api/export-calendar can query them directly as
                 // real DB columns instead of parsing them back out of the
                 // saved HTML. These divs are STILL also contenteditable and

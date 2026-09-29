@@ -258,10 +258,86 @@ const DDL = [
         token TEXT PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS calendar_imports (
+        username TEXT PRIMARY KEY,
+        imported INTEGER NOT NULL DEFAULT 0,
+        done_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`
 ];
 export async function ensureCalendarTables(db) {
     for (const sql of DDL) await db.prepare(sql).run();
+}
+
+/* ---------- the old Training Calendar's events ----------
+   The CMS briefly had a second calendar (the Training Calendar) that kept each
+   trainee's own events in training_calendar_events, as wall times in a zone
+   the trainee picked. The first time a trainee opens the Firm Calendar, those
+   events are copied onto the Firm / Staff calendar at the same moments in firm
+   time, once (calendar_imports). Each keeps its old number as its id, so a
+   copy already sent to Google Calendar (key ev:<id>) is updated, not doubled. */
+const TRAINING_TYPES = { meeting: 'Client Meeting', call: 'Phone Call', court: 'Court Hearing', deposition: 'Deposition',
+    mediation: 'Mediation', deadline: 'Deadline', travel: 'Blocked Time', other: 'Other' };
+const wallFmt = {};
+function wallIn(ms, tz) {
+    const f = wallFmt[tz] || (wallFmt[tz] = new Intl.DateTimeFormat('en-CA', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }));
+    const o = {}; f.formatToParts(new Date(ms)).forEach(p => { o[p.type] = p.value; });
+    return { date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour === '24' ? '00' : o.hour}:${o.minute}` };
+}
+// The moment a 'YYYY-MM-DDTHH:MM' wall time in a zone stands for.
+function wallToMs(wall, tz) {
+    const guess = Date.parse(wall + ':00Z');
+    const off = (ms) => { const w = wallIn(ms, tz); return Date.parse(`${w.date}T${w.time}:00Z`) - ms; };
+    let ms = guess - off(guess);
+    const again = guess - off(ms);
+    if (again !== ms) ms = again;
+    return ms;
+}
+export function fromTrainingEvent(r) {
+    const title = clip(r.title, 140).trim();
+    if (!title) return null;
+    const notes = [r.attendees ? `Attendees: ${r.attendees}` : '', r.notes || ''];
+    let date, start = '', end = '', allDay = !!r.all_day;
+    if (allDay) {
+        date = String(r.start_at || '').slice(0, 10);
+        if (r.end_at && r.end_at > r.start_at) notes.push(`(All day, through ${r.end_at}.)`);
+    } else {
+        let tz = String(r.tz || FIRM_TZ);
+        try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); } catch (e) { tz = FIRM_TZ; }
+        const s = wallToMs(String(r.start_at || ''), tz), e = wallToMs(String(r.end_at || r.start_at || ''), tz);
+        if (Number.isNaN(s)) return null;
+        const ws = wallIn(s, FIRM_TZ), we = wallIn(Number.isNaN(e) ? s : e, FIRM_TZ);
+        date = ws.date; start = ws.time;
+        end = we.date > ws.date ? '23:59' : we.time;
+        if (minutes(end) <= minutes(start)) end = hhmm(Math.min(minutes(start) + 30, 23 * 60 + 59));
+        if (start === '23:59') { start = '23:30'; }
+    }
+    if (!isDate(date)) return null;
+    return {
+        calendar: 'firm', title, type: TRAINING_TYPES[r.category] || 'Other', date, start, end, allDay,
+        location: clip(r.location, 200), caseRef: clip(r.case_ref, 40), notes: clip(notes.filter(Boolean).join('\n'), 4000)
+    };
+}
+export async function importTrainingEvents(db, session) {
+    const done = await db.prepare(`SELECT imported FROM calendar_imports WHERE username = ?`).bind(session.username).first();
+    if (done) return 0;
+    let rows = [];
+    try {
+        ({ results: rows } = await db.prepare(`SELECT * FROM training_calendar_events WHERE username = ? ORDER BY id LIMIT 500`).bind(session.username).all());
+    } catch (e) { rows = []; }   // no such table: the Training Calendar was never used here
+    let n = 0;
+    for (const r of rows || []) {
+        const ev = fromTrainingEvent(r);
+        if (!ev) continue;
+        await db.prepare(
+            `INSERT OR IGNORE INTO calendar_events (id, owner_username, owner_name, shared, calendar, invitees, title, type, date, start_time, end_time,
+                all_day, location, case_ref, case_label, notes) VALUES (?, ?, ?, 0, ?, '[]', ?, ?, ?, ?, ?, ?, ?, ?, '', ?)`
+        ).bind(String(r.id), session.username, session.fullName || session.username, ev.calendar, ev.title, ev.type, ev.date, ev.start, ev.end,
+            ev.allDay ? 1 : 0, ev.location, ev.caseRef, ev.notes).run();
+        n++;
+    }
+    await db.prepare(`INSERT OR IGNORE INTO calendar_imports (username, imported) VALUES (?, ?)`).bind(session.username, n).run();
+    return n;
 }
 
 function parseInvite(text) {
