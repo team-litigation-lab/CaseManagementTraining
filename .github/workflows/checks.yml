@@ -50,3 +50,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/smoke.cjs
+      - name: Firm Calendar (the real calendar API on SQLite, in a browser)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/calendar.cjs
