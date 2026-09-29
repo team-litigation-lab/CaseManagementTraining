@@ -5,7 +5,10 @@
 // trainees get no Training Library button and no list of everyone's cases,
 // the search bar above the case (and the Case Library window) finds saved and
 // mock cases by name or DOL and flags same-name files, and a library case's
-// Notes and Tasks can be edited, saved, reloaded and reset. Fails on any page error.
+// Notes and Tasks can be edited, saved, reloaded and reset. Opens the Training
+// Calendar (month, week and agenda), saves an event with the double-booking
+// warning, and copies events to and disconnects a mocked Google Calendar.
+// Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -22,6 +25,16 @@ const SAVED = [
     { id: 7, caseId: 'LSH-2026-MVA-000007', clientName: 'Maria Santos', phase: 'Intake', isDraft: false, ownerUsername: 'someone', submittedBy: 'Other Trainee', dateOfLoss: '02/02/2026', canEdit: false, updatedAt: '2026-09-20 10:00:00' },
     { id: 8, caseId: null, clientName: 'Zed Practice', phase: 'Intake', isDraft: true, ownerUsername: 'ci', submittedBy: 'CI Trainee', dateOfLoss: '03/03/2026', canEdit: true, updatedAt: '2026-09-21 10:00:00' }
 ];
+// Training Calendar data, in UTC so "today" here is the calendar's today.
+const TODAY = new Date().toISOString().slice(0, 10);
+const GOOGLE_OFF = { configured: true, clientId: 'ci.apps.googleusercontent.com', scopes: 'openid email', connected: false, email: '', calendarId: '', calendarName: '', canWrite: false, lastSyncAt: null };
+const CAL = {
+    tz: 'UTC', layers: { mine: true, sim: true, deadlines: true, google: true }, syncLayers: { mine: true, sim: false, deadlines: false }, events: [],
+    simulation: { anchor: TODAY, usedFallback: false, events: [{ key: 'sim:0-0900', title: 'Client Intake Meeting — New Case Review', category: 'meeting', location: 'Conference Room A', notes: 'Intake.', start: `${TODAY}T09:00`, end: `${TODAY}T10:00` }] },
+    deadlines: [{ key: 'dl:8:sol_bar', date: TODAY, label: 'SOL deadline', title: 'SOL deadline — Zed Practice', caseId: '', clientName: 'Zed Practice', isDraft: true }],
+    google: Object.assign({}, GOOGLE_OFF, { connected: true, email: 'ci@example.com', calendarId: 'atty@example.com', calendarName: 'Attorney CI', canWrite: true }),
+    synced: {}
+};
 (async () => {
     await new Promise(r => server.listen(0, r));
     const base = `http://localhost:${server.address().port}/`;
@@ -31,7 +44,7 @@ const SAVED = [
     const fail = (msg) => failures.push(msg);
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     page.on('dialog', d => d.accept());
-    const saved = [], drills = [], updates = {};
+    const saved = [], drills = [], updates = {}, calPosts = [], gPosts = [];
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
@@ -45,6 +58,21 @@ const SAVED = [
             if (m === 'POST') { const b = JSON.parse(route.request().postData()); updates[b.mock] = { notes: b.notes, tasks: b.tasks }; return j({ success: true }); }
             if (m === 'DELETE') { delete updates[mock]; return j({ success: true }); }
             return j({ success: true, updates: updates[mock] || null });
+        }
+        if (u.pathname === '/api/training-calendar') {
+            if (m === 'GET') return j(Object.assign({ success: true }, CAL));
+            const b = JSON.parse(route.request().postData()); calPosts.push(b);
+            if (b.action === 'save') { const ev = Object.assign({}, b.event, { id: b.event.id || CAL.events.length + 1 }); ev.key = `ev:${ev.id}`; CAL.events = CAL.events.filter(e => e.id !== ev.id).concat(ev); return j({ success: true, event: ev }); }
+            return j({ success: true });
+        }
+        if (u.pathname === '/api/calendar-google') {
+            if (m === 'GET' && u.searchParams.get('action') === 'calendars') return j({ success: true, calendars: [{ id: 'atty@example.com', name: 'Attorney CI', canWrite: true }] });
+            if (m === 'GET') return j({ success: true, events: [{ id: 'g1', title: 'Attorney lunch', allDay: false, start: `${TODAY}T12:00:00Z`, end: `${TODAY}T13:00:00Z` }] });
+            const b = JSON.parse(route.request().postData()); gPosts.push(b);
+            if (b.action === 'push') return j({ success: true, results: b.events.map(e => ({ key: e.key, ok: true })) });
+            if (b.action === 'remove') return j({ success: true, removed: b.keys.length, failed: 0, remaining: 0 });
+            if (b.action === 'disconnect') return j({ success: true, google: GOOGLE_OFF });
+            return j({ success: true });
         }
         return j({ success: true });
     });
@@ -188,8 +216,48 @@ const SAVED = [
     if (!seen.same || !seen.single) fail('the DOL scoring check never saw both kinds of call');
     await page.evaluate(() => fddClose());
 
+    // Training Calendar: embedded instead of .ics downloads
+    if (await page.locator('#sidebar-actions button:has-text(".ics")').count()) fail('the sidebar still offers .ics downloads');
+    await page.click('#tcal-open-btn'); await page.waitForTimeout(600);
+    if (!(await page.isVisible('#tcal-page'))) fail('the Training Calendar did not open');
+    const chips = await page.$$eval(`.tcal-cell[data-date="${TODAY}"] .tcal-chip`, cs => cs.map(c => c.textContent));
+    for (const want of ['Client Intake Meeting', 'SOL deadline — Zed Practice', 'Attorney lunch']) if (!chips.some(c => c.includes(want))) fail(`calendar month view: today is missing "${want}" (${chips.join(' | ')})`);
+    await page.click('#tcal-page [data-view="week"]'); await page.waitForTimeout(200);
+    if (await page.locator('#tcal-view .tcal-blk').count() < 2) fail('calendar week view: timed events are missing');
+    // a new event on top of the intake meeting: warned, saved as typed, copied to the attorney's calendar
+    await page.click('#tcal-page [data-act="new"]');
+    await page.fill('#tcf-title', 'CI prep call');
+    await page.fill('#tcf-sd', TODAY); await page.dispatchEvent('#tcf-sd', 'change');
+    await page.fill('#tcf-st', '09:30'); await page.dispatchEvent('#tcf-st', 'change');
+    await page.fill('#tcf-et', '10:15'); await page.dispatchEvent('#tcf-et', 'change');
+    if (!(await page.isVisible('#tcf-warn li.conflict:has-text("Client Intake Meeting")'))) fail('the event form did not warn about double-booking the intake meeting');
+    await page.click('#tcal-box [data-act="save"]'); await page.waitForTimeout(600);
+    const ev = (calPosts.find(b => b.action === 'save') || {}).event;
+    if (!ev || ev.title !== 'CI prep call' || ev.start !== `${TODAY}T09:30` || ev.end !== `${TODAY}T10:15` || ev.tz !== 'UTC') fail(`the new event was not saved as typed (${JSON.stringify(ev)})`);
+    if (!gPosts.some(b => b.action === 'push' && b.events[0].key === 'ev:1')) fail('the new event was not copied to the attorney\'s Google Calendar');
+    await page.click('#tcal-page [data-view="agenda"]'); await page.waitForTimeout(200);
+    if (!(await page.isVisible('.tcal-ag-row:has-text("CI prep call")'))) fail('calendar agenda view does not list the new event');
+    // one training-schedule event sent by hand, then Sync now: my events stay, the unticked layer's copy is removed
+    await page.click('.tcal-ag-row:has-text("Client Intake Meeting")');
+    await page.click('#tcal-box [data-act="push"]'); await page.waitForTimeout(400);
+    if (!gPosts.some(b => b.action === 'push' && b.events[0].key === 'sim:0-0900' && /^\[TRAINING SIM\]/.test(b.events[0].title))) fail('"Add to the attorney\'s calendar" did not copy the training event');
+    const before = gPosts.length;
+    await page.click('#tcal-rail [data-act="sync"]'); await page.waitForTimeout(800);
+    const syncPosts = gPosts.slice(before);
+    if (!syncPosts.some(b => b.action === 'push' && b.events.some(e => e.key === 'ev:1'))) fail('Sync now did not copy my events');
+    if (!syncPosts.some(b => b.action === 'remove' && b.keys.includes('sim:0-0900'))) fail('Sync now did not remove the training event (its layer is unticked)');
+    // disconnect: the Connect button comes back, and events offer "Add to Google Calendar" instead
+    await page.click('#tcal-rail [data-act="disconnect"]');
+    await page.click('#tcal-box [data-act="ok"]'); await page.waitForTimeout(500);
+    if (!gPosts.some(b => b.action === 'disconnect') || !(await page.isVisible('#tcal-rail [data-act="connect"]'))) fail('Disconnect Google did not disconnect');
+    await page.click('.tcal-ag-row:has-text("Client Intake Meeting")');
+    const href = await page.getAttribute('#tcal-box a[href*="calendar.google.com"]', 'href').catch(() => '');
+    if (!/action=TEMPLATE/.test(href || '') || !/ctz=UTC/.test(href || '')) fail(`the "Add to Google Calendar" link is wrong (${href})`);
+    await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+    if (await page.isVisible('#tcal-page')) fail('Escape did not close the Training Calendar');
+
     await browser.close(); server.close();
-    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls; checked the Case Library and library-case notes.`);
+    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls; checked the Case Library, library-case notes and the Training Calendar.`);
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
     console.log('Smoke test passed.');
 })().catch(e => { console.error(e); process.exit(1); });
