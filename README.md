@@ -82,6 +82,7 @@ Trainees **register in the CMS once**, so their trainer can follow their work. A
 | Standard Foundational Training | `from=standard` |
 | EA/PA Training | `from=ea` |
 | Case Management Training | `from=cm` |
+| Medsum & Demand Training | `from=md` |
 
 - The links also send `name=` and `batch=`, which fill in the form.
 - A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses.

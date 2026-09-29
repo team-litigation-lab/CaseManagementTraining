@@ -2,7 +2,7 @@
    LSH CMS — NAME-ONLY SIGN-IN FROM OUR OTHER TRAINING PLATFORMS
    Opened from the LSH Training Portal (Training Directory, Simulators),
    Property Damage Claims Training, Standard Foundational Training,
-   EA/PA Training or Case Management Training, the sign-in screen asks
+   EA/PA Training, Case Management Training or Medsum & Demand Training, the sign-in screen asks
    only for the trainee's name. /api/guest-login signs them in to their
    registered CMS account (functions/api/guest-login.js), so their trainer
    monitors their work as usual. Not registered yet: they're taken to the
@@ -10,7 +10,7 @@
    Opened directly (not from a platform): the Register form comes first,
    until this browser has signed in once; then the usual sign-in.
    How the CMS knows where they came from:
-     • ?from=portal|pd|standard|ea on the link (the platforms add it,
+     • ?from=portal|pd|standard|ea|cm|md on the link (the platforms add it,
        with name= and batch= to fill in the form), or
      • the page that linked here (document.referrer) is one of them.
    It's remembered for the browser tab. A direct visit gets the usual
@@ -23,7 +23,8 @@
         pd: 'Property Damage Claims Training',
         standard: 'Standard Foundational Training',
         ea: 'EA/PA Training',
-        cm: 'Case Management Training'
+        cm: 'Case Management Training',
+        md: 'Medsum & Demand Training'
     };
     // Each platform's Worker, including its preview addresses ("<version>-<name>.…").
     const worker = (name) => new RegExp('^([a-z0-9-]+-)?' + name + '\\.legalsupporthelp\\.workers\\.dev$');
@@ -32,7 +33,8 @@
         [worker('propertydamageclaimstraining'), 'pd'],
         [worker('foundational-training'), 'standard'],
         [worker('ea-pa-training'), 'ea'],
-        [worker('case-management-training'), 'cm']
+        [worker('case-management-training'), 'cm'],
+        [worker('medsumanddemandtraining'), 'md']
     ];
     const FROM_KEY = 'LSH_CMS_GUEST_FROM', VIA_KEY = 'LSH_CMS_GUEST_VIA', KNOWN_KEY = 'LSH_CMS_SIGNED_IN_BEFORE';
     const knownBrowser = () => { try { return !!localStorage.getItem(KNOWN_KEY); } catch (e) { return false; } };
