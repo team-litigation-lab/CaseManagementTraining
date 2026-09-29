@@ -52,6 +52,8 @@
             <button onclick="requestDownload()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download Case Summary (PDF)</button>
             <button onclick="newCase()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-4">Start a New Case</button>
             <button onclick="openFirmCalendar()" class="w-full border border-orange-500 text-orange-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-2">📅 Firm Calendar</button>
+            <!-- the billable / non-billable timer (time-tracker.js fills it) -->
+            <div id="tt-widget" class="mb-2"></div>
             <button onclick="openTraineeDashboard()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-8">📊 My Dashboard</button>
 
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mono">Case Library</p>
@@ -139,6 +141,7 @@
                     <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
                     <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
                     <div onclick="showTab('calendar')" id="tab-calendar" class="tab-btn">📅 Calendar</div>
+                    <div onclick="showTab('time')" id="tab-time" class="tab-btn">⏱ Time</div>
                 </div>
             </div>
 
@@ -409,6 +412,8 @@
             <!-- Firm Calendar (firm-calendar.js fills it). Not part of the saved case: no .pdf-card,
                  no select/contenteditable, and data-free-edit keeps it typeable on view-only library cases. -->
             <div id="pane-calendar" class="tab-pane no-print" data-free-edit></div>
+            <!-- Time & billing (time-tracker.js fills it). Same rules as the Calendar tab. -->
+            <div id="pane-time" class="tab-pane no-print" data-free-edit></div>
 
         </div>
     </main>
@@ -878,6 +883,7 @@
     <script src="front-desk-drill.js"></script>
     <script src="case-library.js"></script>
     <script src="firm-calendar.js"></script>
+    <script src="time-tracker.js"></script>
     <script src="guest-access.js"></script>
 </body>
 </html>
