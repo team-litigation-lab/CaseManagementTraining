@@ -14,6 +14,12 @@
 //   - the Medical Chronology sorts by date and reorders by dragging;
 //   - dropping files on the Doc Hub adds attached rows under the chosen category;
 //   - a ping sent as a task waits for Accept, which adds it to the case's Tasks;
+//   - tasks arrive reliably: two sent a moment apart both arrive, a computer clock
+//     that's off doesn't hide them (the server measures their age), others' and old
+//     ones don't show, a reload doesn't offer an accepted one again, and the task card
+//     stays clear of the Front Desk panel;
+//   - a request refused only because the session's heartbeat lapsed is sent again once
+//     after a heartbeat (and one refused for a revoked account isn't);
 //   - Monitoring's "View Latest Saved" opens the trainee's latest case.
 // Usage: node .github/scripts/sections.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -39,11 +45,14 @@ const failures = []; const fail = (m) => failures.push(m);
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     page.on('dialog', d => d.accept());
-    let ping = null; const uploads = [];
+    let ping = null, pings = null; const uploads = [], calls = [];
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url());
         const j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
-        if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping });
+        if (u.pathname === '/api/state') return j(Object.assign({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping }, pings ? { pings } : {}));
+        if (u.pathname === '/api/heartbeat' && route.request().method() === 'POST') { calls.push('heartbeat'); return j({ success: true }); }
+        if (u.pathname === '/api/retry-probe') { calls.push('probe'); const first = calls.filter(c => c === 'probe').length === 1; return route.fulfill({ status: first ? 401 : 200, contentType: 'application/json', body: JSON.stringify(first ? { success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' } : { success: true, again: true }) }); }
+        if (u.pathname === '/api/revoked-probe') { calls.push('revoked'); return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, error: 'Your access has been revoked.', code: 'ACCESS_REVOKED' }) }); }
         if (u.pathname === '/api/case-repository') return j({ success: true, cases: [] });
         if (u.pathname === '/api/upload') { uploads.push(1); return j({ success: true, key: 'k' + uploads.length, filename: 'file' + uploads.length }); }
         if (u.pathname === '/api/monitor-case') return j({ success: true, case: { id: 1, caseId: 'LSH-2026-MVA-000001', clientName: 'Olive Oldcase', phase: 'Treatment', isDraft: false, updatedAt: new Date().toISOString(), content: OLD, _for: u.searchParams.get('username') } });
@@ -203,6 +212,37 @@ const failures = []; const fail = (m) => failures.push(m);
         sendPing(); await new Promise(r => setTimeout(r, 50)); window.fetch = f; return body;
     });
     if (!sent || sent.text !== '[TASK] Upload the police report') fail(`"Send as a task" didn't mark the ping (${JSON.stringify(sent)})`);
+
+    // 6b. tasks arrive reliably. firedAt is far off on purpose: only the age the server measured counts.
+    ping = null;
+    pings = [
+        { id: 83, text: '[TASK] Too old', target: 'ci', by: 'Admin Rae', firedAt: '2020-01-01T00:00:00.000Z', ageMs: 90000 },
+        { id: 82, text: 'For someone else', target: 'other', by: 'Admin Rae', firedAt: '2020-01-01T00:00:00.000Z', ageMs: 500 },
+        { id: 81, text: '[TASK] Second of two', target: 'ci', by: 'Admin Rae', firedAt: '2020-01-01T00:00:00.000Z', ageMs: 1000 },
+        { id: 80, text: '[TASK] First of two', target: ['other', 'ci'], by: 'Admin Rae', firedAt: '2020-01-01T00:00:00.000Z', ageMs: 3000 }
+    ];
+    for (let k = 0; k < 2; k++) await page.evaluate(() => fetch('/api/state').then(r => r.json()).then(applySiteState));
+    const cards = await page.$$eval('#task-inbox .task-card .task-card-text', els => els.map(e => e.textContent));
+    if (cards.join('|') !== 'First of two|Second of two') fail(`tasks sent a moment apart didn't both arrive once, in order (or others'/old ones showed): ${JSON.stringify(cards)}`);
+    await page.click('#task-inbox .task-card:has-text("First of two") .accept'); await page.waitForTimeout(300);
+    await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(1200);
+    await page.evaluate(() => fetch('/api/state').then(r => r.json()).then(applySiteState));
+    const afterReload = await page.$$eval('#task-inbox .task-card .task-card-text', els => els.map(e => e.textContent));
+    if (afterReload.join('|') !== 'Second of two') fail(`after a reload the task cards are ${JSON.stringify(afterReload)} (the accepted one came back, or the waiting one was lost)`);
+    await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(500);
+    const [inbox, panel] = await Promise.all([page.locator('#task-inbox').boundingBox(), page.locator('#fdd-panel').boundingBox()]);
+    if (!inbox || !panel || inbox.x + inbox.width > panel.x) fail(`the task card covers the Front Desk panel (${JSON.stringify({ inbox, panel })})`);
+    await page.evaluate(() => fddClose());
+    pings = null;
+
+    // 6c. a request refused only because the heartbeat lapsed is sent again once, after a heartbeat
+    calls.length = 0;
+    const again = await page.evaluate(async () => { const r = await fetch('/api/retry-probe', { method: 'POST', body: '{}' }); return [r.status, await r.json()]; });
+    const seq = calls.slice(calls.indexOf('probe')).join(',');   // (the page's own heartbeats may come before)
+    if (again[0] !== 200 || !again[1].again || !/^probe,(heartbeat,)+probe(,|$)/.test(seq)) fail(`a request refused for a lapsed heartbeat wasn't sent again after one (${JSON.stringify(again)}; ${calls.join(',')})`);
+    calls.length = 0;
+    const revoked = await page.evaluate(async () => (await fetch('/api/revoked-probe', { method: 'POST', body: '{}' })).status);
+    if (revoked !== 401 || calls.filter(c => c === 'revoked').length !== 1) fail(`a request refused for a revoked account was sent again (${calls.join(',')})`);
 
     // 7. Monitoring: View Latest Saved (a username with a quote in it, and a name that isn't HTML)
     await page.evaluate(() => renderMonitoringOnline([{ username: 'ci"q', full_name: '<b>Tia</b>', user_type: 'Trainee', last_seen: new Date().toISOString() }]));

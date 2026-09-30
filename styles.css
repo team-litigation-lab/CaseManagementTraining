@@ -674,6 +674,10 @@
     @media print { #chrono-container > tr > td:first-child::before { display: none; } }
     /* tasks an Admin sent: waiting for Accept */
     #task-inbox { position: fixed; right: 18px; bottom: 18px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; max-width: 340px; }
+    /* Clear of the Front Desk panel (front-desk-drill.js) and its "Back to the call" button, so a task card never covers their buttons. */
+    body:has(#fdd-panel.open) #task-inbox { right: calc(min(500px, 100vw) + 18px); }
+    body:has(#fdd-mini[style*="block"]) #task-inbox { bottom: 74px; }
+    @media (max-width: 860px) { body:has(#fdd-panel.open) #task-inbox { right: 10px; left: 10px; top: 58px; bottom: auto; max-width: none; } }
     .task-card { background: #0f2148; color: #fff; border-left: 5px solid #f97316; border-radius: 10px; padding: 12px 14px; box-shadow: 0 12px 30px rgba(0,0,0,.3); font-size: 13px; }
     .task-card-head { font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: #fb923c; }
     .task-card-text { margin: 6px 0; line-height: 1.4; white-space: pre-wrap; }

@@ -90,8 +90,10 @@ export function clearSessionCookie() {
     return `lsh_session=; HttpOnly; Secure; SameSite=None; Partitioned; Path=/; Max-Age=0`;
 }
 
-/** Client heartbeat interval is 2s; grace window is 3× that. */
-export const HEARTBEAT_GRACE_SECONDS = 6;
+/** Client heartbeat interval is 2s. The grace window is wide enough for a tab in the
+ *  background, which browsers slow to a heartbeat a minute (a trainee on a Google Meet
+ *  tab mid-session): the session stays alive, and a closed tab's still ends in 2 minutes. */
+export const HEARTBEAT_GRACE_SECONDS = 120;
 
 /**
  * True when the user's heartbeats row was touched within the grace window.

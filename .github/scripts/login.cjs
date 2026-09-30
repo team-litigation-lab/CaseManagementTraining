@@ -8,7 +8,9 @@
 // gets the same account; a revoked one isn't made again); MASTER_ADMIN_PASSWORD
 // and the older ADMIN_PORTAL_PASSWORD both work; a wrong admin password, a bad
 // name and no admin password set up are refused; "trainer-" usernames can't be
-// registered; trainees still sign in with
+// registered; a session stays alive with a heartbeat up to 2 minutes old (a
+// background tab) and ends after that; /api/state lists the last minute's pings,
+// with their age measured on the server; trainees still sign in with
 // username and password; registration offers Trainee only; the registration form
 // scrolls on a small screen; a browser tab still running the old Training
 // Calendar gets told to reload. The admin password here is a test value.
@@ -42,6 +44,7 @@ const failures = []; const fail = (m) => failures.push(m);
     const utils = await import(pathToFileURL(path.join(ROOT, 'functions/_utils.js')).href);
     const loginApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/login.js')).href);
     const registerApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/register.js')).href);
+    const stateApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/state.js')).href);
     const oldCal = await import(pathToFileURL(path.join(ROOT, 'functions/api/training-calendar.js')).href);
     const sql = new DatabaseSync(':memory:');
     sql.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT, email TEXT, user_type TEXT,
@@ -108,6 +111,23 @@ const failures = []; const fail = (m) => failures.push(m);
     if (r.status !== 403 || sql.prepare("SELECT COUNT(*) AS n FROM users WHERE username = 'trainer-tom-reyes'").get().n) fail(`a permanently revoked trainer's account was made again (${r.status})`);
     const reg = await registerApi.onRequestPost({ request: new Request('http://x/api/register', { method: 'POST', body: JSON.stringify({ firstName: 'Sly', lastName: 'Fox', email: 's@x.io', userType: 'Trainee', username: 'trainer-sly-fox', password: 'abcd1234', trainingStartDate: '2026-09-28' }) }), env });
     if (reg.status !== 400) fail(`a "trainer-" username could be registered (${reg.status})`);
+    // a background tab's heartbeat (browsers slow it to one a minute) keeps the session; a closed tab's ends
+    sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', '-60 seconds') WHERE username = 'tia'").run();
+    if (!(await utils.isSessionHeartbeatAlive(env.DB, 'tia'))) fail('a session with a 60 s old heartbeat (a background tab) was treated as expired');
+    sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', '-200 seconds') WHERE username = 'tia'").run();
+    if (await utils.isSessionHeartbeatAlive(env.DB, 'tia')) fail('a session with no heartbeat for 200 s (a closed tab) was still alive');
+    // /api/state: the last minute's pings, newest first, each with its age measured on the server
+    sql.exec(`CREATE TABLE site_state (id INTEGER PRIMARY KEY, paused INTEGER, locked INTEGER, locked_by_batch TEXT, updated_at TEXT);
+        CREATE TABLE announcements (id INTEGER PRIMARY KEY, text TEXT, updated_at TEXT);
+        CREATE TABLE alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, bg_color TEXT, image TEXT, duration_seconds INTEGER, start_at TEXT, stopped INTEGER DEFAULT 0);
+        CREATE TABLE pings (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, target TEXT, by TEXT, fired_at TEXT);`);
+    const ago = (sec) => new Date(Date.now() - sec * 1000).toISOString();
+    sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('old', '__all__', 'A', ago(300));
+    sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('[TASK] first', JSON.stringify(['tia', 'bo']), 'A', ago(5));
+    sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('[TASK] second', 'tia', 'A', ago(2));
+    const st = await (await stateApi.onRequestGet({ env })).json();
+    const got = (st.pings || []).map(p => `${p.text}@${Math.round(p.ageMs / 1000)}`).join(',');
+    if (got !== '[TASK] second@2,[TASK] first@5' || !Array.isArray(st.pings[1].target) || st.ping.text !== '[TASK] second' || typeof st.ping.ageMs !== 'number') fail(`/api/state's pings are wrong: ${JSON.stringify(st.pings)} / ${JSON.stringify(st.ping)}`);
     const moved = await oldCal.onRequestGet({ request: new Request('http://x/api/training-calendar'), env });
     const mj = await moved.json();
     if (moved.status !== 410 || !/Reload the page/.test(mj.error || '')) fail('the old Training Calendar endpoint does not tell the tab to reload');

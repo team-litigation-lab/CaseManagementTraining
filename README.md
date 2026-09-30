@@ -172,7 +172,7 @@ Trainees **register in the CMS once**, so their trainer can follow their work. A
 
 **The trade-off:**
 - On a platform page, anyone who types a registered trainee's name signs in as that trainee. That's the point of it: quick access, and the trainee's work still lands in their monitored account.
-- Failed name look-ups are limited to 30 per connection per hour.
+- Failed name look-ups are limited to 120 per connection per hour (a class often shares one office connection).
 - Admin access still needs the admin password.
 
 **Data** (D1):
@@ -230,8 +230,9 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
   - A file dropped on a row attaches to that row.
 - **Tasks from an Admin:**
   - In Master Control → Ping, **Send as a task** makes the ping stay on the trainee's screen with an **Accept** button, until they accept or dismiss it.
-  - **Accept** adds the task, with who assigned it, to the open case's **Tasks** list and opens that tab.
+  - **Accept** adds the task, with who assigned it, to the open case's **Tasks** list and opens that tab. On a Training Library case it's saved right away, and the trainee can edit it and change who it's assigned to like any task; on their own case, Save or Update keeps it.
   - Pending tasks are kept in that browser until the trainee acts on them.
+  - **Delivery:** `/api/state` lists the last minute's pings with each one's age measured on the server, so tasks sent a moment apart to different trainees all arrive, and a trainee whose computer clock is off still gets theirs. Each ping shows once per browser (a reload doesn't offer an accepted task again). The task card sits beside the Front Desk panel, not over its buttons.
 - **Monitoring:** *View Latest Saved* works again. The username was placed inside the click handler in a way that broke it. Names are now shown as text, not HTML.
 
 **How they're saved:**
@@ -372,6 +373,8 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - `MASTER_ADMIN_PASSWORD` and the older `ADMIN_PORTAL_PASSWORD` both work;
   - a wrong or unset admin password, and a name without a last name, are refused;
   - trainees still sign in with username and password;
+  - a session stays alive with a heartbeat up to 2 minutes old (a background tab, e.g. while on a Google Meet tab) and ends after that;
+  - `/api/state` lists the last minute's pings with their age measured on the server;
   - registration is for trainees only and scrolls on a small screen;
   - a tab still running the old Training Calendar is told to reload.
 - **Case editor sections** (`.github/scripts/sections.cjs`, in the same job). It checks that:
@@ -382,6 +385,8 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - Medical Chronology sorting and dragging;
   - dropping files on the Doc Hub;
   - a task ping waits for Accept and lands in Tasks;
+  - tasks arrive reliably: two sent a moment apart both arrive, a wrong computer clock doesn't hide them, others' and old ones don't show, a reload doesn't offer an accepted one again, and the card stays clear of the Front Desk panel;
+  - a request refused only because the session's heartbeat lapsed (a background tab, a computer that slept) is sent again once after a heartbeat, and one refused for a revoked account isn't;
   - *View Latest Saved* opens the case.
 - **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
   - the tab's place and the sidebar timer;
