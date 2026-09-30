@@ -68,6 +68,9 @@ With **🎙 Live voice calls** ticked on the drill's start screen (the default i
 - **What the caller knows:** the caller only knows their script. That is why they're calling (`opening`) and what they answer when asked for each identifier (`gives`), wrong answers included. They don't volunteer details, don't invent case facts, and never say they're a simulation.
 - **Asking for identifiers:** the trainee just asks out loud. Each identifier is ticked on screen as they ask for it (from the live transcript), and that is what the "asked the right identifiers" points use. Tapping an identifier asks it in writing instead.
 - **Transcript:** both sides are transcribed as they speak. **Mute** and **Hang up** work as on a phone.
+- **🔈 Speaker (speakerphone):** for a room, or to show a call in **Google Meet**. The caller plays louder, and the setting is remembered for the next calls.
+  - **In Meet:** Present now → A tab (or Share screen → Chrome tab), pick the CMS tab, and turn on **Also share tab audio**. The class hears the caller, and hears the trainee through their Meet microphone. The phone panel shows these steps when Speaker is on.
+  - **No echo:** on speakerphone the microphone sends silence while the caller talks, so the caller can't hear its own voice from the speakers and cut in. The trainee lets the caller finish, then answers.
 - **Scoring:** "End the call and score it" hangs up. The call's transcript is saved with the drill result, for the trainer.
 - **Headset:** a headset works best. Speakers can echo the caller back into the microphone.
 
@@ -344,6 +347,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - the caller's voice plays and is transcribed;
     - identifiers asked out loud are ticked, and a tapped one is asked in writing;
     - Mute stops the microphone;
+    - Speaker turns the caller up, is remembered, and silences the microphone while the caller talks (the test's microphone is a steady tone, so any unsilenced frame shows);
     - a refused line is retried on another;
     - the time limit warns, then hangs up;
     - scoring hangs up, frees the line and keeps the transcript;

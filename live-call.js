@@ -23,6 +23,11 @@
                             its time limit
      onNotice(message)      e.g. 30 seconds left
    LiveCall.stop() · LiveCall.setMuted(bool) · LiveCall.sendText(text)
+   LiveCall.setSpeaker(bool)  speakerphone: the caller plays louder
+                              (for a room, or a Google Meet that shares
+                              this tab's audio) and the microphone
+                              pauses while the caller talks, so the
+                              caller doesn't hear itself and cut in
    ========================================================= */
 (function () {
     'use strict';
@@ -60,7 +65,7 @@
 
     async function start(opts) {
         stop(true); stopRing();
-        const call = C = { opts, ws: null, ctx: null, mic: null, node: null, src: null, muted: false, ended: false,
+        const call = C = { opts, ws: null, ctx: null, out: null, mic: null, node: null, src: null, muted: false, speaker: !!opts.speaker, ended: false,
             playing: [], playAt: 0, line: null, lineSeq: 0, heard: false, kick: null };
         const state = (s) => { if (C === call && opts.onState) opts.onState(s); };
         const fail = (msg, code) => { if (C !== call || call.ended) return; stop(true); if (opts.onError) opts.onError(msg, code || ''); };
@@ -69,6 +74,10 @@
             // Made inside the click that answered the call, so the browser lets it play.
             call.ctx = new Ctx();
             if (call.ctx.state === 'suspended') call.ctx.resume().catch(() => {});
+            // The caller's voice: a volume stage (louder on speakerphone) and a limiter so it never clips.
+            call.out = call.ctx.createGain(); call.out.gain.value = call.speaker ? SPEAKER_GAIN : 1;
+            const limiter = call.ctx.createDynamicsCompressor();
+            call.out.connect(limiter); limiter.connect(call.ctx.destination);
             call.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
         } catch (e) {
             return fail(e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')
@@ -147,7 +156,10 @@
             const rate = call.ctx.sampleRate;
             call.node.port.onmessage = (e) => {
                 if (C !== call || call.muted || !call.ws || call.ws.readyState !== 1) return;
-                call.ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64FromBuffer(e.data), mimeType: 'audio/pcm;rate=' + rate } } }));
+                // Speakerphone: while the caller is talking the mic hears the speakers, so it sends
+                // silence instead (the stream keeps going, so the caller still knows when you speak).
+                const data = call.speaker && callerTalking(call) ? new ArrayBuffer(e.data.byteLength) : e.data;
+                call.ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64FromBuffer(data), mimeType: 'audio/pcm;rate=' + rate } } }));
             };
             call.src.connect(call.node);
             // A worklet with no output still has to be pulled; a silent gain keeps it running.
@@ -192,7 +204,7 @@
         if (!pcm.length) return;
         const buf = ctx.createBuffer(1, pcm.length, rate), ch = buf.getChannelData(0);
         for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 0x8000;
-        const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+        const src = ctx.createBufferSource(); src.buffer = buf; src.connect(call.out || ctx.destination);
         const at = Math.max(ctx.currentTime + 0.03, call.playAt);
         src.start(at); call.playAt = at + buf.duration;
         call.playing.push(src);
@@ -219,6 +231,15 @@
     }
 
     function setMuted(m) { if (C) C.muted = !!m; return C ? C.muted : false; }
+    const SPEAKER_GAIN = 1.8;
+    // The caller's voice is playing (or just stopped: the room's echo takes a moment to die down).
+    function callerTalking(call) { return !!(call.ctx && call.playAt && call.ctx.currentTime < call.playAt + 0.35); }
+    function setSpeaker(on) {
+        const call = C; if (!call) return !!on;
+        call.speaker = !!on;
+        if (call.out) call.out.gain.value = call.speaker ? SPEAKER_GAIN : 1;
+        return call.speaker;
+    }
     // Text in place of speech (a typed question, or the nudge after a silent pickup).
     function sendText(text, hidden) {
         const call = C; if (!call || !call.ws || call.ws.readyState !== 1) return false;
@@ -241,5 +262,6 @@
 
     window.addEventListener('pagehide', () => { if (C) stop(true); });
 
-    window.LiveCall = { supported, start, stop: () => { stopRing(); stop(false); }, setMuted, sendText, ring, stopRing, active: () => !!C };
+    window.LiveCall = { supported, start, stop: () => { stopRing(); stop(false); }, setMuted, setSpeaker, sendText, ring, stopRing, active: () => !!C,
+        state: () => (C ? { speaker: C.speaker, callerTalking: callerTalking(C), volume: C.out ? C.out.gain.value : 1 } : null) };
 })();

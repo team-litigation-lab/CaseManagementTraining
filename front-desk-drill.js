@@ -133,6 +133,8 @@
     .fdd-phone .ctl{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
     .fdd-phone .ctl button{border:none;border-radius:999px;padding:7px 12px;font-size:11.5px;font-weight:800;cursor:pointer;background:rgba(255,255,255,.14);color:#fff}
     .fdd-phone .ctl button.answer{background:#22c55e}.fdd-phone .ctl button.hang{background:#dc2626}.fdd-phone .ctl button.on{background:#fff;color:#0f172a}
+    .fdd-phone .meet{margin-top:8px;font-size:11.5px;line-height:1.5;color:#c7d2fe;background:rgba(255,255,255,.08);border-radius:8px;padding:7px 9px}
+    .fdd-phone .meet summary{cursor:pointer;font-weight:800;color:#fff}.fdd-phone .meet ol{margin:6px 0 4px 18px;padding:0;list-style:decimal}.fdd-phone .meet li{display:list-item}.fdd-phone .meet p{margin:4px 0 0}.fdd-phone .meet b{color:#fff}
     .fdd-phone .note{margin-top:8px;font-size:11.5px;line-height:1.45;color:#fde68a;background:rgba(245,158,11,.14);border-radius:8px;padding:7px 9px}
     .fdd-ltx{max-height:210px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:10px}
     .fdd-ltx div{max-width:88%;padding:7px 10px;border-radius:12px;font-size:12.5px;line-height:1.45}
@@ -208,6 +210,9 @@
     const liveOK = () => !!(window.LiveCall && window.LiveCall.supported());
     const livePref = () => { try { return localStorage.getItem(LIVE_KEY) !== 'off'; } catch (e) { return true; } };
     window.fddSetLive = function (on) { try { localStorage.setItem(LIVE_KEY, on ? 'on' : 'off'); } catch (e) {} };
+    // Speakerphone (remembered): for a room, or to show the call in Google Meet.
+    const SPEAKER_KEY = 'LSH_FDD_SPEAKER_V1';
+    const speakerPref = () => { try { return localStorage.getItem(SPEAKER_KEY) === 'on'; } catch (e) { return false; } };
     // Which identifiers the trainee asked for, heard in what they said on the call.
     const HEARD = {
         name: /\b(your|full|first|last) name\b|who (am i|i'm) (speaking|talking) (to|with)|who('s| is) (calling|this|on the line)|may i (have|get) (your )?name|spell (your|that|it)/i,
@@ -265,7 +270,7 @@
     function startCall() {
         hangUp();
         D.cur = { asked: [], heard: [], selected: null, auth: null, action: null, q: '', submitted: false, t0: Date.now(),
-            live: D.live ? { status: 'ringing', lines: [], muted: false, note: '' } : null };
+            live: D.live ? { status: 'ringing', lines: [], muted: false, speaker: speakerPref(), note: '' } : null };
         screen = 'call'; startTimer(); paint();
         if (D.cur.live) window.LiveCall.ring(3);
     }
@@ -275,6 +280,7 @@
         lv.status = 'connecting'; cur.t0 = Date.now(); paintPhone();
         window.LiveCall.start({
             callId: D.calls[D.i].call.id,
+            speaker: lv.speaker,
             onState: (st) => { if (!D || D.cur !== cur || !cur.live) return; if (st === 'live') lv.status = 'live'; else if (st === 'ended') lv.status = 'ended'; paintPhone(); },
             onLine: (role, text, id) => {
                 if (!D || D.cur !== cur || !cur.live) return;
@@ -298,6 +304,14 @@
             }
         });
     };
+    window.fddSpeaker = function () {
+        const lv = D && D.cur && D.cur.live; if (!lv) return;
+        lv.speaker = !lv.speaker; lv.meetOpen = lv.speaker;
+        if (window.LiveCall.active()) window.LiveCall.setSpeaker(lv.speaker);
+        try { localStorage.setItem(SPEAKER_KEY, lv.speaker ? 'on' : 'off'); } catch (e) {}
+        paintPhone();
+    };
+    window.fddMeetOpen = function (open) { const lv = D && D.cur && D.cur.live; if (lv) lv.meetOpen = !!open; };
     window.fddMute = function () { const lv = D && D.cur && D.cur.live; if (!lv) return; lv.muted = window.LiveCall.setMuted(!lv.muted); paintPhone(); };
     window.fddHangUp = function () { const lv = D && D.cur && D.cur.live; if (!lv) return; hangUp(); lv.status = 'ended'; paintPhone(); };
     window.fddAskAloud = function (k) {
@@ -529,11 +543,18 @@
     function paintAsks() { const el = $id('fdd-asks'); if (el && D && D.cur) el.innerHTML = asksHTML(); }
     function phoneHTML() {
         const lv = D.cur.live, done = D.cur.submitted;
-        const st = { ringing: ['Incoming call', 'Ringing… answer it'], connecting: ['Connecting…', 'Allow the microphone if asked'], live: ['On the call', lv.muted ? 'You\'re muted' : 'Talk normally: the caller hears you'], ended: ['Call ended', done ? '' : 'Finish steps 2–4, then score the call'] }[lv.status] || ['', ''];
+        const st = { ringing: ['Incoming call', 'Ringing… answer it'], connecting: ['Connecting…', 'Allow the microphone if asked'], live: ['On the call', lv.muted ? 'You\'re muted' : lv.speaker ? 'Speakerphone: let the caller finish, then answer' : 'Talk normally: the caller hears you'], ended: ['Call ended', done ? '' : 'Finish steps 2–4, then score the call'] }[lv.status] || ['', ''];
         return `<div class="row"><div class="fdd-av ${lv.status === 'ringing' ? 'ringing' : ''}" id="fdd-av">📞</div><div class="st"><b>${st[0]}</b><span>${st[1]}</span></div><span class="t" style="font-family:'IBM Plex Mono',monospace;color:#fdba74;font-weight:800">${lv.status === 'live' ? '● LIVE' : ''}</span></div>
             <div class="ctl">${lv.status === 'ringing' && !done ? `<button class="answer" onclick="fddAnswer()">📞 Answer</button>` : ''}
-                ${lv.status === 'live' ? `<button class="${lv.muted ? 'on' : ''}" onclick="fddMute()">${lv.muted ? '🔇 Unmute' : '🎙 Mute'}</button><button class="hang" onclick="fddHangUp()">✆ Hang up</button>` : ''}</div>
+                ${lv.status === 'live' ? `<button class="${lv.muted ? 'on' : ''}" onclick="fddMute()">${lv.muted ? '🔇 Unmute' : '🎙 Mute'}</button>` : ''}
+                ${lv.status !== 'ended' ? `<button class="${lv.speaker ? 'on' : ''}" id="fdd-speaker" onclick="fddSpeaker()" title="Speakerphone: louder, for a room or a Google Meet">${lv.speaker ? '🔊 Speaker on' : '🔈 Speaker'}</button>` : ''}
+                ${lv.status === 'live' ? `<button class="hang" onclick="fddHangUp()">✆ Hang up</button>` : ''}</div>
             ${lv.note ? `<div class="note">${esc(lv.note)}</div>` : ''}
+            ${lv.speaker && lv.status !== 'ended' ? `<details class="meet" id="fdd-meet" ${lv.meetOpen ? 'open' : ''} ontoggle="fddMeetOpen(this.open)"><summary>🔊 Speakerphone is on · showing this call in Google Meet</summary>
+                <ol><li>In Meet, click <b>Present now → A tab</b> (or <b>Share screen → Chrome tab</b>) and pick this CMS tab.</li>
+                <li>Turn on <b>Also share tab audio</b>, then <b>Share</b>. The class hears the caller.</li>
+                <li>Keep your Meet microphone on, so the class hears you too.</li></ol>
+                <p>On speakerphone your microphone pauses while the caller talks (so the caller doesn't hear its own voice and cut in). Wait for them to finish, then answer.</p></details>` : ''}
             ${lv.status === 'ringing' ? '' : `<div class="fdd-ltx" id="fdd-ltx">${linesHTML()}</div>`}`;
     }
     function linesHTML() {
