@@ -386,7 +386,7 @@ const failures = []; const fail = (m) => failures.push(m);
     const roles = turn ? turn.messages.map(m => m.role[0]).join('') : '';
     if (!turn || roles !== 'umu' || !/help with my case/.test(turn.messages[1].text) || !/full name\?\s*Can you hold/.test(turn.messages[2].text)) fail(`the standard voice didn't get the live transcript so far: ${JSON.stringify(turn && turn.messages)}`);
     await page.click('button:has-text("Hang up")');
-    const who = await page.evaluate((sys) => DRILL_CALLS.find(d => sys.includes(d.opening.slice(1, 40))), turn ? turn.system : '');
+    const who = await page.evaluate((sys) => DRILL_CALLS.find(d => sys.includes(fddHeardAs(d.opening).slice(1, 40))), turn ? turn.system : ''); // hard names are written as heard
     if (!who) fail('couldn\'t tell which caller the practice call was');
     else {
         if (who.mock) { await page.fill('.fdd-search', who.mock); await page.click(`.fdd-row:has(.id:text-is("${who.mock}"))`); } else await page.click('#fdd-none');
