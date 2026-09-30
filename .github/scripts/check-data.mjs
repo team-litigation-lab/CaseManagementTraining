@@ -6,11 +6,17 @@
 //   - a phase, case type, lien type or facility specialty isn't one the CMS
 //     editor offers (it would load blank);
 //   - a drill call points at a case that doesn't exist, has an unknown auth
-//     code, or an answer index outside its options;
+//     code, an answer index outside its options, or no caller voice ('f'/'m');
 //   - a caller the key says is verified gave details that don't match the file
 //     (or a "not verified" caller's details all match);
-//   - two files with the same client name have the same date of loss (the DOL
-//     is how the front desk tells them apart, and the drill scores asking for it).
+//   - two files with the same client name have the same date of loss AND date of
+//     birth (the DOL and the DOB are how the front desk tells them apart; a father
+//     and son hurt in the same crash share a DOL but not a DOB);
+//   - a case number is missing, repeats, or doesn't look like one the CMS issues
+//     (LSH-<year>-<type code>-<number>: the type code the editor would give the
+//     case type, a year no earlier than the DOL, and a number in the 9xxxxx range
+//     the server's counter never reaches), or a drill caller quotes a case number
+//     that isn't their file's.
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
@@ -54,9 +60,23 @@ for (const c of MOCK_CASES) {
 const byName = {};
 for (const c of MOCK_CASES) {
     const key = String((c.client || {}).name || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    const other = (byName[key] = byName[key] || []).find(o => o.dateOfLoss === c.dateOfLoss);
-    if (other) bad(`${c.id}: same client name and date of loss as ${other.id}; files that share a name need different DOLs`);
+    const other = (byName[key] = byName[key] || []).find(o => o.dateOfLoss === c.dateOfLoss && o.client.dob === c.client.dob);
+    if (other) bad(`${c.id}: same client name, date of loss and date of birth as ${other.id}; files that share a name need a different DOL or DOB`);
     byName[key].push(c);
+}
+// Case numbers: the Case ID format nextCaseId() issues (functions/_utils.js), with the type code
+// currentTypeCode() in app.js gives the case type.
+const TYPE_CODES = Object.fromEntries([...((app.match(/const TYPE_CODES = \{([^}]*)\}/) || [])[1] || '').matchAll(/'([^']+)':\s*'([^']+)'/g)].map(m => [m[1], m[2]]));
+if (!Object.keys(TYPE_CODES).length) bad('Could not read TYPE_CODES from app.js; update check-data.mjs');
+const typeCode = (c) => c.caseType === 'Others' ? (String(c.caseTypeOther || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 4) || 'OTH') : TYPE_CODES[c.caseType];
+const numbers = new Map();
+for (const c of MOCK_CASES) {
+    const m = String(c.caseNumber || '').match(/^LSH-(\d{4})-([A-Z0-9]{3,4})-(9\d{5})$/);
+    if (!m) { bad(`${c.id}: caseNumber "${c.caseNumber || ''}" must look like LSH-2026-MVA-901234 (number in the 9xxxxx range)`); continue; }
+    if (numbers.has(m[3])) bad(`${c.id}: case number ${c.caseNumber} repeats ${numbers.get(m[3])}'s number`);
+    numbers.set(m[3], c.id);
+    if (m[2] !== typeCode(c)) bad(`${c.id}: case number type code ${m[2]} should be ${typeCode(c)} for a ${c.caseType === 'Others' ? c.caseTypeOther : c.caseType} case`);
+    if (Number(m[1]) < Number(String(c.dateOfLoss).slice(-4))) bad(`${c.id}: case number year ${m[1]} is before the date of loss`);
 }
 
 const AUTH = ['client', 'authorized', 'failed', 'unauthorized', 'business', 'newcaller'];
@@ -72,7 +92,11 @@ for (const d of DRILL_CALLS) {
     if (!Array.isArray(d.actions) || d.actions.length !== 4) bad(`${where}: needs exactly 4 actions`);
     if (!(d.answer >= 0 && d.answer < (d.actions || []).length)) bad(`${where}: answer index ${d.answer} is out of range`);
     if (!d.opening || !d.why) bad(`${where}: needs an opening line and a why`);
+    if (!['f', 'm'].includes(d.voice)) bad(`${where}: voice must be 'f' or 'm' (the caller's voice on a live call)`);
     const c = MOCK_CASES.find(x => x.id === d.mock);
+    for (const quoted of String(d.opening || '').match(/LSH-\d{4}-[A-Z0-9]{3,4}-\d{6}/g) || []) {
+        if (!c || quoted !== c.caseNumber) bad(`${where}: the caller quotes case number ${quoted}, but ${d.mock || 'their (no) file'}'s is ${c ? c.caseNumber : 'none'}`);
+    }
     if (c && ['client', 'authorized', 'failed'].includes(d.auth)) {
         const g = d.gives || {};
         const dobOk = has(g.dob) && String(g.dob).includes(c.client.dob);

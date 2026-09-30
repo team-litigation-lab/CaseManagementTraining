@@ -42,7 +42,7 @@
         const s = session();
         const repo = typeof _repoCache !== 'undefined' && Array.isArray(_repoCache) ? _repoCache : [];
         const mocks = (window.MOCK_CASES || []).map(c => ({
-            kind: 'mock', id: c.id, name: c.client.name, dob: c.client.dob, dol: c.dateOfLoss, ref: c.id,
+            kind: 'mock', id: c.id, name: c.client.name, dob: c.client.dob, dol: c.dateOfLoss, ref: c.caseNumber || c.id,
             phase: c.phase, type: c.caseType === 'Others' ? c.caseTypeOther : c.caseType
         }));
         const saved = repo.map(i => ({
@@ -148,7 +148,7 @@
                 <div class="clb-wrap">
                     <div class="clb-field" onclick="document.getElementById('cl-bar-input').focus()">
                         <span class="clb-icon" aria-hidden="true">🔍</span>
-                        <input type="search" id="cl-bar-input" name="cl-bar-q" placeholder="Search cases: name, DOL, DOB, phone, claim #, plate or case ID" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search cases" aria-controls="cl-bar-results" aria-expanded="false" aria-autocomplete="list">
+                        <input type="search" id="cl-bar-input" name="cl-bar-q" placeholder="Search cases: name, case number, DOL, DOB, phone, claim # or plate" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search cases" aria-controls="cl-bar-results" aria-expanded="false" aria-autocomplete="list">
                         <span class="clb-kbd" aria-hidden="true">Ctrl K</span>
                     </div>
                     <div id="cl-bar-results" class="clb-results" role="listbox" aria-label="Matching cases"></div>
@@ -207,7 +207,7 @@
             .map(([k, l]) => `<button class="${state.tab === k ? 'on' : ''}" onclick="clSetTab('${k}')">${l}</button>`).join('');
         if (state.tab === 'desk') { filters.innerHTML = ''; body.innerHTML = window.mockDeskHTML ? window.mockDeskHTML() : ''; return; }
         const scopes = [['all', 'All files'], ['mock', 'Training Library'], ['saved', 'Saved cases'], ['mine', `My cases (${mineCount()})`]];
-        filters.innerHTML = `<input type="search" id="cl-search" class="cl-search" placeholder="Search name, DOL, DOB, phone, claim #, plate or case ID…" value="${esc(state.q)}" oninput="clSearch(this.value)" autocomplete="off" spellcheck="false" aria-label="Search cases">
+        filters.innerHTML = `<input type="search" id="cl-search" class="cl-search" placeholder="Search name, case number, DOL, DOB, phone, claim # or plate…" value="${esc(state.q)}" oninput="clSearch(this.value)" autocomplete="off" spellcheck="false" aria-label="Search cases">
             <div class="cl-chips">${scopes.map(([k, l]) => `<button class="${state.scope === k ? 'on' : ''}" onclick="clSetScope('${k}')">${esc(l)}</button>`).join('')}</div>`;
         paintResults();
     }
@@ -217,7 +217,7 @@
         const tags = f.kind === 'mock'
             ? `<span class="cl-tag mock">TRAINING LIBRARY · ${esc(f.id)}</span>`
             : `<span class="cl-tag saved">${f.ref ? esc(f.ref) : 'NO CASE ID YET'}</span>${f.draft ? '<span class="cl-tag draft">DRAFT</span>' : ''}${f.mine ? '<span class="cl-tag mine">YOUR CASE</span>' : ''}`;
-        const meta = [f.dob && `DOB ${esc(f.dob)}`, f.type && esc(f.type), f.phase && esc(f.phase), f.kind === 'saved' && admin && f.by && `By ${esc(f.by)}`].filter(Boolean).join(' · ');
+        const meta = [f.kind === 'mock' && `Case # ${esc(f.ref)}`, f.dob && `DOB ${esc(f.dob)}`, f.type && esc(f.type), f.phase && esc(f.phase), f.kind === 'saved' && admin && f.by && `By ${esc(f.by)}`].filter(Boolean).join(' · ');
         const open = f.kind === 'mock' ? `caseLibraryOpen('mock','${esc(f.id)}')` : `caseLibraryOpen('saved',${Number(f.id)})`;
         return `<div class="cl-row">
             <div><div>${tags}</div><div class="nm">${esc(f.name)}</div>${meta ? `<div class="sm">${meta}</div>` : ''}</div>
@@ -268,12 +268,12 @@
         const shown = barHits.slice(0, BAR_MAX);
         if (barActive >= shown.length) barActive = shown.length - 1;
         box.innerHTML = q.length < 2
-            ? `<div class="clb-hint">Type a name, the date of the accident (MM/DD/YYYY), a date of birth, phone, claim #, plate or case ID. Saved cases and the Training Library are both searched.</div>`
+            ? `<div class="clb-hint">Type a name, a case number, the date of the accident (MM/DD/YYYY), a date of birth, phone, claim # or plate. Saved cases and the Training Library are both searched.</div>`
             : !shown.length ? `<div class="clb-hint">No files match "${esc(q)}". Try the last name only, the date of the accident, a phone number or a claim number.</div>`
             : sameNameWarning(barHits) + shown.map((f, i) => {
                 const tag = f.kind === 'mock' ? `<span class="cl-tag mock">TRAINING LIBRARY · ${esc(f.id)}</span>`
                     : `<span class="cl-tag saved">${f.ref ? esc(f.ref) : 'NO CASE ID YET'}</span>${f.draft ? '<span class="cl-tag draft">DRAFT</span>' : ''}${f.mine ? '<span class="cl-tag mine">YOUR CASE</span>' : ''}`;
-                const meta = [f.dob && `DOB ${esc(f.dob)}`, f.type && esc(f.type), f.phase && esc(f.phase), f.kind === 'saved' && isAdmin() && f.by && `By ${esc(f.by)}`].filter(Boolean).join(' · ');
+                const meta = [f.kind === 'mock' && `Case # ${esc(f.ref)}`, f.dob && `DOB ${esc(f.dob)}`, f.type && esc(f.type), f.phase && esc(f.phase), f.kind === 'saved' && isAdmin() && f.by && `By ${esc(f.by)}`].filter(Boolean).join(' · ');
                 return `<div class="clb-row ${i === barActive ? 'on' : ''}" role="option" aria-selected="${i === barActive}" data-i="${i}">
                     <div><div class="nm">${esc(f.name)} ${tag}</div>${meta ? `<div class="sm">${meta}</div>` : ''}</div>
                     <div class="dol">Date of loss<b>${esc(f.dol || '—')}</b></div></div>`;

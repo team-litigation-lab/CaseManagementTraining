@@ -360,7 +360,7 @@
             <p style="margin:0 0 6px;line-height:1.5">A caller is on the line. For each call:</p>
             <ol style="margin:0 0 6px 18px;padding:0;line-height:1.55">
               <li><b>Ask</b> the caller for what you need (name, date of birth, address, SSN last 4, callback, relationship, date of the accident). On a live call, just ask out loud: what you ask is ticked as you say it.</li>
-              <li><b>Find</b> their case with the search (name, phone, claim #, plate, DOL…), open it and read the file. Some callers aren't in the system, and some names are on more than one file: the date of the accident and the date of birth tell you which one.</li>
+              <li><b>Find</b> their case with the search (name, case number, phone, claim #, plate, DOL…), open it and read the file. Some callers aren't in the system, and some names are on more than one file: the date of the accident and the date of birth tell you which one.</li>
               <li><b>Authenticate</b>: compare what they told you with the file. Some callers get it wrong on purpose.</li>
               <li><b>Handle</b> the call.</li></ol>
             <p style="margin:0;color:#64748b;font-size:12px">Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. Time per call is recorded. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The rules are in 🔍 Case Library → ☎ Firm directory.</p></div>
@@ -409,7 +409,7 @@
             ${lv ? `<p style="margin:6px 0 0;font-size:11.5px;color:#64748b">Ask out loud: each identifier is ticked as you ask for it. Tap one to ask it in writing instead.</p>`
                  : `<div class="fdd-tr">${cur.asked.map(k => `<div><span class="q">You: ${esc((ASKS.find(a => a[0] === k) || [])[1])}?</span><br><span class="a">${esc(answerFor(c, k))}</span></div>`).join('')}</div>`}</div>
         <div class="fdd-sec"><h4>2 · Find the case</h4>
-            <input class="fdd-search" placeholder="Search name, phone, DOB, claim #, plate, case ID…" value="${esc(cur.q)}" oninput="fddSearch(this.value)" ${done ? 'disabled' : ''}>
+            <input class="fdd-search" placeholder="Search name, case number, DOL, DOB, phone, claim #, plate…" value="${esc(cur.q)}" oninput="fddSearch(this.value)" ${done ? 'disabled' : ''}>
             <div class="fdd-res" id="fdd-res"></div>
             <button class="fdd-chip" style="margin-top:6px;${cur.selected === 'none' ? 'background:#ecfdf5;border-color:#10b981' : ''}" onclick="fddPick('none')" ${done ? 'disabled' : ''}>No matching case on file</button>
             ${cur.selected && cur.selected !== 'none' ? `<p style="margin:6px 0 0;font-size:11.5px;color:#475569">Opened <b>${esc(cur.selected)}</b> in the editor (view only). Use <b>▭ Case</b> above to hide this panel and read the file.</p>` : ''}</div>
@@ -453,7 +453,7 @@
         const hits = (window.mockSearch ? window.mockSearch(q) : []).slice(0, 12);
         const dup = [...new Set(hits.map(nameKey))].filter(k => hits.filter(c => nameKey(c) === k).length > 1);
         const warn = dup.length ? `<p class="fdd-dup">⚠ More than one file is named ${dup.map(k => `<b>${esc(hits.find(c => nameKey(c) === k).client.name)}</b>`).join(' and ')}. Match the date of the accident (DOL) and the date of birth before you open one.</p>` : '';
-        box.innerHTML = hits.length ? warn + hits.map(c => `<div class="fdd-row ${cur.selected === c.id ? 'sel' : ''}" onclick="fddPick('${c.id}')"><span class="id">${c.id}</span><span class="nm">${esc(c.client.name)}<br><span class="mt">DOL <b>${esc(c.dateOfLoss)}</b> · DOB ${esc(c.client.dob)} · ${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}</span></span></div>`).join('')
+        box.innerHTML = hits.length ? warn + hits.map(c => `<div class="fdd-row ${cur.selected === c.id ? 'sel' : ''}" onclick="fddPick('${c.id}')"><span class="id">${c.id}</span><span class="nm">${esc(c.client.name)}<br><span class="mt">DOL <b>${esc(c.dateOfLoss)}</b> · DOB ${esc(c.client.dob)} · ${esc(c.caseNumber || '')} · ${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}</span></span></div>`).join('')
             : '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">No cases match.</p>';
     }
 
@@ -465,7 +465,7 @@
             : c.auth === 'unauthorized' ? 'their name and their relationship to the client' : 'their name and a callback number')
             + (same > 1 ? `, plus the date of the accident (${same} files are named ${k.client.name})` : '');
         return `<div class="fdd-fb ${cls}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${r.score}/100</b><span>⏱ ${fmtSec(r.secs)}</span></div>
-            <div>${r.find ? '✓' : '✗'} <b>Find:</b> ${c.mock ? `${esc(c.mock)} · ${esc(k ? k.client.name : '')}${k ? ` (DOL ${esc(k.dateOfLoss)})` : ''}` : 'not in the system'}${r.find ? '' : ` (you picked ${esc(r.picked.selected)})`}</div>
+            <div>${r.find ? '✓' : '✗'} <b>Find:</b> ${c.mock ? `${esc(c.mock)} · ${esc(k ? k.client.name : '')}${k ? ` (${esc(k.caseNumber || '')}, DOL ${esc(k.dateOfLoss)})` : ''}` : 'not in the system'}${r.find ? '' : ` (you picked ${esc(r.picked.selected)})`}</div>
             <div>${r.authOk ? '✓' : '✗'} <b>Authenticate:</b> ${esc((AUTH.find(a => a[0] === c.auth) || [])[1])}</div>
             <div>${r.idsOk ? '✓' : '✗'} <b>Asked for:</b> ${need}</div>
             <div>${r.actOk ? '✓' : '✗'} <b>Handle:</b> ${esc(c.actions[c.answer])}</div>

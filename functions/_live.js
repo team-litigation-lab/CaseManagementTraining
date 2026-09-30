@@ -22,10 +22,11 @@ export const drillCall = (id) => drillCalls().find(c => c.id === id) || null;
 const caseOf = (id) => (mock.MOCK_CASES || []).find(c => c.id === id) || null;
 const unquote = (s) => String(s || '').trim().replace(/^["“]+|["”]+$/g, '');
 
-// The same caller always gets the same voice, male or female to match the name.
+// The same caller always gets the same voice, female or male as the call's `voice`
+// says (from the first name for a call without one).
 export function voiceFor(call) {
     const name = String((call.gives && call.gives.name) || call.id);
-    const pool = VOICES[FEMALE.test(name) ? 'f' : 'm'];
+    const pool = VOICES[call.voice === 'f' || call.voice === 'm' ? call.voice : FEMALE.test(name) ? 'f' : 'm'];
     let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     return pool[h % pool.length];
 }
