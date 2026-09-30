@@ -216,34 +216,45 @@ export function isOwnerOrAdmin(session, ownerUsername) {
    not a fresh DB read).
 
    PHASE-AWARE: severity depends on where the case actually is in its
-   lifecycle (see PHASE_ORDER below, matching the exact #phase-selector
-   options in index.html). A missing Trial Date at Intake is normal, not
+   lifecycle (see PHASE_STAGES below, grouping the #phase-selector
+   options in index.html by stage). A missing Trial Date at Intake is normal, not
    a problem — the same gap once a case reaches Litigation is a real one.
    Litigation-specific fields are skipped entirely before that stage
    instead of being reported as findings at all, so the checklist stays
    relevant to what a trainee should actually be doing right now rather
    than penalizing them for steps that legitimately haven't come up yet.
    ===================================================================== */
-const PHASE_ORDER = [
-    'Intake', 'Investigation', 'Treatment', 'Demand Review', 'Bi Demand',
-    'BI Settlement Nego', 'UM Demand', 'UM settlement', 'Lien Negotiations',
-    'Disbursement', 'Litigation',
+// The case statuses (#phase-selector in index.html) grouped by stage. Cases saved
+// before the firm's status list came in carry the old phase names, listed here too.
+// The saved phase is the header's display text (upper case), so matching ignores case.
+//   0 intake · 1 treating (and the drop statuses) · 2 demand · 3 settled / closing
+//   4 litigation pending or under review · 5 in litigation
+const PHASE_STAGES = [
+    [0, ['Intake']],
+    [1, ['Treating', 'Drop Review', 'Pending Drop', 'Dropped', 'Dropped Lien', 'Referral',
+        'Investigation', 'Treatment', 'Dropped Case', 'Referred Out']],
+    [2, ['Pending Demand', 'Demand Writing', 'BI Demanded', 'BI Settlement Negotiations', 'UM or UIM Demanded', 'UM/UIM Settlement Negotiations',
+        'Demand Review', 'Bi Demand', 'BI Settlement Nego', 'UM Demand']],
+    [3, ['BI Settled', 'UM/UIM Settled', 'Disbursement', 'Closed', 'Storage', 'Litigation Settled',
+        'UM settlement', 'Lien Negotiations', 'Settled']],
+    [4, ['Pending Litigation / Lit', 'Litigation Review']],
+    [5, ['Litigation Initiated', 'Service', 'Pending Response', 'Litigation Discovery', 'Deposition', 'Mediation', 'Arbitration', 'Trial Prep', 'Trial', 'Pre-trial',
+        'Lit Review – Litigation Initiated', 'Lit Review – Service', 'Lit Review – Pending Response', 'Lit Review – Litigation Discovery', 'Lit Review – Deposition', 'Lit Review – Trial',
+        'Litigation', 'Discovery', 'Post Trial']],
 ];
-function phaseIndex(phase) {
-    const i = PHASE_ORDER.indexOf((phase || '').trim());
-    return i === -1 ? 0 : i; // unrecognized/blank phase treated as earliest
-}
-function phaseAtOrAfter(phase, target) {
-    return phaseIndex(phase) >= PHASE_ORDER.indexOf(target);
+const PHASE_STAGE = new Map(PHASE_STAGES.flatMap(([stage, names]) => names.map(n => [n.toLowerCase(), stage])));
+export function phaseStage(phase) {
+    return PHASE_STAGE.get(String(phase || '').trim().toLowerCase()) ?? 0; // unrecognized/blank phase treated as earliest
 }
 
 export function runAutomatedReview(content, row) {
     const findings = [];
     const push = (check, status, message) => findings.push({ check, status, message });
     const phase = row.phase || 'Intake';
-    const reachedDemand = phaseAtOrAfter(phase, 'Demand Review');
-    const reachedLitigation = phaseAtOrAfter(phase, 'Litigation');
-    const pastEarlyStage = phaseAtOrAfter(phase, 'Treatment');
+    const stage = phaseStage(phase);
+    const reachedDemand = stage >= 2;
+    const reachedLitigation = stage >= 5;
+    const pastEarlyStage = stage >= 1;
 
     const clientName = (row.client_name || '').trim();
     if (!clientName || clientName === 'Unnamed Client') {
@@ -289,10 +300,10 @@ export function runAutomatedReview(content, row) {
         push('Case Manager Assigned', 'pass', `Case manager assigned: ${caseManager}.`);
     }
 
-    // Litigation-specific dates: not relevant before the case actually
-    // reaches litigation-adjacent stages, so they're left off the
-    // checklist entirely rather than reported as a gap.
-    if (phaseAtOrAfter(phase, 'Lien Negotiations')) {
+    // Litigation-specific dates: not relevant before the case goes to
+    // litigation (pending or under review: warnings; in litigation: gaps),
+    // so they're left off the checklist entirely rather than reported as a gap.
+    if (stage >= 4) {
         const litigationFields = [
             ['sol_litigation', 'Statute (Litigation Tab)'],
             ['complaint_filed', 'Complaint Filed'],
