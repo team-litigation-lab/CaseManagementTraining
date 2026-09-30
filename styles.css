@@ -165,11 +165,12 @@
         flex-direction: column !important;
         justify-content: center !important;
         width: 170px !important;
-        height: 52px !important;
+        height: 58px !important;
         flex-shrink: 0 !important;
     }
-    .bar-box label { margin-bottom: 2px !important; color: #64748b !important; font-size: 9px !important; font-weight: 900 !important; line-height: 1 !important; }
-    .bar-box div { color: #0f172a !important; font-weight: 800 !important; font-size: 13px !important; font-family: 'IBM Plex Mono', 'Courier New', monospace; }
+    /* Date of Loss / Statute (SOL) / Location of Incident: labels in the brand orange, large enough to read at a glance */
+    .bar-box label { margin-bottom: 4px !important; color: #c2410c !important; font-size: 11px !important; font-weight: 800 !important; letter-spacing: .06em; line-height: 1.1 !important; }
+    .bar-box div { color: #0f172a !important; font-weight: 800 !important; font-size: 14px !important; font-family: 'IBM Plex Mono', 'Courier New', monospace; }
     .sol-box { }
     /* Location of Incident: one line that scrolls sideways for a long address, so
        nothing spills out of the bar. The box is as wide as its hint when there's
@@ -314,6 +315,8 @@
         align-items: center;
         text-align: center;
     }
+    /* the logo on the sidebar: the Legal Support Help mark and name, white on navy, no frame */
+    #sidebar-logo { display: block; width: 150px; max-width: 100%; height: auto; }
     #agency-seal {
         width: 88px; height: 88px; aspect-ratio: 1 / 1; border-radius: 10px;
         border: 2px solid var(--orange);
