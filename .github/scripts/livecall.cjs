@@ -17,7 +17,7 @@
 // voice isn't set up the call falls back to text and the rest of the drill is text.
 // A practice call (no script) on live voice: answered, transcribed, typed lines go to the
 // caller; when the live line drops, the call goes on with the standard voice (/api/call-ai)
-// with the transcript so far; the debrief and the saved result; the next call tries live
+// with the transcript so far; Speakerphone; the debrief and the saved result; the next call tries live
 // voice again, and ends at the time limit; and without live voice set up, the practice
 // call runs on the standard voice from the start, and the next one doesn't try again.
 // Usage: node .github/scripts/livecall.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
@@ -369,6 +369,12 @@ const failures = []; const fail = (m) => failures.push(m);
     const ptx = await page.$$eval('#fdd-pc-tr .fdd-msg', els => els.map(e => e.className.split(' ')[1] + ':' + e.textContent));
     if (ptx.join('|') !== 'y:Thank you for calling, how can I help?|c:Hi, I need some help with my case.|y:May I have your full name?') fail(`the practice call's live transcript is wrong: ${JSON.stringify(ptx)}`);
     if (aiCalls.length) fail('a practice call on live voice asked /api/call-ai for the caller\'s lines');
+    // speakerphone on a practice call: the caller gets louder and the setting is the drill's
+    const spk0 = await page.evaluate(() => [LiveCall.state().speaker, localStorage.getItem('LSH_FDD_SPEAKER_V1')]);
+    await page.click('#fdd-pc-ctl button:has-text("Speakerphone")');
+    const spk1 = await page.evaluate(() => [LiveCall.state().speaker, LiveCall.state().volume > 1, localStorage.getItem('LSH_FDD_SPEAKER_V1'), document.getElementById('fdd-pc-status').textContent]);
+    if (spk1[0] === spk0[0] || spk1[1] !== spk1[0] || spk1[2] !== (spk1[0] ? 'on' : 'off') || (spk1[0] && !/let the caller finish/.test(spk1[3]))) fail(`the practice call's Speakerphone button didn't switch speakerphone (${JSON.stringify([spk0, spk1])})`);
+    await page.click('#fdd-pc-ctl button:has-text("Speakerphone")');
     // the live line drops (voice service busy): the call goes on with the standard voice, transcript and all
     await page.evaluate(() => { const w = window.__ws[window.__ws.length - 1]; w.readyState = 3; w.onclose({ code: 1011, reason: 'RESOURCE_EXHAUSTED: quota' }); });
     await page.waitForTimeout(200);

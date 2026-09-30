@@ -752,11 +752,12 @@ The call has just been answered. When the receptionist greets you, say why you'r
     // is busy, or drops, the call carries on with the standard voice, transcript and all.
     function startLive(my) {
         pcStatus('Connecting… allow the microphone if the browser asks.');
+        my.speakerOn = speakerPref();
         window.LiveCall.start({
-            callId: my.call.id,
+            callId: my.call.id, speaker: my.speakerOn,
             onState: (st) => {
                 if (P !== my || my.ended || my.transport !== 'live') return;
-                if (st === 'live') { my.liveUp = my.usedLive = true; pcStatus('On the call: talk normally, the caller hears you. You can also type.'); pcControls(); }
+                if (st === 'live') { my.liveUp = my.usedLive = true; pcStatus(liveTalkHint(my)); pcControls(); }
                 else if (st === 'ended') toStandard(my, 'The live line closed.');
             },
             onLine: (role, text, id) => {
@@ -899,6 +900,16 @@ The call has just been answered. When the receptionist greets you, say why you'r
         sayAloud(last.text, pending || yourTurn);
         P.speak = was;
     };
+    const liveTalkHint = (l) => l.speakerOn ? 'On the call, on speakerphone: let the caller finish, then answer. You can also type.' : 'On the call: talk normally, the caller hears you. You can also type.';
+    // Speakerphone on live voice (the drill's setting, remembered): louder, for a room or a Google Meet.
+    window.fddPracticeSpeakerphone = function () {
+        if (!pcOn() || P.transport !== 'live' || !window.LiveCall) return;
+        P.speakerOn = !P.speakerOn;
+        if (window.LiveCall.active()) window.LiveCall.setSpeaker(P.speakerOn);
+        try { localStorage.setItem(SPEAKER_KEY, P.speakerOn ? 'on' : 'off'); } catch (e) {}
+        if (P.liveUp) pcStatus(liveTalkHint(P));
+        pcControls();
+    };
     window.fddPracticeMute = function () {
         if (!pcOn() || P.transport !== 'live' || !window.LiveCall) return;
         P.muted = window.LiveCall.setMuted(!P.muted); pcControls();
@@ -949,10 +960,11 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const std = l.transport === 'standard', listening = std && V.isListening && V.isListening();
         const send = $id('fdd-pc-send'); if (send) send.disabled = !can;
         const box = $id('fdd-pc-in'); if (box) box.disabled = !on;
-        el.innerHTML = (!std ? `<button class="${l.muted ? 'rec' : ''}" onclick="fddPracticeMute()" ${on ? '' : 'disabled'}>${l.muted ? '🔇 Unmute' : '🎙 Mute'}</button>` : '')
+        el.innerHTML = (!std ? `<button class="${l.muted ? 'rec' : ''}" onclick="fddPracticeMute()" ${on ? '' : 'disabled'}>${l.muted ? '🔇 Unmute' : '🎙 Mute'}</button>
+                <button class="${l.speakerOn ? 'on' : ''}" onclick="fddPracticeSpeakerphone()" ${on ? '' : 'disabled'} title="Speakerphone: louder, for a room or a Google Meet (share this tab with its audio)">${l.speakerOn ? '🔊 Speakerphone on' : '🔈 Speakerphone'}</button>` : '')
             + (std && V.canListen ? `<button id="fdd-pc-talk" class="${listening ? 'rec' : ''}" onclick="fddPracticeTalk()" ${can ? '' : 'disabled'}>${listening ? '■ Done talking' : '🎙 Talk'}</button>
                 <button class="${l.hands ? 'on' : ''}" onclick="fddPracticeHands()" title="Listen for your reply after the caller speaks">🔁 Hands-free ${l.hands ? 'on' : 'off'}</button>` : '')
-            + (std && V.canSpeak ? `<button class="${l.speak ? 'on' : ''}" onclick="fddPracticeSpeaker()">${l.speak ? '🔊 Speaker on' : '🔇 Speaker off'}</button>
+            + (std && V.canSpeak ? `<button class="${l.speak ? 'on' : ''}" onclick="fddPracticeSpeaker()" title="Read the caller's lines out loud">${l.speak ? '🔊 Voice on' : '🔇 Voice off'}</button>
                 <button onclick="fddPracticeReplay()" ${on && !l.busy && l.msgs.some(m => m.who === 'caller') ? '' : 'disabled'} title="Hear the caller's last line again">↻ Replay</button>` : '')
             + (l.voiceNote ? `<div class="fdd-pc-note">${esc(l.voiceNote)}</div>` : '')
             + (std && l.noVoice ? `<div class="fdd-pc-note">This computer has no voice for the caller: read their lines.</div>` : '');
