@@ -70,3 +70,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/guest.cjs
+      - name: Front Desk Drill live voice calls (token endpoint, call in a browser)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/livecall.cjs

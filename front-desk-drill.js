@@ -21,6 +21,13 @@
    Time per call is
    recorded. Results are saved to /api/drill-results; trainees see
    their history and Admins see the whole team.
+
+   Live voice (live-call.js): with 🎙 Live voice on, each call is a
+   real phone call. It rings, the trainee answers and talks, and the
+   caller answers out loud from the same script (gives). The
+   identifiers the trainee asks for are ticked from what they say.
+   Without a microphone, or when live voice isn't set up, the call
+   runs as text, as before.
    ========================================================= */
 (function () {
     'use strict';
@@ -93,6 +100,29 @@
     .fdd-tbl th{color:#64748b;font-size:10px;text-transform:uppercase}
     #fdd-mini{position:fixed;right:16px;bottom:16px;z-index:2976;background:#10b981;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-weight:800;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:none}
     body.fdd-on #mock-banner button[onclick="openCallsPanel()"]{display:none}
+    .fdd-phone{background:linear-gradient(160deg,#0b1633,#13295a);color:#fff;border-radius:14px;padding:14px;margin-bottom:10px}
+    .fdd-phone .row{display:flex;align-items:center;gap:10px}
+    .fdd-av{width:42px;height:42px;border-radius:50%;background:#f97316;color:#0f172a;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+    .fdd-av.ringing{animation:fddshake 1.1s ease-in-out infinite}
+    .fdd-av.talking::after,.fdd-av.ringing::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid rgba(251,146,60,.6);animation:fddpulse 1.1s ease-out infinite}
+    .fdd-av.ringing::after{border-color:rgba(34,197,94,.7)}
+    @keyframes fddpulse{from{transform:scale(.95);opacity:1}to{transform:scale(1.3);opacity:0}}
+    @keyframes fddshake{0%,50%,100%{transform:rotate(0)}10%,30%{transform:rotate(-8deg)}20%,40%{transform:rotate(8deg)}}
+    .fdd-phone .st{flex:1;min-width:0}.fdd-phone .st b{display:block;font-size:13.5px}.fdd-phone .st span{font-size:11.5px;color:#fdba74}
+    .fdd-phone .ctl{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .fdd-phone .ctl button{border:none;border-radius:999px;padding:7px 12px;font-size:11.5px;font-weight:800;cursor:pointer;background:rgba(255,255,255,.14);color:#fff}
+    .fdd-phone .ctl button.answer{background:#22c55e}.fdd-phone .ctl button.hang{background:#dc2626}.fdd-phone .ctl button.on{background:#fff;color:#0f172a}
+    .fdd-phone .note{margin-top:8px;font-size:11.5px;line-height:1.45;color:#fde68a;background:rgba(245,158,11,.14);border-radius:8px;padding:7px 9px}
+    .fdd-ltx{max-height:210px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:10px}
+    .fdd-ltx div{max-width:88%;padding:7px 10px;border-radius:12px;font-size:12.5px;line-height:1.45}
+    .fdd-ltx .caller{background:rgba(255,255,255,.12);align-self:flex-start;border-bottom-left-radius:3px}
+    .fdd-ltx .you{background:#f97316;color:#0f172a;align-self:flex-end;border-bottom-right-radius:3px}
+    .fdd-ltx em{font-size:11.5px;color:#c7d2fe}
+    .fdd-asks button.heard{background:#ecfdf5;border-color:#10b981;color:#047857;cursor:default}
+    .fdd-live-opt{display:flex;gap:8px;align-items:flex-start;margin:8px 0 0;font-size:12px;line-height:1.45;color:#334155}
+    #fdd-panel label.fdd-live-opt,#fdd-panel label.fdd-live-opt span{text-transform:none !important;letter-spacing:normal !important;color:#334155 !important;font-size:12px !important;font-weight:500 !important;margin:8px 0 0}
+    #fdd-panel label.fdd-live-opt span{margin:0}#fdd-panel label.fdd-live-opt b{font-weight:800;color:#0f2148}
+    #fdd-panel label.fdd-live-opt input{margin-top:2px}
     `;
     document.head.appendChild(css);
 
@@ -119,6 +149,23 @@
     // "Maria Santos"). With more than one, only the date of the accident tells them apart.
     const sameNameCount = (id) => { const k = caseOf(id); return k ? (window.MOCK_CASES || []).filter(c => nameKey(c) === nameKey(k)).length : 0; };
 
+    /* ---------- live voice ---------- */
+    const LIVE_KEY = 'LSH_FDD_LIVE_V1';
+    const liveOK = () => !!(window.LiveCall && window.LiveCall.supported());
+    const livePref = () => { try { return localStorage.getItem(LIVE_KEY) !== 'off'; } catch (e) { return true; } };
+    window.fddSetLive = function (on) { try { localStorage.setItem(LIVE_KEY, on ? 'on' : 'off'); } catch (e) {} };
+    // Which identifiers the trainee asked for, heard in what they said on the call.
+    const HEARD = {
+        name: /\b(your|full|first|last) name\b|who (am i|i'm) (speaking|talking) (to|with)|who('s| is) (calling|this|on the line)|may i (have|get) (your )?name|spell (your|that|it)/i,
+        dob: /date of birth|\bd\.? ?o\.? ?b\b|birth ?day|birth ?date|when were you born|year (you were|were you) born/i,
+        address: /address|where do you live|street|zip ?code|mailing/i,
+        ssn4: /social|\bssn\b|last (four|4)|security number/i,
+        callback: /call ?back|phone number|best number|number (to|where|we can|i can)|reach you|contact number|your number|number you're calling from/i,
+        relationship: /relationship|related to|how do you know|who are you to|are you (the|a|his|her) (client|family|relative|son|daughter|mother|father|husband|wife)|are you (his|her|the client)|on behalf of|(your|what's your|what is your) (connection|relation)/i,
+        dol: /date of (the |your )?(accident|loss|incident|injury|crash|fall)|\bd\.? ?o\.? ?l\b|when did (it|this|that|the accident|the crash|the incident|the fall|you get hurt|you get injured) (happen|occur)|when (was|did) (the|your) (accident|crash|incident|fall|injury)|what (date|day) (was|did) (the|your) (accident|crash|incident|fall)/i
+    };
+    const heardAsks = (text) => Object.keys(HEARD).filter(k => HEARD[k].test(text));
+
     /* ---------- open / close ---------- */
     window.openFrontDeskDrill = function () {
         if (typeof hasAuthorizedAccess === 'function' && !hasAuthorizedAccess()) return;
@@ -132,7 +179,7 @@
     };
     window.fddClose = function () {
         if (D && screen === 'call' && !confirm('Leave the drill? This run won\'t be scored.')) return;
-        stopTimer(); D = null; screen = 'home';
+        hangUp(); stopTimer(); D = null; screen = 'home';
         document.body.classList.remove('fdd-on');
         $id('fdd-panel').classList.remove('open'); $id('fdd-panel').setAttribute('aria-hidden', 'true');
         $id('fdd-mini').style.display = 'none';
@@ -147,7 +194,10 @@
         if (unsaved && !confirm('The drill opens case files in the editor, which clears the unsaved case that\'s there now. Start anyway?')) return;
         const n = parseInt(($id('fdd-len') || {}).value, 10) || 6;
         const pool = shuffle(window.DRILL_CALLS || []).slice(0, n);
+        const liveBox = $id('fdd-live');
+        if (liveBox) window.fddSetLive(liveBox.checked);
         D = {
+            live: liveOK() && (liveBox ? liveBox.checked : livePref()),
             program: (window.lshProgram && window.lshProgram()) || '',
             calls: pool.map(c => ({ call: c, order: shuffle(c.actions.map((_, i) => i)) })),
             i: 0, results: []
@@ -157,9 +207,50 @@
         startCall();
     };
     function startCall() {
-        D.cur = { asked: [], selected: null, auth: null, action: null, q: '', submitted: false, t0: Date.now() };
+        hangUp();
+        D.cur = { asked: [], heard: [], selected: null, auth: null, action: null, q: '', submitted: false, t0: Date.now(),
+            live: D.live ? { status: 'ringing', lines: [], muted: false, note: '' } : null };
         screen = 'call'; startTimer(); paint();
+        if (D.cur.live) window.LiveCall.ring(3);
     }
+    // Answer: the call connects and the caller hears you.
+    window.fddAnswer = function () {
+        const cur = D && D.cur, lv = cur && cur.live; if (!lv || lv.status !== 'ringing') return;
+        lv.status = 'connecting'; cur.t0 = Date.now(); paintPhone();
+        window.LiveCall.start({
+            callId: D.calls[D.i].call.id,
+            onState: (st) => { if (!D || D.cur !== cur || !cur.live) return; if (st === 'live') lv.status = 'live'; else if (st === 'ended') lv.status = 'ended'; paintPhone(); },
+            onLine: (role, text, id) => {
+                if (!D || D.cur !== cur || !cur.live) return;
+                const l = lv.lines.find(x => x.id === id); if (l) l.text = text; else lv.lines.push({ id, role, text });
+                if (role === 'you' && !cur.submitted) {
+                    heardAsks(text).forEach(k => { if (!cur.asked.includes(k)) cur.asked.push(k); if (!cur.heard.includes(k)) cur.heard.push(k); });
+                    paintAsks();
+                }
+                lv.talking = role === 'caller';
+                paintLines(); paintAvatar();
+            },
+            onError: (msg, code) => {
+                if (!D || D.cur !== cur || !cur.live) return;
+                // No microphone, or live voice isn't set up here: the rest of the drill runs as text.
+                if (['MIC', 'NOT_CONFIGURED', 'NO_MODEL'].includes(code)) D.live = false;
+                if (lv.lines.length) { lv.status = 'ended'; lv.note = msg; paintPhone(); return; }
+                cur.live = null; cur.liveNote = msg; paint();
+            }
+        });
+    };
+    window.fddMute = function () { const lv = D && D.cur && D.cur.live; if (!lv) return; lv.muted = window.LiveCall.setMuted(!lv.muted); paintPhone(); };
+    window.fddHangUp = function () { const lv = D && D.cur && D.cur.live; if (!lv) return; hangUp(); lv.status = 'ended'; paintPhone(); };
+    window.fddAskAloud = function (k) {
+        const cur = D && D.cur; if (!cur || cur.submitted) return;
+        const label = (ASKS.find(a => a[0] === k) || [])[1] || k;
+        if (cur.live && cur.live.status === 'live') {
+            window.LiveCall.sendText(k === 'relationship' ? 'What is your relationship to the client?' : k === 'dol' ? 'What was the date of the accident?' : `Can I have your ${label.toLowerCase()}, please?`);
+            if (!cur.asked.includes(k)) cur.asked.push(k);
+            paintAsks();
+        } else if (!cur.live) window.fddAsk(k);
+    };
+    function hangUp() { if (!window.LiveCall) return; window.LiveCall.stopRing(); if (window.LiveCall.active()) window.LiveCall.stop(); }
     function startTimer() {
         stopTimer();
         timer = setInterval(() => { const el = $id('fdd-timer'); if (el && D && D.cur && !D.cur.submitted) el.textContent = fmtSec(Math.round((Date.now() - D.cur.t0) / 1000)); }, 1000);
@@ -196,12 +287,15 @@
         const secs = Math.round((Date.now() - cur.t0) / 1000);
         return { id: c.id, mock: c.mock, find, authOk, idsOk, actOk, secs,
             score: (find ? 30 : 0) + (authOk ? 30 : 0) + (idsOk ? 10 : 0) + (actOk ? 30 : 0),
-            picked: { selected: cur.selected, auth: cur.auth, action: c.actions[cur.action], asked: cur.asked.slice() } };
+            picked: { selected: cur.selected, auth: cur.auth, action: c.actions[cur.action], asked: cur.asked.slice() },
+            live: !!(cur.live && cur.live.lines.length),
+            transcript: cur.live && cur.live.lines.length ? cur.live.lines.map(l => `${l.role === 'you' ? 'You' : 'Caller'}: ${l.text}`).join('\n').slice(0, 4000) : undefined };
     }
     window.fddSubmit = function () {
         const cur = D.cur;
         if (!cur.selected || !cur.auth || cur.action == null) return;
         cur.submitted = true; stopTimer();
+        if (cur.live) { hangUp(); if (cur.live.status !== 'ringing') cur.live.status = 'ended'; }
         D.results.push(scoreCall(D.calls[D.i], cur));
         paint();
         const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0;
@@ -245,7 +339,7 @@
         } catch (e) { history = { results: [], isAdmin: false, error: true }; }
         if (screen === 'home' || screen === 'summary') paint();
     }
-    window.fddHome = function () { stopTimer(); D = null; screen = 'home'; document.body.classList.remove('fdd-on'); loadHistory(); paint(); };
+    window.fddHome = function () { hangUp(); stopTimer(); D = null; screen = 'home'; document.body.classList.remove('fdd-on'); loadHistory(); paint(); };
 
     /* ---------- rendering ---------- */
     function paint() {
@@ -265,7 +359,7 @@
         return `<div class="fdd-sec"><h4>How it works</h4>
             <p style="margin:0 0 6px;line-height:1.5">A caller is on the line. For each call:</p>
             <ol style="margin:0 0 6px 18px;padding:0;line-height:1.55">
-              <li><b>Ask</b> the caller for what you need (name, date of birth, address, SSN last 4, callback, relationship, date of the accident).</li>
+              <li><b>Ask</b> the caller for what you need (name, date of birth, address, SSN last 4, callback, relationship, date of the accident). On a live call, just ask out loud: what you ask is ticked as you say it.</li>
               <li><b>Find</b> their case with the search (name, phone, claim #, plate, DOL…), open it and read the file. Some callers aren't in the system, and some names are on more than one file: the date of the accident and the date of birth tell you which one.</li>
               <li><b>Authenticate</b>: compare what they told you with the file. Some callers get it wrong on purpose.</li>
               <li><b>Handle</b> the call.</li></ol>
@@ -273,7 +367,9 @@
             <div class="fdd-sec"><h4>Start a drill</h4>
             <div style="display:flex;gap:8px;align-items:center"><select id="fdd-len" style="padding:8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px">
                 <option value="5">5 calls (~10 min)</option><option value="8" selected>8 calls (~15 min)</option><option value="12">12 calls (~25 min)</option><option value="${total}">All ${total} calls</option></select>
-            <button class="fdd-go alt" style="margin:0;flex:1" onclick="fddStart()">▶ Take the first call</button></div></div>
+            <button class="fdd-go alt" style="margin:0;flex:1" onclick="fddStart()">▶ Take the first call</button></div>
+            ${liveOK() ? `<label class="fdd-live-opt"><input type="checkbox" id="fdd-live" ${livePref() ? 'checked' : ''} onchange="fddSetLive(this.checked)"><span><b>🎙 Live voice calls.</b> The phone rings, you answer and talk, and the caller talks back like a real call. Use a headset and allow the microphone. Turn this off to read the calls as text.</span></label>`
+                : `<p class="fdd-live-opt">🎙 Live voice calls need Chrome or Edge with a microphone. In this browser the calls run as text.</p>`}</div>
             ${historyHTML()}`;
     }
 
@@ -305,10 +401,13 @@
         const entry = D.calls[D.i], c = entry.call, cur = D.cur, done = cur.submitted;
         const r = done ? D.results[D.results.length - 1] : null;
         const fb = done ? feedbackHTML(entry, r) : '';
+        const lv = cur.live;
         return `${fb}
-        <div class="fdd-caller">📞 ${esc(c.opening)}</div>
-        <div class="fdd-sec"><h4>1 · Ask the caller</h4><div class="fdd-asks">${ASKS.map(([k, l]) => `<button class="${cur.asked.includes(k) ? 'on' : ''}" onclick="fddAsk('${k}')">${l}</button>`).join('')}</div>
-            <div class="fdd-tr">${cur.asked.map(k => `<div><span class="q">You: ${esc((ASKS.find(a => a[0] === k) || [])[1])}?</span><br><span class="a">${esc(answerFor(c, k))}</span></div>`).join('')}</div></div>
+        ${lv ? `<div class="fdd-phone" id="fdd-phone">${phoneHTML()}</div>`
+             : `${cur.liveNote ? `<div class="fdd-dup">🎙 ${esc(cur.liveNote)}</div>` : ''}<div class="fdd-caller">📞 ${esc(c.opening)}</div>`}
+        <div class="fdd-sec"><h4>1 · Ask the caller${lv ? ' (out loud)' : ''}</h4><div class="fdd-asks" id="fdd-asks">${asksHTML()}</div>
+            ${lv ? `<p style="margin:6px 0 0;font-size:11.5px;color:#64748b">Ask out loud: each identifier is ticked as you ask for it. Tap one to ask it in writing instead.</p>`
+                 : `<div class="fdd-tr">${cur.asked.map(k => `<div><span class="q">You: ${esc((ASKS.find(a => a[0] === k) || [])[1])}?</span><br><span class="a">${esc(answerFor(c, k))}</span></div>`).join('')}</div>`}</div>
         <div class="fdd-sec"><h4>2 · Find the case</h4>
             <input class="fdd-search" placeholder="Search name, phone, DOB, claim #, plate, case ID…" value="${esc(cur.q)}" oninput="fddSearch(this.value)" ${done ? 'disabled' : ''}>
             <div class="fdd-res" id="fdd-res"></div>
@@ -319,6 +418,33 @@
         ${done ? `<button class="fdd-go alt" onclick="fddNext()">${D.i + 1 < D.calls.length ? 'Next call →' : 'See my results →'}</button>`
                : `<button class="fdd-go" id="fdd-submit" onclick="fddSubmit()" ${cur.selected && cur.auth && cur.action != null ? '' : 'disabled'}>End the call and score it</button>`}`;
     }
+
+    function asksHTML() {
+        const cur = D.cur, lv = cur.live;
+        return ASKS.map(([k, l]) => {
+            const asked = cur.asked.includes(k);
+            return lv ? `<button class="${asked ? 'heard' : ''}" onclick="fddAskAloud('${k}')" ${asked || cur.submitted ? 'disabled' : ''}>${asked ? '✓ ' : ''}${l}</button>`
+                      : `<button class="${asked ? 'on' : ''}" onclick="fddAsk('${k}')">${l}</button>`;
+        }).join('');
+    }
+    function paintAsks() { const el = $id('fdd-asks'); if (el && D && D.cur) el.innerHTML = asksHTML(); }
+    function phoneHTML() {
+        const lv = D.cur.live, done = D.cur.submitted;
+        const st = { ringing: ['Incoming call', 'Ringing… answer it'], connecting: ['Connecting…', 'Allow the microphone if asked'], live: ['On the call', lv.muted ? 'You\'re muted' : 'Talk normally: the caller hears you'], ended: ['Call ended', done ? '' : 'Finish steps 2–4, then score the call'] }[lv.status] || ['', ''];
+        return `<div class="row"><div class="fdd-av ${lv.status === 'ringing' ? 'ringing' : ''}" id="fdd-av">📞</div><div class="st"><b>${st[0]}</b><span>${st[1]}</span></div><span class="t" style="font-family:'IBM Plex Mono',monospace;color:#fdba74;font-weight:800">${lv.status === 'live' ? '● LIVE' : ''}</span></div>
+            <div class="ctl">${lv.status === 'ringing' && !done ? `<button class="answer" onclick="fddAnswer()">📞 Answer</button>` : ''}
+                ${lv.status === 'live' ? `<button class="${lv.muted ? 'on' : ''}" onclick="fddMute()">${lv.muted ? '🔇 Unmute' : '🎙 Mute'}</button><button class="hang" onclick="fddHangUp()">✆ Hang up</button>` : ''}</div>
+            ${lv.note ? `<div class="note">${esc(lv.note)}</div>` : ''}
+            ${lv.status === 'ringing' ? '' : `<div class="fdd-ltx" id="fdd-ltx">${linesHTML()}</div>`}`;
+    }
+    function linesHTML() {
+        const lv = D.cur.live;
+        if (!lv.lines.length) return lv.status === 'live' ? '<em>Greet the caller the way you answer the firm\'s phone.</em>' : '';
+        return lv.lines.map(l => `<div class="${l.role}">${esc(l.text)}</div>`).join('');
+    }
+    function paintPhone() { const el = $id('fdd-phone'); if (el && D && D.cur && D.cur.live) { el.innerHTML = phoneHTML(); const tx = $id('fdd-ltx'); if (tx) tx.scrollTop = tx.scrollHeight; } }
+    function paintLines() { const tx = $id('fdd-ltx'); if (tx && D && D.cur && D.cur.live) { tx.innerHTML = linesHTML(); tx.scrollTop = tx.scrollHeight; } }
+    function paintAvatar() { const av = $id('fdd-av'); if (av && D && D.cur && D.cur.live) av.classList.toggle('talking', !!D.cur.live.talking && D.cur.live.status === 'live'); }
 
     function paintResults() {
         const box = $id('fdd-res'); if (!box || !D) return;
@@ -344,7 +470,8 @@
             <div>${r.idsOk ? '✓' : '✗'} <b>Asked for:</b> ${need}</div>
             <div>${r.actOk ? '✓' : '✗'} <b>Handle:</b> ${esc(c.actions[c.answer])}</div>
             <div style="margin-top:5px;color:#334155">${esc(c.why)}</div>
-            ${k && k.reception ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px"><b>On file:</b> ${esc(k.reception.verify)}</div>` : ''}</div>`;
+            ${k && k.reception ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px"><b>On file:</b> ${esc(k.reception.verify)}</div>` : ''}
+            ${r.live ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px">🎙 Live call · you asked for: ${r.picked.asked.length ? esc(r.picked.asked.map(a => (ASKS.find(x => x[0] === a) || [])[1]).join(', ')) : 'nothing'}</div>` : ''}</div>`;
     }
 
     function summaryHTML() {
@@ -367,7 +494,7 @@
             const r = origApply.apply(this, arguments);
             buildUI();
             const signedIn = typeof hasAuthorizedAccess === 'function' && hasAuthorizedAccess();
-            if (!signedIn && $id('fdd-panel')) { stopTimer(); D = null; screen = 'home'; document.body.classList.remove('fdd-on'); $id('fdd-panel').classList.remove('open'); }
+            if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; screen = 'home'; document.body.classList.remove('fdd-on'); $id('fdd-panel').classList.remove('open'); }
             else if (signedIn && new URLSearchParams(location.search).get('drill') && !window.__fddOpened) { window.__fddOpened = true; setTimeout(openFrontDeskDrill, 80); }
             return r;
         };
