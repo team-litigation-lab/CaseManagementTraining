@@ -60,7 +60,7 @@
     const announce = () => { if (channel) channel.postMessage('changed'); };
     const activities = () => (T.data && T.data.activities) || DEFAULT_ACTIVITIES;
     const defaultBillable = (a) => { const hit = activities().find(x => x[0] === a); return hit ? hit[1] : false; };
-    const admin = () => !!(T.data && T.data.me && T.data.me.admin);
+    const admin = () => !!(T.data && T.data.me && T.data.me.admin) && !(window.isTraineeView && window.isTraineeView());   // Trainee view: a trainee's timesheet
 
     /* ---------- the open case (same reading as the Firm Calendar) ---------- */
     function openCase() {
@@ -88,7 +88,8 @@
         return T.draft;
     }
     const elapsed = () => !T.timer ? 0 : T.timer.accumulated + (T.timer.running ? Date.now() + T.offset - T.timer.resumedAt : 0);
-    const caseText = (d) => d.caseLabel ? `${d.caseLabel}${d.caseRef && d.caseRef !== d.caseLabel ? ' · ' + d.caseRef : ''}` : 'No case';
+    const shownRef = (ref) => window.lshShownRef ? window.lshShownRef(ref) : ref;   // trainees see a library case's case number, not "MC-01"
+    const caseText = (d) => d.caseLabel ? `${d.caseLabel}${d.caseRef && d.caseRef !== d.caseLabel ? ' · ' + shownRef(d.caseRef) : ''}` : 'No case';
 
     /* ---------- server ---------- */
     async function api(method, url, body) {
@@ -235,7 +236,7 @@
     window.ttWeek = function (dir) { T.anchor = dir ? addDays(T.anchor, 7 * dir) : monday(localToday()); refresh(); };
     window.ttExport = function () {
         const rows = [['Date', 'Trainee', 'Client / case', 'Case ID', 'Activity', 'Description', 'Billable', 'Time (h:mm)', 'Billed hours']]
-            .concat(T.entries.map(e => [e.date, e.ownerName, e.caseLabel, e.caseRef, e.activity, e.description, e.billable ? 'Yes' : 'No', hm(e.seconds), e.hours.toFixed(1)]));
+            .concat(T.entries.map(e => [e.date, e.ownerName, e.caseLabel, shownRef(e.caseRef), e.activity, e.description, e.billable ? 'Yes' : 'No', hm(e.seconds), e.hours.toFixed(1)]));
         const csv = rows.map(r => r.map(v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
@@ -351,7 +352,7 @@
         const acts = activities();
         const pills = acts.map(([a, b]) => `<button type="button" class="pill ${d.activity === a ? 'on' : ''} ${b ? '' : 'nb'}" onclick="ttSet('activity', this.dataset.a)" data-a="${esc(a)}" title="${b ? 'Usually billable' : 'Usually not billable'}">${esc(a)}</button>`).join('');
         const clerical = d.billable && !defaultBillable(d.activity) && d.activity !== 'Other';
-        const linked = d.caseLabel ? `<div class="note" style="margin-top:0;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>🔗 <b style="color:#0f172a">${esc(d.caseLabel)}</b>${d.caseRef && d.caseRef !== d.caseLabel ? ' · ' + esc(d.caseRef) : ''}</span><button class="tt-btn" onclick="ttUnlink()">Unlink</button></div>`
+        const linked = d.caseLabel ? `<div class="note" style="margin-top:0;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>🔗 <b style="color:#0f172a">${esc(d.caseLabel)}</b>${d.caseRef && d.caseRef !== d.caseLabel ? ' · ' + esc(shownRef(d.caseRef)) : ''}</span><button class="tt-btn" onclick="ttUnlink()">Unlink</button></div>`
             : `${oc ? `<button class="tt-btn" style="width:100%" onclick="ttLinkCase()">🔗 Link to the open case: ${esc(oc.label)}</button>` : ''}
                <input class="fi" style="margin-top:6px" id="tt-case" value="" placeholder="…or type the client name" onchange="ttTypedCase(this.value)">`;
         let top;
@@ -397,7 +398,7 @@
         if (!list.length) return '<div class="note">No time recorded here yet.</div>';
         return `<div class="scroll"><table><thead><tr><th>Date</th>${withOwner ? '<th>Trainee</th>' : ''}<th>Case</th><th>Activity / what was done</th><th>Time</th><th>Billed</th><th></th></tr></thead><tbody>
             ${list.map(e => `<tr data-id="${esc(e.id)}"><td style="white-space:nowrap">${esc(fmtDate(e.date))}</td>${withOwner ? `<td>${esc(e.ownerName)}</td>` : ''}
-                <td>${esc(e.caseLabel || '—')}${e.caseRef && e.caseRef !== e.caseLabel ? `<div class="sub">${esc(e.caseRef)}</div>` : ''}</td>
+                <td>${esc(e.caseLabel || '—')}${e.caseRef && e.caseRef !== e.caseLabel ? `<div class="sub">${esc(shownRef(e.caseRef))}</div>` : ''}</td>
                 <td><b>${esc(e.activity)}</b>${e.description ? `<div class="sub" style="white-space:pre-wrap">${esc(e.description)}</div>` : ''}</td>
                 <td style="white-space:nowrap">${hm(e.seconds)}${e.source === 'manual' ? ' <span class="sub" title="Added by hand">✎</span>' : ''}</td>
                 <td style="white-space:nowrap"><span class="badge ${e.billable ? 'yes' : 'no'}">${e.billable ? hrs(e.hours) + ' billable' : hrs(e.hours) + ' non-bill.'}</span></td>

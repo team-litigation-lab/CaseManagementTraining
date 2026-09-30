@@ -5,8 +5,8 @@ import { runAiReview } from '../_ai-review.js';
 // repository entirely, and also replaces the old append-only 'cases' sync
 // log as the source of truth for Monitoring (see monitor-case.js).
 //
-// Visibility: finalized cases (is_draft = 0) are readable by any logged-in
-// user. Drafts (is_draft = 1) are readable only by their owner or an Admin.
+// Visibility: a trainee sees only the cases they saved themselves (drafts and
+// finalized); Admins see every case.
 // Modify/delete (POST update / DELETE): owner or Admin only, enforced here
 // server-side — never trust the UI alone for this.
 //
@@ -153,8 +153,9 @@ export async function onRequestGet({ request, env }) {
     if (id) {
         const row = await db.prepare(`SELECT * FROM case_repository WHERE id = ?`).bind(id).first();
         if (!row) return json({ success: false, error: 'Case not found.' }, 404);
-        if (row.is_draft && !isOwnerOrAdmin(session, row.owner_username)) {
-            return json({ success: false, error: 'This case is a draft and is only visible to its owner or an Admin.' }, 403);
+        // Trainees see only the cases they saved themselves.
+        if (!isOwnerOrAdmin(session, row.owner_username)) {
+            return json({ success: false, error: 'This case belongs to another trainee. You can only open the cases you saved.' }, 403);
         }
         return json({ success: true, case: rowToFull(row, session) });
     }
@@ -166,7 +167,7 @@ export async function onRequestGet({ request, env }) {
         `SELECT id, case_id, client_name, phase, is_draft, owner_username, owner_batch_id,
                 submitted_by, submitted_by_batch, submitted_at, med_total, date_of_loss, created_at, updated_at
          FROM case_repository
-         WHERE is_draft = 0 OR owner_username = ? OR ? = 'Admin'
+         WHERE owner_username = ? OR ? = 'Admin'
          ORDER BY updated_at DESC`
     ).bind(session.username, session.userType).all();
 

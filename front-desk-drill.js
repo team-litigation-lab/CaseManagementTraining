@@ -483,10 +483,11 @@
             <div class="fdd-seg">${lv.map(([n, l]) => `<button class="${pcLevel === n ? 'on' : ''}" onclick="fddPracticeLevel(${n}, this)">${l}</button>`).join('')}</div>
             <button class="fdd-go alt" onclick="fddPracticeStart()">📞 Take a practice call</button></div>
             <div class="fdd-sec"><h4>📋 Scored drill · step by step</h4>
-            <p style="margin:0 0 6px;line-height:1.5;font-size:12.3px">A run of calls where you <b>ask</b> for identifiers, <b>find</b> the case, <b>authenticate</b> the caller (some get it wrong on purpose) and pick how to <b>handle</b> the call. On a live call, just ask out loud: what you ask is ticked as you say it. Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The rules are in 🔍 Case Library → ☎ Firm directory.</p>
+            <p style="margin:0 0 6px;line-height:1.5;font-size:12.3px">A run of calls where you <b>ask</b> for identifiers, <b>find</b> the case, <b>authenticate</b> the caller (some get it wrong on purpose) and pick how to <b>handle</b> the call. On a live call, just ask out loud: what you ask is ticked as you say it. Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The firm directory and front-desk rules are below.</p>
             <div style="display:flex;gap:8px;align-items:center"><select id="fdd-len" style="padding:8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px">
                 <option value="5">5 calls (~10 min)</option><option value="8" selected>8 calls (~15 min)</option><option value="12">12 calls (~25 min)</option><option value="${total}">All ${total} calls</option></select>
             <button class="fdd-go" style="margin:0;flex:1" onclick="fddStart()">▶ Take the first call</button></div></div>
+            ${directoryHTML()}
             ${historyHTML()}`;
     }
 
@@ -501,7 +502,7 @@
     function historyHTML() {
         if (!history) return `<p style="color:#64748b;font-size:12px">Loading results…</p>`;
         const rows = history.results || [];
-        if (history.isAdmin) {
+        if (history.isAdmin && isAdmin()) {   // not in Trainee view
             const by = {};
             rows.forEach(r => { (by[r.username] = by[r.username] || []).push(r); });
             const team = Object.entries(by).map(([u, rs]) => {

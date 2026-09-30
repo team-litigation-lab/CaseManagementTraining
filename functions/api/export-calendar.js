@@ -74,7 +74,7 @@ export async function onRequestGet({ request, env }) {
         `SELECT case_id, client_name, date_of_loss, sol_bar, sol_litigation,
                 complaint_filed, discovery_cutoff, trial_date
          FROM case_repository
-         WHERE is_draft = 0 OR owner_username = ? OR ? = 'Admin'
+         WHERE owner_username = ? OR ? = 'Admin'
          ORDER BY updated_at DESC`
     ).bind(session.username, session.userType).all();
 

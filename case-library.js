@@ -14,7 +14,9 @@
    matching files in a dropdown; clicking one opens it, so trainees
    never need to open a library. The Case Library window (sidebar →
    Open Case Library) adds filters, "My cases" and the firm directory.
-   For trainees, every way into the Training Library comes here.
+   For trainees, every way into the Training Library comes here, and
+   they never see its name: its files are case files, tagged with their
+   case number.
    During a Front Desk Drill call, a mock case opened from here counts
    as the call's pick.
 
@@ -45,10 +47,13 @@
             kind: 'mock', id: c.id, name: c.client.name, dob: c.client.dob, dol: c.dateOfLoss, ref: c.caseNumber || c.id,
             phase: c.phase, type: c.caseType === 'Others' ? c.caseTypeOther : c.caseType
         }));
-        const saved = repo.map(i => ({
+        // Trainees only ever see the cases they saved themselves (the server sends them nothing else;
+        // the filter also covers an Admin's Trainee view, whose list still has everyone's).
+        const admin = isAdmin(), own = (i) => !!s && i.ownerUsername === s.username;
+        const saved = repo.filter(i => admin || own(i)).map(i => ({
             kind: 'saved', id: i.id, name: i.clientName || 'Unnamed Client', dob: '', dol: i.dateOfLoss || '', ref: i.caseId || '',
-            phase: i.phase || '', type: '', draft: !!i.isDraft, canEdit: !!i.canEdit,
-            mine: !!s && i.ownerUsername === s.username, by: i.submittedBy || i.ownerUsername || ''
+            phase: i.phase || '', type: '', draft: !!i.isDraft, canEdit: admin ? !!i.canEdit : own(i),
+            mine: own(i), by: i.submittedBy || i.ownerUsername || ''
         }));
         return mocks.concat(saved);
     }
@@ -134,6 +139,13 @@
     @media (max-width:640px){.cl-row{grid-template-columns:minmax(0,1fr) auto}.cl-row .dol{grid-column:1}.cl-row .act{grid-column:2;grid-row:1 / span 2}}
     .cl-side-hint{font-size:10px;color:#64748b;line-height:1.5;margin:0 0 8px}
     .cl-side-hint a{color:#fdba74;cursor:pointer;text-decoration:underline}
+    .cl-mine-row{display:flex;gap:6px;align-items:stretch;margin:0 0 6px}
+    .cl-mine-row .open{flex:1;min-width:0;text-align:left;background:rgba(255,255,255,.04);border:1px solid #334155;border-radius:8px;padding:7px 9px;cursor:pointer;color:#e2e8f0}
+    .cl-mine-row .open:hover{border-color:#f97316}
+    .cl-mine-row .open b{display:block;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cl-mine-row .open span{display:block;font-size:9.5px;color:#94a3b8;font-family:'IBM Plex Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cl-mine-row .del{flex-shrink:0;background:none;border:1px solid #334155;border-radius:8px;color:#fca5a5;cursor:pointer;padding:0 8px;font-size:12px}
+    .cl-mine-row .del:hover{border-color:#b91c1c}
     `;
     document.head.appendChild(css);
 
@@ -161,7 +173,7 @@
             <div class="modal-overlay no-print" id="case-library-modal" style="z-index:2990;" role="dialog" aria-modal="true" aria-labelledby="cl-title">
                 <div class="modal-box wide cl-box">
                     <h2 class="serif" id="cl-title">🔍 Case Library</h2>
-                    <div class="sub mono">Saved cases and the Training Library in one place. Search it the way you would on a live call.</div>
+                    <div class="sub mono" id="cl-sub"></div>
                     <div class="cl-tabs" id="cl-tabs"></div>
                     <div id="cl-filters"></div>
                     <div id="cl-body" style="overflow-y:auto;flex:1;"></div>
@@ -175,8 +187,11 @@
         const on = signedIn();
         const bar = $id('cl-bar'); if (bar) bar.classList.toggle('on', on);
         if (!on) closeBar();
-        // The case list export lists every trainee's cases, so it's for Admins only.
+        // The case list export lists every trainee's cases, so it's for Admins only. So is the Case Library
+        // window: trainees get their own cases in the sidebar and the search bar above the case.
         const exp = $id('export-repo-btn'); if (exp) exp.style.display = on && isAdmin() ? '' : 'none';
+        const ob = $id('cl-open-btn'); if (ob) ob.style.display = on && isAdmin() ? '' : 'none';
+        const lbl = $id('repo-label'); if (lbl) lbl.textContent = on && !isAdmin() ? 'My cases' : 'Case Library';
         if (!on) closeCaseLibrary();
     }
 
@@ -206,18 +221,25 @@
         tabs.innerHTML = [['search', '🔍 Search cases'], ['desk', '☎ Firm directory & rules']]
             .map(([k, l]) => `<button class="${state.tab === k ? 'on' : ''}" onclick="clSetTab('${k}')">${l}</button>`).join('');
         if (state.tab === 'desk') { filters.innerHTML = ''; body.innerHTML = window.mockDeskHTML ? window.mockDeskHTML() : ''; return; }
-        const scopes = [['all', 'All files'], ['mock', 'Training Library'], ['saved', 'Saved cases'], ['mine', `My cases (${mineCount()})`]];
+        const sub = $id('cl-sub'); if (sub) sub.textContent = isAdmin() ? 'Saved cases and the Training Library in one place. Search it the way you would on a live call.' : 'Every case file in one place. Search it the way you would on a live call.';
+        // Trainees never see the Training Library: its files are just case files to them.
+        if (!isAdmin() && (state.scope === 'mock' || state.scope === 'saved')) state.scope = 'all';
+        const scopes = isAdmin() ? [['all', 'All files'], ['mock', 'Training Library'], ['saved', 'Saved cases'], ['mine', `My cases (${mineCount()})`]]
+            : [['all', 'All files'], ['mine', `My cases (${mineCount()})`]];
         filters.innerHTML = `<input type="search" id="cl-search" class="cl-search" placeholder="Search name, case number, DOL, DOB, phone, claim # or plate…" value="${esc(state.q)}" oninput="clSearch(this.value)" autocomplete="off" spellcheck="false" aria-label="Search cases">
             <div class="cl-chips">${scopes.map(([k, l]) => `<button class="${state.scope === k ? 'on' : ''}" onclick="clSetScope('${k}')">${esc(l)}</button>`).join('')}</div>`;
         paintResults();
     }
 
+    // A result's tags and details. Admins see which files are Training Library cases; to trainees
+    // they're case files like any other, tagged with their case number.
+    function tagsHTML(f) {
+        if (f.kind === 'mock') return isAdmin() ? `<span class="cl-tag mock">TRAINING LIBRARY · ${esc(f.id)}</span>` : `<span class="cl-tag saved">${esc(f.ref)}</span>`;
+        return `<span class="cl-tag saved">${f.ref ? esc(f.ref) : 'NO CASE ID YET'}</span>${f.draft ? '<span class="cl-tag draft">DRAFT</span>' : ''}${f.mine ? '<span class="cl-tag mine">YOUR CASE</span>' : ''}`;
+    }
+    const metaText = (f) => [f.kind === 'mock' && isAdmin() && `Case # ${esc(f.ref)}`, f.dob && `DOB ${esc(f.dob)}`, f.type && esc(f.type), f.phase && esc(f.phase), f.kind === 'saved' && isAdmin() && f.by && `By ${esc(f.by)}`].filter(Boolean).join(' · ');
     function rowHTML(f) {
-        const admin = isAdmin();
-        const tags = f.kind === 'mock'
-            ? `<span class="cl-tag mock">TRAINING LIBRARY · ${esc(f.id)}</span>`
-            : `<span class="cl-tag saved">${f.ref ? esc(f.ref) : 'NO CASE ID YET'}</span>${f.draft ? '<span class="cl-tag draft">DRAFT</span>' : ''}${f.mine ? '<span class="cl-tag mine">YOUR CASE</span>' : ''}`;
-        const meta = [f.kind === 'mock' && `Case # ${esc(f.ref)}`, f.dob && `DOB ${esc(f.dob)}`, f.type && esc(f.type), f.phase && esc(f.phase), f.kind === 'saved' && admin && f.by && `By ${esc(f.by)}`].filter(Boolean).join(' · ');
+        const tags = tagsHTML(f), meta = metaText(f);
         const open = f.kind === 'mock' ? `caseLibraryOpen('mock','${esc(f.id)}')` : `caseLibraryOpen('saved',${Number(f.id)})`;
         return `<div class="cl-row">
             <div><div>${tags}</div><div class="nm">${esc(f.name)}</div>${meta ? `<div class="sm">${meta}</div>` : ''}</div>
@@ -231,7 +253,7 @@
         const q = state.q.trim();
         const total = allFiles().length;
         if (state.scope !== 'mine' && q.length < 2) {
-            body.innerHTML = `<p class="cl-hint">Type at least 2 characters to search <b>${total}</b> files: cases saved by trainees and the Training Library mock cases. Nothing is listed until you search, just like looking up a caller.</p>
+            body.innerHTML = `<p class="cl-hint">Type at least 2 characters to search <b>${total}</b> files${isAdmin() ? ': cases saved by trainees and the Training Library mock cases' : ''}. Nothing is listed until you search, just like looking up a caller.</p>
                 <p class="cl-hint">Some clients have more than one file, and some names belong to different people. Check the <b>date of the accident (DOL)</b> and the <b>date of birth</b> before you open one.</p>`;
             return;
         }
@@ -268,12 +290,10 @@
         const shown = barHits.slice(0, BAR_MAX);
         if (barActive >= shown.length) barActive = shown.length - 1;
         box.innerHTML = q.length < 2
-            ? `<div class="clb-hint">Type a name, a case number, the date of the accident (MM/DD/YYYY), a date of birth, phone, claim # or plate. Saved cases and the Training Library are both searched.</div>`
+            ? `<div class="clb-hint">Type a name, a case number, the date of the accident (MM/DD/YYYY), a date of birth, phone, claim # or plate.${isAdmin() ? ' Saved cases and the Training Library are both searched.' : ''}</div>`
             : !shown.length ? `<div class="clb-hint">No files match "${esc(q)}". Try the last name only, the date of the accident, a phone number or a claim number.</div>`
             : sameNameWarning(barHits) + shown.map((f, i) => {
-                const tag = f.kind === 'mock' ? `<span class="cl-tag mock">TRAINING LIBRARY · ${esc(f.id)}</span>`
-                    : `<span class="cl-tag saved">${f.ref ? esc(f.ref) : 'NO CASE ID YET'}</span>${f.draft ? '<span class="cl-tag draft">DRAFT</span>' : ''}${f.mine ? '<span class="cl-tag mine">YOUR CASE</span>' : ''}`;
-                const meta = [f.kind === 'mock' && `Case # ${esc(f.ref)}`, f.dob && `DOB ${esc(f.dob)}`, f.type && esc(f.type), f.phase && esc(f.phase), f.kind === 'saved' && isAdmin() && f.by && `By ${esc(f.by)}`].filter(Boolean).join(' · ');
+                const tag = tagsHTML(f), meta = metaText(f);
                 return `<div class="clb-row ${i === barActive ? 'on' : ''}" role="option" aria-selected="${i === barActive}" data-i="${i}">
                     <div><div class="nm">${esc(f.name)} ${tag}</div>${meta ? `<div class="sm">${meta}</div>` : ''}</div>
                     <div class="dol">Date of loss<b>${esc(f.dol || '—')}</b></div></div>`;
@@ -327,8 +347,18 @@
     /* ---------- sidebar (app.js renderRepo calls this once access is checked) ---------- */
     window.renderCaseLibrarySidebar = function () {
         const list = $id('repo-list'), note = $id('repo-count-note'); if (!list) return;
+        paintRole();
+        if (!isAdmin()) {   // trainees: just the cases they saved, newest first
+            const mine = allFiles().filter(f => f.kind === 'saved' && f.mine);
+            list.innerHTML = mine.length ? mine.map(f => `<div class="cl-mine-row">
+                    <button class="open" onclick="caseLibraryOpen('saved',${Number(f.id)})" title="Open this case"><b>${esc(f.name)}</b><span>${f.ref ? esc(f.ref) : 'Draft · no case ID yet'}${f.dol ? ' · DOL ' + esc(f.dol) : ''}</span></button>
+                    <button class="del" onclick="deleteCase(${Number(f.id)}, event)" title="Delete this case" aria-label="Delete ${esc(f.name)}">🗑</button></div>`).join('')
+                : '<p class="cl-side-hint">The cases you save (Save Case or Archive as draft) appear here.</p>';
+            if (note) note.innerHTML = '<p class="cl-side-hint">Find a case file with the 🔍 search bar above the case.</p>';
+            return;
+        }
         const n = mineCount();
-        list.innerHTML = `<p class="cl-side-hint">Find any case (saved cases and the Training Library, ${allFiles().length} files) with the 🔍 search bar above the case. Nothing is listed until you search.${n ? ` <a onclick="openCaseLibrary('search'); clSetScope('mine')">My cases (${n})</a>` : ''}</p>`;
+        list.innerHTML = `<p class="cl-side-hint">Find any case (${isAdmin() ? 'saved cases and the Training Library, ' : ''}${allFiles().length} files) with the 🔍 search bar above the case. Nothing is listed until you search.${n ? ` <a onclick="openCaseLibrary('search'); clSetScope('mine')">My cases (${n})</a>` : ''}</p>`;
         if (note) note.innerHTML = '';
     };
 
