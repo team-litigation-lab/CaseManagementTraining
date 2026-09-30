@@ -556,7 +556,7 @@
                 <div class="auth-field"><label>Full name</label><input type="text" id="guest-name" autocomplete="name" maxlength="60" placeholder="First and last name"></div>
                 <div class="auth-field"><label>CMS Batch ID <span style="text-transform:none;">(only if asked)</span></label><input type="text" id="guest-batch" autocomplete="off" maxlength="24" placeholder="e.g., B050225"></div>
                 <button class="auth-submit" id="guest-submit" onclick="guestContinue()">Continue</button>
-                <div class="auth-switch">Not registered yet? <a onclick="guestRegister()">Register here</a> · <a onclick="showLoginView()">Sign in with username</a></div>
+                <div class="auth-switch">Not registered yet? <a onclick="guestRegister()">Register here</a> · <a onclick="showLoginView()">Sign in with username</a> · <a onclick="showLoginView(); switchPortalTab('Admin')">Trainer sign-in</a></div>
             </div>
 
             <!-- LOGIN VIEW -->
@@ -567,6 +567,7 @@
                 </div>
                 <div id="auth-login-msg" class="auth-msg"></div>
                 <div class="auth-field login-username-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" placeholder="Enter your username"></div>
+                <div class="auth-field login-trainer-field"><label>Your name</label><input type="text" id="login-trainer-name" autocomplete="name" maxlength="60" placeholder="First and last name"><p class="auth-hint">Trainers: your name and the admin password sign you in as yourself. No registration needed. Leave it blank for the Master Account.</p></div>
                 <div class="auth-field"><label id="login-password-label">Password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter your password"></div>
                 <button class="auth-submit" onclick="attemptLogin()">Log In</button>
                 <div class="auth-switch auth-register-link">No account yet? <a onclick="showRegisterView()">Register here</a></div>

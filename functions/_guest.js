@@ -32,6 +32,12 @@ export const isGuestUsername = (u) => String(u || '').toLowerCase().startsWith(G
 
 export const NEW_GUESTS_PER_HOUR = 10;
 
+// Trainers sign in to the Admin Portal with their name and the admin password
+// (functions/api/login.js): each name gets its own Admin account, made on first
+// use. register.js refuses this prefix too, so no one can register into one.
+export const TRAINER_PREFIX = 'trainer-';
+export const isTrainerUsername = (u) => String(u || '').toLowerCase().startsWith(TRAINER_PREFIX);
+
 const DDL = [
     `CREATE TABLE IF NOT EXISTS guest_accounts (
         username TEXT PRIMARY KEY,
@@ -87,6 +93,13 @@ export function splitName(full) {
     const parts = full.split(' ');
     const last = parts.pop();
     return { first: parts.join(' '), last };
+}
+
+// The same name always gives the same trainer account.
+export function trainerUsername(name) {
+    let s = slug(name).slice(0, 48);
+    if (!s) { let h = 0; for (const c of name) h = (h * 31 + c.codePointAt(0)) >>> 0; s = 'n' + h.toString(36); }
+    return TRAINER_PREFIX + s;
 }
 
 // Map of username -> platform label for the name-only accounts.

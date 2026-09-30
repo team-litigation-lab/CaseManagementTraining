@@ -1,5 +1,5 @@
 import { json, logActivity, hashPassword, isUsernameTombstoned } from '../_utils.js';
-import { isGuestUsername } from '../_guest.js';
+import { isGuestUsername, isTrainerUsername } from '../_guest.js';
 const REG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,}$/;
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
@@ -32,6 +32,9 @@ export async function onRequestPost({ request, env }) {
     // name from another training platform (guest-login.js, _guest.js).
     if (isGuestUsername(username)) {
         return json({ success: false, error: 'Usernames starting with "guest-" are reserved. Please choose another username.' }, 400);
+    }
+    if (isTrainerUsername(username)) {
+        return json({ success: false, error: 'Usernames starting with "trainer-" are reserved. Please choose another username.' }, 400);
     }
     const existing = await db.prepare(`SELECT id FROM users WHERE username = ?`).bind(username).first();
     if (existing) {
