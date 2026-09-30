@@ -27,9 +27,26 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
 
 What the cases cover, from starter to advanced: every phase from Intake to Litigation, and a wide spread of case types: car crashes (rear-end, T-bone, rideshare, hit-and-run, commercial truck), a pedestrian hit by a city bus (government-claim notice), motorcycle, bicycle, slip and fall, dog bite (adult and child), premises liability, product liability (evidence that must not be released) and wrongful death (estate administrator). MC-25 … MC-36 add an e-scooter, a boating and a pedestrian case, negligent security, an elevator case in litigation (mediation), a trampoline-park injury, the UM settlement phase, and a prior attorney's lien and a pre-settlement funding lien. Authorization situations include the client only, an authorized daughter, a son with power of attorney, a guardian parent with the other parent *not* authorized, divorced parents with joint custody who are *both* authorized, an estate administrator with other relatives *not* authorized, a funding company allowed the case status only, a client with a safety flag (never confirm she's a client), an employer asking about a client, and a potential client with the statute of limitations weeks away. Call types include offers with deadlines, recorded-statement requests, deposition changes, a mediation center, a process server, check pickup by a third party, collections threats, a media call, a Spanish-speaking caller, a file transfer to new counsel, the client's former law firm, and callers who give only our case number.
 
-## 📞 Front Desk Drill (measures the VA)
+## 📞 Front Desk calls: practice calls and the scored drill (measures the VA)
 
-Admins: sidebar → **📞 Front Desk Drill · scored**. Trainees don't get the sidebar button (like the Training Library's); they open the drill from their course's link, `?drill=1`. A drill is 5, 8, 12 or all 44 incoming calls, picked at random from `DRILL_CALLS` in `mock-cases.js`. For each call the trainee:
+Admins: sidebar → **📞 Front Desk · practice calls**. Trainees don't get the sidebar button (like the Training Library's); they open the panel from their course's link, `?drill=1`. The panel offers two things: a **practice call** (below), taken in the trainee's own words, and the **scored drill**, a run of calls taken step by step.
+
+### 📞 Practice calls (no script)
+
+Like the Training Portal's Call Simulator. A random caller from `DRILL_CALLS` phones in (the level buttons pick warm-up, harder or tricky callers), and the trainee takes the whole call in their own words. There are no answer choices and no identifier buttons, and the caller's lines aren't shown before they're said.
+
+- **The call:** the phone rings with the caller ID. The trainee presses **📞 Answer** and greets the caller, who then says why they're calling in their own words and answers what they're asked from what their `gives` says (wrong answers included). They react to what the trainee says and hang up when the call is done. The trainee talks (live voice, or **🎙 Talk** on the standard voice in Chrome and Edge) or types. They find the file with the panel's search or the 🔍 search bar above the case (the file they open counts as the call's file), and the ☎ firm directory and rules are one tap away.
+- **After hanging up:** the trainee confirms which file the call was about (or "not in the system"), picks who the caller was (the same six authentication choices as the drill) and can write a call note.
+- **Debrief and score (100):** find the right file 30 and authentication 30, checked against the key; asked the right identifiers 10 and handled the call 30, from a review of the transcript and the note against the key and the firm's rules. Disclosing case information to a caller who isn't verified or authorized, reading an identifier out, or giving legal advice scores 0 for handling. The debrief says what went well, what to work on, a better line to say, the key and what the file says, with the transcript.
+- **Saved** with the drill results (as a practice call, with the transcript and the review), so trainers see practice calls in the team table.
+
+**Two voices.** With **🎙 Live voice calls** on (the default in Chrome and Edge), a practice call runs on live voice (Gemini Live, below): the caller hears the trainee and talks back naturally. **🎙 Mute** and **🔈 Speakerphone** work as in the drill (the speakerphone setting is shared), so a practice call can be shown in Google Meet too. When live voice is off, isn't set up, has no microphone, is busy or drops mid-call, the call goes on with the **standard voice**: the caller's next line comes from `/api/call-ai`, the browser reads it out (a female or male voice per caller; 🔊 Voice on/off, ↻ Replay), and the trainee types or talks (🎙 Talk, 🔁 Hands-free). A call that drops keeps its transcript, and the caller carries on from there. After live voice is found not set up, without a microphone, out of the day's minutes or refused in this region, practice calls use the standard voice for the rest of the visit; after a busy line, the next call tries live voice again. A live practice call ends at the live voice time limit (a warning comes 30 seconds before) and goes to the wrap-up.
+
+**Heavy use (a whole class at once).** Live voice spreads its calls over the keys itself (below). On the standard voice, every Gemini key on the project is used and the keys take turns (`functions/_ai.js`): each caller line and review starts on the next key, so the load is spread across all of them. A key that hits its limit rests (a minute, or an hour when its daily quota is used up; a rejected key 10 minutes) and the request moves to the next key at once, so later requests don't pay for a failed try. Caller lines start on Flash-Lite, which has the biggest free quota; reviews start on Flash. When every key is busy, the page retries the line three times (after 1.5, 3 and 6 seconds) and then puts the trainee's line back in the box to send again. Each user gets up to `CALL_AI_LIMIT` caller lines and reviews per 10 minutes (default 150; a call uses about 10 to 30), so one runaway page can't use up the class's quota. The more keys from separate Google Cloud projects, the more trainees can call at once. Admins can see how many keys are set up and which are resting at `/api/call-ai` (GET).
+
+### 📋 The scored drill
+
+A drill is 5, 8, 12 or all 44 incoming calls, picked at random from `DRILL_CALLS` in `mock-cases.js`. For each call the trainee:
 
 1. **Asks the caller** for identifiers (full name, date of birth, address, SSN last 4, callback number, relationship, date of the accident). The caller answers from a script, and some answers are wrong on purpose: a wrong DOB, only two identifiers, a new address that isn't on file, a relative who knows the client's details.
 2. **Finds the case** with the drill's search (or the 🔍 search bar above the case), by whatever the caller gave: name, case number, phone, DOB, DOL, claim or policy number, account number, plate, report number or library ID. Some callers only give a claim number, a plate or our case number. One is a brand-new caller who isn't in the system. Some names are on two or three files: the DOL and the DOB pick the right one. Opening a result loads the file view-only in the editor; **▭ Case** hides the panel to read it.
@@ -38,7 +55,7 @@ Admins: sidebar → **📞 Front Desk Drill · scored**. Trainees don't get the 
 
 **Scoring per call (100):** find the right case 30 · authentication 40 (the decision 30, plus 10 for asking the right identifiers: name + DOB + address or SSN last 4 for personal callers, name + relationship for relatives, name + callback for businesses, and also the date of the accident whenever the client's name is on more than one file) · handling 30. Time per call is recorded. After each call the trainee sees what was right, why, and what the file says.
 
-**Results** are saved to `/api/drill-results` (table `front_desk_drills`, created automatically on first use). Trainees see their history in the drill panel. Admins see a **team table**: each trainee's number of drills, average and best score, find / authenticate / handle percentages, and seconds per call. Nothing to set up on Cloudflare beyond the existing D1 binding.
+**Results** are saved to `/api/drill-results` (table `front_desk_drills`, created automatically on first use; its `mode` column, `drill` or `practice`, is added to an older table automatically). Trainees see their history in the panel. Admins see a **team table**: each trainee's number of drills and practice calls, average and best score, find / authenticate / handle percentages, and seconds per call. Nothing to set up on Cloudflare beyond the existing D1 binding and the Gemini key below.
 
 To add or change a case, edit `mock-cases.js` (the comment at the top explains the fields). Course drills are keyed to these facts (e.g. the CM course's Front Desk Lookup), so update those when you change a fact.
 
@@ -59,10 +76,11 @@ With **🎙 Live voice calls** ticked on the drill's start screen (the default i
 
 **Falling back to text.** Without a microphone, in another browser, or while live voice isn't set up, the call runs as text as before, with a note saying why.
 
-**Setup:** add the Gemini key to this Pages project.
+**Setup:** add the Gemini key to this Pages project. The same keys serve live voice, the practice calls' standard voice and the debriefs.
 1. Cloudflare → Workers & Pages → the CMS Pages project → **Settings → Variables and Secrets**.
-2. Add a secret named `GEMINI_API_KEY` or any numbered name (`GEMINI_API_KEY1`, `GEMINI_API_KEY13`, …), for Production and Preview. It can be the same key the courses use. Each extra numbered key shares the load.
-3. Redeploy.
+2. Add a secret named `GEMINI_API_KEY` or any numbered name (`GEMINI_API_KEY1`, `GEMINI_API_KEY13`, …), for Production and Preview. It can be the same key the courses use. Each extra numbered key shares the load; free-tier limits are per Google Cloud project, so keys from separate projects add capacity.
+3. Optional: `CALL_AI_LIMIT` (plain text), the caller lines and reviews each user may request per 10 minutes (default 150).
+4. Redeploy.
 
 Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. The default order is `gemini-3.8-live`, then `gemini-3.1-flash-live-preview`, then `gemini-2.5-flash-native-audio-preview-12-2025`. The drill moves to the next model on its own if one doesn't accept the call.
 
@@ -308,7 +326,12 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - callers the key marks verified giving details that match the file (and "not verified" callers not matching);
     - files that share a client name having a different date of loss or date of birth;
     - case numbers in the CMS format, unique, with the type code the editor would give the case type, and matching any case number a drill caller quotes.
-- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
+  - **the Gemini key pool** (`.github/scripts/call-ai.mjs`, with Google answered by the test):
+    - the keys take turns (any numbered `GEMINI_API_KEY`, a duplicate used once);
+    - a rate-limited or rejected key rests and the request moves to the next key at once; a busy key hands over; a missing model falls through; a refused region is explained;
+    - `/api/call-ai`: sign-in required, bad and oversized bodies refused, the review's JSON mode, the per-user limit (and it doesn't limit anyone else), "busy" when every key is at its limit, the Admin-only status;
+    - results are saved as `practice` or `drill`, including in a table made before the `mode` column.
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the debrief needs a file and an authentication decision, scores 97 from the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
   - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
@@ -328,7 +351,8 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - a refused line is retried on another;
     - the time limit warns, then hangs up;
     - scoring hangs up, frees the line and keeps the transcript;
-    - without live voice set up, the call and the rest of the drill run as text.
+    - without live voice set up, the call and the rest of the drill run as text;
+    - a **practice call on live voice**: Answer connects, both sides are transcribed, a typed line goes to the caller; when the live line drops (busy), the call goes on with the standard voice and the caller gets the transcript so far; the debrief scores it and the result is saved with the whole transcript; the next practice call tries live voice again and ends at the time limit, going to the wrap-up; and on a visit where live voice isn't set up, the practice call says so, carries on with the standard voice, and the next one doesn't ask for live voice again.
 - **Name sign-in** (`.github/scripts/guest.cjs`, in the same job): the real `guest-login.js` on SQLite. It checks that:
   - a registered trainee's name signs in to their account, with or without the M.I.;
   - duplicate names need the Batch ID;
@@ -378,6 +402,6 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - the sidebar button opens the tab, and typing in it isn't saved as a case edit;
   - no select or contenteditable was added to the page.
 
-To run them locally: `node .github/scripts/check-site.mjs`, `node .github/scripts/check-data.mjs`, `node .github/scripts/smoke.cjs` and `node .github/scripts/calendar.cjs` (the last two need Playwright; `calendar.cjs` needs Node 22.13 or later for `node:sqlite`).
+To run them locally: `node .github/scripts/check-site.mjs`, `node .github/scripts/check-data.mjs`, `node .github/scripts/call-ai.mjs`, `node .github/scripts/smoke.cjs` and `node .github/scripts/calendar.cjs` (the last two need Playwright; `calendar.cjs` needs Node 22.13 or later for `node:sqlite`).
 
 `_redirects` keeps `wrangler.toml`, this README, `.github/` and the Functions source off the published site.

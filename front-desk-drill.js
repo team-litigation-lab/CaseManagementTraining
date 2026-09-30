@@ -28,6 +28,23 @@
    identifiers the trainee asks for are ticked from what they say.
    Without a microphone, or when live voice isn't set up, the call
    runs as text, as before.
+
+   PRACTICE CALLS (no script), like the Training Portal's Call
+   Simulator: a random caller from DRILL_CALLS phones in, and the
+   trainee takes the whole call in their own words. No answer choices,
+   no identifier buttons. After hanging up they pick the file and the
+   authentication decision, can write a call note, and get a debrief:
+   find 30 and authenticate 30 against the key, plus identifiers 10 and
+   handling 30 from a review of the transcript against the key and the
+   firm's rules (/api/call-ai). The call runs on live voice when it's on
+   and working; otherwise, or when it's busy or drops, it goes on with
+   the standard voice: the caller's lines come from /api/call-ai and are
+   read out by the browser (call-voice.js), and the trainee types or
+   talks. So a whole class can call at once, live voice spreads its
+   calls over the keys (functions/api/live-call.js); the standard
+   voice's lines and the debriefs take turns over every key, resting a
+   key that hits its limit (functions/_ai.js); and a busy line is
+   retried here with a back-off.
    ========================================================= */
 (function () {
     'use strict';
@@ -52,8 +69,12 @@
     const PERSONAL = ['client', 'authorized', 'failed'];
 
     let D = null;         // the running drill
+    let P = null;         // the practice call
     let timer = null;
-    let screen = 'home';  // home | call | summary
+    let screen = 'home';  // home | call | summary | practice | pcwrap | pcdebrief
+    let pcLevel = 0;      // practice callers' level (0 = any)
+    let pcRecent = [];    // the last few practice callers, so they don't repeat right away
+    let pcLiveOff = 0, pcLiveWhy = '';   // live voice failed: practice calls use the standard voice until then
     let history = null;   // results from the server
 
     /* ---------- styles ---------- */
@@ -125,13 +146,46 @@
     #fdd-panel label.fdd-live-opt,#fdd-panel label.fdd-live-opt span{text-transform:none !important;letter-spacing:normal !important;color:#334155 !important;font-size:12px !important;font-weight:500 !important;margin:8px 0 0}
     #fdd-panel label.fdd-live-opt span{margin:0}#fdd-panel label.fdd-live-opt b{font-weight:800;color:#0f2148}
     #fdd-panel label.fdd-live-opt input{margin-top:2px}
+    .fdd-pc-id{background:linear-gradient(160deg,#0b1633,#13295a);color:#fff;border-radius:12px;padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+    .fdd-pc-id .av{width:38px;height:38px;border-radius:50%;background:#f97316;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .fdd-pc-id.ringing .av{animation:fddshake 1.1s ease-in-out infinite;background:#22c55e}
+    .fdd-pc-id .who{flex:1;min-width:0}.fdd-pc-id .who b{display:block;font-size:14px}.fdd-pc-id .who span{font-size:11.5px;color:#fdba74}
+    .fdd-pc-id .answer{border:none;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;background:#22c55e;color:#fff}
+    #fdd-pc-status{font-size:12px;color:#475569;margin:0 0 6px;min-height:16px}
+    #fdd-pc-status.warn{color:#b45309;font-weight:600}
+    .fdd-tx{display:flex;flex-direction:column;gap:6px;max-height:34vh;min-height:80px;overflow-y:auto;padding:6px 2px 8px}
+    .fdd-msg{max-width:86%;padding:8px 11px;border-radius:12px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+    .fdd-msg.c{align-self:flex-start;background:#0f2148;color:#fff;border-bottom-left-radius:3px}
+    .fdd-msg.y{align-self:flex-end;background:#ffedd5;color:#7c2d12;border-bottom-right-radius:3px}
+    .fdd-msg.s{align-self:center;color:#64748b;font-size:11.5px;font-style:italic;padding:2px 6px}
+    .fdd-msg.typing{opacity:.65;letter-spacing:2px}
+    .fdd-comp{display:flex;gap:6px;align-items:flex-end}
+    .fdd-comp textarea,.fdd-note{flex:1;width:100%;box-sizing:border-box;min-height:46px;max-height:140px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;font-size:13px;resize:vertical}
+    .fdd-note{min-height:74px;font-size:12.5px}
+    .fdd-comp button,.fdd-ctl button{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:8px;padding:8px 10px;font-weight:800;font-size:11.5px;cursor:pointer}
+    .fdd-comp button.send{background:#0f2148;color:#fff;border-color:#0f2148;padding:10px 14px}
+    .fdd-comp button:disabled,.fdd-ctl button:disabled{opacity:.45;cursor:not-allowed}
+    .fdd-ctl{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+    .fdd-ctl button.on{background:#ecfdf5;border-color:#10b981;color:#047857}
+    .fdd-ctl button.rec{background:#fee2e2;border-color:#ef4444;color:#b91c1c}
+    .fdd-pc-note{flex-basis:100%;font-size:11.5px;line-height:1.45;color:#92400e;background:#fffbeb;border-radius:7px;padding:6px 9px}
+    .fdd-hang{width:100%;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:12px;text-transform:uppercase;cursor:pointer;margin:8px 0 10px}
+    .fdd-seg{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+    .fdd-seg button{font-size:11px;font-weight:700;border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:999px;padding:5px 11px;cursor:pointer}
+    .fdd-seg button.on{background:#0f2148;color:#fff;border-color:#0f2148}
+    .fdd-rv ul{margin:3px 0 7px 18px;padding:0}.fdd-rv li{margin:2px 0;line-height:1.45}
+    .fdd-rv .better{background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:5px;padding:6px 9px;margin-top:4px}
+    .fdd-breach{margin-top:5px;color:#991b1b;font-weight:700}
+    .fdd-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;border-radius:4px;padding:1px 5px;background:#e0f2fe;color:#0369a1;white-space:nowrap}
+    .fdd-dir summary{cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b}
+    .fdd-dir ul{margin:6px 0 0 16px;padding:0;font-size:12px;line-height:1.5}
     `;
     document.head.appendChild(css);
 
     function buildUI() {
         const lib = $id('lib-open-btn');
         if (lib && !$id('fdd-open-btn')) {
-            lib.insertAdjacentHTML('afterend', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Front Desk Drill · scored</button>`);
+            lib.insertAdjacentHTML('afterend', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Front Desk · practice calls</button>`);
         }
         // Like the Training Library button, the sidebar button is for Admins. Trainees open the
         // drill from their course's link (?drill=1), and their scores are saved the same way.
@@ -179,12 +233,13 @@
         if (typeof closeTrainingLibrary === 'function') closeTrainingLibrary();
         $id('fdd-panel').classList.add('open'); $id('fdd-panel').setAttribute('aria-hidden', 'false');
         $id('fdd-mini').style.display = 'none';
-        if (!D) { screen = 'home'; loadHistory(); }
+        if (!D && !P) { screen = 'home'; loadHistory(); }
         paint();
     };
     window.fddClose = function () {
         if (D && screen === 'call' && !confirm('Leave the drill? This run won\'t be scored.')) return;
-        hangUp(); stopTimer(); D = null; screen = 'home';
+        if (P && (screen === 'practice' || screen === 'pcwrap') && !confirm('Leave this call? It won\'t be scored.')) return;
+        hangUp(); stopTimer(); D = null; endPractice(); screen = 'home';
         document.body.classList.remove('fdd-on');
         $id('fdd-panel').classList.remove('open'); $id('fdd-panel').setAttribute('aria-hidden', 'true');
         $id('fdd-mini').style.display = 'none';
@@ -201,6 +256,7 @@
         const pool = shuffle(window.DRILL_CALLS || []).slice(0, n);
         const liveBox = $id('fdd-live');
         if (liveBox) window.fddSetLive(liveBox.checked);
+        endPractice();
         D = {
             live: liveOK() && (liveBox ? liveBox.checked : livePref()),
             program: (window.lshProgram && window.lshProgram()) || '',
@@ -270,7 +326,10 @@
     function hangUp() { if (!window.LiveCall) return; window.LiveCall.stopRing(); if (window.LiveCall.active()) window.LiveCall.stop(); }
     function startTimer() {
         stopTimer();
-        timer = setInterval(() => { const el = $id('fdd-timer'); if (el && D && D.cur && !D.cur.submitted) el.textContent = fmtSec(Math.round((Date.now() - D.cur.t0) / 1000)); }, 1000);
+        timer = setInterval(() => {
+            const t0 = screen === 'call' && D && D.cur && !D.cur.submitted ? D.cur.t0 : screen === 'practice' && P && P.t0 && !P.ended ? P.t0 : null;
+            const el = $id('fdd-timer'); if (el && t0) el.textContent = fmtSec(Math.round((Date.now() - t0) / 1000));
+        }, 1000);
     }
     function stopTimer() { if (timer) clearInterval(timer); timer = null; }
 
@@ -278,8 +337,16 @@
         const cur = D.cur; if (cur.submitted || cur.asked.includes(k)) return;
         cur.asked.push(k); paint();
     };
-    window.fddSearch = function (v) { D.cur.q = v; paintResults(); };
+    // The search box and the file pick belong to the drill call or to the practice call on screen.
+    const pickCtx = () => screen === 'call' && D ? D.cur : (screen === 'practice' || screen === 'pcwrap') && P ? P : null;
+    window.fddSearch = function (v) { const p = pickCtx(); if (p) { p.q = v; paintResults(); } };
     window.fddPick = function (id) {
+        if ((screen === 'practice' || screen === 'pcwrap') && P) {
+            P.selected = id;
+            if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true });
+            pcPick(); return;
+        }
+        if (!D || !D.cur) return;
         const cur = D.cur; if (cur.submitted) return;
         cur.selected = id;
         if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true });
@@ -287,7 +354,7 @@
     };
     // True while a call is on the line and not yet scored: the top-bar case search
     // (case-library.js) then records the case it opens as this call's pick.
-    window.fddOnCall = () => !!(D && screen === 'call' && D.cur && !D.cur.submitted);
+    window.fddOnCall = () => !!(D && screen === 'call' && D.cur && !D.cur.submitted) || !!(P && (screen === 'practice' || screen === 'pcwrap'));
     window.fddSetAuth = function (v) { if (!D.cur.submitted) { D.cur.auth = v; paintButtons(); } };
     window.fddSetAction = function (v) { if (!D.cur.submitted) { D.cur.action = Number(v); paintButtons(); } };
 
@@ -364,16 +431,25 @@
             history = data && data.success ? data : { results: [], isAdmin: false };
         } catch (e) { history = { results: [], isAdmin: false, error: true }; }
         if (screen === 'home' || screen === 'summary') paint();
+        else if (screen === 'pcdebrief') { const h = $id('fdd-pc-hist'); if (h) h.innerHTML = historyHTML(); }
     }
-    window.fddHome = function () { hangUp(); stopTimer(); D = null; screen = 'home'; document.body.classList.remove('fdd-on'); loadHistory(); paint(); };
+    window.fddHome = function () { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on'); loadHistory(); paint(); };
 
     /* ---------- rendering ---------- */
     function paint() {
         const p = $id('fdd-panel'); if (!p) return;
-        const title = screen === 'call' ? `Call ${D.i + 1} of ${D.calls.length}` : screen === 'summary' ? 'Drill complete' : 'Front Desk Drill';
-        p.innerHTML = `<div class="fdd-h"><b>📞 ${title}</b>${screen === 'call' ? `<span class="t" id="fdd-timer">${fmtSec(Math.round((Date.now() - D.cur.t0) / 1000))}</span><button onclick="fddMinimize()" title="Hide to read the case">▭ Case</button>` : ''}<button onclick="fddClose()">✕</button></div>
-            <div class="fdd-b">${screen === 'call' ? callHTML() : screen === 'summary' ? summaryHTML() : homeHTML()}</div>`;
-        if (screen === 'call') paintResults();
+        if (['practice', 'pcwrap', 'pcdebrief'].includes(screen) && !P) screen = 'home';
+        const title = screen === 'call' ? `Call ${D.i + 1} of ${D.calls.length}` : screen === 'summary' ? 'Drill complete'
+            : screen === 'practice' ? 'Practice call' : screen === 'pcwrap' ? 'Wrap up the call' : screen === 'pcdebrief' ? 'Call debrief' : 'Front Desk Calls';
+        const t0 = screen === 'call' ? D.cur.t0 : screen === 'practice' ? P.t0 : null;
+        const clock = screen === 'call' || screen === 'practice' ? `<span class="t" id="fdd-timer">${t0 ? fmtSec(Math.round((Date.now() - t0) / 1000)) : '0:00'}</span>` : '';
+        const hide = ['call', 'practice', 'pcwrap'].includes(screen) ? `<button onclick="fddMinimize()" title="Hide to read the case">▭ Case</button>` : '';
+        p.innerHTML = `<div class="fdd-h"><b>📞 ${title}</b>${clock}${hide}<button onclick="fddClose()">✕</button></div>
+            <div class="fdd-b">${screen === 'call' ? callHTML() : screen === 'summary' ? summaryHTML() : screen === 'practice' ? practiceHTML()
+                : screen === 'pcwrap' ? pcWrapHTML() : screen === 'pcdebrief' ? pcDebriefHTML() : homeHTML()}</div>`;
+        if (['call', 'practice', 'pcwrap'].includes(screen)) paintResults();
+        if (screen === 'practice') { pcIdCard(); pcControls(); pcTr(); const box = $id('fdd-pc-in'); if (box) box.value = P.draft || ''; }
+        if (screen === 'pcdebrief') paintSaved();
     }
     function paintButtons() {
         const cur = D && D.cur; const b = $id('fdd-submit');
@@ -382,20 +458,23 @@
 
     function homeHTML() {
         const total = (window.DRILL_CALLS || []).length;
-        return `<div class="fdd-sec"><h4>How it works</h4>
-            <p style="margin:0 0 6px;line-height:1.5">A caller is on the line. For each call:</p>
-            <ol style="margin:0 0 6px 18px;padding:0;line-height:1.55">
-              <li><b>Ask</b> the caller for what you need (name, date of birth, address, SSN last 4, callback, relationship, date of the accident). On a live call, just ask out loud: what you ask is ticked as you say it.</li>
-              <li><b>Find</b> their case with the search (name, case number, phone, claim #, plate, DOL…), open it and read the file. Some callers aren't in the system, and some names are on more than one file: the date of the accident and the date of birth tell you which one.</li>
-              <li><b>Authenticate</b>: compare what they told you with the file. Some callers get it wrong on purpose.</li>
-              <li><b>Handle</b> the call.</li></ol>
-            <p style="margin:0;color:#64748b;font-size:12px">Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. Time per call is recorded. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The rules are in 🔍 Case Library → ☎ Firm directory.</p></div>
-            <div class="fdd-sec"><h4>Start a drill</h4>
+        const lv = [[0, 'Any caller'], [1, 'Level 1 · warm-up'], [2, 'Level 2'], [3, 'Level 3 · tricky']];
+        return `${liveOK() ? `<label class="fdd-live-opt" style="margin:0 0 10px"><input type="checkbox" id="fdd-live" ${livePref() ? 'checked' : ''} onchange="fddSetLive(this.checked)"><span><b>🎙 Live voice calls.</b> The phone rings, you answer and talk, and the caller talks back like a real call. Use a headset and allow the microphone. Turn this off to type (practice calls) or read (drill) instead.</span></label>`
+                : `<p class="fdd-live-opt" style="margin:0 0 10px">🎙 Live voice calls need Chrome or Edge with a microphone. In this browser you type (practice calls) or read (drill).</p>`}
+            <div class="fdd-sec"><h4>📞 Practice call · no script</h4>
+            <p style="margin:0 0 6px;line-height:1.5">A caller phones the front desk and you take the whole call in your own words, like on the job: no script and no answer choices. The caller reacts to what you say.</p>
+            <ol style="margin:0 0 8px 18px;padding:0;line-height:1.55">
+              <li><b>Answer</b> and greet the caller, and find out what they need.</li>
+              <li><b>Ask</b> for what you need to identify them, <b>find</b> their file (search by name, case number, phone, DOL…) and <b>verify</b> them against it. Some callers aren't clients, some aren't allowed to get information, and some names are on more than one file.</li>
+              <li><b>Help</b> them from the file, or take a complete message and route it. Then hang up.</li></ol>
+            <p style="margin:0 0 4px;font-size:12px;color:#475569">After the call you pick the file and who the caller was, and you get a debrief: find 30 · authenticate 30 · asked the right identifiers 10 · handled the call 30.</p>
+            <div class="fdd-seg">${lv.map(([n, l]) => `<button class="${pcLevel === n ? 'on' : ''}" onclick="fddPracticeLevel(${n}, this)">${l}</button>`).join('')}</div>
+            <button class="fdd-go alt" onclick="fddPracticeStart()">📞 Take a practice call</button></div>
+            <div class="fdd-sec"><h4>📋 Scored drill · step by step</h4>
+            <p style="margin:0 0 6px;line-height:1.5;font-size:12.3px">A run of calls where you <b>ask</b> for identifiers, <b>find</b> the case, <b>authenticate</b> the caller (some get it wrong on purpose) and pick how to <b>handle</b> the call. On a live call, just ask out loud: what you ask is ticked as you say it. Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The rules are in 🔍 Case Library → ☎ Firm directory.</p>
             <div style="display:flex;gap:8px;align-items:center"><select id="fdd-len" style="padding:8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px">
                 <option value="5">5 calls (~10 min)</option><option value="8" selected>8 calls (~15 min)</option><option value="12">12 calls (~25 min)</option><option value="${total}">All ${total} calls</option></select>
-            <button class="fdd-go alt" style="margin:0;flex:1" onclick="fddStart()">▶ Take the first call</button></div>
-            ${liveOK() ? `<label class="fdd-live-opt"><input type="checkbox" id="fdd-live" ${livePref() ? 'checked' : ''} onchange="fddSetLive(this.checked)"><span><b>🎙 Live voice calls.</b> The phone rings, you answer and talk, and the caller talks back like a real call. Use a headset and allow the microphone. Turn this off to read the calls as text.</span></label>`
-                : `<p class="fdd-live-opt">🎙 Live voice calls need Chrome or Edge with a microphone. In this browser the calls run as text.</p>`}</div>
+            <button class="fdd-go" style="margin:0;flex:1" onclick="fddStart()">▶ Take the first call</button></div></div>
             ${historyHTML()}`;
     }
 
@@ -415,13 +494,13 @@
             rows.forEach(r => { (by[r.username] = by[r.username] || []).push(r); });
             const team = Object.entries(by).map(([u, rs]) => {
                 const n = rs.length, avg = (k) => Math.round(rs.reduce((a, r) => a + (r[k] || 0), 0) / n);
-                return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: avg('find_pct'), auth: avg('auth_pct'), act: avg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
+                return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, practice: rs.filter(r => r.mode === 'practice').length, score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: avg('find_pct'), auth: avg('auth_pct'), act: avg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
             }).sort((a, b) => b.score - a.score);
-            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} drills)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Drills</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}%</td><td>${t.auth}%</td><td>${t.act}%</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>`;
+            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} drills and practice calls)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
+                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}%</td><td>${t.auth}%</td><td>${t.act}%</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>`;
         }
-        return `<div class="fdd-sec"><h4>My results</h4>${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Calls</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${r.calls}</td><td><b>${r.score}%</b></td><td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td><td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : 'No drills yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>`;
+        return `<div class="fdd-sec"><h4>My results</h4>${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Type</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
+            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${r.mode === 'practice' ? '<span class="fdd-tag">Practice call</span>' : `Drill · ${r.calls}`}</td><td><b>${r.score}%</b></td><td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td><td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : 'No calls yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>`;
     }
 
     function answerFor(c, k) {
@@ -488,8 +567,8 @@
     function paintAvatar() { const av = $id('fdd-av'); if (av && D && D.cur && D.cur.live) av.classList.toggle('talking', !!D.cur.live.talking && D.cur.live.status === 'live'); }
 
     function paintResults() {
-        const box = $id('fdd-res'); if (!box || !D) return;
-        const cur = D.cur, q = (cur.q || '').trim();
+        const box = $id('fdd-res'), cur = pickCtx(); if (!box || !cur) return;
+        const q = (cur.q || '').trim();
         if (q.length < 2) { box.innerHTML = '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">Type at least 2 characters.</p>'; return; }
         const hits = (window.mockSearch ? window.mockSearch(q) : []).slice(0, 12);
         const dup = [...new Set(hits.map(nameKey))].filter(k => hits.filter(c => nameKey(c) === k).length > 1);
@@ -498,13 +577,17 @@
             : '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">No cases match.</p>';
     }
 
+    // The identifiers the front desk has to ask this caller for (the 10 identifier points).
+    function needFor(c) {
+        const k = c.mock && caseOf(c.mock), same = c.mock ? sameNameCount(c.mock) : 0;
+        return (PERSONAL.includes(c.auth) ? 'name, date of birth, and address or SSN last 4'
+            : c.auth === 'unauthorized' ? 'their name and their relationship to the client' : 'their name and a callback number')
+            + (same > 1 ? `, plus the date of the accident (${same} files are named ${k.client.name})` : '');
+    }
     function feedbackHTML(entry, r) {
         const c = entry.call, k = c.mock && caseOf(c.mock);
         const cls = r.score >= 85 ? 'ok' : r.score >= 60 ? 'mid' : 'bad';
-        const same = c.mock ? sameNameCount(c.mock) : 0;
-        const need = (PERSONAL.includes(c.auth) ? 'name, date of birth, and address or SSN last 4'
-            : c.auth === 'unauthorized' ? 'their name and their relationship to the client' : 'their name and a callback number')
-            + (same > 1 ? `, plus the date of the accident (${same} files are named ${k.client.name})` : '');
+        const need = needFor(c);
         return `<div class="fdd-fb ${cls}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${r.score}/100</b><span>⏱ ${fmtSec(r.secs)}</span></div>
             <div>${r.find ? '✓' : '✗'} <b>Find:</b> ${c.mock ? `${esc(c.mock)} · ${esc(k ? k.client.name : '')}${k ? ` (${esc(k.caseNumber || '')}, DOL ${esc(k.dateOfLoss)})` : ''}` : 'not in the system'}${r.find ? '' : ` (you picked ${esc(r.picked.selected)})`}</div>
             <div>${r.authOk ? '✓' : '✗'} <b>Authenticate:</b> ${esc((AUTH.find(a => a[0] === c.auth) || [])[1])}</div>
@@ -528,6 +611,542 @@
             <button class="fdd-go" onclick="fddHome()">My results</button>`;
     }
 
+    /* ---------- practice calls (no script) ---------- */
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const cut = (v, n) => String(v == null ? '' : v).slice(0, n);
+    const firmName = () => String((window.MOCK_FIRM || {}).name || 'the law firm').replace(/\s*\(fictional\)\s*/i, '').trim();
+    const unquote = (t) => String(t || '').trim().replace(/^["“]+|["”]+$/g, '').trim();
+    const authLabel = (k) => (AUTH.find(a => a[0] === k) || [])[1] || '';
+    const voice = () => window.CallVoice || null;
+    const pcOn = () => !!(P && screen === 'practice' && !P.ended);
+    // Standard-voice settings, remembered in this browser.
+    const pcPref = (k, dflt) => { try { const v = localStorage.getItem('LSH_FDD_' + k + '_V1'); return v == null ? dflt : v === 'on'; } catch (e) { return dflt; } };
+    const pcSetPref = (k, on) => { try { localStorage.setItem('LSH_FDD_' + k + '_V1', on ? 'on' : 'off'); } catch (e) {} };
+
+    window.fddPracticeLevel = function (n, btn) {
+        pcLevel = n;
+        if (btn) btn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
+    };
+
+    // The standard voice's caller: who they are and what they know, never the key's answer
+    // or "why" (the caller can't hand the trainee the answer). Live voice builds its own
+    // caller from the same call (functions/_live.js).
+    const ROLE = {
+        client: 'You are the client on this case (or, for a child\'s case, the parent or guardian who signed with the firm). You want a real answer to your question. When the receptionist asks you to confirm who you are, you give the details you know without fuss.',
+        authorized: 'You are calling about someone else\'s case, and the client\'s file lists you as allowed to get information (a signed authorization, a power of attorney, or the estate\'s administrator). When the receptionist asks you to confirm who you are and who the client is, you give the details you know. You expect an answer.',
+        failed: 'You say this is your case (or that you may speak for the client), but you can only give the details listed below, and some are missing or don\'t match what the firm has. If the receptionist says they can\'t verify you, push back once, then accept what they offer (a callback to the number on file, or a message).',
+        unauthorized: 'You are NOT on the client\'s file as someone who may get information, but you feel you should be told (you are family, a friend, or similar). Push for an answer once or twice, politely but firmly. If the receptionist holds the line kindly, accept leaving a message. Never get abusive.',
+        business: 'You are calling from a business (an insurance company, a medical provider, another law office, a vendor). You are professional and brief. When asked, you give your name, your company, any claim or reference number and your callback number. You don\'t know the client\'s personal details (date of birth, SSN, home address). You expect to be put through to the right person, or to leave a detailed message.',
+        newcaller: 'You are not a client of this firm. You were hurt recently and are calling to ask whether the firm can help you. Answer questions about what happened simply. You expect to be put through to the intake team or to get a callback.'
+    };
+    const GIVES = [['name', 'Your name'], ['dob', 'A date of birth, if asked'], ['address', 'An address, if asked'], ['ssn4', 'Last 4 of the Social Security number, if asked'],
+        ['callback', 'Your callback number'], ['relationship', 'Who you are to the client'], ['dol', 'The date of the accident, if asked']];
+    function callerPrompt(c) {
+        const k = caseOf(c.mock), g = c.gives || {};
+        const val = (key) => key === 'dol' && g.dol == null && k ? k.dateOfLoss : g[key];
+        const knows = GIVES.filter(([key]) => val(key) != null && String(val(key)).trim() !== '').map(([key, l]) => `- ${l}: ${val(key)}`).join('\n');
+        const bg = k && PERSONAL.includes(c.auth) ? `\nBACKGROUND (what you know about the accident; use it to answer naturally, never recite it):\n${k.narrative}\n` : '';
+        return `You are role-playing a caller phoning the front desk of ${firmName()}, a personal injury law firm. The person answering is a receptionist. Stay in character for the whole call.
+
+WHO YOU ARE AND WHY YOU CALL
+Why you're calling (say it in your own words once they greet you): "${unquote(c.opening)}"
+${ROLE[c.auth] || ROLE.client}
+
+WHAT YOU SAY WHEN ASKED (give each detail only when the receptionist asks for it, exactly as written here, even if it seems wrong; never correct it or add to it):
+${knows || '- Your name: you\'d rather not say.'}
+For anything not listed, say you don't know it or would rather not say.
+${bg}
+HOW TO TALK
+- Talk like a real person on the phone: 1 to 3 short sentences per turn, plain spoken English. No lists, no stage directions, no narration, no quotation marks.
+- Don't volunteer details before you're asked. Answer what the receptionist asks, then wait for them.
+- Never say you are an AI, a computer, a simulation or a training exercise, and never coach the receptionist or tell them what they should do.
+- If they put you on hold or look something up, just say something short like "Sure, I'll wait."
+- If they tell you something that doesn't sound right for your case, react like a real caller (confused, ask them to check), but don't supply facts you weren't given.
+- When the call has reached its natural end (you got your answer, left a message, or they said goodbye), say a short goodbye and put [END_CALL] at the very end of that line. If the receptionist is rude or hangs up on you, end the call the same way.
+
+The call has just been answered. When the receptionist greets you, say why you're calling.`;
+    }
+    // The transcript as Gemini turns: it starts with the receptionist, and turns by the same side are joined.
+    function apiMessages(l) {
+        const out = [];
+        l.msgs.filter(m => m.who !== 'sys').forEach(m => {
+            const role = m.who === 'caller' ? 'model' : 'user';
+            if (!out.length && role === 'model') out.push({ role: 'user', text: '(The receptionist picks up.)' });
+            if (out.length && out[out.length - 1].role === role) out[out.length - 1].text += ' ' + m.text; else out.push({ role, text: m.text });
+        });
+        // The start of the call and the latest turns (the list always ends on the receptionist's line).
+        return out.length > 41 ? [out[0], out[1], ...out.slice(-39)] : out;
+    }
+    const cleanLine = (t) => unquote(String(t || '').replace(/\[END_CALL\]/gi, ' ').replace(/\*[^*]*\*/g, ' ').replace(/^\s*(caller|client|me)\s*:\s*/i, '').replace(/\s+/g, ' '));
+
+    // One request to /api/call-ai. retry: worth trying again (busy line, network).
+    async function askAI(purpose, system, messages, json) {
+        try {
+            const res = await fetch('/api/call-ai', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ purpose, system, messages, json: !!json })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data && data.success && data.text) return { ok: true, text: String(data.text) };
+            return { ok: false, retry: res.status === 429 || res.status >= 500, error: (data && data.error) || `Error ${res.status}.` };
+        } catch (e) { return { ok: false, retry: true, error: 'Connection problem.' }; }
+    }
+    // A busy line is retried 3 times (1.5 s, 3 s, 6 s). stale() → the call moved on; stop quietly.
+    async function askWithRetry(purpose, system, messages, json, stale, onWait) {
+        for (let attempt = 0; ; attempt++) {
+            const r = await askAI(purpose, system, messages, json);
+            if (stale()) return null;
+            if (r.ok || !r.retry || attempt >= 3) return r;
+            if (onWait) onWait(attempt + 1);
+            await sleep([1500, 3000, 6000][attempt]);
+            if (stale()) return null;
+        }
+    }
+
+    function endPractice() {
+        const l = P; P = null;
+        if (l) { l.ended = l.ended || 'left'; l.req++; clearTimeout(l.kick); if (l.transport === 'live' && window.LiveCall) window.LiveCall.stop(); }
+        if (window.LiveCall) window.LiveCall.stopRing();
+        const V = voice(); if (V) V.stopAll();
+    }
+
+    window.fddPracticeStart = function () {
+        const unsaved = typeof hasCaseContent === 'function' && hasCaseContent() && typeof currentCaseId !== 'undefined' && currentCaseId === null;
+        if (unsaved && !confirm('The call opens case files in the editor, which clears the unsaved case that\'s there now. Start anyway?')) return;
+        const box = $id('fdd-live'); if (box) window.fddSetLive(box.checked);
+        const all = window.DRILL_CALLS || [];
+        const pool = all.filter(c => !pcLevel || c.level === pcLevel);
+        let choices = pool.filter(c => !pcRecent.includes(c.id)); if (!choices.length) choices = pool.length ? pool : all;
+        const call = choices[Math.floor(Math.random() * choices.length)];
+        if (!call) return;
+        pcRecent = [call.id, ...pcRecent].slice(0, Math.max(0, Math.min(8, pool.length - 1)));
+        const V = voice();
+        hangUp(); stopTimer(); D = null; endPractice();
+        P = { call, transport: liveOK() && livePref() && Date.now() > pcLiveOff ? 'live' : 'standard', answered: false, t0: null, t1: null, msgs: [],
+            speak: !!(V && V.canSpeak && pcPref('SPEAK', true)), hands: !!(V && V.canListen && pcPref('HANDS', false)),
+            selected: null, q: '', auth: null, note: '', draft: '', busy: false, closing: false, ended: false, req: 0, muted: false,
+            status: 'Incoming call… press 📞 Answer.', warn: false, voiceNote: '', program: (window.lshProgram && window.lshProgram()) || '' };
+        document.body.classList.add('fdd-on');
+        if (typeof closeCallsPanel === 'function') closeCallsPanel();
+        screen = 'practice'; paint();
+        if (window.LiveCall) window.LiveCall.ring(3);
+    };
+
+    // Answer: the call connects; the caller waits for the trainee's greeting (and says "Hello?" if there's none).
+    window.fddPracticeAnswer = function () {
+        const my = P; if (!pcOn() || my.answered) return;
+        my.answered = true; my.t0 = Date.now(); startTimer();
+        if (window.LiveCall) window.LiveCall.stopRing();
+        if (my.transport === 'live') startLive(my);
+        else {
+            const V = voice(); if (V && my.speak) V.unlock();
+            if (liveOK() && livePref() && pcLiveWhy) my.voiceNote = `🎙 ${pcLiveWhy} This call uses the standard voice: type your reply${V && V.canListen ? ' or press 🎙 Talk' : ''}.`;
+            pcStatus('Connected. Greet the caller the way you answer the firm\'s phone.');
+            my.kick = setTimeout(() => { if (P === my && !my.ended && !my.msgs.length && !my.busy) callerSays('Hello?', false); }, 6000);
+        }
+        pcIdCard(); pcControls(); pcTr();
+        const b = $id('fdd-pc-in'); if (b) b.focus({ preventScroll: true });
+    };
+
+    // Live voice (live-call.js): the caller hears the trainee and talks back. If it can't start,
+    // is busy, or drops, the call carries on with the standard voice, transcript and all.
+    function startLive(my) {
+        pcStatus('Connecting… allow the microphone if the browser asks.');
+        my.speakerOn = speakerPref();
+        window.LiveCall.start({
+            callId: my.call.id, speaker: my.speakerOn,
+            onState: (st) => {
+                if (P !== my || my.ended || my.transport !== 'live') return;
+                if (st === 'live') { my.liveUp = my.usedLive = true; pcStatus(liveTalkHint(my)); pcControls(); }
+                else if (st === 'ended') toStandard(my, 'The live line closed.');
+            },
+            onLine: (role, text, id) => {
+                if (P !== my || my.ended || my.transport !== 'live') return;
+                const m = my.msgs.find(x => x.id === id);
+                if (m) m.text = text; else my.msgs.push({ who: role === 'you' ? 'you' : 'caller', text, id });
+                pcTr();
+            },
+            onNotice: (msg) => { if (P === my && !my.ended && my.transport === 'live') pcStatus(msg, true); },
+            onError: (msg, code) => {
+                if (P !== my || my.ended || my.transport !== 'live') return;
+                if (code === 'TIME') return pcEnd('time');   // the call's time limit (LIVE_MAX_MINUTES)
+                toStandard(my, msg, code);
+            }
+        });
+    }
+    // The live voice messages end with what the drill does ("This call runs as text…"); a practice call goes on with the standard voice instead.
+    const textless = (m) => String(m).replace(/[;,]?\s*(?:so\s+)?(?:this call|the drill|the call)\s+runs as text[^.]*\.?/gi, '.').replace(/\s*,?\s*or run (?:it|this call) as text/gi, '').replace(/\.{2,}/g, '.').replace(/\s+\./g, '.').trim();
+    function toStandard(my, why, code) {
+        my.transport = 'standard'; my.liveUp = false;
+        if (window.LiveCall && window.LiveCall.active()) window.LiveCall.stop();
+        why = code === 'DROPPED' ? (/busy/i.test(why) ? 'The live voice service got busy.' : 'The live line dropped.') : textless(why || 'Live voice isn\'t available.');
+        // Not set up, no microphone, the day's live minutes used up, a refused region: not again
+        // this visit. Busy or dropped: the next practice call tries live voice again.
+        const off = ['NOT_CONFIGURED', 'NO_MODEL', 'MIC', 'BUDGET', 'REGION'].includes(code);
+        pcLiveWhy = off ? why : ''; pcLiveOff = off ? Infinity : 0;
+        my.voiceNote = `🎙 ${why} The call goes on with the standard voice: type your reply${voice() && voice().canListen ? ' or press 🎙 Talk' : ''}.`;
+        const V = voice(); if (V && my.speak) V.unlock();
+        pcStatus(my.msgs.length ? 'Your turn.' : 'Greet the caller the way you answer the firm\'s phone.');
+        pcControls(); pcTr();
+    }
+
+    function yourTurn() {
+        const l = P; if (!l || l.ended) return;
+        const V = voice();
+        pcStatus(`Your turn: ${V && V.canListen ? 'press 🎙 Talk or type' : 'type'} your reply (Enter sends).`);
+        pcControls();
+        if (l.hands) pcListen();
+        else { const b = $id('fdd-pc-in'); if (b && document.activeElement !== b && $id('fdd-panel').classList.contains('open')) b.focus({ preventScroll: true }); }
+    }
+    // The caller's line out loud (standard voice, speaker on). then() runs when they finish.
+    function sayAloud(text, then) {
+        const my = P; let fired = false;
+        const fin = () => { if (fired) return; fired = true; if (my.afterSpeak === fin) my.afterSpeak = null; if (P === my && then) then(); };
+        my.afterSpeak = fin;
+        const V = voice();
+        if (!my.speak || !V || !V.canSpeak) return fin();
+        pcStatus('The caller is talking…');
+        V.speak(text, { gender: my.call.voice, name: (my.call.gives || {}).name, onDone: fin,
+            onNoVoice: () => { if (P === my && !my.noVoice) { my.noVoice = true; my.speak = false; pcControls(); } } });
+    }
+    function callerSays(text, end) {
+        const my = P;
+        my.msgs.push({ who: 'caller', text }); pcTr();
+        if (end) my.closing = true;
+        sayAloud(text, () => { if (P !== my || my.ended) return; if (end) return pcEnd('caller'); yourTurn(); });
+    }
+
+    window.fddPracticeSend = async function () {
+        const my = P; if (!pcOn() || !my.answered || my.busy || my.closing) return;
+        const box = $id('fdd-pc-in');
+        const text = cut(box ? box.value : '', 1000).trim();
+        if (!text) return;
+        if (my.transport === 'live') {   // typed into the live call
+            if (!window.LiveCall.sendText(text)) { pcStatus('Still connecting… send it again in a moment.', true); return; }
+            if (box) box.value = ''; my.draft = ''; return;
+        }
+        if (box) box.value = ''; my.draft = '';
+        clearTimeout(my.kick);
+        const V = voice(); if (V) { V.stopSpeaking(); V.stopListening(); }
+        my.afterSpeak = null;
+        my.msgs.push({ who: 'you', text });
+        my.busy = true; pcTr(); pcStatus(''); pcControls();
+        const reqNo = ++my.req;
+        const r = await askWithRetry('caller', callerPrompt(my.call), apiMessages(my), false,
+            () => P !== my || my.ended || my.req !== reqNo,
+            (n) => pcStatus(`The line is busy… retrying (${n} of 3).`, true));
+        if (!r) return;
+        my.busy = false;
+        if (!r.ok) {
+            my.msgs.pop(); pcTr();
+            const b = $id('fdd-pc-in'); if (b && !b.value) { b.value = text; my.draft = text; }
+            pcStatus(`⚠ The caller didn't come through: ${r.error} Your line is back in the box. Send it again.`, true);
+            pcControls(); return;
+        }
+        const end = /\[END_CALL\]/i.test(r.text);
+        pcControls();
+        callerSays(cleanLine(r.text) || (end ? 'Okay. Bye.' : '…'), end);
+    };
+    window.fddPracticeKey = function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); fddPracticeSend(); }
+    };
+    window.fddPracticeInput = function (el) {
+        if (P) P.draft = el.value;
+        const V = voice(); if (V && V.isListening()) { V.stopListening(); pcControls(); }   // typing takes over from the microphone
+    };
+
+    // Standard voice: the trainee's reply by microphone (Chrome/Edge), sent when they pause.
+    function pcListen() {
+        const my = P, V = voice();
+        if (!pcOn() || my.transport !== 'standard' || my.busy || my.closing || !V || !V.canListen) return;
+        const box = $id('fdd-pc-in'); const before = box ? box.value.trim() : '';
+        const ok = V.listen({
+            onText: (t) => { const b = $id('fdd-pc-in'); if (b && P === my) { b.value = (before ? before + ' ' : '') + t; my.draft = b.value; } },
+            onEnd: (t) => {
+                if (P !== my || my.ended) return;
+                pcControls();
+                const b = $id('fdd-pc-in');
+                if (t && b && b.value.trim()) fddPracticeSend();
+                else pcStatus('Didn\'t catch that. Press 🎙 Talk to try again, or type.');
+            },
+            onBlocked: () => { if (P === my) { my.hands = false; pcStatus('The microphone is blocked. Allow it in the browser\'s address bar, or type your reply.', true); pcControls(); } }
+        });
+        if (ok) { pcStatus('🎙 Listening… speak now (it sends when you pause).'); pcControls(); }
+    }
+    window.fddPracticeTalk = function () {
+        const V = voice(); if (!pcOn() || !V || P.transport !== 'standard') return;
+        if (V.isListening()) { V.stopListening(true); return; }
+        if (P.afterSpeak) { V.stopSpeaking(); P.afterSpeak = null; }   // talking over the caller
+        pcListen();
+    };
+    window.fddPracticeHands = function () {
+        const V = voice(); if (!P || !V || !V.canListen) return;
+        P.hands = !P.hands; pcSetPref('HANDS', P.hands);
+        if (!P.hands) V.stopListening();
+        else if (pcOn() && P.answered && !P.busy && !P.afterSpeak && !V.isListening()) pcListen();
+        pcControls();
+    };
+    window.fddPracticeSpeaker = function () {
+        const V = voice(); if (!P || !V || !V.canSpeak) return;
+        P.speak = !P.speak; P.noVoice = false; pcSetPref('SPEAK', P.speak);
+        if (P.speak) V.unlock(); else { V.stopSpeaking(); const f = P.afterSpeak; if (f) f(); }
+        pcControls();
+    };
+    window.fddPracticeReplay = function () {
+        const V = voice(); if (!pcOn() || P.busy || !V || !V.canSpeak) return;
+        const last = [...P.msgs].reverse().find(m => m.who === 'caller'); if (!last) return;
+        const pending = P.afterSpeak; V.stopSpeaking(); V.stopListening(); P.afterSpeak = null;
+        const was = P.speak; P.speak = true;
+        sayAloud(last.text, pending || yourTurn);
+        P.speak = was;
+    };
+    const liveTalkHint = (l) => l.speakerOn ? 'On the call, on speakerphone: let the caller finish, then answer. You can also type.' : 'On the call: talk normally, the caller hears you. You can also type.';
+    // Speakerphone on live voice (the drill's setting, remembered): louder, for a room or a Google Meet.
+    window.fddPracticeSpeakerphone = function () {
+        if (!pcOn() || P.transport !== 'live' || !window.LiveCall) return;
+        P.speakerOn = !P.speakerOn;
+        if (window.LiveCall.active()) window.LiveCall.setSpeaker(P.speakerOn);
+        try { localStorage.setItem(SPEAKER_KEY, P.speakerOn ? 'on' : 'off'); } catch (e) {}
+        if (P.liveUp) pcStatus(liveTalkHint(P));
+        pcControls();
+    };
+    window.fddPracticeMute = function () {
+        if (!pcOn() || P.transport !== 'live' || !window.LiveCall) return;
+        P.muted = window.LiveCall.setMuted(!P.muted); pcControls();
+    };
+    window.fddPracticeHangUp = function () {
+        if (!pcOn()) return;
+        if (!P.msgs.some(m => m.who === 'you')) {
+            if (!confirm('Hang up without saying anything? This call won\'t be scored.')) return;
+            return fddHome();
+        }
+        pcEnd('you');
+    };
+    function pcEnd(by) {
+        const l = P; if (!l || l.ended) return;
+        l.ended = by; l.t1 = Date.now(); l.req++; l.busy = false; l.afterSpeak = null; clearTimeout(l.kick);
+        stopTimer();
+        if (l.transport === 'live' && window.LiveCall) window.LiveCall.stop();
+        const V = voice(); if (V) V.stopAll();
+        l.msgs.push({ who: 'sys', text: by === 'caller' ? 'The caller hung up.' : by === 'time' ? 'The call reached its time limit.' : 'You ended the call.' });
+        screen = 'pcwrap'; paint(); fddRestore();
+        const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0;
+    }
+
+    /* practice: partial updates, so typing, the search box and scrolling survive */
+    function pcStatus(text, warn) {
+        if (!P) return; P.status = text; P.warn = !!warn;
+        const el = $id('fdd-pc-status'); if (el) { el.textContent = text; el.classList.toggle('warn', !!warn); }
+    }
+    const trHTML = (msgs) => msgs.map(m => `<div class="fdd-msg ${m.who === 'caller' ? 'c' : m.who === 'you' ? 'y' : 's'}">${esc(m.text)}</div>`).join('');
+    function pcTr() {
+        const box = $id('fdd-pc-tr'); if (!box || !P) return;
+        box.innerHTML = trHTML(P.msgs) + (P.busy ? '<div class="fdd-msg c typing">…</div>' : '')
+            + (!P.msgs.length ? `<div class="fdd-msg s">${P.answered ? 'The caller is on the line. Greet them.' : 'Ringing…'}</div>` : '');
+        box.scrollTop = box.scrollHeight;
+    }
+    // What the phone shows: the number the caller gives as their callback, when it is one.
+    const callerId = (c) => (String((c.gives || {}).callback || '').match(/\(?\d{3}\)?[\s.-]*\d{3}-\d{4}/) || [])[0] || 'Unknown number';
+    function pcIdCard() {
+        const el = $id('fdd-pc-id'); if (!el || !P) return;
+        const ringing = !P.answered;
+        el.className = 'fdd-pc-id' + (ringing ? ' ringing' : '');
+        el.innerHTML = `<div class="av">${ringing ? '📞' : '👤'}</div><div class="who"><b>${ringing ? 'Incoming call…' : 'On the line'}</b><span>Caller ID: ${esc(callerId(P.call))}${P.answered ? ` · ${P.transport === 'live' ? '🎙 live voice' : 'standard voice'}` : ''}</span></div>
+            ${ringing ? '<button class="answer" onclick="fddPracticeAnswer()">📞 Answer</button>' : ''}`;
+    }
+    function pcControls() {
+        const el = $id('fdd-pc-ctl'), l = P; if (!el || !l) return;
+        const V = voice() || {}, on = pcOn() && l.answered, can = on && !l.busy && !l.closing;
+        const std = l.transport === 'standard', listening = std && V.isListening && V.isListening();
+        const send = $id('fdd-pc-send'); if (send) send.disabled = !can;
+        const box = $id('fdd-pc-in'); if (box) box.disabled = !on;
+        el.innerHTML = (!std ? `<button class="${l.muted ? 'rec' : ''}" onclick="fddPracticeMute()" ${on ? '' : 'disabled'}>${l.muted ? '🔇 Unmute' : '🎙 Mute'}</button>
+                <button class="${l.speakerOn ? 'on' : ''}" onclick="fddPracticeSpeakerphone()" ${on ? '' : 'disabled'} title="Speakerphone: louder, for a room or a Google Meet (share this tab with its audio)">${l.speakerOn ? '🔊 Speakerphone on' : '🔈 Speakerphone'}</button>` : '')
+            + (std && V.canListen ? `<button id="fdd-pc-talk" class="${listening ? 'rec' : ''}" onclick="fddPracticeTalk()" ${can ? '' : 'disabled'}>${listening ? '■ Done talking' : '🎙 Talk'}</button>
+                <button class="${l.hands ? 'on' : ''}" onclick="fddPracticeHands()" title="Listen for your reply after the caller speaks">🔁 Hands-free ${l.hands ? 'on' : 'off'}</button>` : '')
+            + (std && V.canSpeak ? `<button class="${l.speak ? 'on' : ''}" onclick="fddPracticeSpeaker()" title="Read the caller's lines out loud">${l.speak ? '🔊 Voice on' : '🔇 Voice off'}</button>
+                <button onclick="fddPracticeReplay()" ${on && !l.busy && l.msgs.some(m => m.who === 'caller') ? '' : 'disabled'} title="Hear the caller's last line again">↻ Replay</button>` : '')
+            + (l.voiceNote ? `<div class="fdd-pc-note">${esc(l.voiceNote)}</div>` : '')
+            + (std && l.noVoice ? `<div class="fdd-pc-note">This computer has no voice for the caller: read their lines.</div>` : '');
+    }
+    function pcPick() {
+        const el = $id('fdd-pick-line'), l = P; if (!l) return;
+        if (el) el.innerHTML = pickLine(l.selected);
+        const none = $id('fdd-none'); if (none) none.style.cssText = l.selected === 'none' ? 'margin-top:6px;background:#ecfdf5;border-color:#10b981' : 'margin-top:6px';
+        paintResults(); pcWrapButton();
+    }
+    function pickLine(sel) {
+        if (!sel) return 'No file opened yet.';
+        if (sel === 'none') return '✓ You marked this caller as <b>not in the system</b>.';
+        const k = caseOf(sel);
+        return `✓ Opened <b>${esc(sel)}</b>${k ? ` · ${esc(k.client.name)} · ${esc(k.caseNumber || '')} · DOL ${esc(k.dateOfLoss)}` : ''} (view only). Use <b>▭ Case</b> to read it.`;
+    }
+    function findHTML(l, title) {
+        return `<div class="fdd-sec"><h4>${title}</h4>
+            <input class="fdd-search" id="fdd-pc-q" placeholder="Search name, case number, DOL, DOB, phone, claim #, plate…" value="${esc(l.q)}" oninput="fddSearch(this.value)">
+            <div class="fdd-res" id="fdd-res"></div>
+            <button class="fdd-chip" id="fdd-none" style="margin-top:6px;${l.selected === 'none' ? 'background:#ecfdf5;border-color:#10b981' : ''}" onclick="fddPick('none')">No matching case on file</button>
+            <p id="fdd-pick-line" style="margin:6px 0 0;font-size:11.5px;color:#475569">${pickLine(l.selected)}</p></div>`;
+    }
+    function directoryHTML() {
+        const F = window.MOCK_FIRM || {};
+        return `<details class="fdd-sec fdd-dir"><summary>☎ Firm directory and front-desk rules</summary>
+            <ul>${(F.directory || []).map(d => `<li><b>${esc(d.name)}</b>, ${esc(d.role)} · ext ${esc(d.ext)}</li>`).join('')}</ul>
+            <ul>${(F.rules || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul></details>`;
+    }
+
+    function practiceHTML() {
+        const l = P;
+        return `<div id="fdd-pc-id"></div>
+            <p id="fdd-pc-status" class="${l.warn ? 'warn' : ''}">${esc(l.status)}</p>
+            <div class="fdd-sec" style="padding:8px 10px"><div class="fdd-tx" id="fdd-pc-tr"></div>
+              <div class="fdd-comp"><textarea id="fdd-pc-in" maxlength="1000" placeholder="Type what you say to the caller…" onkeydown="fddPracticeKey(event)" oninput="fddPracticeInput(this)"></textarea>
+                <button class="send" id="fdd-pc-send" onclick="fddPracticeSend()" disabled>Send</button></div>
+              <div class="fdd-ctl" id="fdd-pc-ctl"></div></div>
+            <button class="fdd-hang" onclick="fddPracticeHangUp()">✆ Hang up</button>
+            ${findHTML(l, 'Find the file')}
+            ${directoryHTML()}`;
+    }
+
+    function pcWrapHTML() {
+        const l = P, secs = Math.round(((l.t1 || Date.now()) - (l.t0 || Date.now())) / 1000);
+        return `<div class="fdd-fb mid" style="margin-bottom:10px"><b>${l.ended === 'caller' ? 'The caller hung up.' : l.ended === 'time' ? 'The call reached its time limit.' : 'Call ended.'}</b> ⏱ ${fmtSec(secs)}. Wrap it up the way you would at the desk, then get your debrief.</div>
+            ${findHTML(l, '1 · Which file was this call about?')}
+            <div class="fdd-sec"><h4>2 · Authentication: who was the caller?</h4>${AUTH.map(([k, lab]) => `<label class="fdd-opt"><input type="radio" name="fdd-auth" value="${k}" ${l.auth === k ? 'checked' : ''} onchange="fddPracticeAuth(this.value)"><span>${esc(lab)}</span></label>`).join('')}</div>
+            <div class="fdd-sec"><h4>3 · Call note (optional)</h4><textarea class="fdd-note" id="fdd-pc-note" maxlength="1500" placeholder="Who called, what they wanted, what you told them or the message you took, and who it goes to." oninput="fddPracticeNote(this.value)">${esc(l.note)}</textarea></div>
+            <button class="fdd-go alt" id="fdd-pc-go" onclick="fddPracticeReview()" ${l.selected && l.auth ? '' : 'disabled'}>Get my debrief →</button>
+            <details class="fdd-sec" style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript</summary><div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div></details>`;
+    }
+    function pcWrapButton() { const b = $id('fdd-pc-go'); if (b && P) b.disabled = !(P.selected && P.auth); }
+    window.fddPracticeAuth = function (v) { if (P) { P.auth = v; pcWrapButton(); } };
+    window.fddPracticeNote = function (v) { if (P) P.note = cut(v, 1500); };
+
+    const transcriptText = (l) => l.msgs.map(m => m.who === 'caller' ? `Caller: ${m.text}` : m.who === 'you' ? `Receptionist: ${m.text}` : `(${m.text})`).join('\n');
+    const REVIEW_SYSTEM = 'You coach receptionists in training at a personal injury law firm. You review one practice phone call against the firm\'s front-desk rules and the answer key, and you reply with JSON only. Be specific and fair: refer to what the receptionist actually said. Judge only what is in the transcript and the wrap-up; the receptionist could not see the answer key. The transcript may come from speech recognition, so ignore small transcription slips. Write to the receptionist as "you". Never mention AI, models or prompts.';
+    function reviewPrompt(l) {
+        const c = l.call, k = caseOf(c.mock), F = window.MOCK_FIRM || {}, g = c.gives || {};
+        const picked = l.selected === 'none' ? 'not in the system' : l.selected ? `${l.selected}${caseOf(l.selected) ? ' · ' + caseOf(l.selected).client.name : ''}` : 'none';
+        return `FIRM FRONT-DESK RULES
+${(F.rules || []).map(r => '- ' + r).join('\n')}
+
+DIRECTORY
+${(F.directory || []).map(d => `- ${d.name}, ${d.role}, ext ${d.ext}`).join('\n')}
+
+ANSWER KEY FOR THIS CALL
+Caller: ${g.name || 'unknown'}${g.relationship ? ` (${g.relationship})` : ''}
+Caller's file: ${k ? `${k.id} · ${k.client.name} · case ${k.caseNumber || ''} · DOL ${k.dateOfLoss}` : 'none: the caller is not in the system'}
+Correct authentication: ${authLabel(c.auth)}
+${k && k.reception ? `On the file: ${k.reception.verify}\n` : ''}Identifiers the receptionist had to ask the caller for: ${needFor(c)}
+The right way to handle it: ${c.actions[c.answer]}
+Why: ${c.why}
+Wrong ways (for reference): ${c.actions.filter((_, i) => i !== c.answer).join(' | ')}
+
+TRANSCRIPT
+${transcriptText(l)}
+
+THE RECEPTIONIST'S WRAP-UP (after the call)
+File they matched: ${picked}
+Their authentication decision: ${authLabel(l.auth) || 'none'}
+Their call note: ${l.note.trim() || '(none)'}
+
+Reply with exactly this JSON:
+{"askedIds": true or false, "idsNote": "", "handling": 0-100, "handlingNote": "", "breach": true or false, "breachNote": "", "verdict": "", "strengths": [""], "improve": [""], "betterLine": ""}
+- askedIds: true only if, during the call, the receptionist asked the caller for every identifier listed in the key (asking counts even if the caller couldn't answer). idsNote: one sentence on what they asked for or missed.
+- handling (0-100): how well they handled the call: reached the right outcome from the key; gave only correct information from the file; took a complete message (name, callback number, reason, who it's for) when one was needed; routed to the right person; stayed courteous and in control; closed the call clearly. 90-100: what a senior receptionist would do. 70-89: right outcome with small gaps. 40-69: partly right. Below 40: wrong outcome. handlingNote: 1-2 sentences.
+- breach: true if the receptionist disclosed case information (even confirming the person is a client) to a caller who was not verified or not authorized, read an identifier out to the caller, or gave legal advice, a case value or a settlement opinion. breachNote: what was disclosed, or "".
+- verdict: one sentence overall. strengths and improve: 1 to 3 short points each.
+- betterLine: one thing they could have said, word for word, at the moment it mattered most.`;
+    }
+    function parseReview(text) {
+        const t = String(text || '').replace(/```(?:json)?/gi, '');
+        const a = t.indexOf('{'), b = t.lastIndexOf('}');
+        if (a < 0 || b <= a) return null;
+        let j; try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+        if (!j || typeof j !== 'object' || !isFinite(Number(j.handling))) return null;
+        const list = (v) => (Array.isArray(v) ? v : v ? [v] : []).map(x => cut(x, 300)).filter(Boolean).slice(0, 3);
+        return { askedIds: j.askedIds === true || j.askedIds === 'true', idsNote: cut(j.idsNote, 400),
+            handling: Math.max(0, Math.min(100, Math.round(Number(j.handling)))), handlingNote: cut(j.handlingNote, 600),
+            breach: j.breach === true || j.breach === 'true', breachNote: cut(j.breachNote, 400), verdict: cut(j.verdict, 400),
+            strengths: list(j.strengths), improve: list(j.improve), betterLine: cut(j.betterLine, 400) };
+    }
+    // find 30 and authenticate 30 against the key; identifiers 10 and handling 30 from the review.
+    function pcScore(l) {
+        const c = l.call, rv = l.review;
+        const find = l.selected === (c.mock || 'none'), authOk = l.auth === c.auth, idsOk = rv.askedIds;
+        const handling = rv.breach ? 0 : rv.handling;
+        return { id: c.id, mock: c.mock, mode: 'practice', voice: l.usedLive ? 'live' : 'standard', find, authOk, idsOk, breach: rv.breach, handling,
+            secs: Math.max(0, Math.round((l.t1 - l.t0) / 1000)),
+            score: (find ? 30 : 0) + (authOk ? 30 : 0) + (idsOk ? 10 : 0) + Math.round(handling * 0.3) };
+    }
+    window.fddPracticeReview = async function () {
+        const my = P; if (!my || !my.ended || !my.selected || !my.auth || my.reviewing) return;
+        my.reviewing = true; my.reviewError = null; screen = 'pcdebrief'; paint();
+        const r = await askWithRetry('review', REVIEW_SYSTEM, [{ role: 'user', text: reviewPrompt(my) }], true, () => P !== my);
+        if (!r) return;
+        my.reviewing = false;
+        const rv = r.ok ? parseReview(r.text) : null;
+        if (!rv) { my.reviewError = r.ok ? 'The review came back unreadable.' : r.error; paint(); return; }
+        my.review = rv; my.result = pcScore(my); paint();
+        const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0;
+        savePractice(my);
+    };
+    window.fddPracticeBackToWrap = function () { if (P && !P.review && !P.reviewing) { screen = 'pcwrap'; paint(); } };
+    async function savePractice(l) {
+        const r = l.result;
+        const detail = Object.assign({}, r, { picked: { selected: l.selected, auth: l.auth }, turns: l.msgs.filter(m => m.who === 'you').length,
+            note: cut(l.note, 1500), review: l.review, transcript: '' });
+        const full = transcriptText(l);
+        detail.transcript = full.length > 12000 ? '…' + full.slice(-12000) : full;
+        while (JSON.stringify([detail]).length > 19000 && detail.transcript.length > 500) detail.transcript = '…' + detail.transcript.slice(-Math.floor(detail.transcript.length * 0.7));
+        l.saved = 'saving'; paintSaved();
+        try {
+            const res = await fetch('/api/drill-results', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ mode: 'practice', program: l.program, calls: 1, details: [detail], score: r.score,
+                    findPct: r.find ? 100 : 0, authPct: Math.round(((r.authOk ? 30 : 0) + (r.idsOk ? 10 : 0)) / 40 * 100), actionPct: r.handling, avgSeconds: r.secs })
+            });
+            const data = await res.json().catch(() => ({}));
+            l.saved = data && data.success ? 'saved' : 'failed';
+        } catch (e) { l.saved = 'failed'; }
+        paintSaved(); loadHistory();
+    }
+    function paintSaved() {
+        const el = $id('fdd-pc-saved'), l = P; if (!el || !l) return;
+        el.style.color = l.saved === 'failed' ? '#b91c1c' : '#047857';
+        el.textContent = l.saved === 'saving' ? 'Saving…' : l.saved === 'saved' ? '✓ Saved to your results (your trainer sees them too)' : l.saved === 'failed' ? 'Couldn\'t save this result. Check your connection.' : '';
+    }
+
+    function pcDebriefHTML() {
+        const l = P, c = l.call, k = caseOf(c.mock);
+        if (l.reviewing) return `<div class="fdd-sec" style="text-align:center;padding:26px 12px"><div style="font-size:26px">📝</div><b>Reviewing your call…</b><p style="margin:6px 0 0;color:#64748b;font-size:12px">This takes a few seconds.</p></div>`;
+        if (!l.review) return `<div class="fdd-fb bad"><b>Couldn't get your debrief.</b> ${esc(l.reviewError || '')}</div>
+            <button class="fdd-go alt" onclick="fddPracticeReview()">Try again</button><button class="fdd-go" onclick="fddPracticeBackToWrap()">← Back to the wrap-up</button>`;
+        const r = l.result, rv = l.review, cls = r.score >= 85 ? 'ok' : r.score >= 60 ? 'mid' : 'bad';
+        const li = (a) => a.length ? `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
+        return `<div class="fdd-sec" style="text-align:center"><div class="fdd-score">${r.score}/100</div><div style="color:#64748b">Practice call · ⏱ ${fmtSec(r.secs)} · ${l.msgs.filter(m => m.who === 'you').length} replies</div>
+                <div class="fdd-grid"><div><span>Find</span><b>${r.find ? 30 : 0}/30</b></div><div><span>Authenticate</span><b>${r.authOk ? 30 : 0}/30</b></div><div><span>Identifiers</span><b>${r.idsOk ? 10 : 0}/10</b></div><div><span>Handling</span><b>${Math.round(r.handling * 0.3)}/30</b></div></div>
+                <div id="fdd-pc-saved" style="font-size:11.5px"></div></div>
+            <div class="fdd-fb ${cls}">
+                <div>${r.find ? '✓' : '✗'} <b>Find:</b> ${k ? `${esc(k.id)} · ${esc(k.client.name)} (${esc(k.caseNumber || '')}, DOL ${esc(k.dateOfLoss)})` : 'not in the system'}${r.find ? '' : ` (you picked ${esc(l.selected === 'none' ? 'not in the system' : l.selected)})`}</div>
+                <div>${r.authOk ? '✓' : '✗'} <b>Authenticate:</b> ${esc(authLabel(c.auth))}${r.authOk ? '' : ` (you picked: ${esc(authLabel(l.auth))})`}</div>
+                <div>${r.idsOk ? '✓' : '✗'} <b>Asked for:</b> ${esc(needFor(c))}. ${esc(rv.idsNote)}</div>
+                <div>${rv.handling >= 70 && !rv.breach ? '✓' : '✗'} <b>Handling ${r.handling}/100:</b> ${esc(rv.handlingNote)}</div>
+                ${rv.breach ? `<div class="fdd-breach">⚠ Disclosure: ${esc(rv.breachNote || 'information was shared that shouldn\'t have been')}. Handling scores 0.</div>` : ''}
+                <div style="margin-top:6px"><b>The key:</b> ${esc(c.actions[c.answer])}</div>
+                <div style="margin-top:3px;color:#334155">${esc(c.why)}</div>
+                ${k && k.reception ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px"><b>On file:</b> ${esc(k.reception.verify)}</div>` : ''}</div>
+            <div class="fdd-sec fdd-rv"><h4>Debrief</h4>
+                ${rv.verdict ? `<p style="margin:0 0 6px"><b>${esc(rv.verdict)}</b></p>` : ''}
+                ${rv.strengths.length ? `<div style="font-weight:700;color:#047857">What went well</div>${li(rv.strengths)}` : ''}
+                ${rv.improve.length ? `<div style="font-weight:700;color:#b45309">To work on</div>${li(rv.improve)}` : ''}
+                ${rv.betterLine ? `<div class="better"><b>Try saying:</b> “${esc(rv.betterLine)}”</div>` : ''}</div>
+            <details class="fdd-sec"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript${l.note ? ' and your note' : ''}</summary>
+                <div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div>${l.note ? `<p style="margin:6px 0 0;font-size:12px"><b>Your note:</b> ${esc(l.note)}</p>` : ''}</details>
+            <button class="fdd-go alt" onclick="fddPracticeStart()">📞 Take another call</button>
+            <button class="fdd-go" onclick="fddHome()">My results</button>
+            <div id="fdd-pc-hist" style="margin-top:10px">${historyHTML()}</div>`;
+    }
+
     // The sidebar button goes in after the Training Library button exists.
     const origApply = window.applySessionUI;
     if (typeof origApply === 'function') {
@@ -535,7 +1154,7 @@
             const r = origApply.apply(this, arguments);
             buildUI();
             const signedIn = typeof hasAuthorizedAccess === 'function' && hasAuthorizedAccess();
-            if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; screen = 'home'; document.body.classList.remove('fdd-on'); $id('fdd-panel').classList.remove('open'); }
+            if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on'); $id('fdd-panel').classList.remove('open'); }
             else if (signedIn && new URLSearchParams(location.search).get('drill') && !window.__fddOpened) { window.__fddOpened = true; setTimeout(openFrontDeskDrill, 80); }
             return r;
         };

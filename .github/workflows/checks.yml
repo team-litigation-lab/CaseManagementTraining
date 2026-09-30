@@ -30,6 +30,8 @@ jobs:
         run: node .github/scripts/check-site.mjs
       - name: Training Library cases and Front Desk Drill calls are consistent
         run: node .github/scripts/check-data.mjs
+      - name: Gemini key pool, /api/call-ai and practice call results (Google answered by the test)
+        run: node .github/scripts/call-ai.mjs
       - name: Build the Pages Functions without deploying
         run: npx --yes wrangler@3 pages functions build --outdir "$RUNNER_TEMP/dist"
 

@@ -5,7 +5,10 @@
 // trainees get no Training Library button and no list of everyone's cases,
 // the search bar above the case (and the Case Library window) finds saved and
 // mock cases by name or DOL and flags same-name files, and a library case's
-// Notes and Tasks can be edited, saved, reloaded and reset. The sidebar has one
+// Notes and Tasks can be edited, saved, reloaded and reset. Takes a practice call
+// on the standard voice (the caller's lines and the review answered by the test,
+// one busy line retried): answer, greet, pick the file from the search bar, the
+// caller hangs up, wrap up, debrief, saved as a practice call. The sidebar has one
 // calendar (the Firm Calendar; calendar.cjs tests it) and no .ics downloads.
 // Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
@@ -33,7 +36,8 @@ const SAVED = [
     const fail = (msg) => failures.push(msg);
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     page.on('dialog', d => d.accept());
-    const saved = [], drills = [], updates = {};
+    const saved = [], drills = [], updates = {}, aiCalls = [];
+    let busyOnce = true;
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
@@ -42,6 +46,13 @@ const SAVED = [
         if (u.pathname === '/api/case-repository') return j({ success: true, cases: SAVED });
         if (u.pathname === '/api/drill-results' && m === 'POST') { drills.push(JSON.parse(route.request().postData())); return j({ success: true }); }
         if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: false, results: [] });
+        if (u.pathname === '/api/call-ai') {
+            const b = JSON.parse(route.request().postData()); aiCalls.push(b);
+            if (b.purpose === 'review') return j({ success: true, text: '```json\n' + JSON.stringify({ askedIds: true, idsNote: 'You asked for everything.', handling: 90, handlingNote: 'Right outcome.', breach: false, breachNote: '', verdict: 'Well handled.', strengths: ['Verified first'], improve: ['Read back the callback number'], betterLine: 'May I have your date of birth?' }) + '\n```' });
+            if (busyOnce) { busyOnce = false; return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ success: false, error: 'The line is busy.' }) }); }
+            const last = b.messages[b.messages.length - 1].text;
+            return j({ success: true, text: /goodbye/i.test(last) ? 'Okay, thank you. Bye! [END_CALL]' : 'Caller: "Sure, one second."' });
+        }
         if (u.pathname === '/api/mock-case-updates') {
             const mock = u.searchParams.get('mock');
             if (m === 'POST') { const b = JSON.parse(route.request().postData()); updates[b.mock] = { notes: b.notes, tasks: b.tasks }; return j({ success: true }); }
@@ -52,7 +63,7 @@ const SAVED = [
     });
     await page.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'ci', fullName: 'CI Trainee', batchId: 'B1', userType: 'Trainee' })));
     // the drill as text (live voice calls are tested in livecall.cjs)
-    await page.addInitScript(() => localStorage.setItem('LSH_FDD_LIVE_V1', 'off'));
+    await page.addInitScript(() => { localStorage.setItem('LSH_FDD_LIVE_V1', 'off'); localStorage.setItem('LSH_FDD_SPEAK_V1', 'off'); });
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
 
@@ -199,13 +210,58 @@ const SAVED = [
     if (!seen.same || !seen.single) fail('the DOL scoring check never saw both kinds of call');
     await page.evaluate(() => fddClose());
 
+    // A practice call on the standard voice: no script, the caller answers what the trainee types.
+    await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(300);
+    await page.click('button:has-text("Take a practice call")');
+    if (!(await page.isVisible('#fdd-pc-id button:has-text("Answer")')) || await page.isVisible('.fdd-caller') || await page.isVisible('.fdd-asks')) fail('the practice call doesn\'t ring with an Answer button, or shows the script');
+    await page.click('#fdd-pc-id button:has-text("Answer")');
+    const pcCall = await page.evaluate(() => { const cid = document.querySelector('#fdd-pc-id span').textContent; return DRILL_CALLS.filter(d => cid.includes((String(d.gives.callback || '').match(/\(?\d{3}\)?[\s.-]*\d{3}-\d{4}/) || [])[0] || 'Unknown number')).map(d => d.id); });
+    await page.fill('#fdd-pc-in', 'Thank you for calling LSH, this is the front desk. May I have your full name and date of birth?');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.querySelectorAll('#fdd-pc-tr .fdd-msg.c:not(.typing)').length >= 1, null, { timeout: 9000 }).catch(() => {});
+    const turns = aiCalls.filter(b => b.purpose === 'caller');
+    const lines = await page.evaluate(() => [...document.querySelectorAll('#fdd-pc-tr .fdd-msg')].map(m => m.className.split(' ')[1] + ':' + m.textContent));
+    if (turns.length !== 2 || lines.join('|') !== 'y:Thank you for calling LSH, this is the front desk. May I have your full name and date of birth?|c:Sure, one second.') fail(`the caller's reply after a busy line (retried once) didn't show: ${turns.length} requests, transcript ${JSON.stringify(lines)}`);
+    const sys = (turns[0] && turns[0].system) || '';
+    const lc = await page.evaluate((s) => DRILL_CALLS.find(d => s.includes(d.opening.slice(1, 40))), sys);
+    if (!lc || !pcCall.includes(lc.id)) fail('couldn\'t tell which caller the practice call is (the caller ID or the caller\'s instructions are wrong)');
+    else {
+        if (!sys.includes(lc.gives.name) || !/\[END_CALL\]/.test(sys)) fail('the caller\'s instructions don\'t say who they are and how to end the call');
+        if (sys.includes(lc.why) || sys.includes(lc.actions[lc.answer])) fail('the caller\'s instructions include the answer key');
+        const m0 = (turns[0] && turns[0].messages) || [];
+        if (m0.length !== 1 || m0[0].role !== 'user') fail(`the first caller turn should carry just the greeting: ${JSON.stringify(m0)}`);
+        if (lc.mock) {   // the search bar above the case picks the call's file
+            await page.fill('#cl-bar-input', lc.mock);
+            await page.locator('#cl-bar-results .clb-row').filter({ has: page.locator('.cl-tag.mock', { hasText: new RegExp(`· ${lc.mock}$`) }) }).click();
+            if (!(await page.textContent('#fdd-pick-line')).includes(lc.mock) || await page.evaluate(() => mockCurrentId()) !== lc.mock) fail(`opening ${lc.mock} from the search bar during a practice call didn't count as the call's file`);
+        } else await page.click('#fdd-none');
+        await page.fill('#fdd-pc-in', 'Thanks for calling, goodbye.');
+        await page.click('#fdd-pc-send');
+        await page.waitForSelector('#fdd-pc-go', { timeout: 9000 });   // the caller hung up: wrap-up
+        if (!(await page.textContent('#fdd-pick-line')).includes(lc.mock || 'not in the system')) fail('the wrap-up lost the file picked during the call');
+        if (!(await page.isDisabled('#fdd-pc-go'))) fail('the debrief button is on before an authentication decision');
+        await page.check(`input[name="fdd-auth"][value="${lc.auth}"]`);
+        await page.fill('#fdd-pc-note', 'CI note: caller verified, message taken.');
+        await page.click('#fdd-pc-go');
+        await page.waitForSelector('.fdd-score', { timeout: 9000 });
+        const sc = await page.textContent('.fdd-score');
+        if (sc !== '97/100') fail(`the practice call scored ${sc} (expected 97/100: find 30, auth 30, identifiers 10, handling 90 → 27)`);
+        const rv = aiCalls.find(b => b.purpose === 'review'), rt = rv ? rv.messages[0].text : '';
+        if (!rv || !rv.json || !rt.includes(lc.why) || !rt.includes('Receptionist: Thank you for calling LSH') || !rt.includes('CI note')) fail('the review request is missing the key, the transcript or the call note');
+        await page.waitForTimeout(500);
+        const pr = drills.find(x => x.mode === 'practice');
+        if (!pr || pr.score !== 97 || pr.calls !== 1 || pr.actionPct !== 90 || pr.details[0].voice !== 'standard' || !/Receptionist: Thank you/.test(pr.details[0].transcript)) fail(`the practice call wasn't saved as a practice result (${JSON.stringify(pr && { score: pr.score, calls: pr.calls, actionPct: pr.actionPct, voice: pr.details[0].voice })})`);
+        if (!(await page.isVisible('text=Saved to your results'))) fail('the debrief doesn\'t say the call was saved');
+    }
+    await page.evaluate(() => fddClose());
+
     // One calendar: the Firm Calendar (the Calendar tab); no separate Training Calendar, no .ics downloads
     if (await page.locator('#sidebar-actions button:has-text(".ics")').count()) fail('the sidebar still offers .ics downloads');
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
     if (!(await page.locator('#sidebar-actions button:has-text("Firm Calendar")').count()) || !(await page.locator('#tab-calendar').count())) fail('the Firm Calendar button or the Calendar tab is missing');
 
     await browser.close(); server.close();
-    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls; checked the Case Library, library-case notes and the sidebar's calendar.`);
+    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls and a practice call; checked the Case Library, library-case notes and the sidebar's calendar.`);
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
     console.log('Smoke test passed.');
 })().catch(e => { console.error(e); process.exit(1); });

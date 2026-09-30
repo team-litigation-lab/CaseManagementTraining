@@ -1,12 +1,14 @@
 import { json, requireSession, buildFullName } from '../_utils.js';
 
-// Front Desk Drill results (front-desk-drill.js in the CMS). One row per
-// completed drill: which calls the trainee got, how they did at finding the
-// case, authenticating the caller and handling the call, and how long it
-// took. Trainees read their own history; Admins read everyone's.
+// Front Desk results (front-desk-drill.js in the CMS). One row per completed
+// drill (mode 'drill') or practice call (mode 'practice'): which calls the
+// trainee got, how they did at finding the case, authenticating the caller
+// and handling the call, and how long it took. Trainees read their own
+// history; Admins read everyone's.
 //
 // The table is created on first use (CREATE TABLE IF NOT EXISTS is a cheap
-// no-op after that), so no manual migration is needed. Same DDL for reference:
+// no-op after that), and the mode column is added to a table made before it
+// existed, so no manual migration is needed. Same DDL for reference:
 const DDL = `CREATE TABLE IF NOT EXISTS front_desk_drills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
@@ -20,10 +22,18 @@ const DDL = `CREATE TABLE IF NOT EXISTS front_desk_drills (
     action_pct INTEGER,
     avg_seconds INTEGER,
     details TEXT,
+    mode TEXT NOT NULL DEFAULT 'drill',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`;
+let modeChecked = false;   // once per Worker instance
 async function ensureTable(db) {
     await db.prepare(DDL).run();
+    if (modeChecked) return;
+    try { await db.prepare(`ALTER TABLE front_desk_drills ADD COLUMN mode TEXT NOT NULL DEFAULT 'drill'`).run(); modeChecked = true; }
+    catch (e) {
+        if (/duplicate column/i.test(String(e && e.message || e))) modeChecked = true;   // already there
+        else console.error('drill-results: adding the mode column failed', e);
+    }
 }
 const pct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
 
@@ -34,9 +44,9 @@ export async function onRequestGet({ request, env }) {
     await ensureTable(env.DB);
     const isAdmin = session.userType === 'Admin';
     const { results } = isAdmin
-        ? await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, calls, score, find_pct, auth_pct, action_pct, avg_seconds, created_at
+        ? await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, created_at
                                 FROM front_desk_drills ORDER BY created_at DESC LIMIT 1000`).all()
-        : await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details, created_at
+        : await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details, created_at
                                 FROM front_desk_drills WHERE username = ? ORDER BY created_at DESC LIMIT 100`).bind(session.username).all();
     return json({ success: true, isAdmin, results: results || [] });
 }
@@ -53,10 +63,10 @@ export async function onRequestPost({ request, env }) {
     await ensureTable(env.DB);
     const userRow = await env.DB.prepare(`SELECT first_name, mi, last_name, suffix FROM users WHERE username = ?`).bind(session.username).first();
     await env.DB.prepare(
-        `INSERT INTO front_desk_drills (username, full_name, batch_id, program, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO front_desk_drills (username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(session.username, buildFullName(userRow) || session.fullName || session.username, session.batchId || null,
-        String(body.program || '').slice(0, 20) || null, calls, pct(body.score), pct(body.findPct), pct(body.authPct), pct(body.actionPct),
+        String(body.program || '').slice(0, 20) || null, body.mode === 'practice' ? 'practice' : 'drill', calls, pct(body.score), pct(body.findPct), pct(body.authPct), pct(body.actionPct),
         Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), details).run();
     return json({ success: true });
 }
