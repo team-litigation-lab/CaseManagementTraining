@@ -723,6 +723,8 @@
             // A view-only Training Library case isn't the user's work: nothing to
             // autosave, archive on inactivity, or warn about losing.
             if (window.mockIsViewOnly && window.mockIsViewOnly()) return false;
+            // Nor is an Admin's edit of a library case: it saves to the library, never as their own case.
+            if (window.mockIsLibraryEdit && window.mockIsLibraryEdit()) return false;
             const name = document.getElementById('client-name-field').innerText.trim();
             return !!name;
         }
