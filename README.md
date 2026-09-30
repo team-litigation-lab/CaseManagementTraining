@@ -41,6 +41,32 @@ Admins: sidebar → **📞 Front Desk Drill · scored**. Trainees don't get the 
 
 To add or change a case, edit `mock-cases.js` (the comment at the top explains the fields). Course drills are keyed to these facts (e.g. the CM course's Front Desk Lookup), so update those when you change a fact.
 
+### 🎙 Live voice calls
+
+With **🎙 Live voice calls** ticked on the drill's start screen (the default in Chrome and Edge), each call is a real phone call instead of text.
+
+- **Answering:** the phone rings. The trainee presses **📞 Answer** and greets the caller the way they answer the firm's phone.
+- **The caller** talks back out loud in a natural voice (Gemini Live, one voice per caller, male or female to match the name). Either one can talk over the other, as on a real call.
+- **What the caller knows:** the caller only knows their script. That is why they're calling (`opening`) and what they answer when asked for each identifier (`gives`), wrong answers included. They don't volunteer details, don't invent case facts, and never say they're a simulation.
+- **Asking for identifiers:** the trainee just asks out loud. Each identifier is ticked on screen as they ask for it (from the live transcript), and that is what the "asked the right identifiers" points use. Tapping an identifier asks it in writing instead.
+- **Transcript:** both sides are transcribed as they speak. **Mute** and **Hang up** work as on a phone.
+- **Scoring:** "End the call and score it" hangs up. The call's transcript is saved with the drill result, for the trainer.
+- **Headset:** a headset works best. Speakers can echo the caller back into the microphone.
+
+**Falling back to text.** Without a microphone, in another browser, or while live voice isn't set up, the call runs as text as before, with a note saying why.
+
+**Setup:** add the Gemini key to this Pages project.
+1. Cloudflare → Workers & Pages → the CMS Pages project → **Settings → Variables and Secrets**.
+2. Add a secret named `GEMINI_API_KEY`, for Production and Preview. It can be the same key the courses use. `GEMINI_API_KEY1` … `GEMINI_API_KEY9` add more keys to share the load.
+3. Redeploy.
+
+Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. The default order is `gemini-3.8-live`, then `gemini-3.1-flash-live-preview`, then `gemini-2.5-flash-native-audio-preview-12-2025`. The drill moves to the next model on its own if one doesn't accept the call.
+
+**How it works:**
+- **The key stays on the server.** `functions/api/live-call.js` makes a single-use token that expires quickly, with the caller's script locked in (`functions/_live.js`). The browser (`live-call.js`) then talks straight to Google with that token. The key never reaches the browser, and the token can't be used for anything but that one call.
+- **Limit:** 60 live calls per trainee per hour (table `live_call_log`, created on first use).
+- **Region:** Google refuses some regions. If this site's server runs in one of them for a trainee, that trainee's calls run as text.
+
 ## Using the CMS from any training program
 
 Link to the CMS with a program so it opens in that program's context:
@@ -262,6 +288,16 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - files that share a client name having different dates of loss.
 - **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name and DOL, the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
+- **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
+  - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It moves to the next model when asked, and hands over to the next key when one is rate-limited. It refuses unknown calls and signed-out users, and applies the hourly cap.
+  - **Browser:**
+    - the call rings and Answer connects;
+    - the microphone streams as PCM;
+    - the caller's voice plays and is transcribed;
+    - identifiers asked out loud are ticked, and a tapped one is asked in writing;
+    - Mute stops the microphone;
+    - scoring hangs up and keeps the transcript;
+    - without live voice set up, the call and the rest of the drill run as text.
 - **Name sign-in** (`.github/scripts/guest.cjs`, in the same job): the real `guest-login.js` on SQLite. It checks that:
   - a registered trainee's name signs in to their account, with or without the M.I.;
   - duplicate names need the Batch ID;
