@@ -40,7 +40,7 @@ Like the Training Portal's Call Simulator. A random caller from `DRILL_CALLS` ph
 - **Debrief and score (100):** find the right file 30 and authentication 30, checked against the key; asked the right identifiers 10 and handled the call 30, from a review of the transcript and the note against the key and the firm's rules. Disclosing case information to a caller who isn't verified or authorized, reading an identifier out, or giving legal advice scores 0 for handling. The debrief says what went well, what to work on, a better line to say, the key and what the file says, with the transcript.
 - **Saved** with the drill results (as a practice call, with the transcript and the review), so trainers see practice calls in the team table.
 
-**Two voices.** With **🎙 Live voice calls** on (the default in Chrome and Edge), a practice call runs on live voice (Gemini Live, below): the caller hears the trainee and talks back naturally. When live voice is off, isn't set up, has no microphone, is busy or drops mid-call, the call goes on with the **standard voice**: the caller's next line comes from `/api/call-ai`, the browser reads it out (a female or male voice per caller; 🔊 Speaker, ↻ Replay), and the trainee types or talks (🎙 Talk, 🔁 Hands-free). A call that drops keeps its transcript, and the caller carries on from there. After live voice is found not set up, practice calls use the standard voice for the rest of the visit; after it's busy, for two minutes.
+**Two voices.** With **🎙 Live voice calls** on (the default in Chrome and Edge), a practice call runs on live voice (Gemini Live, below): the caller hears the trainee and talks back naturally. When live voice is off, isn't set up, has no microphone, is busy or drops mid-call, the call goes on with the **standard voice**: the caller's next line comes from `/api/call-ai`, the browser reads it out (a female or male voice per caller; 🔊 Speaker, ↻ Replay), and the trainee types or talks (🎙 Talk, 🔁 Hands-free). A call that drops keeps its transcript, and the caller carries on from there. After live voice is found not set up, without a microphone, out of the day's minutes or refused in this region, practice calls use the standard voice for the rest of the visit; after a busy line, the next call tries live voice again. A live practice call ends at the live voice time limit (a warning comes 30 seconds before) and goes to the wrap-up.
 
 **Heavy use (a whole class at once).** Live voice spreads its calls over the keys itself (below). On the standard voice, every Gemini key on the project is used and the keys take turns (`functions/_ai.js`): each caller line and review starts on the next key, so the load is spread across all of them. A key that hits its limit rests (a minute, or an hour when its daily quota is used up; a rejected key 10 minutes) and the request moves to the next key at once, so later requests don't pay for a failed try. Caller lines start on Flash-Lite, which has the biggest free quota; reviews start on Flash. When every key is busy, the page retries the line three times (after 1.5, 3 and 6 seconds) and then puts the trainee's line back in the box to send again. Each user gets up to `CALL_AI_LIMIT` caller lines and reviews per 10 minutes (default 150; a call uses about 10 to 30), so one runaway page can't use up the class's quota. The more keys from separate Google Cloud projects, the more trainees can call at once. Admins can see how many keys are set up and which are resting at `/api/call-ai` (GET).
 
@@ -81,9 +81,26 @@ With **🎙 Live voice calls** ticked on the drill's start screen (the default i
 
 Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. The default order is `gemini-3.8-live`, then `gemini-3.1-flash-live-preview`, then `gemini-2.5-flash-native-audio-preview-12-2025`. The drill moves to the next model on its own if one doesn't accept the call.
 
+**Capacity and cost (a whole class at once):**
+- **Limits are per Google Cloud project, not per key.** Google caps how many live calls run at once, and how much audio is used per minute and per day, for each project. Keys from **different projects** add capacity; two keys from the same project share one allowance. Your current limits are on the [AI Studio rate-limit page](https://aistudio.google.com/rate-limit). Free-tier limits are low; turning on billing for a project (paid tier) raises them a lot.
+- **Spreading the load:** each new call goes to the key with the fewest calls in progress. When a call ends (or the page closes), its place is freed.
+- **When a key is busy:** if Google refuses a call (busy, out of quota, model unavailable), the drill tries the next key, then the next model. Only when none takes the call does that one call run as text. The next call tries live again, so a trainee is never stuck.
+- **Paid price:** Gemini Live costs about $0.005 per minute of the trainee's audio and $0.018 per minute of the caller's. That is about $0.023 per minute of call when the caller talks the whole time, so a 3-minute call costs a few cents. Ten trainees each doing an 8-call drill is roughly 80 calls, about 240 minutes, **roughly $5–6**. Google's billing page has the exact amounts.
+- **Time limit:** every call hangs up at a time limit (6 minutes by default), with a warning 30 seconds before. A forgotten open call can't keep running.
+- **Optional caps:** set these Cloudflare variables (plain text):
+  - `LIVE_MAX_MINUTES`: the time limit per call (1–15; default 6).
+  - `LIVE_CALLS_PER_KEY`: the most calls at once on one key. Calls past it run as text. Use it to stay under a free-tier limit on concurrent calls.
+  - `LIVE_DAILY_MINUTES`: the whole site's live minutes in any 24 hours. Past it, the drill runs as text until minutes free up. This is a spending cap.
+- **Usage for Admins:** the drill panel shows **🎙 Live voice calls**:
+  - calls in progress now;
+  - calls, minutes and estimated cost over the last 24 hours;
+  - each key's calls in progress;
+  - how many tries Google refused.
+- **Budget alert:** for extra safety, set one on the Google Cloud billing account (Billing → Budgets & alerts).
+
 **How it works:**
 - **The key stays on the server.** `functions/api/live-call.js` makes a single-use token that expires quickly, with the caller's script locked in (`functions/_live.js`). The browser (`live-call.js`) then talks straight to Google with that token. The key never reaches the browser, and the token can't be used for anything but that one call.
-- **Limit:** 60 live calls per trainee per hour (table `live_call_log`, created on first use).
+- **Log:** 60 live calls per trainee per hour. Each call is logged in `live_call_log` (created on first use, kept 3 days) with its key, model, start and end, which is what the balancing, the caps and the usage panel read.
 - **Region:** Google refuses some regions. If this site's server runs in one of them for a trainee, that trainee's calls run as text.
 
 ## Using the CMS from any training program
@@ -314,16 +331,24 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
 - **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the debrief needs a file and an authentication decision, scores 97 from the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
-  - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It moves to the next model when asked, and hands over to the next key when one is rate-limited. It refuses unknown calls and signed-out users, and applies the hourly cap.
+  - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
+    - calls spread over the keys (least busy first), and an ended call frees its key;
+    - a try Google refused moves to the other key, then the next model, then text;
+    - `LIVE_CALLS_PER_KEY`, `LIVE_DAILY_MINUTES` and `LIVE_MAX_MINUTES`;
+    - the Admin usage report;
+    - a rate-limited key hands over to the next;
+    - unknown calls and signed-out users are refused, and the hourly cap applies.
   - **Browser:**
     - the call rings and Answer connects;
     - the microphone streams as PCM;
     - the caller's voice plays and is transcribed;
     - identifiers asked out loud are ticked, and a tapped one is asked in writing;
     - Mute stops the microphone;
-    - scoring hangs up and keeps the transcript;
+    - a refused line is retried on another;
+    - the time limit warns, then hangs up;
+    - scoring hangs up, frees the line and keeps the transcript;
     - without live voice set up, the call and the rest of the drill run as text;
-    - a **practice call on live voice**: Answer connects, both sides are transcribed, a typed line goes to the caller; when the live line drops (busy), the call goes on with the standard voice and the caller gets the transcript so far; the debrief scores it and the result is saved with the whole transcript; right after that the next practice call goes straight to the standard voice; and on a visit where live voice isn't set up, the practice call says so, carries on with the standard voice, and the next one doesn't ask for live voice again.
+    - a **practice call on live voice**: Answer connects, both sides are transcribed, a typed line goes to the caller; when the live line drops (busy), the call goes on with the standard voice and the caller gets the transcript so far; the debrief scores it and the result is saved with the whole transcript; the next practice call tries live voice again and ends at the time limit, going to the wrap-up; and on a visit where live voice isn't set up, the practice call says so, carries on with the standard voice, and the next one doesn't ask for live voice again.
 - **Name sign-in** (`.github/scripts/guest.cjs`, in the same job): the real `guest-login.js` on SQLite. It checks that:
   - a registered trainee's name signs in to their account, with or without the M.I.;
   - duplicate names need the Batch ID;

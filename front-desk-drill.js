@@ -40,9 +40,11 @@
    and working; otherwise, or when it's busy or drops, it goes on with
    the standard voice: the caller's lines come from /api/call-ai and are
    read out by the browser (call-voice.js), and the trainee types or
-   talks. /api/call-ai and the live voice tokens share one key pool that
-   takes turns and rests busy keys (functions/_ai.js), and a busy line
-   is retried here with a back-off, so a whole class can call at once.
+   talks. So a whole class can call at once, live voice spreads its
+   calls over the keys (functions/api/live-call.js); the standard
+   voice's lines and the debriefs take turns over every key, resting a
+   key that hits its limit (functions/_ai.js); and a busy line is
+   retried here with a back-off.
    ========================================================= */
 (function () {
     'use strict';
@@ -284,11 +286,14 @@
                 lv.talking = role === 'caller';
                 paintLines(); paintAvatar();
             },
+            onNotice: (msg) => { if (D && D.cur === cur && cur.live) { lv.note = msg; paintPhone(); } },
             onError: (msg, code) => {
                 if (!D || D.cur !== cur || !cur.live) return;
-                // No microphone, or live voice isn't set up here: the rest of the drill runs as text.
-                if (['MIC', 'NOT_CONFIGURED', 'NO_MODEL'].includes(code)) D.live = false;
-                if (lv.lines.length) { lv.status = 'ended'; lv.note = msg; paintPhone(); return; }
+                // No microphone, live voice not set up, the day's minutes used up, or a refused
+                // region: the rest of the drill runs as text. (Busy lines: the next call tries again.)
+                if (['MIC', 'NOT_CONFIGURED', 'BUDGET', 'REGION'].includes(code)) D.live = false;
+                // A call that was already connected ends on the phone; one that never started runs as text.
+                if (lv.lines.length || ['TIME', 'DROPPED'].includes(code)) { lv.status = 'ended'; lv.note = msg; paintPhone(); return; }
                 cur.live = null; cur.liveNote = msg; paint();
             }
         });
@@ -396,7 +401,16 @@
         } catch (e) { D.saved = 'failed'; }
         paint(); loadHistory();
     }
+    let liveUsage = null;
+    async function loadLiveUsage() {
+        try {
+            const res = await fetch('/api/live-call', { credentials: 'include' });
+            const data = await res.json();
+            liveUsage = data && data.success ? data : null;
+        } catch (e) { liveUsage = null; }
+    }
     async function loadHistory() {
+        if (isAdmin()) await loadLiveUsage();
         try {
             const res = await fetch('/api/drill-results', { credentials: 'include' });
             const data = await res.json();
@@ -450,6 +464,14 @@
             ${historyHTML()}`;
     }
 
+    // Admins: how much the live voice calls are being used (and roughly what they cost).
+    function liveUsageHTML() {
+        const u = liveUsage; if (!u) return '';
+        const lim = u.limits || {};
+        return `<div class="fdd-sec"><h4>🎙 Live voice calls</h4>
+            <div class="fdd-grid"><div><span>On calls now</span><b>${u.activeNow}</b></div><div><span>Calls · 24 h</span><b>${u.last24h.calls}</b></div><div><span>Minutes · 24 h</span><b>${u.last24h.minutes}${lim.dailyMinutes ? `<span style="display:inline;font-size:10px"> / ${lim.dailyMinutes}</span>` : ''}</b></div><div><span>Est. cost · 24 h</span><b>$${u.last24h.estCost.toFixed(2)}</b></div></div>
+            <p style="margin:4px 0 0;font-size:11.5px;color:#64748b;line-height:1.5">${u.keys.length} key${u.keys.length === 1 ? '' : 's'}: ${u.keys.map(k => `${esc(k.slot)} (${k.activeNow} now)`).join(', ') || 'none set'} · calls end at ${lim.maxMinutes} min${lim.perKey ? ` · at most ${lim.perKey} at once per key` : ''}${u.last24h.refused ? ` · ${u.last24h.refused} tr${u.last24h.refused === 1 ? 'y' : 'ies'} refused by Google (busy), moved to another key or to text` : ''}. The cost is an estimate at Google's paid per-minute price (Google's billing page has the exact amount). Google's limits are per Google Cloud project, so keys from different projects add capacity.</p></div>`;
+    }
     function historyHTML() {
         if (!history) return `<p style="color:#64748b;font-size:12px">Loading results…</p>`;
         const rows = history.results || [];
@@ -460,7 +482,7 @@
                 const n = rs.length, avg = (k) => Math.round(rs.reduce((a, r) => a + (r[k] || 0), 0) / n);
                 return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, practice: rs.filter(r => r.mode === 'practice').length, score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: avg('find_pct'), auth: avg('auth_pct'), act: avg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
             }).sort((a, b) => b.score - a.score);
-            return `<div class="fdd-sec"><h4>Team results (${rows.length} drills and practice calls)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
+            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} drills and practice calls)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
                 ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}%</td><td>${t.auth}%</td><td>${t.act}%</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>`;
         }
         return `<div class="fdd-sec"><h4>My results</h4>${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Type</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
@@ -722,16 +744,24 @@ The call has just been answered. When the receptionist greets you, say why you'r
                 if (m) m.text = text; else my.msgs.push({ who: role === 'you' ? 'you' : 'caller', text, id });
                 pcTr();
             },
-            onError: (msg, code) => { if (P === my && !my.ended && my.transport === 'live') toStandard(my, msg, code); }
+            onNotice: (msg) => { if (P === my && !my.ended && my.transport === 'live') pcStatus(msg, true); },
+            onError: (msg, code) => {
+                if (P !== my || my.ended || my.transport !== 'live') return;
+                if (code === 'TIME') return pcEnd('time');   // the call's time limit (LIVE_MAX_MINUTES)
+                toStandard(my, msg, code);
+            }
         });
     }
+    // The live voice messages end with what the drill does ("This call runs as text…"); a practice call goes on with the standard voice instead.
+    const textless = (m) => String(m).replace(/[;,]?\s*(?:so\s+)?(?:this call|the drill|the call)\s+runs as text[^.]*\.?/gi, '.').replace(/\s*,?\s*or run (?:it|this call) as text/gi, '').replace(/\.{2,}/g, '.').replace(/\s+\./g, '.').trim();
     function toStandard(my, why, code) {
         my.transport = 'standard'; my.liveUp = false;
         if (window.LiveCall && window.LiveCall.active()) window.LiveCall.stop();
-        why = code === 'DROPPED' ? (/busy/i.test(why) ? 'The live voice service got busy.' : 'The live line dropped.')
-            : String(why || 'Live voice isn\'t available.').replace(/\s*(This call runs as text|or run (it|this call) as text)\.?/gi, '').replace(/,\s*\./, '.').trim();
-        // Not set up, no model, no microphone: don't try again this visit. Busy: give it two minutes.
-        pcLiveWhy = why; pcLiveOff = ['NOT_CONFIGURED', 'NO_MODEL', 'MIC'].includes(code) ? Infinity : Date.now() + 120000;
+        why = code === 'DROPPED' ? (/busy/i.test(why) ? 'The live voice service got busy.' : 'The live line dropped.') : textless(why || 'Live voice isn\'t available.');
+        // Not set up, no microphone, the day's live minutes used up, a refused region: not again
+        // this visit. Busy or dropped: the next practice call tries live voice again.
+        const off = ['NOT_CONFIGURED', 'NO_MODEL', 'MIC', 'BUDGET', 'REGION'].includes(code);
+        pcLiveWhy = off ? why : ''; pcLiveOff = off ? Infinity : 0;
         my.voiceNote = `🎙 ${why} The call goes on with the standard voice: type your reply${voice() && voice().canListen ? ' or press 🎙 Talk' : ''}.`;
         const V = voice(); if (V && my.speak) V.unlock();
         pcStatus(my.msgs.length ? 'Your turn.' : 'Greet the caller the way you answer the firm\'s phone.');
@@ -866,7 +896,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         stopTimer();
         if (l.transport === 'live' && window.LiveCall) window.LiveCall.stop();
         const V = voice(); if (V) V.stopAll();
-        l.msgs.push({ who: 'sys', text: by === 'caller' ? 'The caller hung up.' : 'You ended the call.' });
+        l.msgs.push({ who: 'sys', text: by === 'caller' ? 'The caller hung up.' : by === 'time' ? 'The call reached its time limit.' : 'You ended the call.' });
         screen = 'pcwrap'; paint(); fddRestore();
         const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0;
     }
@@ -947,7 +977,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
 
     function pcWrapHTML() {
         const l = P, secs = Math.round(((l.t1 || Date.now()) - (l.t0 || Date.now())) / 1000);
-        return `<div class="fdd-fb mid" style="margin-bottom:10px"><b>${l.ended === 'caller' ? 'The caller hung up.' : 'Call ended.'}</b> ⏱ ${fmtSec(secs)}. Wrap it up the way you would at the desk, then get your debrief.</div>
+        return `<div class="fdd-fb mid" style="margin-bottom:10px"><b>${l.ended === 'caller' ? 'The caller hung up.' : l.ended === 'time' ? 'The call reached its time limit.' : 'Call ended.'}</b> ⏱ ${fmtSec(secs)}. Wrap it up the way you would at the desk, then get your debrief.</div>
             ${findHTML(l, '1 · Which file was this call about?')}
             <div class="fdd-sec"><h4>2 · Authentication: who was the caller?</h4>${AUTH.map(([k, lab]) => `<label class="fdd-opt"><input type="radio" name="fdd-auth" value="${k}" ${l.auth === k ? 'checked' : ''} onchange="fddPracticeAuth(this.value)"><span>${esc(lab)}</span></label>`).join('')}</div>
             <div class="fdd-sec"><h4>3 · Call note (optional)</h4><textarea class="fdd-note" id="fdd-pc-note" maxlength="1500" placeholder="Who called, what they wanted, what you told them or the message you took, and who it goes to." oninput="fddPracticeNote(this.value)">${esc(l.note)}</textarea></div>
