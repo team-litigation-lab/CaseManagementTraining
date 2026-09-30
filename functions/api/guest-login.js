@@ -19,7 +19,9 @@ const BLOCKED = {
     Revoked: 'Access for this name has been revoked by an administrator.',
     Suspended: 'Access for this name has been temporarily revoked by an administrator.'
 };
-const LOOKUPS_PER_HOUR = 30;   // failed name look-ups per connection per hour
+// Failed name look-ups per connection per hour. A class often shares one office
+// connection, so this leaves room for a room full of typos and unregistered names.
+const LOOKUPS_PER_HOUR = 120;
 
 const normName = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
 // How a registered trainee's name may be typed: first + last, with or without M.I. and suffix.

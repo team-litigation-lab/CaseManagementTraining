@@ -2489,6 +2489,23 @@
             .catch(() => false);
         }
 
+        // A request refused only because the session's heartbeat lapsed (the computer slept,
+        // or the browser paused a background tab) is sent again once, right after a heartbeat,
+        // so the trainee's note, call or save goes through instead of failing. The server
+        // refuses those before doing anything, so sending one again is safe.
+        (function () {
+            const nativeFetch = window.fetch.bind(window);
+            window.fetch = async function (input, init) {
+                const res = await nativeFetch(input, init);
+                if (res.status !== 401) return res;
+                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                if (!/\/api\//.test(url) || /\/api\/(heartbeat|login|logout|guest-login)\b/.test(url) || !getSession()) return res;
+                const data = await res.clone().json().catch(() => null);
+                if (!data || data.code !== 'SESSION_EXPIRED') return res;
+                return (await sendHeartbeat()) ? nativeFetch(input, init) : res;
+            };
+        })();
+
         function stopHeartbeat() {
             if (heartbeatTimer) {
                 clearInterval(heartbeatTimer);
@@ -2843,9 +2860,31 @@
            ========================================================= */
         let lastAlertId = null;
         let lastAnnouncementText = null; // null = not yet initialized (first poll after page load)
-        let lastPingId = null; // last delivered ping id, so a given ping is never toasted twice
+        // Pings this browser has shown (kept across reloads, so a reload doesn't show one again).
+        const SEEN_PINGS_KEY = 'LSH_SEEN_PINGS_V1';
+        const seenPings = new Set((() => { try { return JSON.parse(localStorage.getItem(SEEN_PINGS_KEY) || '[]'); } catch (e) { return []; } })().map(String));
+        function markPingSeen(id) {
+            seenPings.add(String(id));
+            try { localStorage.setItem(SEEN_PINGS_KEY, JSON.stringify([...seenPings].slice(-100))); } catch (e) { /* private mode: this tab still remembers */ }
+        }
         function refreshSiteState() {
             fetch('/api/state').then(r => r.json()).then(state => applySiteState(state)).catch(() => {});
+        }
+        function deliverPing(ping) {
+            if (!ping || !ping.id || seenPings.has(String(ping.id))) return;
+            const pingSession = getSession();
+            const myUsername = pingSession && pingSession.username;
+            const isForMe = ping.target === '__all__' ||
+                (myUsername && (Array.isArray(ping.target) ? ping.target.includes(myUsername) : ping.target === myUsername));
+            if (!isForMe) return;
+            const age = typeof ping.ageMs === 'number' ? ping.ageMs : (ping.firedAt ? Date.now() - new Date(ping.firedAt).getTime() : 0);
+            if (age >= 60000) return;
+            markPingSeen(ping.id);
+            const byLine = 'By: ' + (ping.by || 'System Administrator');
+            // A ping sent as a task ("[TASK] …") waits for Accept, which adds it to the case's Tasks (case-sections.js).
+            const taskText = /^\[TASK\]\s*/.test(ping.text || '') ? ping.text.replace(/^\[TASK\]\s*/, '') : null;
+            if (taskText && typeof window.showTaskAssignment === 'function') window.showTaskAssignment({ id: ping.id, text: taskText, by: ping.by || 'System Administrator' });
+            else showToast('📣 ' + (ping.text || 'You have been pinged by an Administrator.'), 'ping', 6000, byLine);
         }
         function applySiteState(state) {
             if (!state) return;
@@ -2887,27 +2926,14 @@
 
             // Ping — instant toast+sound notification to a specific user or
             // everyone, styled and sounding exactly like the login-success
-            // toast (see showToast). One-shot: each ping fires at most once per
-            // browser, and stale pings (fired well before this poll, e.g. one
-            // that went out before this browser tab was opened) are skipped so
-            // loading/refreshing the page doesn't replay old notifications.
-            if (state.ping && state.ping.id && state.ping.id !== lastPingId) {
-                const pingSession = getSession();
-                const myUsername = pingSession && pingSession.username;
-                const isForMe = state.ping.target === '__all__' ||
-                    (myUsername && (Array.isArray(state.ping.target)
-                        ? state.ping.target.includes(myUsername)
-                        : state.ping.target === myUsername));
-                const isFresh = !state.ping.firedAt || (Date.now() - new Date(state.ping.firedAt).getTime()) < 10000;
-                if (isForMe && isFresh) {
-                    const byLine = 'By: ' + (state.ping.by || 'System Administrator');
-                    // A ping sent as a task ("[TASK] …") waits for Accept, which adds it to the case's Tasks (case-sections.js).
-                    const taskText = /^\[TASK\]\s*/.test(state.ping.text || '') ? state.ping.text.replace(/^\[TASK\]\s*/, '') : null;
-                    if (taskText && typeof window.showTaskAssignment === 'function') window.showTaskAssignment({ id: state.ping.id, text: taskText, by: state.ping.by || 'System Administrator' });
-                    else showToast('📣 ' + (state.ping.text || 'You have been pinged by an Administrator.'), 'ping', 6000, byLine);
-                }
-                lastPingId = state.ping.id;
-            }
+            // toast (see showToast). /api/state lists the last minute's pings,
+            // each with its age measured on the server (so a computer whose clock
+            // is off still gets them), and a ping sent right after another one
+            // isn't lost between two polls. Each one shows once per browser, even
+            // across reloads; older ones (e.g. sent before this tab was opened)
+            // are skipped.
+            const pings = Array.isArray(state.pings) ? state.pings : (state.ping ? [state.ping] : []);
+            pings.slice().sort((x, y) => x.id - y.id).forEach(deliverPing);
 
             // Pause overlay (freezes, no logout) — admins are exempt so they can always resume
             const pauseOverlay = document.getElementById('pause-overlay');

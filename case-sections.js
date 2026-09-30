@@ -293,7 +293,8 @@
         savePending(list.filter(x => String(x.id) !== String(id)));
         renderTaskCards();
         if (typeof showTab === 'function') showTab('tasks');
-        toast('Task added to this case\'s Tasks. Save the case to keep it.', 'success', 4500);
+        // A Training Library case saves its Notes and Tasks by itself (training-library.js); a saved case needs Save / Update.
+        toast(viewOnly() ? 'Task added to this case\'s Tasks and saved. You can edit it and change who it\'s assigned to.' : 'Task added to this case\'s Tasks. Save the case to keep it.', 'success', 4500);
     };
     window.dismissTask = function (id) { savePending(pending().filter(x => String(x.id) !== String(id))); renderTaskCards(); };
 
