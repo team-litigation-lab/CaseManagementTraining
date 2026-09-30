@@ -10,7 +10,7 @@
 // one busy line retried): answer, greet, pick the file from the search bar, the
 // caller hangs up, wrap up, debrief, saved as a practice call. The sidebar has one
 // calendar (the Firm Calendar; calendar.cjs tests it) and no .ics downloads. The Caller
-// scenarios panel shows the reception call scripts to Admins only, for every file.
+// scenarios panel (with its reception call scripts) is for Admins only, on every file.
 // Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -261,16 +261,25 @@ const SAVED = [
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
     if (!(await page.locator('#sidebar-actions button:has-text("Firm Calendar")').count()) || !(await page.locator('#tab-calendar').count())) fail('the Firm Calendar button or the Calendar tab is missing');
 
-    // Caller scenarios: a trainee gets no call scripts; an Admin gets a reception call script for every
-    // caller scenario and a scripted mock call (the caller's answers) for every simulator caller on the file
-    await page.evaluate(() => { openMockCase('MC-01', { silent: true }); openCallsPanel(); });
-    if (await page.locator('#mock-calls-panel .fdd-script, #mock-calls-panel .mcp-scripts').count()) fail('a trainee can see the reception call scripts');
-    await page.evaluate(() => closeCallsPanel());
+    // Caller scenarios are for trainers only: a trainee gets no button and no panel (on the library
+    // original or a practice copy). An Admin gets a reception call script for every caller scenario
+    // and a scripted mock call (the caller's answers) for every simulator caller on the file
+    for (const copy of [false, true]) {
+        await page.evaluate((copy) => { openMockCase('MC-01', { silent: true }); if (copy) startPracticeCopy(); openCallsPanel(); }, copy);
+        const where = copy ? 'a practice copy' : 'a library case';
+        if (await page.locator('#mock-banner button:has-text("Caller scenarios")').count()) fail(`a trainee has the Caller scenarios button on ${where}`);
+        if (await page.isVisible('#mock-calls-panel.open') || await page.locator('#mock-calls-panel .mcp-call, #mock-calls-panel .fdd-script').count()) fail(`openCallsPanel() showed a trainee the caller scenarios on ${where}`);
+    }
+    await page.evaluate(() => closeMockCase());
     const admin = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     admin.on('pageerror', e => fail(`page error (admin): ${e.message}`));
     await admin.route('**/api/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(new URL(route.request().url()).pathname === '/api/case-repository' ? { success: true, cases: [] } : { success: true }) }));
     await admin.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'trainer-ci', fullName: 'CI Trainer', batchId: 'B1', userType: 'Admin' })));
     await admin.goto(base, { waitUntil: 'load' }); await admin.waitForTimeout(1200);
+    await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
+    await admin.click('#mock-banner button:has-text("Caller scenarios")');
+    if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');
+    await admin.evaluate(() => closeCallsPanel());
     const scripts = await admin.evaluate(() => MOCK_CASES.map(c => {
         openMockCase(c.id, { silent: true }); openCallsPanel();
         const panel = document.getElementById('mock-calls-panel'), issues = [];

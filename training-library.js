@@ -19,9 +19,9 @@
       cases with the search bar above the case (case-library.js), and
       every way into the library (the banner, ?library=1) takes them to
       it; the firm directory opens in the Case Library window.
-   3. Caller scenarios. For the front desk: how to verify the caller on
-      this file, the calls it gets, and the model handling (hidden until
-      the trainee reveals it; always shown to Admins).
+   3. Caller scenarios (trainers/Admins only). For the front desk: how to
+      verify the caller on this file, the calls it gets, the model handling
+      and a reception call script for each, to run mock calls with trainees.
    Deep links: ?mock=MC-04 opens that case after sign-in (courses use it),
    ?library=1 opens the library.
    ========================================================= */
@@ -185,14 +185,12 @@
     .mcp-call{border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:10px}
     .mcp-call .from{font-size:10.5px;font-weight:800;text-transform:uppercase;color:#64748b}
     .mcp-call .ask{font-size:13px;color:#0f2148;font-weight:700;margin:4px 0 8px}
-    .mcp-call textarea{width:100%;min-height:54px;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit}
     .mcp-call .key{display:none;font-size:12px;color:#14532d;background:#f0fdf4;border-radius:6px;padding:8px 10px;margin-top:6px}
     .mcp-call.shown .key{display:block}
     .mcp-script{margin-top:8px}.mcp-script summary{cursor:pointer;font-size:10.5px;font-weight:800;text-transform:uppercase;color:#0f2148;letter-spacing:.04em}
     .mcp-script .fdd-script{margin:8px 0 0}
     .mcp-scripts{border-top:2px solid #e2e8f0;margin:14px 0 12px;padding-top:12px}.mcp-scripts .mcp-sh{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#0f2148}
     .mcp-scripts p{font-size:11.5px;color:#64748b;margin:4px 0 8px}
-    .mcp-call button{font-size:10px;font-weight:800;text-transform:uppercase;background:#fff;border:1px solid #0f2148;color:#0f2148;border-radius:6px;padding:5px 9px;cursor:pointer;margin-top:6px}
     `;
     document.head.appendChild(css);
 
@@ -665,11 +663,12 @@
         if (!c) { b.classList.remove('open'); b.innerHTML = ''; closeCallsPanel(); return; }
         b.classList.add('open');
         const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="focusCaseSearch()">🔍 Search cases</button>`;
+        const calls = isAdmin() ? `<button onclick="openCallsPanel()">☎ Caller scenarios</button>` : '';   // trainers only
         b.innerHTML = mockViewOnly
             ? `<span class="mb-tag">TRAINING LIBRARY · ${c.id}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span><span class="mb-sp"></span>
-               <button onclick="openCallsPanel()">☎ Caller scenarios</button><button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
+               ${calls}<button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
             : `<span class="mb-tag">PRACTICE COPY · ${c.id}</span><span>Your own copy of <b>${esc(c.client.name)}</b>. Save Case adds it to your cases; the library original never changes.</span><span class="mb-sp"></span>
-               <button onclick="openCallsPanel()">☎ Caller scenarios</button><button onclick="openMockCase('${c.id}')">↺ Back to the library original</button>`;
+               ${calls}<button onclick="openMockCase('${c.id}')">↺ Back to the library original</button>`;
     }
 
     window.openMockCase = function (id, opts) {
@@ -715,22 +714,21 @@
         if (typeof showTab === 'function') showTab('profile');
     };
 
-    /* ---------- caller scenarios side panel ---------- */
+    /* ---------- caller scenarios side panel (trainers/Admins only) ---------- */
     window.openCallsPanel = function () {
         const c = mockId && findCase(mockId); const p = $id('mock-calls-panel'); if (!c || !p) return;
-        const admin = isAdmin();
+        if (!isAdmin()) { closeCallsPanel(); return; }
         const r = c.reception || { verify: '', calls: [] };
         p.innerHTML = `<div class="mcp-h"><div><div style="font-size:10px;color:#fdba74;font-weight:800;letter-spacing:1px">${c.id} · CALLER SCENARIOS</div><b>${esc(c.client.name)}</b></div>
             <button onclick="closeCallsPanel()" style="background:none;border:1px solid #334155;color:#fff;border-radius:6px;padding:4px 9px;cursor:pointer">✕</button></div>
             <div class="mcp-b">
             <div class="mcp-verify"><b>Verify before sharing anything:</b> ${esc(r.verify)}</div>
-            <p style="font-size:11.5px;color:#64748b;margin:0 0 10px">Answer each call from what's in this case file (tabs: Profile, Treatment, Notes, Tasks…) and the ☎ Firm directory in the Library. Write what you'd say and do, then reveal the model handling.${admin ? ' <b>Admin:</b> model handling is shown, with a reception call script for each caller.' : ''}</p>
-            ${r.calls.map((k, i) => `<div class="mcp-call ${admin ? 'shown' : ''}" id="mcp-call-${i}">
+            <p style="font-size:11.5px;color:#64748b;margin:0 0 10px">Trainers only. Run these as mock calls: you play the caller, and the trainee answers from this case file (tabs: Profile, Treatment, Notes, Tasks…) and the ☎ Firm directory. Each call has the model handling and a reception call script.</p>
+            ${r.calls.map((k, i) => `<div class="mcp-call shown" id="mcp-call-${i}">
                 <div class="from">📞 ${esc(k.from)}</div><div class="ask">${esc(k.ask)}</div>
-                ${admin ? '' : `<textarea placeholder="What do you say and do?"></textarea><button onclick="this.closest('.mcp-call').classList.add('shown')">Reveal model handling</button>`}
                 <div class="key">✅ ${esc(k.handle)}</div>
-                ${admin && window.fddScenarioScript ? `<details class="mcp-script"><summary>📜 Reception call script</summary>${fddScenarioScript(c.id, i)}</details>` : ''}</div>`).join('')}
-            ${admin && window.fddCallScripts ? scriptsSection(c) : ''}
+                ${window.fddScenarioScript ? `<details class="mcp-script"><summary>📜 Reception call script</summary>${fddScenarioScript(c.id, i)}</details>` : ''}</div>`).join('')}
+            ${window.fddCallScripts ? scriptsSection(c) : ''}
             <button onclick="openTrainingLibrary('desk')" style="font-size:10.5px;font-weight:800;text-transform:uppercase;background:#0f2148;color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer">☎ Firm directory & rules</button>
             </div>`;
         p.classList.add('open'); p.setAttribute('aria-hidden', 'false');
