@@ -2,9 +2,13 @@
 // register.js) on an in-memory SQLite database standing in for D1, and the
 // sign-in screen in a browser.
 //
-// Checks: the Admin Portal tab asks for the admin password only (no username,
-// no Register link) and signs in as the Master Account; a wrong admin password
-// and an unset ADMIN_PORTAL_PASSWORD are refused; trainees still sign in with
+// Checks: the Admin Portal tab asks for the admin password (no username, no
+// Register link) and signs in as the Master Account; with a trainer's name it
+// signs in as that trainer's own Admin account, made on first use (the same name
+// gets the same account; a revoked one isn't made again); MASTER_ADMIN_PASSWORD
+// and the older ADMIN_PORTAL_PASSWORD both work; a wrong admin password, a bad
+// name and no admin password set up are refused; "trainer-" usernames can't be
+// registered; trainees still sign in with
 // username and password; registration offers Trainee only; the registration form
 // scrolls on a small screen; a browser tab still running the old Training
 // Calendar gets told to reload. The admin password here is a test value.
@@ -37,12 +41,16 @@ const failures = []; const fail = (m) => failures.push(m);
 (async () => {
     const utils = await import(pathToFileURL(path.join(ROOT, 'functions/_utils.js')).href);
     const loginApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/login.js')).href);
+    const registerApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/register.js')).href);
     const oldCal = await import(pathToFileURL(path.join(ROOT, 'functions/api/training-calendar.js')).href);
     const sql = new DatabaseSync(':memory:');
     sql.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT, email TEXT, user_type TEXT,
             batch_id TEXT, username TEXT UNIQUE, password TEXT, status TEXT, training_start_date TEXT);
         CREATE TABLE heartbeats (username TEXT PRIMARY KEY, full_name TEXT, batch_id TEXT, user_type TEXT, current_case TEXT, last_seen TEXT);
-        CREATE TABLE activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_username TEXT, actor_batch TEXT, action TEXT, details TEXT, created_at TEXT DEFAULT (datetime('now')));`);
+        CREATE TABLE activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_username TEXT, actor_batch TEXT, action TEXT, details TEXT, created_at TEXT DEFAULT (datetime('now')));
+        CREATE TABLE deleted_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, user_type TEXT, batch_id TEXT, email TEXT, full_name TEXT, deleted_by TEXT, deleted_at TEXT NOT NULL);
+        CREATE TABLE batch_id_counter (user_type TEXT PRIMARY KEY, value INTEGER NOT NULL DEFAULT 0);
+        INSERT INTO batch_id_counter VALUES ('Admin', 0), ('Trainee', 0);`);
     sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Tia', 'Trainee', 't@x.io', 'Trainee', 'B1', 'tia', ?, 'Approved')`)
         .run(await utils.hashPassword('trainee123'));
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret' };
@@ -50,7 +58,7 @@ const failures = []; const fail = (m) => failures.push(m);
 
     // the API
     let r = await post({ portalMode: 'Admin', password: 'anything' });
-    if (r.status !== 503) fail(`without ADMIN_PORTAL_PASSWORD the admin sign-in should say it isn't set up (got ${r.status})`);
+    if (r.status !== 503 || !/MASTER_ADMIN_PASSWORD/.test(r.data.error)) fail(`without an admin password the admin sign-in should say to set MASTER_ADMIN_PASSWORD (got ${r.status} ${r.data.error})`);
     env.ADMIN_PORTAL_PASSWORD = 'ci-admin-pass';
     r = await post({ portalMode: 'Admin', password: 'wrong-pass' });
     if (r.status !== 401) fail(`a wrong admin password was not refused (${r.status})`);
@@ -64,6 +72,42 @@ const failures = []; const fail = (m) => failures.push(m);
     if (r.status !== 200 || r.data.user.username !== 'tia') fail(`a trainee could not sign in with username and password (${r.status})`);
     r = await post({ portalMode: 'Trainee', password: 'ci-admin-pass' });
     if (r.status === 200) fail('the admin password signed in from the Trainee tab without a username');
+    // MASTER_ADMIN_PASSWORD (the secret's current name) works, alone or next to the older one
+    env.MASTER_ADMIN_PASSWORD = 'ci-master-pass';
+    r = await post({ portalMode: 'Admin', password: 'ci-master-pass' });
+    if (r.status !== 200 || r.data.user.username !== utils.MASTER_USERNAME) fail(`MASTER_ADMIN_PASSWORD did not sign in (${r.status} ${JSON.stringify(r.data)})`);
+    delete env.ADMIN_PORTAL_PASSWORD;
+    r = await post({ portalMode: 'Admin', password: 'ci-master-pass' });
+    if (r.status !== 200) fail(`MASTER_ADMIN_PASSWORD alone did not sign in (${r.status})`);
+    r = await post({ portalMode: 'Admin', password: 'ci-admin-pass' });
+    if (r.status !== 401) fail(`the old admin password still signed in after it was removed (${r.status})`);
+    // trainers: their name and the admin password, no registration
+    const usersBefore = sql.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+    r = await post({ portalMode: 'Admin', name: 'Maria Lopez', password: 'wrong' });
+    if (r.status !== 401 || sql.prepare('SELECT COUNT(*) AS n FROM users').get().n !== usersBefore) fail(`a trainer name with a wrong password was let in or made an account (${r.status})`);
+    r = await post({ portalMode: 'Admin', name: 'Maria', password: 'ci-master-pass' });
+    if (r.status !== 400) fail(`a trainer name without a last name should be refused (${r.status})`);
+    r = await post({ portalMode: 'Admin', name: '  maria   Lopez ', password: 'ci-master-pass' });
+    const maria = sql.prepare("SELECT * FROM users WHERE username = 'trainer-maria-lopez'").get();
+    if (r.status !== 200 || r.data.user.username !== 'trainer-maria-lopez' || r.data.user.user_type !== 'Admin' || r.data.user.fullName !== 'maria Lopez' || !/lsh_session=/.test(r.cookie)) fail(`a trainer's name did not sign in as their own admin account: ${r.status} ${JSON.stringify(r.data)}`);
+    if (!maria || maria.status !== 'Approved' || maria.user_type !== 'Admin' || !/^disabled:/.test(maria.password) || !/^B\d{8}-LSHADMIN-001$/.test(maria.batch_id || '')) fail(`the trainer's account row is wrong: ${JSON.stringify(maria)}`);
+    const session = await utils.verifySessionToken(decodeURIComponent(r.cookie.match(/lsh_session=([^;]+)/)[1]), env.SESSION_SECRET);
+    if (!session || session.userType !== 'Admin' || session.username !== 'trainer-maria-lopez') fail(`the trainer's session is wrong: ${JSON.stringify(session)}`);
+    r = await post({ portalMode: 'Admin', name: 'Maria Lopez', password: 'ci-master-pass' });
+    if (r.status !== 200 || r.data.user.id !== maria.id) fail('the same trainer name did not get the same account the second time');
+    r = await post({ portalMode: 'Admin', name: 'Tom Reyes', password: 'ci-master-pass' });
+    if (r.status !== 200 || r.data.user.username !== 'trainer-tom-reyes' || r.data.user.id === maria.id) fail('a second trainer did not get their own account');
+    r = await post({ username: 'trainer-maria-lopez', password: maria.password, portalMode: 'Admin' });
+    if (r.status === 200) fail('a trainer account could be reached with its placeholder password');
+    sql.prepare("UPDATE users SET status = 'Suspended' WHERE username = 'trainer-tom-reyes'").run();
+    r = await post({ portalMode: 'Admin', name: 'Tom Reyes', password: 'ci-master-pass' });
+    if (r.status !== 403) fail(`a suspended trainer could still sign in by name (${r.status})`);
+    sql.prepare("DELETE FROM users WHERE username = 'trainer-tom-reyes'").run();
+    sql.prepare("INSERT INTO deleted_users (username, user_type, deleted_at) VALUES ('trainer-tom-reyes', 'Admin', datetime('now'))").run();
+    r = await post({ portalMode: 'Admin', name: 'Tom Reyes', password: 'ci-master-pass' });
+    if (r.status !== 403 || sql.prepare("SELECT COUNT(*) AS n FROM users WHERE username = 'trainer-tom-reyes'").get().n) fail(`a permanently revoked trainer's account was made again (${r.status})`);
+    const reg = await registerApi.onRequestPost({ request: new Request('http://x/api/register', { method: 'POST', body: JSON.stringify({ firstName: 'Sly', lastName: 'Fox', email: 's@x.io', userType: 'Trainee', username: 'trainer-sly-fox', password: 'abcd1234', trainingStartDate: '2026-09-28' }) }), env });
+    if (reg.status !== 400) fail(`a "trainer-" username could be registered (${reg.status})`);
     const moved = await oldCal.onRequestGet({ request: new Request('http://x/api/training-calendar'), env });
     const mj = await moved.json();
     if (moved.status !== 410 || !/Reload the page/.test(mj.error || '')) fail('the old Training Calendar endpoint does not tell the tab to reload');
@@ -91,10 +135,18 @@ const failures = []; const fail = (m) => failures.push(m);
     if (await page.isVisible('#login-username')) fail('the Admin Portal tab still asks for a username');
     if (await page.isVisible('#auth-login-view .auth-register-link')) fail('the Admin Portal tab still offers registration');
     if ((await page.textContent('#login-password-label')) !== 'Admin password') fail('the Admin tab\'s password field is not labelled "Admin password"');
+    if (!(await page.isVisible('#login-trainer-name'))) fail('the Admin Portal tab has no "Your name" field for trainers');
     await page.fill('#login-password', 'some-password');
     await page.click('#auth-login-view .auth-submit'); await page.waitForTimeout(400);
-    const last = posted[posted.length - 1] || {};
-    if (last.portalMode !== 'Admin' || last.username !== '' || last.password !== 'some-password') fail(`the Admin tab sent the wrong sign-in: ${JSON.stringify(last)}`);
+    let last = posted[posted.length - 1] || {};
+    if (last.portalMode !== 'Admin' || last.username !== '' || last.password !== 'some-password' || last.name !== '') fail(`the Admin tab sent the wrong sign-in: ${JSON.stringify(last)}`);
+    await page.fill('#login-trainer-name', 'Maria Lopez');
+    await page.focus('#login-password'); await page.keyboard.press('Enter'); await page.waitForTimeout(400);
+    last = posted[posted.length - 1] || {};
+    if (posted.length !== 2 || last.name !== 'Maria Lopez' || last.password !== 'some-password') fail(`a trainer's name (and Enter to sign in) didn't go with the sign-in: ${JSON.stringify(posted)}`);
+    await page.click('#portal-tab-trainee');
+    if (await page.isVisible('#login-trainer-name')) fail('the Trainee tab shows the trainer name field');
+    await page.click('#portal-tab-admin');
     // registration: trainees only, and it scrolls on a phone
     await page.click('#portal-tab-trainee');
     await page.setViewportSize({ width: 375, height: 560 });

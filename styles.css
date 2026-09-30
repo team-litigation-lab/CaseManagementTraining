@@ -380,6 +380,9 @@
     @media (max-width: 480px) { #auth-gate { padding: 12px; } .auth-box { padding: 22px 18px; } }
     /* Admin Portal: the admin password only (no username, no registration) */
     #auth-gate.mode-admin .login-username-field, #auth-gate.mode-admin .auth-register-link { display: none; }
+    .login-trainer-field { display: none; }
+    #auth-gate.mode-admin .login-trainer-field { display: block; }
+    .login-trainer-field .auth-hint { font-size: 11px; color: #64748b; margin: 4px 0 0; line-height: 1.4; text-transform: none; letter-spacing: normal; }
     #auth-gate.mode-admin {
         --auth-accent: #ef4444;
         --auth-accent-hover: #f87171;

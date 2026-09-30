@@ -121,14 +121,18 @@ Link to the CMS with a program so it opens in that program's context:
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
 
-## 🔑 Admin Portal (admin password only)
+## 🔑 Admin Portal (trainer's name + admin password)
 
-The sign-in screen's **Admin Portal** tab asks only for the **admin password**, with no username. It signs in as the **Master Account** (`LSHADMIN123`), which keeps all of its powers, including being the only account that can revoke another Admin. New registrations are for trainees only. Admin accounts made earlier can't sign in from the Admin tab any more.
+The sign-in screen's **Admin Portal** tab asks for the trainer's **name** and the **admin password**, with no username and no registration. It works on a direct visit and from the training platforms (their sign-in screen has a **Trainer sign-in** link).
+
+- **With a name** (first and last), each trainer signs in as **their own Admin account**, made the first time they sign in (username `trainer-<name>`, e.g. `trainer-maria-lopez`). The same name always gets the same account. Pings show "Admin <first name>", and the server logs show who did what. Trainer accounts have every Admin power except the Master Account's: only the Master Account can suspend or revoke another Admin. A revoked trainer's name isn't made again.
+- **With no name**, it signs in as the **Master Account** (`LSHADMIN123`), which keeps all of its powers, including being the only account that can revoke another Admin.
+- New registrations are for trainees only, and `trainer-` usernames can't be registered. Admin accounts made earlier can't sign in from the Admin tab any more.
 
 **Setting or changing the admin password** (it is never in the code):
 1. Cloudflare → Workers & Pages → the CMS Pages project → **Settings → Variables and Secrets**.
 2. Add a secret, for both Production and Preview:
-   - **Variable name:** `ADMIN_PORTAL_PASSWORD`
+   - **Variable name:** `MASTER_ADMIN_PASSWORD` (the older name, `ADMIN_PORTAL_PASSWORD`, also works; if both are set, either password signs in)
    - **Value:** the admin password
 3. Redeploy, or wait for the next deploy. The new password works right away.
 
@@ -363,8 +367,10 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - name sign-in is refused without a platform;
   - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
 - **Sign-in** (`.github/scripts/login.cjs`, in the same job): the real login code on SQLite. It checks:
-  - the Admin tab asks for the admin password only and signs in as the Master Account;
-  - a wrong or unset admin password is refused;
+  - the Admin tab asks for the trainer's name and the admin password (Enter signs in); with no name it signs in as the Master Account;
+  - with a name, each trainer gets their own Admin account on first sign-in (the same name, the same account; suspended and revoked trainers are refused, and a revoked one isn't made again), and `trainer-` usernames can't be registered;
+  - `MASTER_ADMIN_PASSWORD` and the older `ADMIN_PORTAL_PASSWORD` both work;
+  - a wrong or unset admin password, and a name without a last name, are refused;
   - trainees still sign in with username and password;
   - registration is for trainees only and scrolls on a small screen;
   - a tab still running the old Training Calendar is told to reload.

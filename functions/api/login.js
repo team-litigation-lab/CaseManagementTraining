@@ -1,17 +1,47 @@
-import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName } from '../_utils.js';
-// The Admin Portal signs in with the admin password only (no username), as the
-// Master Account (MASTER_USERNAME in _utils.js), which keeps every admin power it
-// has. The password is the ADMIN_PORTAL_PASSWORD secret on the Pages project,
-// never the code (README → Admin Portal).
-async function adminPasswordOk(env, password) {
-    const want = String(env.ADMIN_PORTAL_PASSWORD || '');
-    if (!want) return false;
+import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned } from '../_utils.js';
+import { cleanGuestName, splitName, trainerUsername } from '../_guest.js';
+// The Admin Portal signs in with the admin password (no username):
+//   - with a trainer's name: as that trainer's own Admin account, made on first use
+//     (no registration), so pings, logs and reviews show who they are;
+//   - with no name: as the Master Account (MASTER_USERNAME in _utils.js), which
+//     keeps every admin power it has.
+// The password is the MASTER_ADMIN_PASSWORD secret on the Pages project (the earlier
+// name, ADMIN_PORTAL_PASSWORD, still works), never the code (README → Admin Portal).
+const adminPasswords = (env) => [env.MASTER_ADMIN_PASSWORD, env.ADMIN_PORTAL_PASSWORD].map(p => String(p || '')).filter(Boolean);
+async function sameSecret(given, want) {
     const enc = new TextEncoder();
-    const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', enc.encode(password)), crypto.subtle.digest('SHA-256', enc.encode(want))]);
+    const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', enc.encode(given)), crypto.subtle.digest('SHA-256', enc.encode(want))]);
     const x = new Uint8Array(a), y = new Uint8Array(b);
     let diff = 0;
     for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
     return diff === 0;
+}
+async function adminPasswordOk(env, password) {
+    let ok = false;
+    for (const want of adminPasswords(env)) if (await sameSecret(password, want)) ok = true;
+    return ok;
+}
+// A trainer's own Admin account, by name, made on first use (with no usable password
+// of its own: the admin password is the key, as for the Master Account).
+async function trainerUser(db, name) {
+    const username = trainerUsername(name);
+    const find = () => db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
+    let user = await find();
+    if (!user) {
+        if (await isUsernameTombstoned(db, username)) return { revoked: true };   // permanently revoked: not made again
+        const { first, last } = splitName(name);
+        let batchId = null;
+        try { batchId = await nextBatchId(db, 'Admin'); } catch (e) { /* no Admin batch counter: no batch */ }
+        try {
+            await db.prepare(
+                `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
+                 VALUES (?, NULL, ?, NULL, ?, 'Admin', ?, ?, ?, 'Approved', NULL)`
+            ).bind(first, last, `${username}@trainer.invalid`, batchId, username, 'disabled:' + crypto.randomUUID() + crypto.randomUUID()).run();
+            await logActivity(db, username, batchId, 'register', { userType: 'Admin', trainerByName: true });
+        } catch (e) { /* the same name signing in at the same moment made it first */ }
+        user = await find();
+    }
+    return user;
 }
 // The Master Account's row, created on first use (with no usable password of its own).
 async function adminPortalUser(db) {
@@ -34,11 +64,16 @@ export async function onRequestPost({ request, env }) {
     const { username, password, portalMode } = body;
     let user;
     if (portalMode === 'Admin' && !username) {
-        // Admin Portal: the admin password only
+        // Admin Portal: the admin password, and the trainer's name (blank: the Master Account)
         if (!password) return json({ success: false, error: 'Please enter the admin password.' }, 400);
-        if (!env.ADMIN_PORTAL_PASSWORD) return json({ success: false, error: 'The admin password isn\'t set up yet. Add ADMIN_PORTAL_PASSWORD to the Cloudflare Pages project (README → Admin Portal).' }, 503);
+        if (!adminPasswords(env).length) return json({ success: false, error: 'The admin password isn\'t set up yet. Add MASTER_ADMIN_PASSWORD to the Cloudflare Pages project (README → Admin Portal).' }, 503);
+        const rawName = String(body.name || '').trim();
+        const name = rawName ? cleanGuestName(rawName) : '';
+        if (rawName && !name) return json({ success: false, error: 'Enter your first and last name (letters, spaces, hyphens or apostrophes; up to 60 characters), or leave it blank to sign in as the Master Account.' }, 400);
         if (!(await adminPasswordOk(env, String(password)))) return json({ success: false, error: 'Incorrect admin password.' }, 401);
-        user = await adminPortalUser(db);
+        user = name ? await trainerUser(db, name) : await adminPortalUser(db);
+        if (user && user.revoked) return json({ success: false, error: 'Access for this name has been revoked by an administrator.' }, 403);
+        if (!user) return json({ success: false, error: 'Couldn\'t open your trainer account. Please try again.' }, 500);
     } else {
         if (!username || !password) {
             return json({ success: false, error: 'Please enter both username and password.' }, 400);

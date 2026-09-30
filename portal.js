@@ -9,7 +9,7 @@ function switchPortalTab(mode) {
     const traineeTab = document.getElementById('portal-tab-trainee');
     const adminTab = document.getElementById('portal-tab-admin');
     const authGate = document.getElementById('auth-gate');
-    // Admin Portal: the shared admin password only (functions/api/login.js)
+    // Admin Portal: the trainer's name and the shared admin password (functions/api/login.js)
     const pwLabel = document.getElementById('login-password-label'), pw = document.getElementById('login-password');
     if (pwLabel) pwLabel.textContent = mode === 'Admin' ? 'Admin password' : 'Password';
     if (pw) pw.placeholder = mode === 'Admin' ? 'Enter the admin password' : 'Enter your password';
@@ -99,6 +99,8 @@ function attemptLogin() {
 
     const adminMode = currentPortalMode === 'Admin';
     const usernameInput = adminMode ? "" : (document.getElementById('login-username')?.value?.trim() || "");
+    // Admin Portal: a trainer's name signs in as that trainer (functions/api/login.js); blank is the Master Account.
+    const trainerName = adminMode ? (document.getElementById('login-trainer-name')?.value?.trim() || "") : "";
     const passwordInput = document.getElementById('login-password')?.value || "";
 
     if (!usernameInput && !adminMode) {
@@ -133,7 +135,7 @@ function attemptLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username: usernameInput, password: passwordInput, portalMode: currentPortalMode })
+        body: JSON.stringify({ username: usernameInput, password: passwordInput, portalMode: currentPortalMode, name: trainerName })
     })
     .then(response => response.json())
     .then(data => {
@@ -181,3 +183,8 @@ function attemptLogin() {
         showToast("Network error. Failed to hit validation server.", 'error');
     });
 }
+
+// Enter in a sign-in field signs in.
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target && ['login-username', 'login-password', 'login-trainer-name'].includes(e.target.id)) { e.preventDefault(); attemptLogin(); }
+});
