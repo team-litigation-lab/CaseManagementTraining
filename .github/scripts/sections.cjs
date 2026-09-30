@@ -98,10 +98,10 @@ const failures = []; const fail = (m) => failures.push(m);
     ['MRI / Imaging', 'Physical Therapy (PT)'].forEach(o => { if (!opts.spec.includes(o)) fail(`treatment specialty "${o}" missing`); });
     // the firm's case statuses, in order (sub-statuses under their stage)
     const STATUSES = ['Intake', 'Treating', 'Pending Demand', 'Demand Writing', 'BI Demanded', 'BI Settlement Negotiations', 'BI Settled', 'UM or UIM Demanded',
-        'UM/UIM Settlement Negotiations', 'UM/UIM Settled', 'Disbursement', 'Closed', 'Storage', 'Pending Litigation / Lit', 'Litigation Initiated', 'Service',
-        'Pending Response', 'Litigation Discovery', 'Deposition', 'Mediation', 'Arbitration', 'Trial Prep', 'Trial', 'Litigation Review',
-        'Lit Review – Litigation Initiated', 'Lit Review – Service', 'Lit Review – Pending Response', 'Lit Review – Litigation Discovery', 'Lit Review – Deposition',
-        'Pre-trial', 'Lit Review – Trial', 'Litigation Settled', 'Drop Review', 'Pending Drop', 'Dropped', 'Dropped Lien', 'Referral'];
+        'UM or UIM Settlement Negotiations', 'UM or UIM Settled', 'Disbursement', 'Closed', 'Storage', 'Pending Litigation/ Lit', 'Litigation Initiated', 'Service',
+        'Pending Response', 'Litigation Discovery', 'Deposition', 'Mediation', 'Arbitration', 'Trial Prep', 'Trial', 'Litigation review',
+        'Litigation review – Litigation Initiated', 'Litigation review – Service', 'Litigation review – Pending Response', 'Litigation review – Litigation Discovery', 'Litigation review – Deposition',
+        'Pre-trial', 'Litigation review – Trial', 'Litigation Settled', 'Drop Review', 'Pending Drop', 'Dropped', 'Dropped Lien', 'Referral'];
     if (opts.phases.join('|') !== STATUSES.join('|')) fail(`the case statuses aren't the firm's list: ${opts.phases.join(', ')}`);
     // a case saved with an old phase name opens on the matching status (select and header)
     const legacy = await page.evaluate(() => {
@@ -117,11 +117,42 @@ const failures = []; const fail = (m) => failures.push(m);
     });
     const legacyWant = { 'Bi Demand': 'BI Demanded', 'Treatment': 'Treating', 'Referred Out': 'Referral', 'Discovery': 'Litigation Discovery' };
     for (const [old, now] of Object.entries(legacyWant)) if (legacy[old][0] !== now || legacy[old][1] !== now.toUpperCase()) fail(`a case saved as "${old}" opens as ${JSON.stringify(legacy[old])}, expected ${now}`);
+    // staff roles on Notes and Tasks rows
+    const staff = await page.evaluate(() => { addRow('note-body'); const tr = document.getElementById('note-body').lastElementChild; const o = [...tr.querySelector('select').options].map(x => x.value); tr.remove(); return o; });
+    ['PD Specialist', 'Claims Specialist', 'Lien Negotiator', 'Closer'].forEach(o => { if (!staff.includes(o)) fail(`staff role "${o}" missing from Notes and Tasks (${staff.join(', ')})`); });
     if (!opts.intake) fail('the Doc Hub has no Intake category');
     if (!opts.heads.includes('Other Treatment Notes') || opts.heads.includes('Treatment Notes')) fail(`the Treatment tab's notes aren't "Other Treatment Notes" (${opts.heads.join(' | ')})`);
     await page.evaluate(() => { blankCaseEditorContent(); });
     const emp = await page.evaluate(() => document.querySelector('#pane-profile select').value);
     if (emp !== 'N/A') fail(`Employment Status on a new case is "${emp}", expected N/A`);
+
+    // 2b. Primary Injury: beside the Case Narrative; saved by name (keyed), so it round-trips without moving any positional field
+    await page.click('#tab-profile');
+    const box = await page.evaluate(() => {
+        const r = (el) => { const b = el.getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width) }; };
+        const narr = document.getElementById('case-narrative-field').closest('.pdf-card');
+        return { narr: r(narr), inj: r(document.getElementById('kx-injury')), emp: r([...document.querySelectorAll('#pane-profile .pdf-card')].find(c => /Employment Details/.test(c.textContent))) };
+    });
+    if (!(box.inj.x > box.narr.x + box.narr.w - 5 && Math.abs(box.inj.y - box.narr.y) < 6 && Math.abs(box.inj.x - box.emp.x) < 3)) fail(`the Primary Injury card isn't beside the Case Narrative, under Employment Details: ${JSON.stringify(box)}`);
+    await page.click('#kx-injury [data-k="primary"]'); await page.keyboard.type('Left knee meniscus tear');
+    await page.click('#kx-injury [data-k="parts"]'); await page.keyboard.type('Left knee');
+    await page.selectOption('#kx-injury [data-k="type"]', 'Joint / ligament / tendon tear');
+    await page.selectOption('#kx-injury [data-k="surgery"]', 'Recommended');
+    await page.click('#kx-injury [data-k="details"]'); await page.keyboard.type('MRI 02/02/2026 confirmed the tear.');
+    const inj = await page.evaluate(() => {
+        const pos = { edits: posEdits().length, selects: posSels().length };
+        const content = buildCaseContentPayload();
+        blankCaseEditorContent();
+        const cleared = document.querySelector('#kx-injury [data-k="primary"]').textContent + document.querySelector('#kx-injury [data-k="type"]').value;
+        applyCaseContentToDOM(content);
+        const f = (k) => { const el = document.querySelector(`#kx-injury [data-k="${k}"]`); return el.tagName === 'SELECT' ? el.value : el.textContent; };
+        return { pos, saved: content.keyed['kx-injury'] && content.keyed['kx-injury'].fields, cleared, back: ['primary', 'parts', 'type', 'surgery', 'details'].map(f) };
+    });
+    if (inj.pos.edits !== POSITIONAL.edits || inj.pos.selects !== POSITIONAL.selects) fail(`the Primary Injury card moved the positional fields (${JSON.stringify(inj.pos)})`);
+    if (!inj.saved || !/meniscus/.test(inj.saved.primary) || inj.saved.surgery !== 'Recommended') fail(`the Primary Injury card isn't saved by name: ${JSON.stringify(inj.saved)}`);
+    if (inj.cleared) fail(`a new case keeps the last Primary Injury (${inj.cleared})`);
+    if (inj.back.join('|') !== 'Left knee meniscus tear|Left knee|Joint / ligament / tendon tear|Recommended|MRI 02/02/2026 confirmed the tear.') fail(`the Primary Injury card didn't load back: ${inj.back.join(' | ')}`);
+    await page.evaluate(() => blankCaseEditorContent());
 
     // 3. the new sections: fill, save, clear, load back
     await page.evaluate(() => { document.getElementById('client-name-field').innerText = 'Nina Newcase'; });

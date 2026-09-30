@@ -21,6 +21,7 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
 - **Who sees it:** only **Admins**. They get the sidebar **📚 Training Library** button (browse every mock case by program). Trainees can't open the Training Library and never see its name. To them a mock case is an ordinary **case file**, tagged and bannered with its case number (e.g. `LSH-2026-MVA-901379`, not `MC-01`). They find it by searching the **Case Library**, and every way into the library (the case banner, `?library=1`) takes them there instead. Their Case Library has only the **All files** and **My cases** filters.
 - **Open one:** from a Case Library result (or, for Admins, **📚 Training Library** → *Open case*). It loads into the normal case editor across every tab (profile, police report, insurance, liens, treatment, property damage, litigation, finance, Doc Hub, notes, tasks), **view only**. Typing, Save, Archive, Update and autosave are all blocked, except on the Notes and Tasks tabs.
 - **Notes and Tasks are editable:** trainees can add, edit and delete notes and tasks on a library case (log the call they just took, set a task for the case manager). They save automatically to that trainee's account (`/api/mock-case-updates`, table `mock_case_updates`, created on first use) and come back when the trainee reopens the case. Other trainees don't see them, and the library original never changes. **↺ Reset to the original** on either tab deletes them.
+- **Primary Injury:** each library case fills the Profile tab's **Primary Injury** card (beside the Case Narrative), from `injury` in `mock-cases.js`: primary injury, body parts, injury type, surgery, prior injury to the same area, and diagnosis / details. Only what the file says is filled in; the rest stays blank.
 - **Case numbers:** every file has a firm case number in the CMS's own Case ID format, `LSH-<year opened>-<type code>-<number>` (e.g. `LSH-2026-MVA-901379`), shown in the Case ID field when the file opens and in search results. The numbers are in the 900000+ range, which the server's counter (it issues saved cases' IDs from 000001) won't reach for a long time, and follow the order the files were opened. Some callers give only the case number.
 - **Same names on purpose:** MC-21 is a second file for Maria Santos (same client as MC-01, an older pharmacy fall) and MC-22 is a *different* Maria Santos (other DOB). MC-23 and MC-24 do the same for James Wilson (MC-06). Her husband is authorized on MC-21 only, not on MC-01: authorization is per file. MC-25 and MC-26 are a father and son, both named Jose Hernandez, hurt in the same crash: same name, address and DOL, so only the DOB or the case number tells the files apart (his mother is authorized on the father's file only).
 - **Recep2 batch, hard-to-say names (MC-37 … MC-52):** 16 files built from the Recep2 reception sheet (each file keeps the sheet's DOL, DOB, status, the attorney's availability and the notes), plus a 17th caller who has no file. The clients have names that are hard to say and hard to spell (first names Niamh, Saoirse, Mireille, Schuyler, Cian, Rhys, Bjorn, Brittany, Siobhan, Mstislav; surnames Cholmondeley, Witwicky, Featherstonhaugh, Beauchamp, Acheson, Beaumont, Courthope, Kirkcudbright, Masserene, Shaughnessy). They test the NATO phonetic alphabet, attention, active listening and verification. Four clients have two files each, told apart by the DOL (Schuyler Beauchamp, Niamh Cholmondeley, Mstislav Shaughnessy, Bjorn Courthope). Some surnames and first names come back on unrelated files (two Masserenes, two Shaughnessys, a Brittany Beauchamp who isn't on file), so the date of birth decides. `MOCK_NAME_SOUNDS` says how each name is pronounced (`say`, e.g. Cholmondeley = "CHUM-lee") and how it might be written down by ear (`heard`, e.g. "Chumley").
@@ -224,6 +225,25 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 **Authorized to Access Case** (Profile)
 - The people the client authorized to discuss the case.
 - For each: their relationship, a phone number, whether the authorization is on file, and what they may discuss.
+
+**Case status** (the dropdown under Case ID, shown large in the case header)
+- The firm's statuses, with sub-statuses indented under their stage:
+  - Intake · Treating · Pending Demand (Demand Writing; BI Demanded, with Settlement Negotiations and Settled; UM or UIM Demanded, with Settlement Negotiations and Settled)
+  - Disbursement · Closed · Storage
+  - Pending Litigation/ Lit (Litigation Initiated, Service, Pending Response, Litigation Discovery, Deposition, Mediation, Arbitration, Trial Prep, Trial)
+  - Litigation review (Litigation Initiated, Service, Pending Response, Litigation Discovery, Deposition, Pre-trial, Trial, Litigation Settled)
+  - Drop Review (Pending Drop, Dropped, Dropped Lien, Referral)
+- A name that appears under two stages is saved with its stage, so the header says which one: BI Settlement Negotiations / UM or UIM Settled, and Litigation review – Service.
+- **Older cases:** a case saved with an older phase name opens on the matching status: Investigation and Treatment → Treating, Demand Review → Pending Demand, Bi Demand → BI Demanded, BI Settlement Nego → BI Settlement Negotiations, UM Demand → UM or UIM Demanded, UM settlement → UM or UIM Settlement Negotiations, Lien Negotiations and Settled → BI Settled, Litigation → Litigation Initiated, Discovery → Litigation Discovery, Post Trial → Trial, Dropped Case → Dropped, Referred Out → Referral.
+- **Automated review:** the case review's stage checks group the statuses by stage (`PHASE_STAGES` in `functions/_utils.js`):
+  - Treating on: the date of loss is expected.
+  - Any demand status on: the attorney, case manager and documents are expected.
+  - Litigation statuses: the litigation dates are expected.
+  - The saved phase is matched regardless of case (it's stored in capitals), which the earlier list's check didn't do.
+
+**Primary Injury** (Profile, beside the Case Narrative)
+- The client's primary injury, the body parts involved, the injury type (soft tissue, fracture, head injury / concussion, spine / disc, joint / ligament / tendon tear, laceration / bite / scarring, burn, multiple injuries, wrongful death, other), and surgery (no, recommended, scheduled, completed).
+- Also any prior injury to the same area, and the diagnosis and details (imaging, restrictions, future care).
 
 **Location of Incident**: in the case's top bar, next to Date of Loss and SOL.
 

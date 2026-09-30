@@ -38,6 +38,12 @@ const TYPES = optionsIn(html, 'main-case-type');
 const LIEN_TYPES = ['Prior Atty Lien', 'Medical Lien', 'HI Subro', 'Funding', 'Other'];
 const SPECIALTIES = ((app.match(/<select id="sel-\$\{id\}"[\s\S]*?<\/select>/) || [''])[0].match(/<option[^>]*>([^<]*)</g) || []).map(o => o.replace(/<option[^>]*>|</g, ''));
 const PROGRAMS = new Set(MOCK_PROGRAMS.map(p => p.id));
+// the Primary Injury card's dropdowns (a keyed card: its selects are named by data-k)
+const injuryCard = (html.match(/id="kx-injury"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/) || [''])[0];
+const injuryOpts = (k) => ((injuryCard.match(new RegExp(`<select[^>]*data-k="${k}"[^>]*>([\\s\\S]*?)</select>`)) || ['', ''])[1].match(/<option[^>]*>[^<]*</g) || [])
+    .map(o => { const v = o.match(/value="([^"]*)"/); return v ? v[1] : o.replace(/<option[^>]*>|</g, ''); });
+const INJURY_TYPES = injuryOpts('type'), SURGERY = injuryOpts('surgery');
+if (!INJURY_TYPES.length || !SURGERY.length) bad('Could not read the Primary Injury card\'s Injury Type / Surgery options from index.html; update check-data.mjs');
 if (!PHASES.length || !TYPES.length || !SPECIALTIES.length) bad('Could not read the editor\'s phase / case type / specialty options from index.html and app.js; update check-data.mjs');
 
 const ids = new Set();
@@ -49,6 +55,10 @@ for (const c of MOCK_CASES) {
     for (const k of ['summary', 'caseType', 'phase', 'dateOfLoss', 'sol', 'narrative']) if (!c[k]) bad(`${where}: missing ${k}`);
     for (const k of ['name', 'phone', 'dob', 'ssn', 'address']) if (!(c.client || {})[k] && !(k === 'email')) bad(`${where}: client.${k} is missing`);
     if (c.client && c.client.ssn && !/^XXX-XX-\d{4}$/.test(c.client.ssn)) bad(`${where}: SSN must stay masked (XXX-XX-1234)`);
+    const inj = c.injury || {};
+    if (!String(inj.primary || "").trim()) bad(`${where}: no primary injury (injury.primary)`);
+    if (inj.type && !INJURY_TYPES.includes(inj.type)) bad(`${where}: injury type "${inj.type}" isn't an option on the Primary Injury card (${INJURY_TYPES.filter(Boolean).join(', ')})`);
+    if (inj.surgery && !SURGERY.includes(inj.surgery)) bad(`${where}: surgery "${inj.surgery}" isn't an option on the Primary Injury card`);
     if (!PHASES.includes(c.phase)) bad(`${where}: phase "${c.phase}" isn't an option in the CMS (${PHASES.join(', ')})`);
     if (!TYPES.includes(c.caseType)) bad(`${where}: case type "${c.caseType}" isn't an option in the CMS`);
     if (c.caseType === 'Others' && !c.caseTypeOther) bad(`${where}: caseType Others needs caseTypeOther`);

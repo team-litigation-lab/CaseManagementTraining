@@ -185,7 +185,9 @@
             <option>Demand Specialist</option>
             <option>Records Specialist</option>
             <option>PD Specialist</option>
+            <option>Claims Specialist</option>
             <option>Lien Negotiator</option>
+            <option>Closer</option>
             <option>Intake Specialist</option>
             <option>Receptionist / Front Desk</option>
         `;
@@ -207,7 +209,7 @@
            lookup ignores case. functions/_utils.js groups the same statuses by stage. */
         const LEGACY_PHASES = {
             'investigation': 'Treating', 'treatment': 'Treating', 'demand review': 'Pending Demand', 'bi demand': 'BI Demanded',
-            'bi settlement nego': 'BI Settlement Negotiations', 'um demand': 'UM or UIM Demanded', 'um settlement': 'UM/UIM Settlement Negotiations',
+            'bi settlement nego': 'BI Settlement Negotiations', 'um demand': 'UM or UIM Demanded', 'um settlement': 'UM or UIM Settlement Negotiations',
             'lien negotiations': 'BI Settled', 'settled': 'BI Settled', 'litigation': 'Litigation Initiated', 'discovery': 'Litigation Discovery',
             'post trial': 'Trial', 'dropped case': 'Dropped', 'referred out': 'Referral'
         };

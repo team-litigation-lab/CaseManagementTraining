@@ -142,6 +142,12 @@
             pairs([['Phone', cl.phone], ['Email', cl.email], ['Date of birth', cl.dob], ['SSN', cl.ssn], ['Address', cl.address], ['Emergency contact', em.name], ['Relationship', em.relationship], ['Emergency phone', em.phone],
                 ['Employment', emp.status], ['Employer', emp.employer], ['Job title', emp.title]]);
             if (has(c.narrative)) { heading('Case narrative'); para(c.narrative); }
+            const inj = c.injury || {};
+            if (has(inj.primary)) {
+                heading('Primary injury');
+                pairs([['Primary injury', inj.primary], ['Body part(s)', inj.parts], ['Injury type', inj.type], ['Surgery', inj.surgery], ['Prior injury to same area', inj.prior]]);
+                if (has(inj.details)) para(inj.details);
+            }
             if (has(pol.agency) || has(pol.narrative)) { heading('Police report'); pairs([['Agency', pol.agency], ['Report #', pol.number], ['Officer', pol.officer]]); para(pol.narrative); }
             heading('Insurance');
             pairs([['Health insurance', hl.carrier], ['Member ID', hl.memberId], ['Group', hl.group]]);

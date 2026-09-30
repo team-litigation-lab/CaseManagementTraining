@@ -233,13 +233,13 @@ const PHASE_STAGES = [
     [0, ['Intake']],
     [1, ['Treating', 'Drop Review', 'Pending Drop', 'Dropped', 'Dropped Lien', 'Referral',
         'Investigation', 'Treatment', 'Dropped Case', 'Referred Out']],
-    [2, ['Pending Demand', 'Demand Writing', 'BI Demanded', 'BI Settlement Negotiations', 'UM or UIM Demanded', 'UM/UIM Settlement Negotiations',
+    [2, ['Pending Demand', 'Demand Writing', 'BI Demanded', 'BI Settlement Negotiations', 'UM or UIM Demanded', 'UM or UIM Settlement Negotiations',
         'Demand Review', 'Bi Demand', 'BI Settlement Nego', 'UM Demand']],
-    [3, ['BI Settled', 'UM/UIM Settled', 'Disbursement', 'Closed', 'Storage', 'Litigation Settled',
+    [3, ['BI Settled', 'UM or UIM Settled', 'Disbursement', 'Closed', 'Storage', 'Litigation Settled',
         'UM settlement', 'Lien Negotiations', 'Settled']],
-    [4, ['Pending Litigation / Lit', 'Litigation Review']],
+    [4, ['Pending Litigation/ Lit', 'Litigation review']],
     [5, ['Litigation Initiated', 'Service', 'Pending Response', 'Litigation Discovery', 'Deposition', 'Mediation', 'Arbitration', 'Trial Prep', 'Trial', 'Pre-trial',
-        'Lit Review – Litigation Initiated', 'Lit Review – Service', 'Lit Review – Pending Response', 'Lit Review – Litigation Discovery', 'Lit Review – Deposition', 'Lit Review – Trial',
+        'Litigation review – Litigation Initiated', 'Litigation review – Service', 'Litigation review – Pending Response', 'Litigation review – Litigation Discovery', 'Litigation review – Deposition', 'Litigation review – Trial',
         'Litigation', 'Discovery', 'Post Trial']],
 ];
 const PHASE_STAGE = new Map(PHASE_STAGES.flatMap(([stage, names]) => names.map(n => [n.toLowerCase(), stage])));
