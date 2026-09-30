@@ -101,6 +101,10 @@
     #cl-bar-input{flex:1;min-width:0;border:none;outline:none;padding:10px 2px;font-size:14px;color:#0f2148;background:transparent}
     .clb-kbd{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:800;color:#64748b;border:1px solid #cbd5e1;border-radius:5px;padding:2px 6px;white-space:nowrap}
     @media (max-width:700px){#cl-bar{padding:8px 12px}.clb-kbd{display:none}}
+    #cl-bar.in-header{padding:0;background:none;border:none;margin-top:14px;text-align:left}
+    #cl-bar.in-header .clb-wrap{width:min(460px,100%);margin-left:auto}
+    #cl-bar.in-header #cl-bar-input{padding:8px 2px;font-size:13px}
+    #cl-bar.in-header .clb-results{left:auto;right:0;width:min(640px,78vw)}
     .clb-results{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:2986;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 14px 34px rgba(15,33,72,.22);max-height:min(62vh,560px);overflow-y:auto;padding:8px}
     .clb-results.open{display:block}
     .clb-results .cl-dup{margin:0 0 8px}
@@ -151,16 +155,19 @@
 
     /* ---------- DOM ---------- */
     function buildUI() {
-        // The search bar sits at the top of the case workspace, above the case, outside
-        // #capture-area (so the view-only guard on library cases doesn't block typing in it).
+        // The search bar sits in the case header, right under the case status (phase), so it
+        // doesn't take a strip of its own above the case. It's inside #capture-area, so it's
+        // marked data-free-edit: the view-only guard on library cases lets it be typed in, and
+        // typing in it doesn't count as editing the case. (Without the header: above the case.)
+        const phase = $id('display-phase'), statusCol = phase && phase.closest('.text-right');
         const main = $id('capture-area') && $id('capture-area').parentElement;
-        if (main && !$id('cl-bar')) {
-            main.insertAdjacentHTML('afterbegin', `
-            <div id="cl-bar" class="no-print" role="search">
+        if ((statusCol || main) && !$id('cl-bar')) {
+            (statusCol || main).insertAdjacentHTML(statusCol ? 'beforeend' : 'afterbegin', `
+            <div id="cl-bar" class="no-print ${statusCol ? 'in-header' : ''}" role="search" data-free-edit>
                 <div class="clb-wrap">
                     <div class="clb-field" onclick="document.getElementById('cl-bar-input').focus()">
                         <span class="clb-icon" aria-hidden="true">🔍</span>
-                        <input type="search" id="cl-bar-input" name="cl-bar-q" placeholder="Search cases: name, case number, DOL, DOB, phone, claim # or plate" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search cases" aria-controls="cl-bar-results" aria-expanded="false" aria-autocomplete="list">
+                        <input type="search" id="cl-bar-input" name="cl-bar-q" placeholder="Search cases: name, case #, DOL, DOB, phone, claim #, plate" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search cases" aria-controls="cl-bar-results" aria-expanded="false" aria-autocomplete="list">
                         <span class="clb-kbd" aria-hidden="true">Ctrl K</span>
                     </div>
                     <div id="cl-bar-results" class="clb-results" role="listbox" aria-label="Matching cases"></div>

@@ -105,7 +105,24 @@ const SAVED = [
     const s = saved[saved.length - 1];
     if (!s || s.content.trainingLibraryId !== 'MC-04' || s.content.program !== 'reception') fail(`practice copy did not save with its tags (${JSON.stringify(s && { lib: s.content.trainingLibraryId, program: s.content.program })})`);
 
-    // search bar above the case: saved and mock cases by name, same-name warning, search by DOL, open a result.
+    // the search bar sits in the case header, under the case status, not in a strip above the case;
+    // on a view-only library case it can still be typed in, without counting as a case edit
+    const bar = await page.evaluate(() => { const b = document.getElementById('cl-bar'), ph = document.getElementById('display-phase');
+        return { inHeader: !!(b && b.closest('.header-card')), below: !!(b && ph) && b.getBoundingClientRect().top >= ph.getBoundingClientRect().bottom - 1, free: !!(b && b.hasAttribute('data-free-edit')) }; });
+    if (!bar.inHeader || !bar.below || !bar.free) fail(`the search bar is not in the case header under the case status: ${JSON.stringify(bar)}`);
+    // the Profile tab: Identity and Case Narrative | Employment | Emergency Contact and Authorized (placed by CSS; the page order,
+    // which the positional save relies on, is unchanged)
+    await page.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('profile'); }); await page.waitForTimeout(200);
+    const prof = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#profile-grid .pdf-card')].map(c => { const r = c.getBoundingClientRect(); return [c.querySelector('.section-head').textContent.trim(), { x: Math.round(r.x), y: Math.round(r.y), b: Math.round(r.bottom) }]; })));
+    const P = (k) => prof[Object.keys(prof).find(n => n.startsWith(k))] || {};
+    if (!(P('Identity').x === P('Case Narrative').x && P('Case Narrative').y > P('Identity').y && P('Emergency').x > P('Employment').x && P('Employment').x > P('Identity').x && P('Authorized').x === P('Emergency').x && P('Authorized').y >= P('Emergency').b))
+        fail(`the Profile cards are not laid out as Identity + Case Narrative | Employment | Emergency Contact + Authorized: ${JSON.stringify(prof)}`);
+    const heads = await page.evaluate(() => [...document.querySelectorAll('#profile-grid .section-head')].map(h => h.textContent.trim().split(' ')[0]));
+    if (heads.join() !== 'Identity,Emergency,Authorized,Employment,Case') fail(`the Profile cards' page order changed (saved cases load by position): ${heads.join()}`);
+    await page.click('#cl-bar-input'); await page.keyboard.type('zz');
+    if ((await page.inputValue('#cl-bar-input')) !== 'zz') fail('the search bar in the header cannot be typed in on a view-only library case');
+    await page.fill('#cl-bar-input', ''); await page.keyboard.press('Escape');
+    // search bar: saved and mock cases by name, same-name warning, search by DOL, open a result.
     // Trainees never see the Training Library: its files are tagged with their case number, like any case.
     const CN = await page.evaluate(() => Object.fromEntries(MOCK_CASES.map(c => [c.id, c.caseNumber])));
     await page.fill('#cl-bar-input', 'maria santos');
