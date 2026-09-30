@@ -188,6 +188,13 @@ const failures = []; const fail = (m) => failures.push(m);
     });
     await page.addInitScript(() => {
         sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'ci', fullName: 'CI Trainee', batchId: 'B1', userType: 'Trainee' }));
+        // A steady tone as the microphone (Chrome's fake device only beeps now and then), so every
+        // frame the page sends is sound unless the page itself sends silence.
+        navigator.mediaDevices.getUserMedia = async () => {
+            const ctx = new AudioContext(), o = ctx.createOscillator(), d = ctx.createMediaStreamDestination();
+            o.frequency.value = 330; o.connect(d); o.start(); ctx.resume().catch(() => {});
+            return d.stream;
+        };
         // A stand-in for Gemini Live: records what the page sends and answers setup (as a binary frame, like Google).
         window.__ws = [];
         window.WebSocket = class FakeWS {
@@ -246,6 +253,26 @@ const failures = []; const fail = (m) => failures.push(m);
     const c2 = await page.evaluate(() => window.__ws[window.__ws.length - 1].sent.filter(m => m.realtimeInput && m.realtimeInput.audio).length);
     if (c2 !== c1) fail(`the microphone kept streaming while muted (${c1} → ${c2})`);
     await page.click('#fdd-phone button:has-text("Unmute")');
+    // speakerphone (to show the call in Google Meet): louder, remembered, and the mic sends silence while the caller talks
+    await page.click('#fdd-speaker');
+    const sp = await page.evaluate(() => ({ st: LiveCall.state(), pref: localStorage.getItem('LSH_FDD_SPEAKER_V1'), meet: !!document.querySelector('#fdd-meet[open]') }));
+    if (!sp.st || !sp.st.speaker || !(sp.st.volume > 1) || sp.pref !== 'on' || !sp.meet) fail(`Speaker didn't turn on speakerphone with the Meet instructions: ${JSON.stringify(sp)}`);
+    const zeros = (b64) => { const s = atob(b64); for (let i = 0; i < s.length; i++) if (s.charCodeAt(i)) return false; return true; };
+    const pcm1s = Buffer.alloc(24000 * 2); for (let i = 0; i < 24000; i++) pcm1s.writeInt16LE(Math.round(Math.sin(i / 8) * 8000), i * 2);
+    const n0 = await page.evaluate((b64) => { const w = window.__ws[window.__ws.length - 1]; w.emit({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: 'audio/pcm;rate=24000', data: b64 } }] }, outputTranscription: { text: 'Okay, my address is 1187 Willow Bend Drive.' } } }); return w.sent.length; }, pcm1s.toString('base64'));
+    await page.waitForTimeout(150);
+    const during = await page.evaluate(() => LiveCall.state().callerTalking);
+    await page.waitForTimeout(450);
+    const sentDuring = await page.evaluate((n) => window.__ws[window.__ws.length - 1].sent.slice(n).filter(m => m.realtimeInput && m.realtimeInput.audio).map(m => m.realtimeInput.audio.data), n0 + 2);
+    if (!during || !sentDuring.length || !sentDuring.every(d => zeros(d))) fail(`on speakerphone the mic wasn't silenced while the caller talked (${during}, ${sentDuring.length} frames, ${sentDuring.filter(d => !zeros(d)).length} not silent)`);
+    await page.waitForFunction(() => !LiveCall.state().callerTalking, null, { timeout: 4000 }).catch(() => fail('the caller never stopped talking'));
+    const n1 = await page.evaluate(() => window.__ws[window.__ws.length - 1].sent.length);
+    await page.waitForTimeout(500);
+    const after = await page.evaluate((n) => window.__ws[window.__ws.length - 1].sent.slice(n).filter(m => m.realtimeInput && m.realtimeInput.audio).map(m => m.realtimeInput.audio.data), n1);
+    if (!after.length || after.some(d => zeros(d))) fail(`on speakerphone the mic stayed silent after the caller finished (${after.filter(d => zeros(d)).length} of ${after.length} frames silent)`);
+    await page.click('#fdd-speaker');
+    const off = await page.evaluate(() => ({ st: LiveCall.state(), pref: localStorage.getItem('LSH_FDD_SPEAKER_V1') }));
+    if (off.st.speaker || off.st.volume !== 1 || off.pref !== 'off') fail(`Speaker didn't turn off: ${JSON.stringify(off)}`);
     // score it with the answer key
     const cur = await page.evaluate(() => { const t = [...document.querySelectorAll('#fdd-panel .fdd-opt span')].map(s => s.textContent); return DRILL_CALLS.find(d => d.actions.every(a => t.includes(a))); });
     if (!cur) fail('couldn\'t tell which drill call this is');
