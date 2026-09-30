@@ -118,6 +118,7 @@ Link to the CMS with a program so it opens in that program's context:
 | `…/?program=reception` | Header shows *Receptionist / Front Desk Training*; the Training Library lists that program's cases. Also `intake`, `cm`, `ea` (EA/PA) and `pd` (Property Damage: the vehicle cases MC-01, MC-04, MC-08, MC-12). The choice lasts for the browser tab and can be changed in the sidebar. |
 | `…/?mock=MC-04` | Opens that Training Library case right after sign-in (use it in a lesson step). |
 | `…/?library=1` | Opens the Training Library after sign-in (Admins); trainees get the Case Library search. |
+| `…/?intake=1` | Opens the Intake folder after sign-in. |
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
 | `…/?from=ea` (or `portal`, `pd`, `standard`, `cm`) | Opened from that platform: trainees sign in with just their name (see Name sign-in). |
 | `…/?calendar=1` | Opens the 📅 Calendar tab (Firm Calendar) after sign-in. |
@@ -253,6 +254,44 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - A case saved before these sections existed loads unchanged, with the new sections empty. `sections.cjs` checks this with a case saved by the previous version (`.github/scripts/fixtures/case-before-keyed.json`), and it fails if the page's positional fields change.
 - Code: `case-sections.js`, and "Keyed sections" in `app.js`.
 
+## 📥 Intake folder (automatically checked and reviewed)
+
+A separate folder in the Case Repository for **intake files**, kept apart from the case files. Open it from the sidebar (**📥 Intake Folder**), from the Case Library window's **📥 Intake folder** tab, or with a course link ending `?intake=1`. Trainees see only their own intake files; Admins see every trainee's, with the trainee's name on each. Code: `intake-folder.js`, `functions/_intake.js` (checklist), `functions/_intake-review.js` (review), `/api/intake-files`.
+
+**Two kinds of intake file:**
+- **Typed intakes.** **📝 New intake** opens the case editor in **Intake mode**, shown by the orange bar above the case. The trainee fills in the new client's details as usual.
+  - **💾 Save to Intake folder** files it in the folder. **Save Case**, **Archive** and the one-minute autosave also save the intake while the bar shows, so an intake never lands in the case files by accident.
+  - **📂 Move to case files** saves an accepted intake as a regular case (it gets a Case ID). The intake file stays in the folder, marked as moved.
+  - **✕ Close intake** leaves Intake mode.
+  - **Open** on a typed intake loads it back into the editor.
+- **Intake documents.** **⬆ Upload intake document** files a PDF or image (PNG, JPG, GIF, WEBP) of an intake sheet, up to 2 MB, with the client's name, the date of loss and a note if known. Save Word files as PDF first.
+
+**Checked automatically.** Every save or upload is scored against the intake checklist (the % badge on each file):
+- **Essentials** (missing = fail): client name, phone, date of birth, date of loss, SOL date, what happened, injuries and treatment, insurance.
+- **Recommended** (missing = warning): home address, email, police or incident report, emergency contact, intake call notes, attorney assigned.
+- **Also flagged:** an SOL that has passed, falls on or before the date of loss, or is within 90 days; a date of loss in the future; a minor client; an account of what happened under 25 words.
+
+**Reviewed automatically.** Right after each save or upload, Claude reviews the intake and the file shows:
+- a 1–5 score and a short summary;
+- red flags (deadlines, liability, coverage gaps, treatment gaps, prior injuries, inconsistencies);
+- what's missing;
+- questions to ask the client next;
+- what was done well and what to improve.
+
+For an uploaded document, the reviewer reads the file itself and reports which checklist details it contains, so the document's checklist score is filled in after the review. A typed intake is reviewed again only when it has changed. **↻ Review again** re-runs a review, and a review that never finished (for example, the page was closed) shows as *didn't finish* after 3 minutes. The **Needs attention** filter lists files with a missing essential, a red flag or a failed review.
+
+**Setup.** The review uses the `ANTHROPIC_API_KEY` secret on the Pages project, the same one the Doc Hub review uses. Without it, the checklist still runs and the folder says the review isn't set up. The review asks Claude Opus 5.5 for structured JSON output and opts into Anthropic's server-side fallback, so a request declined by a safety classifier is retried on Anthropic's recommended fallback model.
+
+**Data** (D1, created on first use): `intake_files`, one row per file:
+- whose it is and its kind;
+- the client name and date of loss;
+- the typed intake's content (the same shape a saved case has), or the uploaded file's R2 key, name and type;
+- the checklist findings and score;
+- the review and its status;
+- the case it was moved to.
+
+Deleting an intake document also deletes its file from storage.
+
 ## 📅 Firm Calendar (attorney calendars)
 
 The CMS keeps the fictional firm's calendars, the way a firm's case management system does: one calendar for each attorney (**Atty. Marcus Reyes**, pre-litigation; **Atty. Elena Brooks**, litigation; **Atty. David Okafor**, intake) and a **Firm / Staff** calendar. It's a tab of the case, **📅 Calendar**, right after **Tasks**. The sidebar's **📅 Firm Calendar** button, and a course link with `?calendar=1`, open the same tab. All times are the firm's, Eastern; when the trainee's computer is on another time zone, events and the event form also show the trainee's own time (e.g. *9:00 PM – 10:00 PM GMT+8 your time*).
@@ -348,7 +387,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - a rate-limited or rejected key rests and the request moves to the next key at once; a busy key hands over; a missing model falls through; a refused region is explained;
     - `/api/call-ai`: sign-in required, bad and oversized bodies refused, the review's JSON mode, the per-user limit (and it doesn't limit anyone else), "busy" when every key is at its limit, the Admin-only status;
     - results are saved as `practice` or `drill`, including in a table made before the `mode` column.
-- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the debrief needs a file and an authentication decision, scores 97 from the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads. It checks that trainees never see the Training Library: search results carry case numbers, not Training Library tags; the Case Library window has no Training Library filter; nothing on screen says "Training Library" on a library case or a practice copy; and `openTrainingLibrary()` doesn't open it. It checks the **Trainee view**: a trainer's screen switches to a trainee's (no Training Library, Master Control or Caller scenarios buttons, nothing saying "Training Library"), and **Back to trainer view** restores it. Finally, it checks that Caller scenarios are for trainers only: a trainee gets no Caller scenarios button and no panel, on a library case or a practice copy. For an Admin, the button opens the panel, which has one for every caller scenario on every file, and one for each of the file's simulator callers, with the caller's name, number and the right handling. Printing all of them renders every simulator caller.
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the debrief needs a file and an authentication decision, scores 97 from the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads. It checks that trainees never see the Training Library: search results carry case numbers, not Training Library tags; the Case Library window has no Training Library filter; nothing on screen says "Training Library" on a library case or a practice copy; and `openTrainingLibrary()` doesn't open it. It checks the **Trainee view**: a trainer's screen switches to a trainee's (no Training Library, Master Control or Caller scenarios buttons, nothing saying "Training Library"), and **Back to trainer view** restores it. It checks the **Intake folder**: a typed intake saved from Intake mode (autosave and Save Case file it there, never as a case), reviewed, moved to the case files, and an uploaded intake document filed and reviewed. Finally, it checks that Caller scenarios are for trainers only: a trainee gets no Caller scenarios button and no panel, on a library case or a practice copy. For an Admin, the button opens the panel, which has one for every caller scenario on every file, and one for each of the file's simulator callers, with the caller's name, number and the right handling. Printing all of them renders every simulator caller.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
   - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
