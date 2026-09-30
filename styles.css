@@ -196,6 +196,29 @@
     }
     .tab-btn:hover { color: #0f172a; border-bottom-color: #cbd5e1; }
     .active-tab { border-bottom: 3px solid var(--orange) !important; color: var(--orange) !important; font-weight: 700; }
+    /* The case file's tab bar: a panel of equal "keys" in capitals, 9 on the top row and 8 centred under them
+       (each key is a ninth of the bar); the open tab is navy with an orange bar along its foot. */
+    .case-tabs {
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+        margin-top: 18px; padding: 6px;
+        background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px;
+    }
+    .case-tabs .tab-btn {
+        flex: 0 0 calc((100% - 8 * 6px) / 9); min-width: 0; min-height: 40px;
+        display: flex; align-items: center; justify-content: center; text-align: center;
+        white-space: normal; line-height: 1.2;
+        padding: 8px 6px;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+        box-shadow: 0 1px 1px rgba(15, 23, 42, .04);
+        color: #1e293b; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+        transition: background .15s, border-color .15s, color .15s;
+    }
+    .case-tabs .tab-btn:hover { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+    .case-tabs .tab-btn.active-tab {
+        background: var(--navy); border: 1px solid var(--navy) !important; color: #fff !important;
+        box-shadow: inset 0 -3px 0 var(--orange);
+    }
+    @media (max-width: 900px) { .case-tabs .tab-btn { flex: 1 1 130px; } }
     .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 220px; position: relative; z-index: 1; opacity: 0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease; }
     .tab-pane.active { opacity: 1; transform: translateY(0); }
 
