@@ -9,7 +9,8 @@
 // on the standard voice (the caller's lines and the review answered by the test,
 // one busy line retried): answer, greet, pick the file from the search bar, the
 // caller hangs up, wrap up, debrief, saved as a practice call. The sidebar has one
-// calendar (the Firm Calendar; calendar.cjs tests it) and no .ics downloads.
+// calendar (the Firm Calendar; calendar.cjs tests it) and no .ics downloads. The Caller
+// scenarios panel shows the reception call scripts to Admins only, for every file.
 // Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -260,8 +261,37 @@ const SAVED = [
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
     if (!(await page.locator('#sidebar-actions button:has-text("Firm Calendar")').count()) || !(await page.locator('#tab-calendar').count())) fail('the Firm Calendar button or the Calendar tab is missing');
 
+    // Caller scenarios: a trainee gets no call scripts; an Admin gets a reception call script for every
+    // caller scenario and a scripted mock call (the caller's answers) for every simulator caller on the file
+    await page.evaluate(() => { openMockCase('MC-01', { silent: true }); openCallsPanel(); });
+    if (await page.locator('#mock-calls-panel .fdd-script, #mock-calls-panel .mcp-scripts').count()) fail('a trainee can see the reception call scripts');
+    await page.evaluate(() => closeCallsPanel());
+    const admin = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    admin.on('pageerror', e => fail(`page error (admin): ${e.message}`));
+    await admin.route('**/api/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(new URL(route.request().url()).pathname === '/api/case-repository' ? { success: true, cases: [] } : { success: true }) }));
+    await admin.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'trainer-ci', fullName: 'CI Trainer', batchId: 'B1', userType: 'Admin' })));
+    await admin.goto(base, { waitUntil: 'load' }); await admin.waitForTimeout(1200);
+    const scripts = await admin.evaluate(() => MOCK_CASES.map(c => {
+        openMockCase(c.id, { silent: true }); openCallsPanel();
+        const panel = document.getElementById('mock-calls-panel'), issues = [];
+        const scen = panel.querySelectorAll('.mcp-call details.mcp-script .fdd-script').length, calls = DRILL_CALLS.filter(d => d.mock === c.id);
+        if (scen !== c.reception.calls.length) issues.push(`${scen} scripts for ${c.reception.calls.length} caller scenarios`);
+        const sim = [...panel.querySelectorAll('.mcp-scripts .fdd-script')].map(e => e.dataset.call);
+        if (sim.join() !== calls.map(d => d.id).join()) issues.push(`simulator scripts ${sim.join() || 'none'} (expected ${calls.map(d => d.id).join() || 'none'})`);
+        calls.forEach(d => {
+            const t = (panel.querySelector(`.fdd-script[data-call="${d.id}"]`) || {}).innerText || '';
+            if (!t.includes(d.gives.name) || !t.includes(d.gives.callback) || !t.includes(d.actions[d.answer])) issues.push(`${d.id}'s script misses the caller's name, number or the right handling`);
+        });
+        if (/\bundefined\b|\bnull\b|\[object/.test(panel.innerText)) issues.push('undefined/null in a script');
+        closeCallsPanel();
+        return issues.length ? `${c.id}: ${issues.join('; ')}` : null;
+    }).filter(Boolean));
+    scripts.forEach(x => fail(`call scripts: ${x}`));
+    const allScripts = await admin.evaluate(() => { const d = document.createElement('div'); d.innerHTML = fddCallScripts(); return { n: d.querySelectorAll('.fdd-script').length, want: DRILL_CALLS.length, bad: /\bundefined\b|\[object/.test(d.innerText) }; });
+    if (allScripts.n !== allScripts.want || allScripts.bad) fail(`printing all scripts: ${allScripts.n} of ${allScripts.want}${allScripts.bad ? ', with undefined values' : ''}`);
+
     await browser.close(); server.close();
-    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls and a practice call; checked the Case Library, library-case notes and the sidebar's calendar.`);
+    console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls and a practice call; checked the Case Library, library-case notes, the sidebar's calendar and the Admins' call scripts.`);
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
     console.log('Smoke test passed.');
 })().catch(e => { console.error(e); process.exit(1); });

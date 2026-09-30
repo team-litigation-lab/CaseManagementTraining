@@ -188,6 +188,10 @@
     .mcp-call textarea{width:100%;min-height:54px;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit}
     .mcp-call .key{display:none;font-size:12px;color:#14532d;background:#f0fdf4;border-radius:6px;padding:8px 10px;margin-top:6px}
     .mcp-call.shown .key{display:block}
+    .mcp-script{margin-top:8px}.mcp-script summary{cursor:pointer;font-size:10.5px;font-weight:800;text-transform:uppercase;color:#0f2148;letter-spacing:.04em}
+    .mcp-script .fdd-script{margin:8px 0 0}
+    .mcp-scripts{border-top:2px solid #e2e8f0;margin:14px 0 12px;padding-top:12px}.mcp-scripts .mcp-sh{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#0f2148}
+    .mcp-scripts p{font-size:11.5px;color:#64748b;margin:4px 0 8px}
     .mcp-call button{font-size:10px;font-weight:800;text-transform:uppercase;background:#fff;border:1px solid #0f2148;color:#0f2148;border-radius:6px;padding:5px 9px;cursor:pointer;margin-top:6px}
     `;
     document.head.appendChild(css);
@@ -720,15 +724,25 @@
             <button onclick="closeCallsPanel()" style="background:none;border:1px solid #334155;color:#fff;border-radius:6px;padding:4px 9px;cursor:pointer">✕</button></div>
             <div class="mcp-b">
             <div class="mcp-verify"><b>Verify before sharing anything:</b> ${esc(r.verify)}</div>
-            <p style="font-size:11.5px;color:#64748b;margin:0 0 10px">Answer each call from what's in this case file (tabs: Profile, Treatment, Notes, Tasks…) and the ☎ Firm directory in the Library. Write what you'd say and do, then reveal the model handling.${admin ? ' <b>Admin:</b> model handling is shown.' : ''}</p>
+            <p style="font-size:11.5px;color:#64748b;margin:0 0 10px">Answer each call from what's in this case file (tabs: Profile, Treatment, Notes, Tasks…) and the ☎ Firm directory in the Library. Write what you'd say and do, then reveal the model handling.${admin ? ' <b>Admin:</b> model handling is shown, with a reception call script for each caller.' : ''}</p>
             ${r.calls.map((k, i) => `<div class="mcp-call ${admin ? 'shown' : ''}" id="mcp-call-${i}">
                 <div class="from">📞 ${esc(k.from)}</div><div class="ask">${esc(k.ask)}</div>
                 ${admin ? '' : `<textarea placeholder="What do you say and do?"></textarea><button onclick="this.closest('.mcp-call').classList.add('shown')">Reveal model handling</button>`}
-                <div class="key">✅ ${esc(k.handle)}</div></div>`).join('')}
+                <div class="key">✅ ${esc(k.handle)}</div>
+                ${admin && window.fddScenarioScript ? `<details class="mcp-script"><summary>📜 Reception call script</summary>${fddScenarioScript(c.id, i)}</details>` : ''}</div>`).join('')}
+            ${admin && window.fddCallScripts ? scriptsSection(c) : ''}
             <button onclick="openTrainingLibrary('desk')" style="font-size:10.5px;font-weight:800;text-transform:uppercase;background:#0f2148;color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer">☎ Firm directory & rules</button>
             </div>`;
         p.classList.add('open'); p.setAttribute('aria-hidden', 'false');
     };
+    // Admins: the simulator callers on this file, scripted for a trainer to play the caller, and print buttons.
+    function scriptsSection(c) {
+        const mine = (window.DRILL_CALLS || []).filter(d => d.mock === c.id).length, all = (window.DRILL_CALLS || []).length;
+        return `<div class="mcp-scripts"><div class="mcp-sh">🎭 Mock-call scripts · you play the caller</div>
+            <p>Run a mock call: read the caller's lines, answer the trainee's questions from the table, then score the call.</p>
+            <div class="fdd-scripts-bar"><button onclick="fddPrintScripts('${c.id}')">🖨 Print this file's scripts</button><button onclick="fddPrintScripts()">🖨 Print all ${all} simulator callers</button></div>
+            ${mine ? fddCallScripts(c.id) : '<p>No simulator callers on this file: use the caller scenarios above, or print all.</p>'}</div>`;
+    }
     function closeCallsPanel() { const p = $id('mock-calls-panel'); if (p) { p.classList.remove('open'); p.setAttribute('aria-hidden', 'true'); } }
     window.closeCallsPanel = closeCallsPanel;
 
