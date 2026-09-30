@@ -190,6 +190,15 @@
     .lib-row .meta{font-size:10.5px;color:#64748b;line-height:1.5}
     .lib-row .pills span{display:inline-block;font-size:9.5px;font-weight:700;background:#eef2ff;color:#1e3a8a;border-radius:999px;padding:1px 7px;margin:2px 3px 0 0}
     .lib-row button{font-size:10.5px;font-weight:800;text-transform:uppercase;background:#0f2148;color:#fff;border:none;border-radius:6px;padding:8px 10px;cursor:pointer}
+    .lib-row .acts{display:flex;flex-direction:column;gap:5px}
+    .lib-row button.pdf{background:#fff;color:#0f2148;border:1px solid #cbd5e1;padding:5px 8px;font-size:9.5px}
+    .lib-row button.pdf:hover{border-color:#f97316;color:#c2410c}
+    .lib-dl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:#334155}
+    .lib-dl b{color:#0f2148}
+    .lib-dl .sp{flex:1}
+    .lib-dl button{font-size:10.5px;font-weight:800;text-transform:uppercase;border-radius:6px;padding:7px 11px;cursor:pointer;background:#0f2148;color:#fff;border:1px solid #0f2148}
+    .lib-dl button.alt{background:#fff;color:#0f2148;border-color:#cbd5e1}
+    .lib-dl button:disabled,.lib-row button:disabled{opacity:.6;cursor:wait}
     @media (max-width:760px){.lib-row{grid-template-columns:1fr}}
     .lib-dir{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px}
     .lib-dir td,.lib-dir th{border:1px solid #e2e8f0;padding:6px 9px;text-align:left}
@@ -235,7 +244,7 @@
             <div class="modal-overlay no-print" id="library-modal" style="z-index:2940;">
                 <div class="modal-box wide lib-box">
                     <h2 class="serif">📚 Training Library</h2>
-                    <div class="sub mono">Hardcoded mock cases for every LSH training program. They open view-only; work on a practice copy to save your own.</div>
+                    <div class="sub mono">Mock cases for every LSH training program. Open one to edit it for everyone (trainees see it view only), or download them as a PDF.</div>
                     <div class="lib-tabs" id="lib-tabs"></div>
                     <div id="lib-filters"></div>
                     <div id="lib-body" style="overflow-y:auto;flex:1;"></div>
@@ -297,18 +306,40 @@
                 <input type="search" placeholder="Search name, phone, DOB, claim #, plate, case ID…" value="${esc(libState.q)}" oninput="libSearch(this.value)" style="flex:1;min-width:180px;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
             </div>`;
         }
-        const q = norm(libState.q);
-        const list = (window.MOCK_CASES || []).filter(c =>
-            (libState.program === 'all' || c.programs.includes(libState.program)) &&
-            (!q || mockMatches(c, q)));
-        body.innerHTML = list.length ? list.map(c => `<div class="lib-row">
+        const list = libList();
+        const dl = list.length ? `<div class="lib-dl">⬇ <span>Download the <b>${list.length}</b> case${list.length === 1 ? '' : 's'} listed as a PDF</span><span class="sp"></span>
+            <button onclick="libPdf(null, true, this)" title="Every tab of each case, plus its trainer-only front-desk key (verification, caller scenarios, practice calls)">PDF · trainer copy</button>
+            <button class="alt" onclick="libPdf(null, false, this)" title="Every tab of each case, without the answer keys: safe to give trainees">PDF · case files only</button></div>` : '';
+        body.innerHTML = list.length ? dl + list.map(c => `<div class="lib-row">
             <div class="id">${c.id}</div>
             <div><div class="nm">${esc(c.client.name)}${edits[c.id] ? `<span class="ed" title="Edited by ${esc(edits[c.id].updatedBy || '')} · ${esc(edits[c.id].updatedAt || '')} UTC">✎ edited</span>` : ''}</div><div class="sm">${esc(c.summary)}</div>
                 <div class="pills">${c.programs.map(p => `<span>${esc(programLabel(p))}</span>`).join('')}</div></div>
             <div class="meta">${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}<br>DOL ${esc(c.dateOfLoss)}<br><span class="mono">${esc(c.caseNumber || '')}</span><br>${esc(c.level)}</div>
-            <div><button onclick="openMockCase('${c.id}')">Open case</button></div>
+            <div class="acts"><button onclick="openMockCase('${c.id}')">Open case</button><button class="pdf" onclick="libPdf(['${c.id}'], true, this)" title="This case as a PDF (trainer copy)">⬇ PDF</button></div>
         </div>`).join('') : '<p style="font-size:12px;color:#94a3b8">No mock cases match.</p>';
     }
+    // The cases the library window lists now (program filter and search).
+    function libList() {
+        const q = norm(libState.q);
+        return (window.MOCK_CASES || []).filter(c =>
+            (libState.program === 'all' || c.programs.includes(libState.program)) &&
+            (!q || mockMatches(c, q)));
+    }
+    // ⬇ PDF (Admins): the cases listed, or one case (library-pdf.js makes the file).
+    window.libPdf = async function (ids, trainer, btn) {
+        if (!isAdmin() || typeof window.libraryPdf !== 'function') return;
+        const label = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = 'Preparing…'; }
+        try {
+            const title = ids ? '' : [libState.program !== 'all' ? programLabel(libState.program) : '', libState.q.trim() ? `search “${libState.q.trim()}”` : ''].filter(Boolean).join(' · ');
+            const r = await window.libraryPdf({ ids: ids || libList().map(c => c.id), trainer: !!trainer, title });
+            if (typeof showToast === 'function') showToast(`Downloaded ${r.name} (${r.pages} pages).`, 'success', 4000);
+        } catch (e) {
+            if (typeof showToast === 'function') showToast((e && e.message) || 'Couldn\'t make the PDF. Try again.', 'error', 5000);
+        } finally { if (btn) { btn.disabled = false; btn.innerHTML = label; } }
+    };
+    // What library-pdf.js says about a case an Admin edited in the CMS.
+    window.mockEditInfo = (id) => (edits[id] ? { updatedBy: edits[id].updatedBy, updatedAt: edits[id].updatedAt } : null);
 
     window.mockDeskHTML = () => deskHTML();
     function deskHTML() {

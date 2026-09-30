@@ -37,6 +37,12 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
   - The Front Desk practice calls on the file keep their own answers, so change a DOB or address there too if a call depends on it.
   - If the library version can't be loaded (offline), the case opens view only, so an edit of an old version can't go over a newer one.
   - Edits are stored by `/api/mock-case-edits` (table `mock_case_edits`, created on first use): anyone signed in can read them, and only Admins can save or delete one.
+- **Download as PDF (trainers):** the Training Library window has a download bar above the list, and a **⬇ PDF** button on each case.
+  - **PDF · trainer copy:** every tab of each listed case, plus its trainer-only front-desk key: how to verify the caller, the caller scenarios, the Front Desk practice calls, and how to say the hard names.
+  - **PDF · case files only:** the same case files without the keys, safe to give trainees.
+  - It takes the cases the window lists, so a program filter or a search narrows the file. Each file has a cover page, an index and one section per case, with page numbers.
+  - `library-pdf.js` builds the file in the browser with jsPDF and jsPDF-AutoTable, loaded from cdnjs on the first download. It's real text, not a screenshot: about 400 KB for all 52 cases.
+  - A case a trainer edited in the CMS carries a note: its key details are the edited ones, and the whole edited file is in the CMS.
 - **Practice copy:** **✍ Work on a practice copy** makes the case editable. Save Case then creates the trainee's own case as usual; the saved content carries `trainingLibraryId` (e.g. `MC-04`) and `program`.
 
 What the cases cover, from starter to advanced: every phase from Intake to Litigation, and a wide spread of case types: car crashes (rear-end, T-bone, rideshare, hit-and-run, commercial truck), a pedestrian hit by a city bus (government-claim notice), motorcycle, bicycle, slip and fall, dog bite (adult and child), premises liability, product liability (evidence that must not be released) and wrongful death (estate administrator). MC-25 … MC-36 add an e-scooter, a boating and a pedestrian case, negligent security, an elevator case in litigation (mediation), a trampoline-park injury, the UM settlement phase, and a prior attorney's lien and a pre-settlement funding lien. Authorization situations include the client only, an authorized daughter, a son with power of attorney, a guardian parent with the other parent *not* authorized, divorced parents with joint custody who are *both* authorized, an estate administrator with other relatives *not* authorized, a funding company allowed the case status only, a client with a safety flag (never confirm she's a client), an employer asking about a client, and a potential client with the statute of limitations weeks away. Call types include offers with deadlines, recorded-statement requests, deposition changes, a mediation center, a process server, check pickup by a third party, collections threats, a media call, a Spanish-speaking caller, a file transfer to new counsel, the client's former law firm, and callers who give only our case number.
@@ -410,6 +416,11 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - a trainee can't save or delete an edit, and an edit for a case that isn't in the library is refused;
   - opening another case with unsaved changes asks first (and with none, doesn't); Undo my changes drops them; a reload keeps them;
   - Restore the original deletes the edit, and both the trainer and the trainee get the original back, in the case and in the search.
+
+- **Training Library PDF** (`.github/scripts/library-pdf.cjs`, in the same job): the download buttons in a browser as a trainer, with jsPDF served from `node_modules`. It checks that:
+  - the trainer copy has every case, in order, in the index and its own section, each with its trainer-only key; the case-files copy has none and is shorter;
+  - the Property Damage filter narrows the file to exactly the cases listed, and a case's own **⬇ PDF** button gives just that case;
+  - the file names, the "Downloaded … (N pages)" message, and that the page's own `window.jspdf` (html2pdf's) is left alone.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
   - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
