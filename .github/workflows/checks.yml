@@ -72,6 +72,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/guest.cjs
+      - name: Training Library edits (trainers edit library cases for everyone)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/library-edit.cjs
       - name: Front Desk Drill live voice calls (token endpoint, call in a browser)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

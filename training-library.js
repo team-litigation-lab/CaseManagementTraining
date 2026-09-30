@@ -65,12 +65,15 @@
     /* ---------- mock case state ---------- */
     let mockId = null;         // id of the Training Library case in the editor (view-only or practice copy)
     let mockViewOnly = false;  // true while it's the untouched library copy
+    let mockEditing = false;   // an Admin is editing the library case itself (Save to the library)
     let libState = { program: currentProgram() || 'all', q: '', tab: 'cases' };
     window.mockIsViewOnly = () => !!(mockId && mockViewOnly);
+    window.mockIsLibraryEdit = () => !!(mockId && mockEditing);
     window.mockCurrentId = () => mockId;
     // Called by the save/archive/update buttons. Returns true (and explains) when saving must be blocked.
     // The case itself never saves; pending Notes and Tasks updates are saved right away instead.
     window.mockBlocksSave = function (silent) {
+        if (mockId && mockEditing) { saveLibraryEdit(); return true; } // an Admin editing the library case: Save goes to the library
         if (!(mockId && mockViewOnly)) return false;
         const pending = updatesPending();
         if (pending) saveUpdates();
@@ -88,16 +91,20 @@
     };
     // blankCaseEditorContent() calls this: any wipe of the editor ends library mode.
     window.mockReset = function () {
-        mockId = null; mockViewOnly = false;
+        mockId = null; mockViewOnly = false; mockEditing = false;
         setReadOnly(false);
         paintBanner();
     };
-    window.mockSnapshot = () => ({ mockId, mockViewOnly });
+    window.mockSnapshot = () => ({ mockId, mockViewOnly, mockEditing });
     // restoreCurrentEditorState() hands back what mockSnapshot() stored.
     window.mockRestore = function (data) {
         if (!data || !data.mockId || !findCase(data.mockId)) return false;
-        if (data.mockViewOnly) { openMockCase(data.mockId, { silent: true }); return true; }
-        mockId = data.mockId; mockViewOnly = false; paintBanner();
+        // The library case itself, or a library edit by someone who isn't an Admin now (Trainee view): reopened view only.
+        if (data.mockViewOnly || (data.mockEditing && !isAdmin())) { openMockCase(data.mockId, { silent: true }); return true; }
+        mockId = data.mockId; mockViewOnly = false;
+        // An Admin's unsaved edit of the library case comes back as an edit (the normal restore puts the content back).
+        mockEditing = !!(data.mockEditing && isAdmin()); editBase = '';
+        paintBanner();
         return false; // the normal restore puts the practice copy back
     };
 
@@ -149,6 +156,10 @@
     #mock-banner .mb-sp{flex:1;min-width:10px}
     #mock-banner button{font-size:10.5px;font-weight:800;text-transform:uppercase;border-radius:6px;padding:7px 11px;cursor:pointer;border:1px solid #334155;background:#13284f;color:#fff}
     #mock-banner button.pri{background:#10b981;border-color:#10b981}
+    #mock-banner .mb-tag.edit{background:#10b981}
+    #mock-banner .mb-ed{color:#cbd5e1;font-size:11px}
+    #capture-area.mock-loading{opacity:.45;pointer-events:none;transition:opacity .15s}
+    .lib-row .ed{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:800;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:4px;padding:1px 5px;text-transform:uppercase;letter-spacing:.3px}
     #mock-banner button:hover{border-color:#f97316}
     #capture-area.mock-ro .add-btn,#capture-area.mock-ro .hub-btn,#capture-area.mock-ro .revert-btn,#capture-area.mock-ro td button,#capture-area.mock-ro .pdf-card > button{display:none !important}
     #capture-area.mock-ro [contenteditable]{cursor:default;caret-color:transparent}
@@ -291,7 +302,7 @@
             (!q || mockMatches(c, q)));
         body.innerHTML = list.length ? list.map(c => `<div class="lib-row">
             <div class="id">${c.id}</div>
-            <div><div class="nm">${esc(c.client.name)}</div><div class="sm">${esc(c.summary)}</div>
+            <div><div class="nm">${esc(c.client.name)}${edits[c.id] ? `<span class="ed" title="Edited by ${esc(edits[c.id].updatedBy || '')} · ${esc(edits[c.id].updatedAt || '')} UTC">✎ edited</span>` : ''}</div><div class="sm">${esc(c.summary)}</div>
                 <div class="pills">${c.programs.map(p => `<span>${esc(programLabel(p))}</span>`).join('')}</div></div>
             <div class="meta">${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}<br>DOL ${esc(c.dateOfLoss)}<br><span class="mono">${esc(c.caseNumber || '')}</span><br>${esc(c.level)}</div>
             <div><button onclick="openMockCase('${c.id}')">Open case</button></div>
@@ -668,6 +679,159 @@
         if (typeof showToast === 'function') showToast(`Notes and Tasks on ${fileRef(rc)} are back to the original.`, 'success', 3000);
     };
 
+    /* ---------- Admins' edits to library cases ----------
+       An Admin can edit a library case in the editor (✎ Edit library case) and save it to
+       the library for everyone (/api/mock-case-edits). The edited version replaces the
+       mock-cases.js original wherever the case opens, and its key facts (name, phone,
+       DOB, DOL…) update the search and the library list. Restore the original deletes
+       the edit. Trainees' own Notes and Tasks still go on top of whichever version it is. */
+    const edits = {};      // mock id -> { facts, updatedBy, updatedAt } for every edited case
+    const originals = {};  // mock id -> the mock-cases.js facts an edit replaced
+    let openSeq = 0, editBase = '', editsFor = null;
+    const FACT_PATHS = { name: ['client', 'name'], phone: ['client', 'phone'], email: ['client', 'email'], dob: ['client', 'dob'], address: ['client', 'address'],
+        emergencyName: ['client', 'emergency', 'name'], emergencyPhone: ['client', 'emergency', 'phone'], dateOfLoss: ['dateOfLoss'], sol: ['sol'],
+        phase: ['phase'], attorney: ['attorney'], caseManager: ['caseManager'], narrative: ['narrative'] };
+    const getPath = (o, p) => p.reduce((x, k) => (x == null ? x : x[k]), o);
+    const setPath = (o, p, v) => { const last = p[p.length - 1], box = p.slice(0, -1).reduce((x, k) => (x[k] = x[k] || {}), o); box[last] = v; };
+    function patchFacts(id, facts) {
+        const c = findCase(id); if (!c || !facts) return;
+        if (!originals[id]) { originals[id] = {}; Object.entries(FACT_PATHS).forEach(([k, p]) => { originals[id][k] = getPath(c, p); }); }
+        Object.entries(FACT_PATHS).forEach(([k, p]) => { if (typeof facts[k] === 'string' && (k !== 'name' || facts[k].trim())) setPath(c, p, facts[k]); });
+        delete _idx[id];
+    }
+    function unpatchFacts(id) {
+        const c = findCase(id), o = originals[id]; if (!c || !o) return;
+        Object.entries(FACT_PATHS).forEach(([k, p]) => setPath(c, p, o[k]));
+        delete originals[id]; delete _idx[id];
+    }
+    // What the search and the library list use, read from the editor.
+    function readFacts() {
+        const t = (id) => cellText($id(id)).trim(); // as typed (innerText would apply the fields' CSS uppercase)
+        const v = (id) => { const el = $id(id); return el ? String(el.value || '').trim() : ''; };
+        return { name: t('client-name-field').split('\n')[0].trim(), phone: t('client-phone-field'), email: t('client-email-field'), dob: t('client-dob-field'),
+            address: t('client-address-field'), emergencyName: t('emergency-name-field'), emergencyPhone: t('emergency-phone-field'),
+            dateOfLoss: t('date-of-loss-field'), sol: t('sol-bar-field'), phase: v('phase-selector'), attorney: v('attorney-field'),
+            caseManager: v('case-manager-field'), narrative: t('case-narrative-field') };
+    }
+    // Every edit's facts, once per signed-in user (the search needs them before any case opens).
+    function loadEdits(refresh) {
+        if (refresh) editsFor = null;
+        const s = typeof getRealSession === 'function' ? getRealSession() : typeof getSession === 'function' ? getSession() : null, who = s && s.username;
+        if (!who || editsFor === who) return;
+        editsFor = who;
+        fetch('/api/mock-case-edits', { credentials: 'include' }).then(r => r.json()).then(d => {
+            if (!(d && d.success)) { editsFor = null; return; }
+            const seen = new Set();
+            (d.edits || []).forEach(e => { if (!findCase(e.mock)) return; seen.add(e.mock); edits[e.mock] = e; patchFacts(e.mock, e.facts); });
+            Object.keys(edits).forEach(id => { if (!seen.has(id)) { delete edits[id]; unpatchFacts(id); } });
+            const m = $id('library-modal'); if (m && m.classList.contains('open')) renderLibraryList(false);
+            if (mockId && mockViewOnly) paintBanner();
+        }).catch(() => { editsFor = null; });
+    }
+    // Other trainers' new edits reach an open page's search within a few minutes.
+    setInterval(() => { if (typeof hasAuthorizedAccess === 'function' && hasAuthorizedAccess()) loadEdits(true); }, 5 * 60 * 1000);
+    // The case's current edit, fresh from the server each time it opens (another trainer may have just saved one).
+    async function fetchEdit(id) {
+        try {
+            const res = await fetch('/api/mock-case-edits?mock=' + encodeURIComponent(id), { credentials: 'include', signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined });
+            const d = await res.json();
+            return d && d.success ? { ok: true, edit: d.edit } : { ok: false };
+        } catch (e) { return { ok: false }; }
+    }
+    // The library version on screen: the original from mock-cases.js (with any known edit's facts).
+    function showBase(c) {
+        if (typeof blankCaseEditorContent === 'function') blankCaseEditorContent();
+        if (typeof revertOther === 'function') revertOther('main-case-type', 'main-case-other', 'main-revert');
+        fillCase(c);
+        // The file's case number, as on a real file (the banner says it's a library case).
+        const idField = $id('case-id-field'); if (idField) idField.innerText = c.caseNumber || `${c.id} · TRAINING LIBRARY`;
+    }
+    // Puts an Admin's edit on screen, or the original back when the edit is gone.
+    function showEdit(c, e) {
+        const keep = { mockId, mockViewOnly, mockEditing };
+        if (e && e.content) {
+            edits[c.id] = { mock: c.id, facts: e.facts, updatedBy: e.updatedBy, updatedAt: e.updatedAt };
+            patchFacts(c.id, e.facts);
+            showBase(c);
+            if (typeof applyCaseContentToDOM === 'function') applyCaseContentToDOM(e.content, document);
+            const ph = $id('phase-selector'); if (ph && typeof updatePhaseDisplay === 'function') updatePhaseDisplay(ph.value);
+        } else if (edits[c.id]) {
+            delete edits[c.id]; unpatchFacts(c.id);
+            showBase(c);
+        } else return;
+        ({ mockId, mockViewOnly, mockEditing } = keep); // showBase's wipe ends library mode; this is still the same case
+        setReadOnly(mockViewOnly);
+        paintBanner();
+    }
+    const editDirty = () => !!(mockId && mockEditing && typeof buildCaseContentPayload === 'function' && JSON.stringify(buildCaseContentPayload()) !== editBase);
+    window.addEventListener('beforeunload', (e) => { if (editDirty()) { e.preventDefault(); e.returnValue = ''; } });
+    // ✎ Edit library case (Admins): the library version, editable, without this Admin's own Notes and Tasks.
+    window.startLibraryEdit = async function () {
+        if (!mockId || !mockViewOnly || !isAdmin()) return;
+        const c = findCase(mockId); if (!c) return;
+        if (updatesPending()) saveUpdates();
+        const seq = ++openSeq, area = $id('capture-area');
+        if (area) area.classList.add('mock-loading');
+        const r = await fetchEdit(c.id);
+        if (area) area.classList.remove('mock-loading');
+        if (seq !== openSeq || mockId !== c.id || !mockViewOnly) return;
+        if (!r.ok) { if (typeof showToast === 'function') showToast('Couldn\'t load the library version. Check your connection and try again.', 'error'); return; }
+        const tab = activeTab();
+        showBase(c);
+        mockId = c.id; mockViewOnly = false; mockEditing = true;
+        upd.id = null; clearTimeout(upd.timer); upd.pending = false;
+        if (r.edit && r.edit.content) showEdit(c, r.edit); else if (edits[c.id]) showEdit(c, null);
+        setReadOnly(false);
+        editBase = JSON.stringify(buildCaseContentPayload());
+        if (typeof currentCaseId !== 'undefined') { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }
+        paintBanner();
+        if (typeof showTab === 'function') showTab(tab);
+        if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
+        if (typeof showToast === 'function') showToast(`Editing ${c.id} in the Training Library. Save to the library when you're done.`, 'info', 4000);
+    };
+    // 💾 Save to the library (also what Save Case does while editing).
+    let saving = false;
+    window.saveLibraryEdit = async function () {
+        if (!(mockId && mockEditing) || !isAdmin() || saving) return;
+        const id = mockId, c = findCase(id);
+        const content = buildCaseContentPayload(); delete content.trainingLibraryId; delete content.program;
+        const facts = readFacts();
+        if (!facts.name) { if (typeof showToast === 'function') showToast('The client name can\'t be empty.', 'error'); return; }
+        saving = true;
+        let d = null;
+        try {
+            const res = await fetch('/api/mock-case-edits', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ mock: id, content, facts }) });
+            d = await res.json().catch(() => null);
+        } catch (e) { /* offline */ }
+        saving = false;
+        if (!(d && d.success)) { if (typeof showToast === 'function') showToast(`Couldn't save to the library${d && d.error ? ': ' + d.error : ''}. Your changes are still on screen.`, 'error', 5000); return; }
+        if (mockId !== id || !mockEditing) return;
+        edits[id] = { mock: id, facts, updatedBy: d.updatedBy, updatedAt: d.updatedAt };
+        patchFacts(id, facts);
+        editBase = JSON.stringify(buildCaseContentPayload()); mockEditing = false;
+        openMockCase(id, { silent: true, tab: activeTab() });
+        if (typeof showToast === 'function') showToast(`Saved to the Training Library. Everyone who opens ${c ? fileRef(c) : id} now sees this version.`, 'success', 4000);
+    };
+    // ↺ Restore the original (Admins): deletes the edit.
+    window.restoreLibraryOriginal = async function () {
+        if (!mockId || !isAdmin()) return;
+        const id = mockId, c = findCase(id);
+        if (!confirm(`Restore ${id} to the original library case? The edited version is deleted for everyone.`)) return;
+        let d = null;
+        try { d = await (await fetch('/api/mock-case-edits?mock=' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })).json(); } catch (e) { /* offline */ }
+        if (!(d && d.success)) { if (typeof showToast === 'function') showToast('Couldn\'t restore right now. Check your connection and try again.', 'error'); return; }
+        delete edits[id]; unpatchFacts(id);
+        editBase = ''; mockEditing = false;
+        openMockCase(id, { silent: true, tab: activeTab() });
+        if (typeof showToast === 'function') showToast(`${c ? fileRef(c) : id} is back to the original.`, 'success', 3000);
+    };
+    window.cancelLibraryEdit = function () {
+        if (!mockId || !mockEditing) return;
+        if (editDirty() && !confirm('Discard your unsaved changes to the library case?')) return;
+        const id = mockId; editBase = ''; mockEditing = false;
+        openMockCase(id, { silent: true, tab: activeTab() });
+    };
+
     function paintBanner() {
         const b = $id('mock-banner'); if (!b) return;
         const c = mockId && findCase(mockId);
@@ -675,9 +839,17 @@
         b.classList.add('open');
         const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="focusCaseSearch()">🔍 Search cases</button>`;
         const calls = isAdmin() ? `<button onclick="openCallsPanel()">☎ Caller scenarios</button>` : '';   // trainers only
+        const ed = edits[c.id];
+        const edNote = isAdmin() && ed ? `<span class="mb-ed">✎ Edited by ${esc(ed.updatedBy || 'an Admin')}${ed.updatedAt ? ' · ' + esc(ed.updatedAt) + ' UTC' : ''}</span>` : '';
+        if (mockEditing) {
+            b.innerHTML = `<span class="mb-tag edit">EDITING THE LIBRARY · ${esc(fileRef(c))}</span><span>Edit <b>${esc(c.client.name)}</b> like any case. <b>Save to the library</b> saves it for everyone who opens this file (trainees' own Notes and Tasks stay theirs). The practice calls on this file keep their own answers.</span><span class="mb-sp"></span>
+               <button class="pri" onclick="saveLibraryEdit()">💾 Save to the library</button>${ed ? `<button onclick="restoreLibraryOriginal()">↺ Restore the original</button>` : ''}<button onclick="cancelLibraryEdit()">✕ Cancel</button>`;
+            return;
+        }
+        const edit = isAdmin() ? `<button onclick="startLibraryEdit()">✎ Edit library case</button>` : '';   // trainers only
         b.innerHTML = mockViewOnly
-            ? `<span class="mb-tag">${isAdmin() ? 'TRAINING LIBRARY' : 'CASE FILE'} · ${esc(fileRef(c))}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span><span class="mb-sp"></span>
-               ${calls}<button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
+            ? `<span class="mb-tag">${isAdmin() ? 'TRAINING LIBRARY' : 'CASE FILE'} · ${esc(fileRef(c))}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span>${edNote}<span class="mb-sp"></span>
+               ${calls}${edit}<button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
             : `<span class="mb-tag">PRACTICE COPY · ${esc(fileRef(c))}</span><span>Your own copy of <b>${esc(c.client.name)}</b>. Save Case adds it to your cases; the ${isAdmin() ? 'library original' : 'original file'} never changes.</span><span class="mb-sp"></span>
                ${calls}<button onclick="openMockCase('${c.id}')">↺ Back to the ${isAdmin() ? 'library original' : 'original file'}</button>`;
     }
@@ -688,17 +860,23 @@
         if (!c) { if (typeof showToast === 'function') showToast(`That ${kindWord()} was not found.`, 'error'); return false; }
         if (typeof hasAuthorizedAccess === 'function' && !hasAuthorizedAccess()) return false;
         buildUI();
+        if (mockEditing && editDirty() && !confirm('Discard your unsaved changes to the library case?')) return false;
         const unsavedOwnWork = !mockViewOnly && typeof currentCaseId !== 'undefined' && currentCaseId === null && typeof hasCaseContent === 'function' && hasCaseContent();
         if (!opts.silent && unsavedOwnWork && !confirm(`Open this ${kindWord()}? The unsaved case in the editor will be cleared.`)) return false;
-        if (typeof blankCaseEditorContent === 'function') blankCaseEditorContent();
-        if (typeof revertOther === 'function') revertOther('main-case-type', 'main-case-other', 'main-revert');
-        fillCase(c);
-        mockId = c.id; mockViewOnly = true;
-        // The file's case number, as on a real file (the banner says it's a library case).
-        const idField = $id('case-id-field'); if (idField) idField.innerText = c.caseNumber || `${c.id} · TRAINING LIBRARY`;
+        showBase(c);
+        mockId = c.id; mockViewOnly = true; mockEditing = false;
         setReadOnly(true);
         paintBanner();
-        loadUpdates(c.id);
+        // An Admin's edit of this case (if any) replaces the original, then the user's own Notes and Tasks go on top.
+        const seq = ++openSeq, area = $id('capture-area');
+        if (area && edits[c.id]) area.classList.add('mock-loading');
+        fetchEdit(c.id).then(r => {
+            if (seq !== openSeq || mockId !== c.id || !mockViewOnly) return;
+            if (area) area.classList.remove('mock-loading');
+            if (r.ok) showEdit(c, r.edit);
+            loadUpdates(c.id);
+            if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
+        });
         closeTrainingLibrary();
         if (typeof showTab === 'function') showTab(opts.tab || 'profile');
         if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
@@ -764,7 +942,8 @@
             const r = origApply.apply(this, arguments);
             buildUI();
             const signedIn = typeof hasAuthorizedAccess === 'function' && hasAuthorizedAccess();
-            if (!signedIn) { mockId = null; mockViewOnly = false; setReadOnly(false); paintBanner(); }
+            if (!signedIn) { mockId = null; mockViewOnly = false; mockEditing = false; setReadOnly(false); paintBanner(); }
+            else loadEdits();
             if (signedIn && !deepLinkDone) {
                 deepLinkDone = true;
                 const m = params.get('mock');
