@@ -13,6 +13,10 @@
 // identifier is asked in writing; mute stops the microphone; the caller talking
 // over is cut off; scoring hangs up and the result keeps the transcript; when live
 // voice isn't set up the call falls back to text and the rest of the drill is text.
+// A practice call (no script) on live voice: answered, transcribed, typed lines go to the
+// caller; when the live line drops, the call goes on with the standard voice (/api/call-ai)
+// with the transcript so far; the debrief and the saved result; and without live voice set
+// up, the practice call runs on the standard voice from the start.
 // Usage: node .github/scripts/livecall.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
 const { chromium } = require('playwright');
 const { DatabaseSync } = require('node:sqlite');
@@ -117,19 +121,25 @@ const failures = []; const fail = (m) => failures.push(m);
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     page.on('dialog', d => d.accept());
-    const drills = []; let liveMode = 'ok';
+    const drills = [], aiCalls = []; let liveMode = 'ok', tokenAsks = 0;
     await page.route(/cdn\.tailwindcss\.com/, rt => rt.fulfill({ contentType: 'text/javascript', body: '' }));
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
         if (u.pathname === '/api/live-call') {
+            tokenAsks++;
             if (liveMode !== 'ok') return j({ success: false, code: 'NOT_CONFIGURED', error: 'Live voice calls aren\'t set up on this site yet (GEMINI_API_KEY). This call runs as text.' }, 503);
             return j({ success: true, token: 'auth_tokens/ci', model: 'gemini-3.8-live', url: 'wss://live.test/ws', attempts: 3 });
         }
         if (u.pathname === '/api/drill-results' && m === 'POST') { drills.push(JSON.parse(route.request().postData())); return j({ success: true }); }
         if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: false, results: [] });
         if (u.pathname === '/api/case-repository') return j({ success: true, cases: [] });
+        if (u.pathname === '/api/call-ai') {   // the practice call's standard voice and review
+            const b = JSON.parse(route.request().postData()); aiCalls.push(b);
+            if (b.purpose === 'review') return j({ success: true, text: JSON.stringify({ askedIds: false, idsNote: 'You didn\'t ask for an address or SSN.', handling: 60, handlingNote: 'Partly right.', breach: false, breachNote: '', verdict: 'A start.', strengths: ['Polite'], improve: ['Verify first'], betterLine: 'Can I have your address?' }) });
+            return j({ success: true, text: 'Okay, I can hold on.' });
+        }
         return j({ success: true });
     });
     await page.addInitScript(() => {
@@ -239,6 +249,77 @@ const failures = []; const fail = (m) => failures.push(m);
         if (JSON.stringify(first.picked.asked) !== '["name","dob","address"]') fail(`the saved identifiers asked are ${JSON.stringify(first.picked.asked)}`);
         if (saved.details[1].live) fail('the text call is saved as live');
     }
+
+    /* ---------- a practice call (no script) on live voice ---------- */
+    liveMode = 'ok';
+    await page.evaluate(() => { fddClose(); openFrontDeskDrill(); }); await page.waitForTimeout(300);
+    const wsBefore = await page.evaluate(() => window.__ws.length);
+    await page.click('button:has-text("Take a practice call")');
+    await page.click('#fdd-pc-id button:has-text("Answer")');
+    await page.waitForFunction(() => /On the call/.test((document.getElementById('fdd-pc-status') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => fail('Answer didn\'t put the practice call on live voice'));
+    if (await page.evaluate((n) => window.__ws.length, wsBefore) !== wsBefore + 1) fail('the practice call didn\'t open a live voice connection');
+    await page.evaluate(() => {
+        const w = window.__ws[window.__ws.length - 1];
+        w.emit({ serverContent: { inputTranscription: { text: 'Thank you for calling, how can I help?' } } });
+        w.emit({ serverContent: { outputTranscription: { text: 'Hi, I need some help with my case.' }, turnComplete: true } });
+    });
+    await page.fill('#fdd-pc-in', 'May I have your full name?');
+    await page.click('#fdd-pc-send');
+    await page.waitForTimeout(150);
+    const typed = await page.evaluate(() => window.__ws[window.__ws.length - 1].sent.filter(m => m.realtimeInput && m.realtimeInput.text).map(m => m.realtimeInput.text));
+    if (!typed.includes('May I have your full name?')) fail(`a typed line didn't go to the live caller: ${JSON.stringify(typed)}`);
+    const ptx = await page.$$eval('#fdd-pc-tr .fdd-msg', els => els.map(e => e.className.split(' ')[1] + ':' + e.textContent));
+    if (ptx.join('|') !== 'y:Thank you for calling, how can I help?|c:Hi, I need some help with my case.|y:May I have your full name?') fail(`the practice call's live transcript is wrong: ${JSON.stringify(ptx)}`);
+    if (aiCalls.length) fail('a practice call on live voice asked /api/call-ai for the caller\'s lines');
+    // the live line drops (voice service busy): the call goes on with the standard voice, transcript and all
+    await page.evaluate(() => { const w = window.__ws[window.__ws.length - 1]; w.readyState = 3; w.onclose({ code: 1011, reason: 'RESOURCE_EXHAUSTED: quota' }); });
+    await page.waitForTimeout(200);
+    if (!(await page.isVisible('.fdd-pc-note:has-text("standard voice")'))) fail('when the live line dropped, the practice call didn\'t say it goes on with the standard voice');
+    await page.fill('#fdd-pc-in', 'Can you hold for one moment?');
+    await page.click('#fdd-pc-send');
+    await page.waitForFunction(() => /I can hold on/.test(document.getElementById('fdd-pc-tr').textContent), null, { timeout: 5000 }).catch(() => fail('the standard voice didn\'t carry the call on after the live line dropped'));
+    const turn = aiCalls.find(b => b.purpose === 'caller');
+    const roles = turn ? turn.messages.map(m => m.role[0]).join('') : '';
+    if (!turn || roles !== 'umu' || !/help with my case/.test(turn.messages[1].text) || !/full name\?\s*Can you hold/.test(turn.messages[2].text)) fail(`the standard voice didn't get the live transcript so far: ${JSON.stringify(turn && turn.messages)}`);
+    await page.click('button:has-text("Hang up")');
+    const who = await page.evaluate((sys) => DRILL_CALLS.find(d => sys.includes(d.opening.slice(1, 40))), turn ? turn.system : '');
+    if (!who) fail('couldn\'t tell which caller the practice call was');
+    else {
+        if (who.mock) { await page.fill('.fdd-search', who.mock); await page.click(`.fdd-row:has(.id:text-is("${who.mock}"))`); } else await page.click('#fdd-none');
+        await page.check(`input[name="fdd-auth"][value="${who.auth}"]`);
+        await page.click('#fdd-pc-go');
+        await page.waitForSelector('.fdd-score', { timeout: 5000 }).catch(() => {});
+        const sc = await page.textContent('.fdd-score').catch(() => '');
+        if (sc !== '78/100') fail(`the practice call scored ${sc} (expected 78: find 30, auth 30, identifiers 0, handling 60 → 18)`);
+        await page.waitForTimeout(300);
+        const pr = drills.find(x => x.mode === 'practice');
+        if (!pr || pr.details[0].voice !== 'live' || !/Receptionist: Thank you for calling, how can I help\?/.test(pr.details[0].transcript) || !/Caller: Okay, I can hold on\./.test(pr.details[0].transcript)) fail(`the practice call wasn't saved with its live and standard-voice transcript: ${JSON.stringify(pr && pr.details[0]).slice(0, 300)}`);
+    }
+    // right after live voice got busy, the next practice call goes straight to the standard voice
+    let asks = tokenAsks;
+    await page.click('button:has-text("Take another call")');
+    await page.click('#fdd-pc-id button:has-text("Answer")');
+    await page.waitForTimeout(300);
+    if (tokenAsks !== asks || !(await page.isVisible('.fdd-pc-note:has-text("got busy")'))) fail(`right after live voice got busy, the next practice call tried live voice again (${tokenAsks - asks} token requests) or didn't say why it's on the standard voice`);
+    await page.evaluate(() => fddClose());
+    // live voice not set up (a fresh visit): the practice call says so and goes on with the standard voice; the next one doesn't try again
+    liveMode = 'off'; aiCalls.length = 0;
+    await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(1000);
+    await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(300);
+    await page.click('button:has-text("Take a practice call")');
+    await page.click('#fdd-pc-id button:has-text("Answer")');
+    await page.waitForSelector('.fdd-pc-note:has-text("set up")', { timeout: 5000 }).catch(() => fail('without live voice set up, the practice call doesn\'t say so'));
+    await page.fill('#fdd-pc-in', 'Good morning, LSH Training Law Group.');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => /I can hold on/.test(document.getElementById('fdd-pc-tr').textContent), null, { timeout: 5000 }).catch(() => fail('without live voice set up, the practice call didn\'t go on with the standard voice'));
+    await page.evaluate(() => { fddClose(); openFrontDeskDrill(); }); await page.waitForTimeout(200);
+    asks = tokenAsks;
+    await page.click('button:has-text("Take a practice call")');
+    await page.click('#fdd-pc-id button:has-text("Answer")');
+    await page.waitForTimeout(300);
+    if (tokenAsks !== asks) fail('after live voice was found not set up, the next practice call asked for a live voice token again');
+    await page.evaluate(() => fddClose());
+
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
     console.log('Live call test passed.');
