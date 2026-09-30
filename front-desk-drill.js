@@ -179,6 +179,18 @@
     .fdd-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;border-radius:4px;padding:1px 5px;background:#e0f2fe;color:#0369a1;white-space:nowrap}
     .fdd-dir summary{cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b}
     .fdd-dir ul{margin:6px 0 0 16px;padding:0;font-size:12px;line-height:1.5}
+    .fdd-script{border:1px solid #cbd5e1;border-radius:10px;margin:0 0 12px;background:#fff;font-size:12.3px;line-height:1.5;color:#0f172a;overflow:hidden}
+    .fdd-script .sh{background:#0f2148;color:#fff;padding:8px 11px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .fdd-script .sh b{font-size:12.5px}.fdd-script .sh span{font-size:10px;font-weight:800;letter-spacing:.04em;color:#fdba74;text-transform:uppercase}
+    .fdd-script .sb{padding:9px 11px}
+    .fdd-script h5{margin:8px 0 3px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#64748b}
+    .fdd-script .say{background:#f1f5f9;border-left:3px solid #0f2148;border-radius:5px;padding:6px 9px;margin:3px 0;font-weight:600}
+    .fdd-script .rsay{background:#ecfdf5;border-left:3px solid #10b981;border-radius:5px;padding:6px 9px;margin:3px 0}
+    .fdd-script table{width:100%;border-collapse:collapse;font-size:11.8px}.fdd-script td{border-bottom:1px solid #e2e8f0;padding:3px 5px;vertical-align:top}.fdd-script td:first-child{color:#64748b;width:38%}
+    .fdd-script .skey{background:#fff7ed;border-left:3px solid #f97316;border-radius:5px;padding:6px 9px;margin-top:4px}
+    .fdd-script ul{margin:2px 0 0 16px;padding:0}
+    .fdd-scripts-bar{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+    .fdd-scripts-bar button{font-size:10px;font-weight:800;text-transform:uppercase;background:#fff;border:1px solid #0f2148;color:#0f2148;border-radius:6px;padding:6px 9px;cursor:pointer}
     `;
     document.head.appendChild(css);
 
@@ -576,6 +588,114 @@
         box.innerHTML = hits.length ? warn + hits.map(c => `<div class="fdd-row ${cur.selected === c.id ? 'sel' : ''}" onclick="fddPick('${c.id}')"><span class="id">${c.id}</span><span class="nm">${esc(c.client.name)}<br><span class="mt">DOL <b>${esc(c.dateOfLoss)}</b> · DOB ${esc(c.client.dob)} · ${esc(c.caseNumber || '')} · ${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}</span></span></div>`).join('')
             : '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">No cases match.</p>';
     }
+
+    /* ---------- reception call scripts (Admins: the Caller scenarios panel) ----------
+       A trainer runs a mock call by playing the caller: what they open with, what they
+       answer when asked for each identifier (wrong answers included), how to stay in
+       character; then what a ready receptionist says, the key, and a scoring checklist. */
+    const ACTOR = {
+        client: 'You\'re the client. Friendly and cooperative: give your details when you\'re asked, and you want a real answer to your question.',
+        authorized: 'You\'re calling for the client and the file lists you as allowed (a signed authorization, a power of attorney, the estate). Give your details when asked; you expect an answer.',
+        failed: 'You can only give the details below, and some are missing or don\'t match the file. If they can\'t verify you, push back once ("Come on, it\'s me"), then accept a callback to the number on file or a message.',
+        unauthorized: 'You\'re NOT on the file. Push once or twice ("I\'m family, I have a right to know"), politely but firmly. If they hold the line kindly, leave a message. Never get abusive.',
+        business: 'You\'re calling for a company. Professional and brief: give your name, company, claim or reference number and callback number. You don\'t have the client\'s personal details.',
+        newcaller: 'You\'re not a client yet. You were hurt and want to know if the firm can help. Answer questions about what happened simply; you expect intake or a callback.'
+    };
+    const SCRIPT_ASKS = [['name', 'Full name'], ['dob', 'Date of birth'], ['address', 'Address'], ['ssn4', 'Last 4 of SSN'], ['callback', 'Callback number'], ['relationship', 'Relationship to the client'], ['dol', 'Date of the accident']];
+    function verifyLine(c) {
+        const same = c.mock && sameNameCount(c.mock) > 1 ? ' And what was the date of the accident?' : '';
+        if (c.auth === 'unauthorized') return 'May I have your full name, and your relationship to the person you\'re calling about?';
+        if (c.auth === 'business') return 'May I have your name, your company, the claim or reference number, and a good callback number?';
+        if (c.auth === 'newcaller') return 'May I have your full name and a good callback number? And can you tell me briefly what happened, and when?';
+        if (c.auth === 'authorized') return 'May I have your full name and your relationship to the client? And to verify the file, the client\'s date of birth and their address or the last 4 of their Social Security number?' + same;
+        return 'Before I look into that, may I have your full name, your date of birth, and your address or the last 4 of your Social Security number?' + same;
+    }
+    function scriptHTML(c) {
+        const k = caseOf(c.mock), g = c.gives || {};
+        const val = (key) => { const v = key === 'dol' && g.dol == null && k ? k.dateOfLoss : g[key]; return v == null || String(v).trim() === '' ? null : String(v); };
+        const none = c.auth === 'business' ? 'I\'m calling for the company; I don\'t have that.' : 'I don\'t know / I\'d rather not say.';
+        const lvl = { 1: 'Level 1 · warm-up', 2: 'Level 2', 3: 'Level 3 · tricky' }[c.level] || '';
+        return `<div class="fdd-script" data-call="${esc(c.id)}">
+            <div class="sh"><b>📜 ${esc(c.id)} · ${esc(g.name || 'Caller')}</b><span>${esc(lvl)}${c.voice ? ' · ' + (c.voice === 'f' ? 'female' : 'male') + ' caller' : ''}</span></div>
+            <div class="sb">
+            <h5>You play the caller · calls from ${esc(callerId(c))}</h5>
+            <div class="say">“${esc(unquote(c.opening))}”</div>
+            <h5>If the receptionist asks for…</h5>
+            <table>${SCRIPT_ASKS.map(([key, l]) => `<tr><td>${l}</td><td>${esc(val(key) || none)}</td></tr>`).join('')}</table>
+            <h5>Stay in character</h5><div>${esc(ACTOR[c.auth] || '')} Don't volunteer details; answer what you're asked. Hang up once you have your answer, a next step, or a message is taken.</div>
+            <h5>A ready receptionist</h5>
+            <div class="rsay">1. “Thank you for calling ${esc(firmName())}, this is [name]. How may I help you?”</div>
+            <div class="rsay">2. ${c.mock ? 'Finds the file (search by name, DOB, phone, case number, claim #…) and asks: ' : ''}“${esc(verifyLine(c))}”</div>
+            <div class="rsay">3. Decides: <b>${esc(authLabel(c.auth))}</b></div>
+            <div class="rsay">4. ${esc(c.actions[c.answer])}</div>
+            <div class="rsay">5. Confirms the callback number and any message, then: “Is there anything else I can help you with? Thank you for calling.”</div>
+            <h5>Key</h5>
+            <div class="skey">${k ? `<b>File:</b> ${esc(k.id)} · ${esc(k.client.name)} · ${esc(k.caseNumber || '')} · DOL ${esc(k.dateOfLoss)}<br>` : '<b>File:</b> none, not in the system (a potential new client)<br>'}
+                <b>Why:</b> ${esc(c.why)}${k && k.reception ? `<br><b>On file:</b> ${esc(k.reception.verify)}` : ''}</div>
+            <h5>Score it (100)</h5>
+            <ul><li>Found the right file (or knew there's none): 30</li><li>Right verification decision: 30</li><li>Asked for ${esc(needFor(c))}: 10</li><li>Handled it as above, shared nothing they shouldn't, closed well: 30</li></ul>
+            </div></div>`;
+    }
+    // A ready script for one of a library file's own caller scenarios (reception.calls): the
+    // file's verify rule and model handling, with the lines a ready receptionist says.
+    function scenarioScriptHTML(k, s, i) {
+        const r = k.reception || {}, cl = k.client || {};
+        const who = unquote(s.from).split(/[,(]/)[0].trim();
+        const isClient = /\(client\)/i.test(s.from) || who === cl.name;
+        const quoted = /^\s*["“]/.test(s.ask || '');
+        const ssn4 = (String(cl.ssn || '').match(/(\d{4})\s*$/) || [])[1];
+        // Same client name on another file: the date of the accident tells them apart, or (same accident) the date of birth or case number.
+        const twins = (window.MOCK_CASES || []).filter(x => x.id !== k.id && nameKey(x) === nameKey(k)), same = twins.length > 0;
+        const sameAsk = !same ? '' : twins.some(x => x.dateOfLoss === k.dateOfLoss)
+            ? ' The same name, address and accident are on another file: the date of birth or the case number decides which file.'
+            : ' Same name on more than one file: “And what was the date of the accident?”';
+        const caller = isClient
+            ? `You're the client. When they ask, verify with the file's details:<table>
+                <tr><td>Full name</td><td>${esc(cl.name)}</td></tr><tr><td>Date of birth</td><td>${esc(cl.dob || '')}</td></tr>
+                <tr><td>Address</td><td>${esc(cl.address || '')}</td></tr>${ssn4 ? `<tr><td>Last 4 of SSN</td><td>${esc(ssn4)}</td></tr>` : ''}
+                ${same ? `<tr><td>Date of the accident</td><td>${esc(k.dateOfLoss || '')}</td></tr>` : ''}</table>
+                Friendly and cooperative; you want a real answer. Don't volunteer details; answer what you're asked.`
+            : 'Give your name, who you are to the client (or your company) and a callback number when asked. You don\'t have the client\'s date of birth or Social Security number, unless the file authorizes you (see On file below: then answer from it). If they won\'t help, push back once, then accept a message. Never get abusive.';
+        return `<div class="fdd-script" data-scenario="${esc(k.id)}-${i + 1}">
+            <div class="sh"><b>📜 ${esc(k.id)} · caller scenario ${i + 1}</b><span>${esc(isClient ? 'client' : 'caller')}</span></div>
+            <div class="sb">
+            <h5>You play the caller · ${esc(unquote(s.from))}</h5>
+            <div class="say">${quoted ? `“${esc(unquote(s.ask))}”` : `(In your own words) ${esc(s.ask)}`}</div>
+            <div>${caller}</div>
+            <h5>A ready receptionist</h5>
+            <div class="rsay">1. “Thank you for calling ${esc(firmName())}, this is [name]. How may I help you?”</div>
+            <div class="rsay">2. “May I have your full name and a good callback number, in case we get disconnected? And who are you calling about?”</div>
+            <div class="rsay">3. Before sharing anything. The client, or someone the file authorizes: “May I have ${isClient ? 'your' : 'the client\'s'} date of birth, and the address on file or the last 4 of the Social Security number?”${sameAsk} Anyone else: share nothing about the case, not even that it's a client.</div>
+            <div class="rsay">4. ${esc(s.handle)}</div>
+            <div class="rsay">5. Reads back the callback number and any message, then: “Is there anything else I can help you with? Thank you for calling.”</div>
+            <h5>Key</h5>
+            <div class="skey"><b>File:</b> ${esc(k.id)} · ${esc(cl.name)} · ${esc(k.caseNumber || '')} · DOL ${esc(k.dateOfLoss || '')}<br><b>On file:</b> ${esc(r.verify || '')}</div>
+            </div></div>`;
+    }
+    // One caller scenario's script (Caller scenarios panel, Admins).
+    window.fddScenarioScript = function (mockId, i) {
+        const k = caseOf(mockId), s = k && k.reception && k.reception.calls[i];
+        return s ? scenarioScriptHTML(k, s, i) : '';
+    };
+    // The simulator callers' scripts for one library case (or all of them).
+    window.fddCallScripts = function (mockId) {
+        const calls = (window.DRILL_CALLS || []).filter(d => mockId ? d.mock === mockId : true);
+        return calls.map(scriptHTML).join('');
+    };
+    // Printable page of the scripts: one file's (its caller scenarios and simulator callers), or every simulator caller.
+    window.fddPrintScripts = function (mockId) {
+        const k = mockId && caseOf(mockId);
+        const title = k ? `Reception call scripts · ${k.id} ${k.client.name}` : 'Reception call scripts · all simulator callers';
+        const body = k ? ((k.reception && k.reception.calls) || []).map((s, i) => scenarioScriptHTML(k, s, i)).join('') + window.fddCallScripts(mockId)
+            : window.fddCallScripts();
+        const w = window.open('', '_blank');
+        if (!w) { if (typeof showToast === 'function') showToast('Allow pop-ups for this site to print the scripts.', 'error'); return; }
+        w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${css.textContent}
+            body{font-family:Arial,sans-serif;margin:24px;color:#0f172a}h1{font-size:18px;margin:0 0 14px}.fdd-script{break-inside:avoid;page-break-inside:avoid}
+            @media print{.fdd-script .sh{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head>
+            <body><h1>${esc(title)}</h1>${body}</body></html>`);
+        w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+    };
 
     // The identifiers the front desk has to ask this caller for (the 10 identifier points).
     function needFor(c) {
