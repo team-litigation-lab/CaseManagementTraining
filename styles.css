@@ -317,14 +317,16 @@
     }
     /* the logo on the sidebar: the Legal Support Help mark and name, white on navy, no frame */
     #sidebar-logo { display: block; width: 150px; max-width: 100%; height: auto; }
+    /* (#agency-seal: the logo on a white tile, kept for any page that still shows it; the sidebar
+       now shows #sidebar-logo) */
     #agency-seal {
-        width: 88px; height: 88px; aspect-ratio: 1 / 1; border-radius: 10px;
-        border: 2px solid var(--orange);
+        width: 88px; height: 88px; aspect-ratio: 1 / 1; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0; overflow: hidden; background:#0f172a;
+        flex-shrink: 0; overflow: hidden; background: #fff; padding: 6px; box-sizing: border-box;
+        box-shadow: 0 2px 10px rgba(0,0,0,.35);
     }
     #agency-seal span { font-size: 40px !important; }
-    #agency-seal img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1 / 1; }
+    #agency-seal img { width: 100%; height: 100%; object-fit: contain; aspect-ratio: 1 / 1; display: block; }
 
     .session-btn {
         width: 100%;
