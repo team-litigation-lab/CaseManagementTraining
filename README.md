@@ -57,7 +57,7 @@ With **🎙 Live voice calls** ticked on the drill's start screen (the default i
 
 **Setup:** add the Gemini key to this Pages project.
 1. Cloudflare → Workers & Pages → the CMS Pages project → **Settings → Variables and Secrets**.
-2. Add a secret named `GEMINI_API_KEY`, for Production and Preview. It can be the same key the courses use. `GEMINI_API_KEY1` … `GEMINI_API_KEY9` add more keys to share the load.
+2. Add a secret named `GEMINI_API_KEY` or any numbered name (`GEMINI_API_KEY1`, `GEMINI_API_KEY13`, …), for Production and Preview. It can be the same key the courses use. Each extra numbered key shares the load.
 3. Redeploy.
 
 Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. The default order is `gemini-3.8-live`, then `gemini-3.1-flash-live-preview`, then `gemini-2.5-flash-native-audio-preview-12-2025`. The drill moves to the next model on its own if one doesn't accept the call.
