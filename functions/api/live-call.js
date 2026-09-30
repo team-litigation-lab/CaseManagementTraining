@@ -5,8 +5,9 @@ import { drillCall, createLiveToken, LIVE_MODELS, LIVE_WS } from '../_live.js';
 // (see functions/_live.js). `attempt` moves on to the next model when the browser
 // couldn't start a session on the previous one.
 //
-// Needs GEMINI_API_KEY (or GEMINI_API_KEY1 … 9: every one set is used, starting on a
-// random one) as a secret on this Pages project. Without one the drill says live
+// Needs a Gemini key as a secret on this Pages project: GEMINI_API_KEY, or any
+// numbered one (GEMINI_API_KEY1, GEMINI_API_KEY13, …). Every one set is used,
+// starting on a random one. Without one the drill says live
 // voice isn't set up and runs the call as text, as before.
 const PER_HOUR = 60;   // live calls per trainee per hour (a 12-call drill with retries fits easily)
 const DDL = `CREATE TABLE IF NOT EXISTS live_call_log (
@@ -26,8 +27,8 @@ export async function onRequestPost({ request, env }) {
     const call = drillCall(String(body.callId || ''));
     if (!call) return json({ success: false, error: 'Unknown drill call.' }, 400);
 
-    const pool = ['GEMINI_API_KEY', ...Array.from({ length: 9 }, (_, i) => 'GEMINI_API_KEY' + (i + 1))]
-        .map(n => env[n]).filter((k, i, a) => k && a.indexOf(k) === i);
+    const pool = Object.keys(env).filter(n => /^GEMINI_API_KEY\d*$/.test(n)).sort()
+        .map(n => String(env[n] || '').trim()).filter((k, i, a) => k && a.indexOf(k) === i);
     if (!pool.length) return json({ success: false, code: 'NOT_CONFIGURED', error: 'Live voice calls aren\'t set up on this site yet (GEMINI_API_KEY). This call runs as text.' }, 503);
     const models = [env.LIVE_MODEL, ...LIVE_MODELS].filter((m, i, a) => m && a.indexOf(m) === i);
     const attempt = Math.max(0, Math.floor(Number(body.attempt) || 0));

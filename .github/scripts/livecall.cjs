@@ -66,6 +66,11 @@ const failures = []; const fail = (m) => failures.push(m);
 
     let r = await post({ callId: 'D01' });
     if (r.status !== 503 || r.data.code !== 'NOT_CONFIGURED') fail(`without a key the endpoint should say live voice isn't set up (${r.status} ${JSON.stringify(r.data)})`);
+    // any numbered key name counts (GEMINI_API_KEY13 is a real one)
+    env.GEMINI_API_KEY13 = 'key-a';
+    r = await post({ callId: 'D01' });
+    if (r.status !== 200 || (google[google.length - 1] || {}).key !== 'key-a') fail(`a key set as GEMINI_API_KEY13 wasn't used (${r.status} ${JSON.stringify(r.data)})`);
+    delete env.GEMINI_API_KEY13;
     env.GEMINI_API_KEY = 'key-a'; env.GEMINI_API_KEY1 = 'key-b';
     r = await post({ callId: 'D01' }, false);
     if (r.status !== 401) fail(`a signed-out request got ${r.status}`);
