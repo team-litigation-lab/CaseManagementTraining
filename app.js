@@ -873,6 +873,7 @@
         /* ---------- New Case ---------- */
         function newCase() {
             if (hasCaseContent() && !confirm('Start a new case? Any unsaved progress on this case will be lost.')) return;
+            if (window.mockConfirmLeave && !window.mockConfirmLeave()) return; // unsaved changes to a Training Library case
             blankCaseEditorContent(); // wipes all case fields and sets currentCaseId = null
             clearPersistedEditorState(); // don't let a refresh bring back the case we just discarded
             currentCaseIsDraft = false;
@@ -1456,6 +1457,7 @@
         }
         async function loadCase(id) {
             if (!hasAuthorizedAccess()) return; // blocked: not logged in, or site is locked
+            if (window.mockConfirmLeave && !window.mockConfirmLeave()) return; // unsaved changes to a Training Library case
             try {
                 const res = await fetch('/api/case-repository?id=' + encodeURIComponent(id), { credentials: 'include' });
                 const data = await res.json();
@@ -1818,6 +1820,7 @@
         function setTraineeView(on) {
             const s = getRealSession();
             if (!s || s.userType !== 'Admin') return;
+            if (window.mockConfirmLeave && !window.mockConfirmLeave()) return; // unsaved changes to a Training Library case
             try { if (on) sessionStorage.setItem(TRAINEE_VIEW_KEY, '1'); else sessionStorage.removeItem(TRAINEE_VIEW_KEY); } catch (e) { return; }
             if (window.mockFlushUpdates) window.mockFlushUpdates({ keepalive: true });   // Notes/Tasks typed on a library case survive the reload
             location.reload();

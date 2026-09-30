@@ -3,13 +3,14 @@
 // real page in a browser, as a trainer (Admin) and a trainee side by side. Other
 // /api/ calls are answered by the test, as in smoke.cjs.
 //
-// Checks: only an Admin gets ✎ Edit library case; editing makes the case typeable and
-// Save goes to the library (never to the Admin's own cases, and autosave doesn't make
-// one); the saved edit is what a trainee then opens (view only, their own Notes on
-// top) and what the search finds; the library list marks it edited; a trainee can't
-// save or delete an edit; Cancel drops unsaved changes; a reload while editing comes
-// back in edit mode; Restore the original deletes the edit for everyone; and the
-// banner adds no field to the case (saved cases restore fields by position).
+// Checks: an Admin's library case opens editable (a trainee's, and an Admin's in Trainee
+// view, view only); Save goes to the library (never to the Admin's own cases, and
+// autosave doesn't make one); the saved edit is what a trainee then opens (view only,
+// their own Notes on top) and what the search finds; the library list marks it edited;
+// a trainee can't save or delete an edit; leaving with unsaved changes asks first, and
+// Undo my changes drops them; a reload with unsaved changes keeps them; Restore the
+// original deletes the edit for everyone; and the banner adds no field to the case
+// (saved cases restore fields by position).
 // Usage: node .github/scripts/library-edit.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
 const { chromium } = require('playwright');
 const { DatabaseSync } = require('node:sqlite');
@@ -62,12 +63,12 @@ const failures = []; const fail = (m) => failures.push(m);
     await new Promise(r => server.listen(0, r));
     const base = `http://localhost:${server.address().port}/`;
     const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-    const repoPosts = [];
-    async function open(who) {
+    const repoPosts = [], asked = [];
+    async function open(who, init) {
         const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
         const page = await context.newPage();
         page.on('pageerror', e => fail(`${who}: page error: ${e.message}`));
-        page.on('dialog', d => d.accept());
+        page.on('dialog', d => { asked.push(`${who}: ${d.message()}`); d.accept(); });
         await page.route('**/api/**', async route => {
             const r = route.request(), u = new URL(r.url());
             const j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
@@ -83,6 +84,7 @@ const failures = []; const fail = (m) => failures.push(m);
         });
         await page.route(/cdn\.tailwindcss\.com/, r => r.fulfill({ contentType: 'text/javascript', body: `document.head.insertAdjacentHTML('beforeend','<style>.flex{display:flex}.flex-1{flex:1 1 0%}.flex-col{flex-direction:column}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.hidden{display:none}</style>')` }));
         await page.addInitScript((s) => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify(s)), people[who]);
+        if (init) await page.addInitScript(init);
         await page.goto(base, { waitUntil: 'load' });
         await page.waitForTimeout(1200);
         return page;
@@ -95,18 +97,16 @@ const failures = []; const fail = (m) => failures.push(m);
     const admin = await open('boss');
     const trainee = await open('ci');
 
-    // 1. only an Admin can edit
+    // 1. an Admin's library case opens editable; a trainee's view only
     await openCase(trainee, 'MC-01');
-    if (await trainee.locator('#mock-banner button:has-text("Edit library case")').count()) fail('a trainee has the Edit library case button');
+    if (!(await trainee.evaluate(() => mockIsViewOnly())) || await trainee.locator('#mock-banner button:has-text("Save to the library")').count()) fail('a trainee can edit a library case');
     await openCase(admin, 'MC-01');
     const fields0 = await fieldCount(admin);
-    if (!(await admin.isVisible('#mock-banner button:has-text("Edit library case")'))) fail('an Admin has no Edit library case button on a library case');
 
-    // 2. edit: the case is typeable; Save goes to the library
-    await admin.click('#mock-banner button:has-text("Edit library case")'); await admin.waitForTimeout(700);
-    if (!/EDITING THE LIBRARY/.test(await admin.textContent('#mock-banner'))) fail('the banner does not say the library case is being edited');
+    // 2. the Admin types straight into it; Save goes to the library
+    if (!/EDITABLE/.test(await admin.textContent('#mock-banner')) || !(await admin.isVisible('#mock-banner button:has-text("Save to the library")'))) fail('an Admin\'s library case does not open editable');
     await shot(admin, 'lib-1-editing');
-    if (await admin.evaluate(() => document.getElementById('capture-area').classList.contains('mock-ro'))) fail('the library case is still view only in edit mode');
+    if (await admin.evaluate(() => document.getElementById('capture-area').classList.contains('mock-ro') || mockIsViewOnly())) fail('an Admin\'s library case is view only');
     await admin.click('#client-phone-field'); await admin.keyboard.press('Control+A'); await admin.keyboard.type('(555) 777-1234');
     await admin.evaluate(() => showTab('profile'));
     await admin.click('#case-narrative-field'); await admin.keyboard.press('End'); await admin.keyboard.type(' EDITED BY THE TRAINER.');
@@ -123,7 +123,7 @@ const failures = []; const fail = (m) => failures.push(m);
         if (r.updated_by !== 'boss' || r.updated_by_name !== 'Tom Reyes') fail(`the edit isn't credited to the trainer (${r.updated_by}, ${r.updated_by_name})`);
     }
     if (repoPosts.length) fail(`editing a library case saved to the Admin's own cases (${repoPosts.join(', ')})`);
-    if (!/TRAINING LIBRARY/.test(await admin.textContent('#mock-banner')) || !/Edited by Tom Reyes/.test(await admin.textContent('#mock-banner'))) fail('after saving, the case is not back to view only with who edited it');
+    if (!/EDITABLE/.test(await admin.textContent('#mock-banner')) || !/Edited by Tom Reyes/.test(await admin.textContent('#mock-banner'))) fail('after saving, the banner does not say who edited the case');
     if ((await field(admin, 'client-phone-field')) !== '(555) 777-1234') fail('after saving, the Admin does not see the edited version');
     await shot(admin, 'lib-2-saved');
     if ((await fieldCount(admin)) !== fields0) fail(`editing changed the number of case fields (${fields0} → ${await fieldCount(admin)})`);
@@ -149,19 +149,28 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!/Trainee note: client called/.test(await trainee.textContent('#note-body'))) fail('the trainee\'s own Notes are not on top of the edited case');
     if (/Edited by/.test(await trainee.textContent('#mock-banner'))) fail('the trainee\'s banner shows the trainer\'s edit note');
 
-    // 5. Cancel drops unsaved changes
-    await admin.click('#mock-banner button:has-text("Edit library case")'); await admin.waitForTimeout(700);
-    if ((await field(admin, 'client-phone-field')) !== '(555) 777-1234') fail('editing again did not start from the saved edit');
+    // 5. leaving with unsaved changes asks first; Undo my changes drops them; a reload keeps them
+    if ((await field(admin, 'client-phone-field')) !== '(555) 777-1234') fail('reopened, the Admin\'s editable case is not the saved edit');
+    asked.length = 0;
+    await openCase(admin, 'MC-02'); await openCase(admin, 'MC-01');
+    if (asked.length) fail(`opening another case with nothing changed asked: ${asked.join(' / ')}`);
     await admin.click('#client-phone-field'); await admin.keyboard.press('Control+A'); await admin.keyboard.type('(555) 000-0000');
-    // a reload while editing comes back in edit mode, with the unsaved change
+    await openCase(admin, 'MC-02');
+    if (!asked.some(m => /Discard your unsaved changes/.test(m))) fail('opening another case with unsaved changes to a library case did not ask first');
+    await openCase(admin, 'MC-01');
+    await admin.click('#client-phone-field'); await admin.keyboard.press('Control+A'); await admin.keyboard.type('(555) 000-0000');
     await admin.waitForTimeout(800);
     await admin.reload({ waitUntil: 'load' }); await admin.waitForTimeout(1500);
-    if (!/EDITING THE LIBRARY/.test(await admin.textContent('#mock-banner')) || (await field(admin, 'client-phone-field')) !== '(555) 000-0000') fail('a reload while editing did not come back to the edit');
-    await admin.click('#mock-banner button:has-text("Cancel")'); await admin.waitForTimeout(900);
-    if ((await field(admin, 'client-phone-field')) !== '(555) 777-1234' || JSON.parse(row().facts).phone !== '(555) 777-1234') fail('Cancel did not drop the unsaved change');
+    if (!/EDITABLE/.test(await admin.textContent('#mock-banner')) || (await field(admin, 'client-phone-field')) !== '(555) 000-0000') fail('a reload with unsaved changes did not keep them');
+    await admin.click('#mock-banner button:has-text("Undo my changes")'); await admin.waitForTimeout(900);
+    if ((await field(admin, 'client-phone-field')) !== '(555) 777-1234' || JSON.parse(row().facts).phone !== '(555) 777-1234') fail('Undo my changes did not drop the unsaved change');
+    // an Admin in Trainee view sees it view only
+    const preview = await open('boss', () => sessionStorage.setItem('LSH_TRAINEE_VIEW_V1', '1'));
+    await openCase(preview, 'MC-01');
+    if (!(await preview.evaluate(() => mockIsViewOnly())) || await preview.locator('#mock-banner button:has-text("Save to the library")').count()) fail('in Trainee view the library case is editable');
+    if ((await field(preview, 'client-phone-field')) !== '(555) 777-1234') fail('in Trainee view the Admin does not see the edited case');
 
     // 6. Restore the original, for everyone
-    await admin.click('#mock-banner button:has-text("Edit library case")'); await admin.waitForTimeout(700);
     await admin.click('#mock-banner button:has-text("Restore the original")'); await admin.waitForTimeout(1200);
     if (row()) fail('Restore the original did not delete the edit');
     if ((await field(admin, 'client-phone-field')) !== '(555) 010-4417') fail(`after the restore the Admin does not see the original (${await field(admin, 'client-phone-field')})`);

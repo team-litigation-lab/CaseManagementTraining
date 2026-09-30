@@ -403,22 +403,25 @@ const SAVED = [
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');
     await admin.evaluate(() => closeCallsPanel());
+    // A trainer's library case opens editable (Save goes to the library).
+    await admin.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('notes'); }); await admin.waitForTimeout(400);
+    if (await admin.evaluate(() => mockIsViewOnly() || !mockIsLibraryEdit())) fail('a trainer\'s library case did not open editable');
     // Trainee view: the trainer sees the site the way trainees do, then goes back. A note typed
-    // on a library case just before switching is saved, not lost to the reload.
-    await admin.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('notes'); });
-    await admin.click('#pane-notes .add-btn');
-    await admin.click('#note-body tr:last-child td:nth-child(3) [contenteditable]');
-    await admin.keyboard.type('Typed right before Trainee view');
+    // on a library case (their own notes, view only there) just before switching back is saved, not lost to the reload.
     await Promise.all([admin.waitForNavigation({ waitUntil: 'load' }), admin.click('#session-footer button:has-text("Trainee view")')]);
-    if (!adminUpdates.some(b => b.includes('Typed right before Trainee view'))) fail('a note typed on a library case just before switching to Trainee view was not saved');
     await admin.waitForTimeout(1200);
     await admin.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('notes'); });
+    await admin.waitForSelector('#capture-area.mock-upd-ready', { timeout: 5000 }).catch(() => fail('in Trainee view the library case\'s Notes never opened for editing'));
     const tv = await admin.evaluate(() => ({ type: getSession().userType, real: getRealSession().userType, bar: !!document.querySelector('#trainee-view-bar'),
         lib: !!(document.getElementById('lib-open-btn') || {}).offsetParent, mc: !!document.querySelector('#session-footer button[onclick="openAdminDashboard()"]'),
         calls: !!document.querySelector('#mock-banner button[onclick="openCallsPanel()"]'), text: /training library/i.test(document.body.innerText),
-        openLib: !!(document.getElementById('cl-open-btn') || {}).offsetParent }));
-    if (tv.type !== 'Trainee' || tv.real !== 'Admin' || !tv.bar || tv.lib || tv.mc || tv.calls || tv.text || tv.openLib) fail(`Trainee view doesn't look like a trainee's screen: ${JSON.stringify(tv)}`);
+        openLib: !!(document.getElementById('cl-open-btn') || {}).offsetParent, viewOnly: mockIsViewOnly() }));
+    if (tv.type !== 'Trainee' || tv.real !== 'Admin' || !tv.bar || tv.lib || tv.mc || tv.calls || tv.text || tv.openLib || !tv.viewOnly) fail(`Trainee view doesn't look like a trainee's screen: ${JSON.stringify(tv)}`);
+    await admin.click('#pane-notes .add-btn');
+    await admin.click('#note-body tr:last-child td:nth-child(3) [contenteditable]');
+    await admin.keyboard.type('Typed right before trainer view');
     await Promise.all([admin.waitForNavigation({ waitUntil: 'load' }), admin.click('#trainee-view-bar button')]);
+    if (!adminUpdates.some(b => b.includes('Typed right before trainer view'))) fail('a note typed on a library case just before leaving Trainee view was not saved');
     await admin.waitForTimeout(1200);
     const back = await admin.evaluate(() => ({ type: getSession().userType, bar: !!document.querySelector('#trainee-view-bar'), lib: !!(document.getElementById('lib-open-btn') || {}).offsetParent }));
     if (back.type !== 'Admin' || back.bar || !back.lib) fail(`Back to trainer view didn't restore the trainer's screen: ${JSON.stringify(back)}`);
