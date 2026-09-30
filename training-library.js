@@ -440,6 +440,9 @@
         if (c.client.employment) { set(emp, 'Status', c.client.employment.status); set(emp, 'Employer Name', c.client.employment.employer); set(emp, 'Job Position', c.client.employment.title); }
         const narr = cardByHead(prof, 'Case Narrative');
         setVal(narr && narr.querySelector('[contenteditable]'), c.narrative);
+        // Primary Injury (a keyed card: its fields are named by data-k)
+        const inj = $id('kx-injury');
+        if (inj && c.injury) Object.entries(c.injury).forEach(([k, v]) => setVal(inj.querySelector(`[data-k="${k}"]`), v));
 
         // Police
         const pol = $id('pane-police');

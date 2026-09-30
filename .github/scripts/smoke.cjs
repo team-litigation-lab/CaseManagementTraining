@@ -111,6 +111,8 @@ const SAVED = [
         if (n('#bi-container > div') !== (c.bi || []).length) issues.push('BI policies');
         if (n('#facility-container tr') !== (c.facilities || []).length) issues.push('facilities');
         if (n('#note-body tr') !== (c.notes || []).length) issues.push('notes');
+        const inj = (k) => { const el = document.querySelector(`#kx-injury [data-k="${k}"]`); return el ? (el.tagName === 'SELECT' ? el.value : el.textContent) : null; };
+        if (inj('primary') !== c.injury.primary || inj('type') !== (c.injury.type || '') || inj('surgery') !== (c.injury.surgery || '')) issues.push('primary injury');
         if (ids.length !== new Set(ids).size) issues.push('duplicate element ids');
         return issues.length ? `${c.id}: ${issues.join(', ')}` : null;
     }).filter(Boolean));
@@ -137,7 +139,8 @@ const SAVED = [
     const P = (k) => prof[Object.keys(prof).find(n => n.startsWith(k))] || {};
     if (!(P('Identity').x === P('Case Narrative').x && P('Case Narrative').y > P('Identity').y && P('Emergency').x > P('Employment').x && P('Employment').x > P('Identity').x && P('Authorized').x === P('Emergency').x && P('Authorized').y >= P('Emergency').b))
         fail(`the Profile cards are not laid out as Identity + Case Narrative | Employment | Emergency Contact + Authorized: ${JSON.stringify(prof)}`);
-    const heads = await page.evaluate(() => [...document.querySelectorAll('#profile-grid .section-head')].map(h => h.textContent.trim().split(' ')[0]));
+    // (keyed cards, like Primary Injury, save by name, so they aren't part of the page order)
+    const heads = await page.evaluate(() => [...document.querySelectorAll('#profile-grid .pdf-card:not([data-keyed]) .section-head')].map(h => h.textContent.trim().split(' ')[0]));
     if (heads.join() !== 'Identity,Emergency,Authorized,Employment,Case') fail(`the Profile cards' page order changed (saved cases load by position): ${heads.join()}`);
     await page.click('#cl-bar-input'); await page.keyboard.type('zz');
     if ((await page.inputValue('#cl-bar-input')) !== 'zz') fail('the search bar in the header cannot be typed in on a view-only library case');

@@ -4,8 +4,9 @@
    Fictional personal-injury files every training program can open
    (Receptionist / Front Desk, Intake, Case Management, EA/PA, …).
    They live in this file, not in the database, so they are identical
-   for every trainee and can't be edited or deleted. Opening one loads
-   it into the case editor as VIEW ONLY, except its Notes and Tasks:
+   for every trainee and can't be deleted (trainers' edits are saved on top,
+   /api/mock-case-edits). For trainees, opening one loads it into the case
+   editor as VIEW ONLY, except its Notes and Tasks:
    what a trainee adds or edits there is saved for them only
    (/api/mock-case-updates). "Work on a practice copy" lets a trainee
    save their own copy (a normal case they own).
@@ -25,6 +26,10 @@
    Mock numbers use the 900000+ range, which the server's counter (saved
    cases get 000001 and up) won't reach for a long time, and follow the order the files
    were opened. It's searchable and shows in the Case ID field.
+
+   `injury` fills the Profile tab's Primary Injury card: primary, parts, type and
+   surgery (each one of the card's options), prior and details. Only what the
+   file says is filled in.
 
    Each case carries a `reception` block: how to verify the caller and
    the calls the front desk is likely to get on that file, with the
@@ -87,6 +92,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Priya Natarajan',
     dateOfLoss: '06/09/2026', sol: '06/09/2028', target: '',
     narrative: 'Client was stopped at a red light on Peachtree Ave when a 2019 Ford Escape driven by Kyle Brandt rear-ended her at about 30 mph. Neck and low-back pain the same evening; went to urgent care the next morning. No prior neck injuries. Liability is clear (Brandt admitted he was looking at his phone; cited for following too closely).',
+    injury: { primary: 'Neck and low-back strain', parts: 'Neck, lower back', type: 'Soft tissue (sprain / strain)', surgery: 'No', prior: 'No prior neck injuries', details: 'Cervical and lumbar strain; X-rays negative. Chiropractic and physical therapy.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-061902', officer: 'Ofc. T. Hale #2231',
         narrative: 'Unit 1 (Santos, Honda Civic) stopped for red signal. Unit 2 (Brandt, Ford Escape) failed to stop and struck Unit 1 in the rear. Driver 2 stated he "looked down for a second." Driver 2 cited: following too closely. No transports; Driver 1 complained of neck pain.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-88213340', group: 'GRP-55120' },
@@ -142,6 +148,7 @@ const MOCK_CASES = [
     caseType: 'Slip and Fall', phase: 'Intake', attorney: 'Atty. David Okafor', caseManager: '',
     dateOfLoss: '09/12/2026', sol: '09/12/2028', target: '',
     narrative: 'Potential client slipped on spilled liquid detergent in aisle 7 of FreshWay Market (Route 9 store) at about 6:15 PM. No warning cone. Fell on his right side; right wrist fracture (cast) and hip bruising. Store manager (Alan Pruitt) took an incident report; client photographed the spill. Two witnesses gave names to the store. Intake completed 09/18; retainer sent by e-sign 09/21, NOT yet signed.',
+    injury: { primary: 'Right wrist fracture', parts: 'Right wrist, right hip', type: 'Fracture', details: 'Wrist in a cast; hip bruising. Off work (bus operator cannot drive in a cast).' },
     police: { agency: 'None (store incident report only)', number: 'FreshWay IR-0912-117', officer: 'Store manager Alan Pruitt', narrative: 'Store incident report: customer fell in aisle 7; liquid on floor; cleanup requested 6:25 PM. (Copy requested; store says it needs a subpoena or a request from counsel.)' },
     health: { carrier: 'Metro Transit Employee Health (self-funded)', memberId: 'MTA-0047712', group: 'MTA-UNION-4' },
     bi: [{ holder: 'FreshWay Market LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-775120', claim: 'ARC-26-44091', adjuster: 'Brent Kowalski', contact: '(555) 010-7931', liability: 'Pending', limits: 'Unknown' }],
@@ -189,6 +196,7 @@ const MOCK_CASES = [
     caseType: 'Dog Bite', phase: 'Demand Review', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
     dateOfLoss: '02/03/2026', sol: '02/03/2028', target: '$ 65,000.00',
     narrative: 'Client was walking on the public sidewalk when a German Shepherd ("Max") owned by Gerald Finch ran through an open gate and bit her left forearm and calf. 14 stitches; later scar revision consult. Animal Control confirmed a prior bite complaint on the same dog (2024).',
+    injury: { primary: 'Dog-bite lacerations to the left forearm and calf', parts: 'Left forearm, left calf', type: 'Laceration / bite / scarring', surgery: 'Recommended', details: '14 stitches. Scar revision consult; future scar revision estimate in the file.' },
     police: { agency: 'Riverton County Animal Control', number: 'AC-26-00318', officer: 'Officer Linda Moss #88', narrative: 'Dog "Max" (German Shepherd, owner Gerald Finch) quarantined 10 days. Prior bite complaint on file 05/2024. Owner cited for dog at large.' },
     health: { carrier: 'Georgia Educators Health', memberId: 'GEH-7730215', group: 'LIB-2020' },
     bi: [{ holder: 'Gerald Finch', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-3319054', claim: 'HFC-26-02117', adjuster: 'Monica Reyes-Hart', contact: '(555) 010-7640 · mreyeshart@example.com', liability: 'Yes', limits: '$300,000' }],
@@ -235,6 +243,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Bi Demand', attorney: 'Atty. Marcus Reyes', caseManager: 'Grace Kim',
     dateOfLoss: '11/18/2025', sol: '11/18/2027', target: '$ 100,000.00',
     narrative: 'Client (goes by "Bobby") was broadsided at Oak St and 5th Ave by a driver who ran a stop sign (Tanya Mills). Left shoulder rotator-cuff tear, surgery 03/2026. Policy-limits demand ($100,000) sent 09/08/2026 with a 30-day time limit: response due 10/08/2026.',
+    injury: { primary: 'Left rotator-cuff tear', parts: 'Left shoulder', type: 'Joint / ligament / tendon tear', surgery: 'Completed', details: 'Surgery 03/2026. Permanent restriction documented.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-111807', officer: 'Ofc. J. Park #1904', narrative: 'Unit 2 (Mills) failed to stop at the posted stop sign and struck Unit 1 (Chen) on the passenger side. Unit 2 cited.' },
     health: { carrier: 'Small Business Health Alliance', memberId: 'SBHA-5510922', group: 'SBHA-CHEN' },
     bi: [{ holder: 'Tanya Mills', carrier: 'Liberty Crest Insurance', policy: 'LC-8810456', claim: 'LC-25-99812', adjuster: 'Greg Hollis', contact: '(555) 010-7755 · ghollis@example.com', liability: 'Yes', limits: '$100,000 / $300,000' }],
@@ -282,6 +291,7 @@ const MOCK_CASES = [
     caseType: 'Premise Liability', phase: 'Litigation', attorney: 'Atty. Elena Brooks', caseManager: 'Tom Alvarez',
     dateOfLoss: '08/27/2024', sol: '08/27/2026', target: '$ 175,000.00',
     narrative: 'Client fell on a broken stair tread (reported twice to management in writing) at Pine Ridge Apartments. Fractured left ankle (ORIF) and a later hip bursitis. Suit filed 04/15/2026 (Garcia v. Pine Ridge Property Management LLC, Riverton County State Court, No. 26-CV-01877).',
+    injury: { primary: 'Fractured left ankle', parts: 'Left ankle, hip', type: 'Fracture', surgery: 'Completed', details: 'Ankle ORIF; later hip bursitis.' },
     police: { agency: 'None', number: '—', officer: '—', narrative: 'Two prior written maintenance requests (06/2024, 07/2024) about the broken stair tread are in the file.' },
     health: { carrier: 'Medicare (Part A & B)', memberId: 'MBI 1EG4-TE5-MK72', group: '—' },
     bi: [{ holder: 'Pine Ridge Property Management LLC', carrier: 'Keystone Commercial', policy: 'KC-CGL-993014', claim: 'KC-24-66310', adjuster: 'Paul Dreyer', contact: '(555) 010-7870', liability: 'No', limits: '$1,000,000' }],
@@ -332,6 +342,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Disbursement', attorney: 'Atty. Marcus Reyes', caseManager: 'Priya Natarajan',
     dateOfLoss: '01/12/2025', sol: '01/12/2027', target: '$ 42,000.00',
     narrative: 'Side-swipe on I-85 by a box truck changing lanes. Neck and shoulder soft-tissue injuries, 5 months of care. Settled 08/28/2026 for $42,000 (policy tender accepted by the client in writing).',
+    injury: { primary: 'Neck and shoulder soft-tissue injuries', parts: 'Neck, shoulder', type: 'Soft tissue (sprain / strain)', details: 'Five months of chiropractic care; treatment complete.' },
     police: { agency: 'Georgia State Patrol', number: 'GSP-25-004471', officer: 'Tpr. A. Blake #611', narrative: 'Unit 2 (box truck, Quickline Logistics) changed lanes into Unit 1. Unit 2 cited: improper lane change.' },
     health: { carrier: 'Distribution Workers Health Fund', memberId: 'DWHF-221907', group: 'DWHF-09' },
     bi: [{ holder: 'Quickline Logistics Inc.', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-554019', claim: 'TFI-25-18820', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'Yes', limits: '$1,000,000' }],
@@ -378,6 +389,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'UM Demand', attorney: 'Atty. Marcus Reyes', caseManager: 'Luis Ortega',
     dateOfLoss: '10/04/2025', sol: '10/04/2027', target: '$ 85,000.00',
     narrative: 'Client was a rideshare passenger (RideNow) when a hit-and-run driver struck the car. Concussion and lumbar disc bulge. At-fault driver never identified; the claim is against RideNow\'s UM coverage and the client\'s own UM.',
+    injury: { primary: 'Concussion and lumbar disc bulge', parts: 'Head, lower back', type: 'Head injury / concussion', details: 'Pain management; treated on a letter of protection (no health insurance).' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-100488', officer: 'Ofc. M. Ruiz #2098', narrative: 'Hit and run; suspect vehicle dark SUV, no plate obtained.' },
     health: { carrier: 'None', memberId: '', group: '' },
     bi: [],
@@ -417,6 +429,7 @@ const MOCK_CASES = [
     caseType: 'Others', caseTypeOther: 'Motorcycle', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Luis Ortega',
     dateOfLoss: '07/19/2026', sol: '07/19/2028', target: '',
     narrative: 'Client was riding his motorcycle when an SUV turned left in front of him (driver Brian Keller). Right tibia fracture; knee surgery scheduled. Client speaks Spanish; prefers Spanish. Daughter Daniela signed as authorized contact (communication authorization 07/24/2026).',
+    injury: { primary: 'Right tibia fracture', parts: 'Right leg, knee', type: 'Fracture', surgery: 'Scheduled', details: 'Knee surgery scheduled 10/14/2026.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-071955', officer: 'Ofc. S. Grant #2310', narrative: 'Unit 2 (Keller) failed to yield while turning left. Cited.' },
     health: { carrier: 'None', memberId: '', group: '' },
     bi: [{ holder: 'Brian Keller', carrier: 'Keystone Mutual Insurance', policy: 'KM-9901442', claim: 'KM-26-121150', adjuster: 'Dana Whitfield', contact: '(555) 010-7702', liability: 'Yes', limits: '$100,000 / $300,000' }],
@@ -455,6 +468,7 @@ const MOCK_CASES = [
     caseType: 'Slip and Fall', phase: 'BI Settlement Nego', attorney: 'Atty. Marcus Reyes', caseManager: 'Grace Kim',
     dateOfLoss: '03/15/2025', sol: '03/15/2027', target: '$ 55,000.00',
     narrative: 'Slipped on a wet floor near the kitchen doors at Bella Cucina (no mat, no sign). Knee injury (meniscus tear), treated conservatively and with an injection. Demand sent 07/2026; carrier offered $22,000 on 09/15; counter at $48,000 sent 09/19.',
+    injury: { primary: 'Knee meniscus tear', parts: 'Knee', type: 'Joint / ligament / tendon tear', surgery: 'No', details: 'Treated conservatively and with an injection.' },
     police: { agency: 'None', number: 'Restaurant incident log 03/15/2025', officer: 'Manager Paolo Ricci', narrative: 'Manager noted the floor had just been mopped.' },
     health: { carrier: 'Credit Union Employees Health', memberId: 'CUEH-661043', group: 'CUEH-A' },
     bi: [{ holder: 'Bella Cucina LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-661178', claim: 'ARC-25-30551', adjuster: 'Brent Kowalski', contact: '(555) 010-7931', liability: 'Yes', limits: '$500,000' }],
@@ -488,6 +502,7 @@ const MOCK_CASES = [
     caseType: 'Dog Bite', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Priya Natarajan',
     dateOfLoss: '05/30/2026', sol: '06/02/2038', target: '',
     narrative: 'Sofia (8) was bitten on the face by a neighbor\'s dog at a birthday party. Facial lacerations; plastic surgery follow-up. Retainer signed by her father Frank Morales, who has primary custody. The file says: do not share information with the mother (Angela Ruiz) unless Frank authorizes it in writing. SOL for a minor runs from her 18th birthday (confirm the state rule with the attorney).',
+    injury: { primary: 'Facial lacerations from a dog bite', parts: 'Face', type: 'Laceration / bite / scarring', details: 'Plastic surgery follow-up. Child counseling referral pending (nightmares).' },
     police: { agency: 'Riverton County Animal Control', number: 'AC-26-01140', officer: 'Officer Linda Moss #88', narrative: 'Dog quarantined; owner Paula Stevens.' },
     health: { carrier: 'PeachCare for Kids (CHIP)', memberId: 'PCK-00931442', group: '—' },
     bi: [{ holder: 'Paula Stevens', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-5520931', claim: 'HFC-26-05512', adjuster: 'Monica Reyes-Hart', contact: '(555) 010-7640', liability: 'Pending', limits: '$500,000' }],
@@ -525,6 +540,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Lien Negotiations', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
     dateOfLoss: '04/02/2025', sol: '04/02/2027', target: '$ 90,000.00',
     narrative: 'T-bone collision at Summit and 3rd; other driver ran a red light. Wrist fracture and a concussion. Settled 09/05/2026 for $90,000. Liens being negotiated before disbursement.',
+    injury: { primary: 'Wrist fracture and a concussion', parts: 'Wrist, head', type: 'Fracture' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-040211', officer: 'Ofc. D. Lowe #1777', narrative: 'Unit 2 ran the red light (two witnesses). Cited.' },
     health: { carrier: 'Anthem Blue Shield (ERISA plan)', memberId: 'ABS-99210044', group: 'RGH-EMP' },
     bi: [{ holder: 'Victor Lang', carrier: 'Liberty Crest Insurance', policy: 'LC-4410988', claim: 'LC-25-66019', adjuster: 'Greg Hollis', contact: '(555) 010-7755', liability: 'Yes', limits: '$100,000 / $300,000' }],
@@ -559,6 +575,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Investigation', attorney: 'Atty. David Okafor', caseManager: 'Grace Kim',
     dateOfLoss: '09/14/2026', sol: '09/14/2028', target: '',
     narrative: 'Client\'s parked car was hit, and he was clipped while loading groceries, by a driver backing out (Stacy Owens). Hip and hand bruising. The police report is pending. The car was towed to Parkway Collision; storage is $45/day starting 09/21.',
+    injury: { primary: 'Hip and hand bruising', parts: 'Hip, hand', type: 'Soft tissue (sprain / strain)' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-091488 (report pending)', officer: 'Ofc. K. Dunn #2402', narrative: 'Report not yet available (requested 09/16/2026).' },
     health: { carrier: 'Medicare Advantage (Humana Gold Plus)', memberId: 'HUM-H5216-4471', group: '—' },
     bi: [{ holder: 'Stacy Owens', carrier: 'Keystone Mutual Insurance', policy: 'KM-5520881', claim: 'KM-26-133002', adjuster: 'Not yet assigned', contact: '(555) 010-7700 (claims line)', liability: 'Pending', limits: 'Unknown' }],
@@ -594,6 +611,7 @@ const MOCK_CASES = [
     caseType: 'Premise Liability', phase: 'Intake', attorney: 'Atty. David Okafor', caseManager: '',
     dateOfLoss: '10/20/2024', sol: '10/20/2026', target: '',
     narrative: 'Boxed patio heaters fell from a top shelf at HomeMax (Route 12) onto the client\'s shoulder and head. Rotator cuff strain and concussion symptoms. She handled it herself with the store\'s insurer for a year and it stalled. Called the firm 09/24/2026. STATUTE OF LIMITATIONS 10/20/2026: flagged URGENT for attorney review.',
+    injury: { primary: 'Rotator cuff strain and concussion symptoms', parts: 'Shoulder, head', type: 'Soft tissue (sprain / strain)' },
     police: { agency: 'None', number: 'HomeMax incident report HM-12-1020', officer: 'Asst. manager Rick Tully', narrative: 'Merchandise fell from an overhead shelf.' },
     health: { carrier: 'Blue Horizon PPO', memberId: 'BHP-3301928', group: 'LKR-11' },
     bi: [{ holder: 'HomeMax Stores Inc.', carrier: 'National Claims Services (TPA)', policy: 'Self-insured', claim: 'NCS-24-889120', adjuster: 'Pam Ortiz', contact: '(555) 010-7955', liability: 'Pending', limits: 'Unknown' }],
@@ -622,6 +640,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Litigation', attorney: 'Atty. Elena Brooks', caseManager: 'Luis Ortega',
     dateOfLoss: '02/11/2025', sol: '02/11/2027', target: '$ 750,000.00',
     narrative: 'Client was driving his work van when a tractor-trailer (Redline Freight, driver Mark Toller) rear-ended him in stopped traffic on I-75. Cervical fusion (C5-C6). Workers\' compensation paid benefits (client was on the job). Suit filed 01/06/2026 (Mendoza v. Redline Freight LLC and Toller, Riverton County Superior Court, No. 26-CV-00412). Local news covered the crash.',
+    injury: { primary: 'Cervical disc injury (C5-C6)', parts: 'Neck', type: 'Spine / disc', surgery: 'Completed', details: 'Cervical fusion C5-C6. Permanent restrictions; cannot return to electrical work.' },
     police: { agency: 'Georgia State Patrol', number: 'GSP-25-001109', officer: 'Tpr. R. Coombs #402', narrative: 'Commercial vehicle failed to slow for stopped traffic. Driver log violations noted.' },
     health: { carrier: 'Workers\' comp primary (see lien)', memberId: '', group: '' },
     bi: [{ holder: 'Redline Freight LLC', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-771020', claim: 'TFI-25-20911', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'No', limits: '$2,000,000' }],
@@ -663,6 +682,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Priya Natarajan',
     dateOfLoss: '08/03/2026', sol: '08/03/2028', target: '',
     narrative: 'Client (80) was hit by a reversing SUV in the Riverton Plaza parking lot while walking to her car. Pelvic fracture; rehab facility stay, now home with home-health visits. Hard of hearing: speak slowly and clearly. Son Michael holds a durable power of attorney (copy in file) and is authorized.',
+    injury: { primary: 'Pelvic fracture', parts: 'Pelvis', type: 'Fracture', details: 'Rehab facility stay; now home with home-health visits.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-080331', officer: 'Ofc. P. Nair #2255', narrative: 'Driver (Heather Coyle) reversing, did not see pedestrian. Cited for unsafe backing.' },
     health: { carrier: 'Medicare (Part A & B) + AARP Medigap Plan G', memberId: 'MBI 5TR2-QW1-LK38', group: '—' },
     bi: [{ holder: 'Heather Coyle', carrier: 'Harbor Point Insurance', policy: 'HP-3308812', claim: 'HP-26-8810', adjuster: 'Irene Shaw', contact: '(555) 010-7811', liability: 'Yes', limits: '$250,000 / $500,000' }],
@@ -700,6 +720,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Demand Review', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
     dateOfLoss: '12/09/2025', sol: '12/09/2027', target: '$ 60,000.00',
     narrative: 'Rear-end collision on Highway 20. Lumbar strain and a torn labrum (hip). Treatment finished 08/2026; demand in preparation. Client emailed 09/23 unhappy with communication and said she "might go elsewhere."',
+    injury: { primary: 'Torn hip labrum and lumbar strain', parts: 'Hip, lower back', type: 'Joint / ligament / tendon tear', details: 'Treatment finished 08/2026.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-120933', officer: 'Ofc. B. Ames #2140', narrative: 'Unit 2 (Jared Fox) failed to stop; cited.' },
     health: { carrier: 'Fitness Industry Health Plan', memberId: 'FIHP-448120', group: 'RFC-2' },
     bi: [{ holder: 'Jared Fox', carrier: 'Keystone Mutual Insurance', policy: 'KM-7710340', claim: 'KM-25-140882', adjuster: 'Dana Whitfield', contact: '(555) 010-7702', liability: 'Yes', limits: '$100,000 / $300,000' }],
@@ -733,6 +754,7 @@ const MOCK_CASES = [
     caseType: 'Others', caseTypeOther: 'Bicycle', phase: 'Treatment', attorney: 'Atty. David Okafor', caseManager: 'Grace Kim',
     dateOfLoss: '08/21/2026', sol: '08/21/2028', target: '',
     narrative: 'Client was riding in the bike lane on Main St when a parked driver (Leslie Tran) opened her door into his path. Broken collarbone and road rash. His $2,400 bicycle was destroyed; it is his work bike.',
+    injury: { primary: 'Broken collarbone', parts: 'Collarbone, skin', type: 'Fracture', details: 'Road rash. Off work (courier) until cleared.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-082110', officer: 'Ofc. H. Moreno #2366', narrative: 'Driver opened door into bicycle lane without looking. Driver cited.' },
     health: { carrier: 'None', memberId: '', group: '' },
     bi: [{ holder: 'Leslie Tran', carrier: 'Harbor Point Insurance', policy: 'HP-9910233', claim: 'HP-26-9021', adjuster: 'Irene Shaw', contact: '(555) 010-7811', liability: 'Yes', limits: '$50,000 / $100,000' }],
@@ -759,6 +781,7 @@ const MOCK_CASES = [
     caseType: 'Others', caseTypeOther: 'Product Liability', phase: 'Investigation', attorney: 'Atty. Elena Brooks', caseManager: 'Tom Alvarez',
     dateOfLoss: '07/04/2026', sol: '07/04/2028', target: '',
     narrative: 'The lid of a Hearthline QuickPot 8-qt pressure cooker blew off while locked and pressurized, causing second-degree burns to the client\'s chest and arms. The cooker is EVIDENCE: it is stored at the firm\'s evidence vendor (SecureHold Storage, tag SH-2291) and must not be released, tested or altered without the attorney.',
+    injury: { primary: 'Second-degree burns', parts: 'Chest, arms', type: 'Burn', details: 'Scar management ongoing.' },
     police: { agency: 'Riverton Fire Department', number: 'RFD-26-0704-33', officer: 'Capt. L. Benson', narrative: 'EMS response for burn injury; appliance lid separated.' },
     health: { carrier: 'State Educators Health Plan', memberId: 'SEHP-3302871', group: 'RMS-09' },
     bi: [{ holder: 'Hearthline Appliances Inc.', carrier: 'Continental Product Liability Group', policy: 'CPLG-PL-2026-118', claim: 'CPLG-26-7719', adjuster: 'Martin Blake', contact: '(555) 010-7988', liability: 'Pending', limits: 'Unknown' }],
@@ -785,6 +808,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Investigation', attorney: 'Atty. Marcus Reyes', caseManager: 'Luis Ortega',
     dateOfLoss: '06/30/2026', sol: '06/30/2028', target: '',
     narrative: 'Client was in a marked crosswalk when a Riverton Transit bus (Route 4) turned right and struck him. Fractured pelvis. Claim against a government entity: written ante litem notice to the City must be served within 6 months of the incident (by 12/30/2026). Notice was served 08/14/2026.',
+    injury: { primary: 'Fractured pelvis', parts: 'Pelvis', type: 'Fracture', details: 'Walker; home physical therapy.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-063077', officer: 'Ofc. A. Fisher #2419', narrative: 'Bus operator turning right failed to yield to pedestrian in crosswalk.' },
     health: { carrier: 'City Employees Health (self-funded)', memberId: 'CEH-114502', group: 'RWU-3' },
     bi: [{ holder: 'City of Riverton (Riverton Transit)', carrier: 'City of Riverton Risk Management (self-insured)', policy: 'Self-insured', claim: 'RM-26-0415', adjuster: 'Deborah Kline', contact: '(555) 010-7999', liability: 'Pending', limits: 'Statutory cap' }],
@@ -810,6 +834,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Demand Review', attorney: 'Atty. Elena Brooks', caseManager: 'Priya Natarajan',
     dateOfLoss: '03/28/2026', sol: '03/28/2028', target: '',
     narrative: 'George Hammond (76) died after a wrong-way driver (Travis Keene) struck his car on Route 9. His daughter Carol Hammond was appointed administrator of the estate (letters of administration 05/20/2026) and signed the retainer. DOB and address above are George\'s (verify with them plus the administrator\'s name). Other family members are NOT authorized; be compassionate and take messages.',
+    injury: { primary: 'Fatal injuries (wrongful death)', type: 'Wrongful death', details: 'George Hammond died after the crash.' },
     police: { agency: 'Georgia State Patrol', number: 'GSP-26-003281', officer: 'Tpr. N. Ellis #588', narrative: 'Wrong-way vehicle (Keene) struck Unit 1 head-on. Driver 2 charged with DUI.' },
     health: { carrier: 'Medicare', memberId: 'MBI 3HD7-KL2-PQ91', group: '—' },
     bi: [{ holder: 'Travis Keene', carrier: 'Liberty Crest Insurance', policy: 'LC-2231887', claim: 'LC-26-10277', adjuster: 'Greg Hollis', contact: '(555) 010-7755', liability: 'Yes', limits: '$250,000 / $500,000' }],
@@ -844,6 +869,7 @@ const MOCK_CASES = [
     caseType: 'Slip and Fall', phase: 'Lien Negotiations', attorney: 'Atty. David Okafor', caseManager: 'Grace Kim',
     dateOfLoss: '01/14/2025', sol: '01/14/2027', target: '$ 38,500.00',
     narrative: 'Client slipped on a freshly mopped floor with no wet-floor sign at CareWay Pharmacy (Main St store) while picking up a prescription. Fell on her left knee and wrist. Torn meniscus treated with injections; no surgery. Settled 07/30/2026 for $38,500 (client accepted in writing). This is a different, older file from her 06/09/2026 car accident (MC-01).',
+    injury: { primary: 'Torn meniscus (left knee)', parts: 'Left knee, left wrist', type: 'Joint / ligament / tendon tear', surgery: 'No', details: 'Treated with injections; no surgery. Treatment complete.' },
     police: { agency: 'None (store incident report only)', number: 'CareWay IR-2025-0114-03', officer: 'Store manager Dana Kirk', narrative: 'Store incident report: customer fell near the pharmacy counter after the floor was mopped; no sign posted. Store took photos.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-88213340', group: 'GRP-55120' },
     bi: [{ holder: 'CareWay Pharmacy Inc.', carrier: 'Summit Commercial Casualty', policy: 'SCC-GL-310477', claim: 'SCC-25-02281', adjuster: 'Owen Price', contact: '(555) 010-7722', liability: 'Yes', limits: '$1,000,000' }],
@@ -892,6 +918,7 @@ const MOCK_CASES = [
     caseType: 'Dog Bite', phase: 'Investigation', attorney: 'Atty. David Okafor', caseManager: 'Luis Ortega',
     dateOfLoss: '07/28/2026', sol: '07/28/2028', target: '',
     narrative: 'Client was gardening in her front yard when her neighbor\'s German shepherd (owner Dale Fenton, 406 Magnolia Court) got through a broken fence and bit her right forearm and calf. ER stitches, then wound care. Client says the same dog bit a mail carrier in 2025. Speaks Spanish and English; Luis Ortega is her case manager.',
+    injury: { primary: 'Dog-bite wounds to the right forearm and calf', parts: 'Right forearm, right calf', type: 'Laceration / bite / scarring', details: 'ER stitches, then wound care.' },
     police: { agency: 'Riverton County Animal Control', number: 'RCAC-26-3318', officer: 'Officer M. Duran', narrative: 'Bite reported 07/28/2026. Dog quarantined 10 days at the owner\'s home. A prior bite report for the same dog is on file (2025).' },
     health: { carrier: 'Georgia Educators Health Plan', memberId: 'GEHP-4471093', group: 'RUSD-02' },
     bi: [{ holder: 'Dale Fenton', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-551902', claim: 'HFC-26-03390', adjuster: 'Monica Reyes-Hart', contact: '(555) 010-7640', liability: 'Pending', limits: '$300,000' }],
@@ -935,6 +962,7 @@ const MOCK_CASES = [
     caseType: 'Premise Liability', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
     dateOfLoss: '05/16/2026', sol: '05/16/2028', target: '',
     narrative: 'Client leaned on a stairwell handrail on level 3 of the Riverton Plaza parking garage; the rail was loose, gave way, and he fell about six steps. Lower-back injury and a right-wrist sprain. Garage management had an open work order on that rail since April. This is a different file from his 01/12/2025 truck crash (MC-06), which is in disbursement.',
+    injury: { primary: 'Lower-back injury', parts: 'Lower back, right wrist', type: 'Soft tissue (sprain / strain)', details: 'Right-wrist sprain. The 10/07 injection decides whether more care is needed.' },
     police: { agency: 'Riverton Plaza Security', number: 'RPS-26-0516-2', officer: 'Guard K. Mensah', narrative: 'Security report: patron fell in stairwell C after the handrail detached. Maintenance ticket on the rail open since 04/22/2026.' },
     health: { carrier: 'Distribution Workers Health Fund', memberId: 'DWHF-221907', group: 'DWHF-09' },
     bi: [{ holder: 'Riverton Plaza Parking LLC', carrier: 'Keystone Commercial', policy: 'KC-CGL-448120', claim: 'KC-26-71540', adjuster: 'Paul Dreyer', contact: '(555) 010-7870', liability: 'Pending', limits: '$2,000,000' }],
@@ -978,6 +1006,7 @@ const MOCK_CASES = [
     caseType: 'Slip and Fall', phase: 'Investigation', attorney: 'Atty. David Okafor', caseManager: 'Priya Natarajan',
     dateOfLoss: '08/08/2026', sol: '08/08/2028', target: '',
     narrative: 'Client slipped on algae-slick tiles at the edge of the pool at the Grandview Hotel (Lakeshore Blvd) while visiting his grandchildren. Fractured right hip; partial hip replacement 08/09/2026, then inpatient rehab. The hotel says the deck was cleaned that morning; his son photographed the tiles the same day.',
+    injury: { primary: 'Fractured right hip', parts: 'Right hip', type: 'Fracture', surgery: 'Completed', details: 'Partial hip replacement 08/09/2026, then inpatient rehab.' },
     police: { agency: 'None (hotel incident report only)', number: 'Grandview IR-0808-21', officer: 'Night manager Alicia Grant', narrative: 'Hotel report: guest fell on the pool deck at about 4:40 PM; ambulance called. Copy requested; the hotel referred us to its insurer.' },
     health: { carrier: 'Medicare (Part A & B)', memberId: 'MBI 7HX2-QP4-RT55', group: '—' },
     bi: [{ holder: 'Grandview Hotel Group LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-902215', claim: 'ARC-26-51177', adjuster: 'Brent Kowalski', contact: '(555) 010-7931', liability: 'Pending', limits: '$1,000,000' }],
@@ -1025,6 +1054,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Luis Ortega',
     dateOfLoss: '08/30/2026', sol: '08/30/2028', target: '',
     narrative: 'Client was driving his 2015 Toyota Camry through Brookside Ave and 12th St on a green light, with his son Jose Hernandez Jr. (also a client, separate file MC-26) in the passenger seat, when a delivery van ran the red light and hit the driver side. Client: three broken ribs, neck strain and a left shoulder injury. Prefers Spanish; Luis Ortega handles the file.',
+    injury: { primary: 'Three broken ribs', parts: 'Ribs, neck, left shoulder', type: 'Fracture', details: 'Neck strain and a left shoulder injury.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-083044', officer: 'Ofc. L. Grant #2410', narrative: 'Unit 2 (Swift Parcel Co. van, driver Dwayne Pratt) entered the intersection against a red signal and struck Unit 1 (Hernandez) on the driver side. Both occupants of Unit 1 transported. Driver 2 cited.' },
     health: { carrier: 'Georgia Municipal Employees Health Plan', memberId: 'GMEHP-3308124', group: 'RIV-PARKS' },
     bi: [{ holder: 'Swift Parcel Co.', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-771240', claim: 'TFI-26-40219-01', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'Yes', limits: '$1,000,000' }],
@@ -1070,6 +1100,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Treatment', attorney: 'Atty. Marcus Reyes', caseManager: 'Luis Ortega',
     dateOfLoss: '08/30/2026', sol: '08/30/2028', target: '',
     narrative: 'Client was the front-seat passenger in his father\'s 2015 Toyota Camry (father: Jose Hernandez Sr., separate file MC-25) when a delivery van ran a red light at Brookside Ave and 12th St. Client: concussion and a right wrist fracture (cast). Out of work since the crash. Speaks English; his parents prefer Spanish.',
+    injury: { primary: 'Concussion and a right wrist fracture', parts: 'Head, right wrist', type: 'Head injury / concussion', details: 'Wrist in a cast. Out of work since the crash.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-083044', officer: 'Ofc. L. Grant #2410', narrative: 'Same report as the father\'s file: Unit 2 (Swift Parcel Co. van) ran the red signal and struck Unit 1 (Hernandez). Passenger (Jose Hernandez Jr.) transported with a wrist injury and a head strike.' },
     health: { carrier: 'Peach State Logistics Employee Plan', memberId: 'PSL-7719230', group: 'PSL-WH-3' },
     bi: [{ holder: 'Swift Parcel Co.', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-771240', claim: 'TFI-26-40219-02', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'Yes', limits: '$1,000,000' }],
@@ -1113,6 +1144,7 @@ const MOCK_CASES = [
     caseType: 'Premise Liability', phase: 'Demand Review', attorney: 'Atty. Elena Brooks', caseManager: 'Grace Kim',
     dateOfLoss: '11/21/2025', sol: '11/21/2027', target: '$ 250,000.00',
     narrative: 'Client was assaulted and robbed in the parking garage of Stonegate Apartments, where she lived, at about 10:40 PM. Half the garage lights had been out for three weeks and the security gate was broken; both were reported to management in writing. Orbital (eye socket) fracture, a broken wrist, and ongoing anxiety. The assailant was arrested (criminal case pending). Client has since moved; her new address is confidential.',
+    injury: { primary: 'Orbital (eye socket) fracture', parts: 'Eye socket, wrist', type: 'Fracture', details: 'Broken wrist; ongoing anxiety (weekly counseling).' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-112188', officer: 'Det. S. Moreno #1702', narrative: 'Robbery and aggravated assault in the Stonegate Apartments parking garage. Suspect Kyle Dorsey arrested 11/29/2025. Victim referred to victim services.' },
     health: { carrier: 'State Health Benefit Plan', memberId: 'SHBP-2290471', group: 'CITY-LIB' },
     bi: [{ holder: 'Stonegate Residential LLC', carrier: 'Keystone Commercial', policy: 'KC-CGL-660318', claim: 'KC-25-78804', adjuster: 'Monique Tate', contact: '(555) 010-7876', liability: 'Pending', limits: '$2,000,000' }],
@@ -1158,6 +1190,7 @@ const MOCK_CASES = [
     caseType: 'Others', caseTypeOther: 'E-Scooter', phase: 'Investigation', attorney: 'Atty. David Okafor', caseManager: 'Tom Alvarez',
     dateOfLoss: '09/05/2026', sol: '09/05/2028', target: '',
     narrative: 'Client rented a ZipRide e-scooter downtown. Going down the Market Street hill, the front brake lever went slack and he crashed at Market and 3rd. Broken collarbone and road rash. He kept the ride receipt (ride ID ZR-8841-2207) and photographed the scooter. ZipRide says the scooter was inspected the day before.',
+    injury: { primary: 'Broken collarbone', parts: 'Collarbone, skin', type: 'Fracture', details: 'Road rash. Treated under a letter of protection (no health insurance).' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-090517', officer: 'Ofc. D. Shah #2288', narrative: 'Single-rider scooter crash. Rider stated the brakes failed. Scooter (ZipRide unit 4471) left at the scene for the company to collect.' },
     health: { carrier: 'None (uninsured)', memberId: '—', group: '—' },
     bi: [{ holder: 'ZipRide Mobility Inc.', carrier: 'Continental Product Liability Group', policy: 'CPLG-GL-2026-118', claim: 'CPLG-26-9044', adjuster: 'Martin Blake', contact: '(555) 010-7988', liability: 'Pending', limits: '$5,000,000' }],
@@ -1200,6 +1233,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'UM settlement', attorney: 'Atty. Marcus Reyes', caseManager: 'Priya Natarajan',
     dateOfLoss: '02/17/2025', sol: '02/17/2027', target: '$ 85,000.00',
     narrative: 'Client was hit head-on on Old Mill Road by a driver who crossed the center line (Brandon Voss, cited). Right knee ACL tear (surgery 05/2025) and a fractured left wrist. The other driver carried only $25,000 in liability coverage, which was tendered and accepted with the UM carrier\'s consent (06/2026). Her own UM/UIM carrier agreed to settle for $60,000 on 09/15/2026; the release is not signed yet.',
+    injury: { primary: 'Right knee ACL tear', parts: 'Right knee, left wrist', type: 'Joint / ligament / tendon tear', surgery: 'Completed', details: 'Surgery 05/2025; fractured left wrist. Treatment complete.' },
     police: { agency: 'Georgia State Patrol', number: 'GSP-25-001937', officer: 'Tpr. R. Nance #588', narrative: 'Unit 2 (Voss) crossed the center line and struck Unit 1 (Carter) head-on. Driver 2 cited: failure to maintain lane.' },
     health: { carrier: 'Georgia Educators Health Plan', memberId: 'GEHP-3319027', group: 'RUSD-01' },
     bi: [{ holder: 'Brandon Voss', carrier: 'Budget Auto Insurance', policy: 'BAI-6632190', claim: 'BAI-25-22019', adjuster: 'Leah Morgan', contact: '(555) 010-7742', liability: 'Yes', limits: '$25,000 / $50,000 (tendered 06/2026)' }],
@@ -1243,6 +1277,7 @@ const MOCK_CASES = [
     caseType: 'Others', caseTypeOther: 'Boating', phase: 'Disbursement', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
     dateOfLoss: '06/22/2025', sol: '06/22/2027', target: '$ 120,000.00',
     narrative: 'Client rented a pontoon boat from Lake Riverton Marina with his family. While he leaned on the side railing to help his grandson aboard, a railing post gave way and he fell onto the dock. Hip fracture (surgery) and a torn rotator cuff. The marina\'s own log shows the loose post was reported the week before. Settled 08/20/2026 for $120,000.',
+    injury: { primary: 'Hip fracture', parts: 'Hip, shoulder', type: 'Fracture', surgery: 'Completed', details: 'Torn rotator cuff. Treatment complete.' },
     police: { agency: 'Riverton County Sheriff (Marine Unit)', number: 'RCSO-M-25-0622', officer: 'Dep. K. Oyelaran #319', narrative: 'Injury at the Lake Riverton Marina fuel dock. Railing post found detached from the rental pontoon. Photos taken.' },
     health: { carrier: 'Medicare (Part A & B)', memberId: 'MBI 3TR8-KJ2-WQ61', group: '—' },
     bi: [{ holder: 'Lake Riverton Marina LLC', carrier: 'Seaboard Marine Insurance', policy: 'SMI-MAR-44120', claim: 'SMI-25-0918', adjuster: 'Gordon Welch', contact: '(555) 010-7746', liability: 'Yes', limits: '$1,000,000' }],
@@ -1287,6 +1322,7 @@ const MOCK_CASES = [
     caseType: 'Dog Bite', phase: 'BI Settlement Nego', attorney: 'Atty. David Okafor', caseManager: 'Grace Kim',
     dateOfLoss: '04/12/2025', sol: '04/12/2027', target: '$ 75,000.00',
     narrative: 'At a friend\'s backyard barbecue (host Gary Whitlock, 19 Hawthorn Lane), the host\'s pit-bull mix bit the client on the left hand and forearm. Two surgeries to repair tendons; permanent scarring and reduced grip. Homeowner\'s policy with Homestead Fire & Casualty. Demand $75,000 (07/2026); first offer $30,000 on 09/21/2026, open until 10/21/2026.',
+    injury: { primary: 'Dog-bite injuries to the left hand and forearm (tendons)', parts: 'Left hand, left forearm', type: 'Laceration / bite / scarring', surgery: 'Completed', details: 'Two surgeries to repair tendons; permanent scarring and reduced grip.' },
     police: { agency: 'Riverton County Animal Control', number: 'RCAC-25-1204', officer: 'Officer M. Duran', narrative: 'Bite reported 04/12/2025. Dog vaccinated; 10-day home quarantine.' },
     health: { carrier: 'Blue Horizon PPO', memberId: 'BHP-7721045', group: 'RDA-OFFICE' },
     bi: [{ holder: 'Gary Whitlock', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-339021', claim: 'HFC-25-01877', adjuster: 'Paul Irving', contact: '(555) 010-7644', liability: 'Yes', limits: '$300,000' }],
@@ -1328,6 +1364,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Bi Demand', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
     dateOfLoss: '05/03/2025', sol: '05/03/2027', target: '$ 150,000.00',
     narrative: 'Client was rear-ended at highway speed on I-85 by a pickup (driver Scott Kerr) and pushed into the car ahead. L5-S1 disc herniation treated with injections, and a concussion. He first hired Hartley & Moss Law (06/2025), then signed with us on 04/10/2026 after they stopped returning his calls. Hartley & Moss asserted a lien for costs and fees. Policy-limits demand sent 09/01/2026.',
+    injury: { primary: 'L5-S1 disc herniation', parts: 'Lower back, head', type: 'Spine / disc', surgery: 'No', details: 'Treated with injections; concussion.' },
     police: { agency: 'Georgia State Patrol', number: 'GSP-25-003318', officer: 'Tpr. A. Blake #611', narrative: 'Unit 3 (Kerr) failed to slow and struck Unit 2 (Rahman), which struck Unit 1. Driver 3 cited: following too closely.' },
     health: { carrier: 'Delta Freight Employee Health', memberId: 'DFE-2209187', group: 'DFS-MECH' },
     bi: [{ holder: 'Scott Kerr', carrier: 'Liberty Crest Insurance', policy: 'LC-7700315', claim: 'LC-25-60418', adjuster: 'Greg Hollis', contact: '(555) 010-7755 · ghollis@example.com', liability: 'Yes', limits: '$100,000 / $300,000' }],
@@ -1375,6 +1412,7 @@ const MOCK_CASES = [
     caseType: 'MVA', phase: 'Lien Negotiations', attorney: 'Atty. Elena Brooks', caseManager: 'Priya Natarajan',
     dateOfLoss: '10/15/2024', sol: '10/15/2026', target: '$ 95,000.00',
     narrative: 'Client\'s car was T-boned at Ash St and 9th Ave by a driver who ran a stop sign (Nora Fields). Pelvic fracture and a shoulder injury; she could not go back to her job as a home health aide. Settled 08/28/2026 for $95,000. Before the settlement she took a $6,000 pre-settlement advance from Bridgeway Legal Funding (03/2026), which must be paid back from the settlement.',
+    injury: { primary: 'Pelvic fracture', parts: 'Pelvis, shoulder', type: 'Fracture', details: 'Shoulder injury; could not return to work as a home health aide.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-24-101533', officer: 'Ofc. M. Ruiz #2077', narrative: 'Unit 2 (Fields) failed to stop at the stop sign and struck Unit 1 (Jackson) on the driver side. Driver 2 cited.' },
     health: { carrier: 'Georgia Medicaid (CareSource)', memberId: 'CS-44120983', group: '—' },
     bi: [{ holder: 'Nora Fields', carrier: 'Budget Auto Insurance', policy: 'BAI-2208840', claim: 'BAI-24-33107', adjuster: 'Leah Morgan', contact: '(555) 010-7742', liability: 'Yes', limits: '$100,000 / $300,000' }],
@@ -1422,6 +1460,7 @@ const MOCK_CASES = [
     caseType: 'Premise Liability', phase: 'Litigation', attorney: 'Atty. Elena Brooks', caseManager: 'Tom Alvarez',
     dateOfLoss: '01/27/2025', sol: '01/27/2027', target: '$ 400,000.00',
     narrative: 'Client was in an elevator at Parkside Medical Plaza when it dropped about two floors and stopped hard. Two herniated neck discs; cervical fusion 10/2025. The building\'s elevator maintenance contractor (Apex Lift Services) had skipped two monthly inspections. Suit filed 07/08/2026 against the building owner and Apex (O\'Neill v. Parkside Medical Plaza LLC, et al., Riverton County State Court, No. 26-CV-03112). Mediation set for 10/21/2026.',
+    injury: { primary: 'Two herniated neck discs', parts: 'Neck', type: 'Spine / disc', surgery: 'Completed', details: 'Cervical fusion 10/2025; life-care plan in progress.' },
     police: { agency: 'Riverton Fire Rescue', number: 'RFR-25-00917', officer: 'Capt. B. Irwin', narrative: 'Elevator entrapment, Parkside Medical Plaza, car 2. One occupant with neck pain transported. Building management notified its elevator contractor.' },
     health: { carrier: 'Blue Horizon PPO', memberId: 'BHP-3309128', group: 'RTE-EMP' },
     bi: [
@@ -1478,6 +1517,7 @@ const MOCK_CASES = [
     caseType: 'Premise Liability', phase: 'Treatment', attorney: 'Atty. David Okafor', caseManager: 'Grace Kim',
     dateOfLoss: '07/11/2026', sol: '02/17/2035', target: '',
     narrative: 'Emma (11) was at SkyHigh Trampoline Park for a birthday party. An older teen double-bounced her on a court where staff let mixed ages jump together, against the park\'s own posted rules; she landed badly and broke her left thigh bone (surgery, rod placed). Her mother signed the park\'s online waiver when she booked the party; Atty. Okafor is reviewing whether it applies to a minor.',
+    injury: { primary: 'Broken left thigh bone (femur)', parts: 'Left thigh', type: 'Fracture', surgery: 'Completed', details: 'Surgery with a rod placed; back at school on crutches.' },
     police: { agency: 'None (park incident report only)', number: 'SkyHigh IR-0711-06', officer: 'Floor manager Tasha Greene', narrative: 'Guest (minor) injured on court 3 during open jump. Parents called; EMS transported.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-66102299', group: 'GRP-73015' },
     bi: [{ holder: 'SkyHigh Trampoline Parks LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-551874', claim: 'ARC-26-60112', adjuster: 'Nadia Cole', contact: '(555) 010-7934', liability: 'Pending', limits: '$1,000,000' }],
@@ -1519,6 +1559,7 @@ const MOCK_CASES = [
     caseType: 'Others', caseTypeOther: 'Pedestrian', phase: 'Intake', attorney: 'Atty. David Okafor', caseManager: '',
     dateOfLoss: '09/22/2026', sol: '09/22/2028', target: '',
     narrative: 'Client was crossing Harbor Street in the marked crosswalk, with the walk signal, when a FreshCart grocery delivery van turned right and hit him. Broken left leg (tibia) and a head laceration. Intake call 09/25; retainer signed by e-sign 09/27/2026. Intake packet (HIPAA forms, insurance card, photos) not returned yet.',
+    injury: { primary: 'Broken left leg (tibia)', parts: 'Left leg, head', type: 'Fracture', details: 'Head laceration.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-26-092219', officer: 'Ofc. T. Hale #2231', narrative: 'Pedestrian struck in the crosswalk by a right-turning van (FreshCart Delivery, driver Leon Fry). Driver cited: failure to yield to a pedestrian.' },
     health: { carrier: 'Blue Horizon PPO', memberId: 'BHP-9910264', group: 'RMS-SALES' },
     bi: [{ holder: 'FreshCart Delivery LLC', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-990312', claim: 'TFI-26-51770', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'Pending', limits: '$1,000,000' }],
@@ -1564,6 +1605,7 @@ const MOCK_CASES = [
     sol: '07/02/2027',
     target: '',
     narrative: 'Client was driving home on Route 9 when a pickup ran the stop sign at Mill Road and hit the passenger side of his car. Neck and back strain. Treated at Align Chiropractic until he was released on 10/14/2025.',
+    injury: { primary: 'Neck and back strain', parts: 'Neck, back', type: 'Soft tissue (sprain / strain)', details: 'Chiropractic until released 10/14/2025.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-070214', officer: 'Ofc. R. Nunez #1876', narrative: 'Unit 2 (Dale Pruitt, Ford F-150) failed to stop at the stop sign and struck Unit 1 (Beauchamp, Toyota Corolla) on the passenger side. Driver 2 cited: failure to obey a stop sign.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-7730915', group: 'RPH-OPS' },
     bi: [
@@ -1614,6 +1656,7 @@ const MOCK_CASES = [
     sol: '04/04/2036',
     target: '',
     narrative: 'Saoirse (8) was bitten on the left knee and calf by the neighbors\' dog, which got loose from their yard on Cypress Hollow Drive. ER stitches, then physical therapy for the knee; now orthopedic follow-up for knee stiffness. Minor client: her mother Gabriela is the client contact (SOL runs from her 18th birthday).',
+    injury: { primary: 'Dog-bite wounds to the left knee and calf', parts: 'Left knee, left calf', type: 'Laceration / bite / scarring', details: 'ER stitches, then physical therapy; orthopedic follow-up for knee stiffness.' },
     police: { agency: 'Riverton County Animal Control', number: 'RCAC-25-0211', officer: 'Officer J. Tate', narrative: 'Dog (German shepherd mix, owners Frank and Diane Lott) left its yard and bit a child on the left leg. Dog quarantined 10 days; owners cited for dog at large.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-4418702', group: 'RES-FAM' },
     bi: [
@@ -1668,6 +1711,7 @@ const MOCK_CASES = [
     sol: '09/15/2026',
     target: '',
     narrative: 'Client was stopped in traffic on Harbor Street when a sedan rear-ended her at speed. Neck and shoulder injuries; treated with chiropractic and physical therapy. Suit filed after the insurer disputed the damages; in discovery.',
+    injury: { primary: 'Neck and shoulder injuries', parts: 'Neck, shoulder', type: 'Soft tissue (sprain / strain)', details: 'Chiropractic and physical therapy; treatment complete.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-24-091533', officer: 'Ofc. L. Ortiz #2044', narrative: 'Unit 2 (Kyle Mercer, Nissan Altima) struck the stopped Unit 1 (Featherstonhaugh, Honda CR-V) in the rear. Driver 2 cited: following too closely.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-2290416', group: 'NGD-STAFF' },
     bi: [
@@ -1718,6 +1762,7 @@ const MOCK_CASES = [
     sol: '11/29/2022',
     target: '',
     narrative: 'Client fell on a broken, unlit stairwell in the Centerpoint parking garage downtown. Fractured right wrist (surgery) and a sprained ankle. The garage owner denied the claim; suit filed and sent to arbitration.',
+    injury: { primary: 'Fractured right wrist', parts: 'Right wrist, ankle', type: 'Fracture', surgery: 'Completed', details: 'Sprained ankle.' },
     police: { agency: 'Centerpoint Parking security', number: 'CP-IR-20-1129', officer: 'Security Officer M. Grady', narrative: 'Patron fell on stairwell B, level 3; two stair lights out and a broken tread noted. Photos taken.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-6630098', group: 'RCC-STAFF' },
     bi: [
@@ -1767,6 +1812,7 @@ const MOCK_CASES = [
     sol: '04/04/2040',
     target: '',
     narrative: 'Cian (3) was in his car seat when the family car was T-boned at Oak Street and 5th. Hip and leg injuries; physical therapy, with orthopedic care to follow. Minor client: his mother Amber is the client contact (SOL runs from his 18th birthday).',
+    injury: { primary: 'Hip and leg injuries', parts: 'Hip, leg', details: 'Physical therapy, with orthopedic care to follow.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-23-121108', officer: 'Ofc. D. Walsh #1902', narrative: 'Unit 2 (Terrence Boyd, Dodge Ram) ran the red light and struck Unit 1 (Acheson, Kia Sorento) on the driver side. Child passenger transported.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-8812203', group: 'FAM-ACHESON' },
     bi: [
@@ -1816,6 +1862,7 @@ const MOCK_CASES = [
     sol: '03/16/2035',
     target: '',
     narrative: 'Mstislav (8) was a passenger in his mother\'s car when an underinsured driver merged into them on I-85. Broken collarbone. Treatment is done; the file is being built for the demand. Minor client: his mother Tasha is the client contact.',
+    injury: { primary: 'Broken collarbone', parts: 'Collarbone', type: 'Fracture', details: 'Treatment complete; the orthopedic bill has not come in yet.' },
     police: { agency: 'Georgia State Patrol', number: 'GSP-23-120377', officer: 'Tpr. K. Moss #611', narrative: 'Unit 2 (Rick Soto, Chevy Malibu) changed lanes into Unit 1 (Shaughnessy, Honda Pilot). Driver 2 cited: improper lane change.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-5501876', group: 'FAM-SHAUGHNESSY' },
     bi: [
@@ -1868,6 +1915,7 @@ const MOCK_CASES = [
     sol: '05/10/2025',
     target: '',
     narrative: 'Client slipped on a wet locker-room floor at IronWorks Fitness (no warning sign). Lower back and right hip pain. Intake file: treatment not confirmed yet.',
+    injury: { primary: 'Lower back and right hip pain', parts: 'Lower back, right hip', details: 'Treatment not confirmed yet.' },
     police: { agency: 'IronWorks Fitness incident report', number: 'IWF-IR-230510', officer: 'Manager: S. Reeve', narrative: 'Member fell on the wet locker-room floor after cleaning; no wet-floor sign out. Ice pack given.' },
     health: { carrier: 'Blue Horizon PPO', memberId: 'PSH-3390772', group: 'IND-COURTHOPE' },
     bi: [
@@ -1917,6 +1965,7 @@ const MOCK_CASES = [
     sol: '12/30/2025',
     target: '',
     narrative: 'Client fell on a broken outdoor stair at her apartment complex (Oakmont Apartments); the landlord had been told about the loose step. Lower back and left knee injuries.',
+    injury: { primary: 'Lower back and left knee injuries', parts: 'Lower back, left knee', details: 'Pain management; started treating 01/12/2024.' },
     police: { agency: 'Oakmont Property Group incident report', number: 'OPG-IR-231230', officer: 'Property manager: T. Kline', narrative: 'Resident fell on the east stairwell; loose tread reported by residents on 12/12/2023, repair not completed.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-1120569', group: 'RPL-STAFF' },
     bi: [
@@ -1966,6 +2015,7 @@ const MOCK_CASES = [
     sol: '03/11/2027',
     target: '',
     narrative: 'Client was rear-ended at a red light on Peachtree Parkway by a delivery van. Neck and lower back injuries; chiropractic and physical therapy, now finished.',
+    injury: { primary: 'Neck and lower back injuries', parts: 'Neck, lower back', type: 'Soft tissue (sprain / strain)', details: 'Chiropractic and physical therapy, now finished.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-031127', officer: 'Ofc. R. Nunez #1876', narrative: 'Unit 2 (QuickDrop Couriers van, driver Ray Delacroix) struck the stopped Unit 1 (Beaumont, Chevy Impala) in the rear. Driver 2 cited: following too closely.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-7009443', group: 'SLF-WHSE' },
     bi: [
@@ -2016,6 +2066,7 @@ const MOCK_CASES = [
     sol: '03/07/2027',
     target: '',
     narrative: 'Client\'s car was sideswiped on Route 9 by a driver drifting out of his lane. Neck and shoulder strain; physical therapy.',
+    injury: { primary: 'Neck and shoulder strain', parts: 'Neck, shoulder', type: 'Soft tissue (sprain / strain)', details: 'Physical therapy.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-25-030711', officer: 'Ofc. L. Ortiz #2044', narrative: 'Unit 2 (Mason Tully, Toyota Tacoma) drifted into Unit 1 (Kirkcudbright, Hyundai Elantra). Driver 2 cited: failure to maintain lane.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-9951230', group: 'PSC-STAFF' },
     bi: [
@@ -2065,6 +2116,7 @@ const MOCK_CASES = [
     sol: '09/29/2025',
     target: '',
     narrative: 'Client slipped on spilled juice in the produce aisle at FreshWay Grocers; no cone or sign. Fractured left hip (surgery). The store denied liability; suit filed and set for arbitration.',
+    injury: { primary: 'Fractured left hip', parts: 'Left hip', type: 'Fracture', surgery: 'Completed', details: 'Treatment complete.' },
     police: { agency: 'FreshWay Grocers incident report', number: 'FWG-IR-230929', officer: 'Store manager: P. Dunn', narrative: 'Customer fell in aisle 2 (produce); spill not yet cleaned up. Ambulance called.' },
     health: { carrier: 'Medicare', memberId: 'MCR-1EG4-TE5-MK72', group: 'Medicare' },
     bi: [
@@ -2114,6 +2166,7 @@ const MOCK_CASES = [
     sol: '10/10/2025',
     target: '',
     narrative: 'Client was hit head-on by a driver who crossed the center line on Old Mill Road. Broken ribs and a concussion. Suit filed; in discovery (depositions).',
+    injury: { primary: 'Broken ribs and a concussion', parts: 'Ribs, head', type: 'Fracture', details: 'Treatment complete.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-23-101019', officer: 'Ofc. D. Walsh #1902', narrative: 'Unit 2 (Brian Kessler, Jeep Wrangler) crossed the center line and struck Unit 1 (Cholmondeley, Mazda 3) head-on. Driver 2 cited: failure to maintain lane.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-6630098', group: 'RCC-STAFF' },
     bi: [
@@ -2163,6 +2216,7 @@ const MOCK_CASES = [
     sol: '03/16/2035',
     target: '',
     narrative: 'Mstislav (6) was a passenger when a pickup rear-ended his mother\'s car at a school-zone crosswalk. Concussion and a wrist sprain; treatment finished. Minor client: his mother Tasha is the client contact.',
+    injury: { primary: 'Concussion', parts: 'Head, wrist', type: 'Head injury / concussion', details: 'Wrist sprain; treatment complete.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-21-110245', officer: 'Ofc. T. Hale #2231', narrative: 'Unit 2 (Gary Lund, Ford F-250) failed to stop for traffic in the school zone and struck Unit 1 (Shaughnessy, Honda Pilot) in the rear.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-5501876', group: 'FAM-SHAUGHNESSY' },
     bi: [
@@ -2212,6 +2266,7 @@ const MOCK_CASES = [
     sol: '04/11/2024',
     target: '',
     narrative: 'Client\'s work van was T-boned at the Main Street and 3rd intersection by a driver who ran the red light. Complains of back pain but has not started treatment.',
+    injury: { primary: 'Back pain', parts: 'Back', details: 'Has not started treatment.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-22-041109', officer: 'Ofc. R. Nunez #1876', narrative: 'Unit 2 (Sandra Voight, Subaru Outback) ran the red light and struck Unit 1 (Courthope, Ford Transit) on the driver side. Driver 2 cited.' },
     health: { carrier: 'Blue Horizon PPO', memberId: 'PSH-3390772', group: 'IND-COURTHOPE' },
     bi: [
@@ -2261,6 +2316,7 @@ const MOCK_CASES = [
     sol: '12/05/2025',
     target: '',
     narrative: 'Client was hit by an uninsured driver who backed out of a gas station into traffic on Route 9. Lower back injury. The at-fault driver had no insurance, so the claim is on the client\'s own uninsured motorist coverage with Geico.',
+    injury: { primary: 'Lower back injury', parts: 'Lower back', details: 'Pain management.' },
     police: { agency: 'Riverton Police Department', number: 'RPD-23-120514', officer: 'Ofc. L. Ortiz #2044', narrative: 'Unit 2 (Curtis Lyle, Chevy Cavalier) pulled out of a gas station into Unit 1 (Beauchamp, Toyota Corolla). Driver 2 uninsured; cited for no insurance.' },
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-7730915', group: 'RPH-OPS' },
     bi: [
@@ -2312,6 +2368,7 @@ const MOCK_CASES = [
     sol: '10/11/2026',
     target: '',
     narrative: 'Client\'s pickup was rear-ended on I-85 by a Kestrel Logistics tractor-trailer. Neck and back injuries with injections. Suit filed against the driver and the trucking company; in discovery.',
+    injury: { primary: 'Neck and back injuries', parts: 'Neck, back', details: 'Treated with injections; treatment complete.' },
     police: { agency: 'Georgia State Patrol', number: 'GSP-24-101188', officer: 'Tpr. K. Moss #611', narrative: 'Unit 2 (Kestrel Logistics tractor-trailer) failed to slow for stopped traffic and struck Unit 1 (Masserene, Ford F-150) in the rear.' },
     health: { carrier: 'Blue Horizon PPO', memberId: 'PSH-4471190', group: 'IND-MASSERENE' },
     bi: [
