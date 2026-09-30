@@ -5,9 +5,11 @@
 //
 // Checks: no API key → "not set up" (the call runs as text); the token request
 // locks in the right caller (the drill call's identity answers, a matching voice,
-// transcripts on both sides) and a single use; the next attempt moves to the next
-// model; a rate-limited key hands over to the next; unknown calls and signed-out
-// users are refused; the hourly cap. In the browser: the drill offers live voice,
+// transcripts on both sides) and a single use; calls spread over the keys (least
+// busy first) and an ended call frees its key; a try Google refused moves to the
+// other key, then the next model, then text; LIVE_CALLS_PER_KEY, LIVE_DAILY_MINUTES
+// and LIVE_MAX_MINUTES; the Admin usage report; a rate-limited key hands over to
+// the next; unknown calls and signed-out users are refused; the hourly cap. In the browser: the drill offers live voice,
 // the phone rings and Answer connects; the microphone streams as PCM; the caller's
 // voice plays and is transcribed; identifiers asked out loud are ticked; a tapped
 // identifier is asked in writing; mute stops the microphone; the caller talking
@@ -47,14 +49,22 @@ const failures = []; const fail = (m) => failures.push(m);
     const sql = new DatabaseSync(':memory:');
     sql.exec(`CREATE TABLE users (username TEXT PRIMARY KEY, user_type TEXT, status TEXT);
         CREATE TABLE heartbeats (username TEXT PRIMARY KEY, full_name TEXT, batch_id TEXT, user_type TEXT, current_case TEXT, last_seen TEXT);
-        INSERT INTO users VALUES ('ci', 'Trainee', 'Approved');`);
+        INSERT INTO users VALUES ('ci', 'Trainee', 'Approved'), ('boss', 'Admin', 'Approved');`);
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret' };
     const token = await utils.createSessionToken({ username: 'ci', userType: 'Trainee', fullName: 'CI Trainee', batchId: 'B1' }, env.SESSION_SECRET);
+    const bossToken = await utils.createSessionToken({ username: 'boss', userType: 'Admin', fullName: 'Trainer', batchId: 'B1' }, env.SESSION_SECRET);
+    const beat = (u) => sql.prepare(`INSERT INTO heartbeats (username, last_seen) VALUES (?, datetime('now')) ON CONFLICT(username) DO UPDATE SET last_seen = datetime('now')`).run(u);
     const post = async (body, signedIn = true) => {
-        sql.prepare(`INSERT INTO heartbeats (username, last_seen) VALUES ('ci', datetime('now')) ON CONFLICT(username) DO UPDATE SET last_seen = datetime('now')`).run();
+        beat('ci');
         const r = await api.onRequestPost({ request: new Request('http://x/api/live-call', { method: 'POST', headers: signedIn ? { cookie: `lsh_session=${token}` } : {}, body: JSON.stringify(body) }), env });
         return { status: r.status, data: await r.json() };
     };
+    const usage = async (who) => {
+        beat(who);
+        const r = await api.onRequestGet({ request: new Request('http://x/api/live-call', { headers: { cookie: `lsh_session=${who === 'boss' ? bossToken : token}` } }), env });
+        return { status: r.status, data: await r.json() };
+    };
+    const lastKey = () => (google[google.length - 1] || {}).key;
     const google = [];
     let googleReply = () => ({ status: 200, body: { name: 'auth_tokens/ci-token' } });
     const realFetch = globalThis.fetch;
@@ -91,10 +101,49 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!/Your last 4 of your Social Security number|The last 4 of your Social Security number: you don't know it/.test(d06)) fail('a detail the caller doesn\'t have (D06 SSN) isn\'t marked as unknown');
     if (live.voiceFor(live.drillCall('D03')) === live.voiceFor(live.drillCall('D01')) || !['Puck', 'Charon', 'Fenrir', 'Orus'].includes(live.voiceFor(live.drillCall('D03')))) fail('James Wilson did not get a male voice');
     if (!live.callerPrompt(live.drillCall('D02')).includes('06/09/2026') && !live.callerPrompt(live.drillCall('D02')).includes('back in June')) fail('the date of the accident answer is missing from D02');
-    r = await post({ callId: 'D01', attempt: 1 });
-    if (r.data.model !== live.LIVE_MODELS[1]) fail(`attempt 1 should use ${live.LIVE_MODELS[1]}, got ${r.data.model}`);
-    r = await post({ callId: 'D01', attempt: 9 });
-    if (r.status !== 502 || r.data.code !== 'NO_MODEL') fail(`running out of models got ${r.status} ${r.data.code}`);
+    // spreading a class over the keys: each new call goes to the key with the fewest calls in progress
+    sql.exec(`DELETE FROM live_call_log`);
+    const a1 = (await post({ callId: 'D01' })).data, k1 = lastKey();
+    const a2 = (await post({ callId: 'D02' })).data, k2 = lastKey();
+    if (!a1.id || !a2.id || k1 === k2) fail(`two calls at once didn't go to different keys (${k1}, ${k2})`);
+    if (a1.maxSeconds !== 360) fail(`calls should be limited to 6 minutes by default (${a1.maxSeconds})`);
+    const exp = Date.parse(google[google.length - 1].body.expireTime) - Date.now();
+    if (exp < 7 * 60000 || exp > 8.5 * 60000) fail(`the token should expire shortly after the time limit (${Math.round(exp / 1000)} s)`);
+    await post({ end: a1.id });
+    const a3 = (await post({ callId: 'D03' })).data;
+    if (lastKey() !== k1) fail('after a call ended, the next call didn\'t go to the key it freed');
+    // a try Google refused: the same model on the other key, then the next model, then text
+    r = await post({ callId: 'D03', failed: [a3.id] });
+    if (!r.data.success || r.data.model !== live.LIVE_MODELS[0] || lastKey() === k1) fail(`a refused try didn't move to the other key (${lastKey()} ${r.data.model})`);
+    const ids = [a3.id, r.data.id];
+    r = await post({ callId: 'D03', failed: ids });
+    if (r.data.model !== live.LIVE_MODELS[1]) fail(`with both keys refused, the next try should use ${live.LIVE_MODELS[1]} (${r.data.model})`);
+    for (let i = 0; i < 6 && r.data.success; i++) { ids.push(r.data.id); r = await post({ callId: 'D03', failed: ids }); }
+    if (r.status !== 429 || r.data.code !== 'BUSY' || !/runs as text/.test(r.data.error)) fail(`with every line refused, the call should run as text (${r.status} ${JSON.stringify(r.data)})`);
+    if (sql.prepare(`SELECT COUNT(*) AS n FROM live_call_log WHERE failed = 1`).get().n !== ids.length) fail('refused tries aren\'t marked as failed');
+    // at most LIVE_CALLS_PER_KEY at once on each key
+    sql.exec(`DELETE FROM live_call_log`);
+    env.LIVE_CALLS_PER_KEY = '1';
+    const p1 = await post({ callId: 'D01' }), p2 = await post({ callId: 'D01' }), p3 = await post({ callId: 'D01' });
+    if (!p1.data.success || !p2.data.success || p3.status !== 429 || p3.data.code !== 'BUSY') fail(`LIVE_CALLS_PER_KEY=1 with 2 keys should allow 2 calls, then run as text (${p3.status} ${p3.data.code})`);
+    await post({ end: p1.data.id });
+    if (!(await post({ callId: 'D01' })).data.success) fail('a call that ended didn\'t free its line');
+    delete env.LIVE_CALLS_PER_KEY;
+    // LIVE_DAILY_MINUTES: the whole site's live minutes in 24 hours
+    sql.exec(`DELETE FROM live_call_log; INSERT INTO live_call_log (username, call_id, model, key_slot, created_at, ended_at) VALUES ('x', 'D01', 'm', 'GEMINI_API_KEY', datetime('now', '-10 minutes'), datetime('now', '-6 minutes'))`);
+    env.LIVE_DAILY_MINUTES = '5';
+    if (!(await post({ callId: 'D01' })).data.success) fail('a call was refused while under the daily minutes cap');
+    env.LIVE_DAILY_MINUTES = '3';
+    r = await post({ callId: 'D01' });
+    if (r.status !== 429 || r.data.code !== 'BUDGET') fail(`past LIVE_DAILY_MINUTES the call should run as text (${r.status} ${r.data.code})`);
+    delete env.LIVE_DAILY_MINUTES;
+    env.LIVE_MAX_MINUTES = '3';
+    if ((await post({ callId: 'D01' })).data.maxSeconds !== 180) fail('LIVE_MAX_MINUTES isn\'t applied');
+    delete env.LIVE_MAX_MINUTES;
+    // Admins see the usage; trainees don't
+    if ((await usage('ci')).status !== 403) fail('a trainee can read the live-call usage');
+    const u = (await usage('boss')).data;
+    if (!u.success || u.activeNow !== 2 || u.last24h.calls !== 3 || u.last24h.minutes < 4 || u.keys.length !== 2 || !(u.last24h.estCost > 0)) fail(`the usage report is wrong: ${JSON.stringify(u)}`);
     let n = 0; googleReply = () => (++n === 1 ? { status: 429, body: { error: { message: 'Resource exhausted' } } } : { status: 200, body: { name: 'auth_tokens/second' } });
     const before = google.length;
     r = await post({ callId: 'D05' });
@@ -102,8 +151,9 @@ const failures = []; const fail = (m) => failures.push(m);
     if (r.data.token !== 'auth_tokens/second' || used.length !== 2 || used[0] === used[1]) fail(`a rate-limited key didn't hand over to the next (${JSON.stringify(used)} → ${JSON.stringify(r.data)})`);
     googleReply = () => ({ status: 400, body: { error: { message: 'User location is not supported for the API use.' } } });
     r = await post({ callId: 'D05' });
-    if (r.status !== 502 || !/region/.test(r.data.error)) fail(`the region refusal isn't explained: ${JSON.stringify(r.data)}`);
+    if (r.status !== 502 || r.data.code !== 'REGION' || !/region/.test(r.data.error)) fail(`the region refusal isn't explained: ${JSON.stringify(r.data)}`);
     googleReply = () => ({ status: 200, body: { name: 'auth_tokens/x' } });
+    sql.exec(`DELETE FROM live_call_log`);
     sql.exec(`INSERT INTO live_call_log (username, call_id, model) SELECT 'ci', 'D01', 'm' FROM (WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c WHERE x < 60) SELECT x FROM c)`);
     r = await post({ callId: 'D01' });
     if (r.status !== 429 || r.data.code !== 'RATE_LIMIT') fail(`the hourly cap didn't apply (${r.status})`);
@@ -117,15 +167,19 @@ const failures = []; const fail = (m) => failures.push(m);
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     page.on('dialog', d => d.accept());
-    const drills = []; let liveMode = 'ok';
+    const drills = [], liveReqs = []; let liveMode = 'ok', liveId = 0;
     await page.route(/cdn\.tailwindcss\.com/, rt => rt.fulfill({ contentType: 'text/javascript', body: '' }));
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
         if (u.pathname === '/api/live-call') {
-            if (liveMode !== 'ok') return j({ success: false, code: 'NOT_CONFIGURED', error: 'Live voice calls aren\'t set up on this site yet (GEMINI_API_KEY). This call runs as text.' }, 503);
-            return j({ success: true, token: 'auth_tokens/ci', model: 'gemini-3.8-live', url: 'wss://live.test/ws', attempts: 3 });
+            const b = JSON.parse(route.request().postData() || '{}'); liveReqs.push(b);
+            if (b.end) return j({ success: true });
+            if (liveMode === 'off') return j({ success: false, code: 'NOT_CONFIGURED', error: 'Live voice calls aren\'t set up on this site yet (GEMINI_API_KEY). This call runs as text.' }, 503);
+            // the first try of the first call is refused by "Google" (busy): the page asks again
+            const busy = liveId === 0;
+            return j({ success: true, id: ++liveId, token: busy ? 'auth_tokens/busy' : 'auth_tokens/ci', model: 'gemini-3.8-live', url: 'wss://live.test/ws', maxSeconds: liveMode === 'short' ? 2 : 360 });
         }
         if (u.pathname === '/api/drill-results' && m === 'POST') { drills.push(JSON.parse(route.request().postData())); return j({ success: true }); }
         if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: false, results: [] });
@@ -140,6 +194,7 @@ const failures = []; const fail = (m) => failures.push(m);
             constructor(url) { this.url = url; this.readyState = 0; this.sent = []; window.__ws.push(this); setTimeout(() => { this.readyState = 1; this.onopen && this.onopen(); }, 20); }
             send(d) {
                 const m = JSON.parse(d); this.sent.push(m);
+                if (m.setup && /busy/.test(this.url)) return setTimeout(() => { this.readyState = 3; this.onclose && this.onclose({ code: 1011, reason: 'RESOURCE_EXHAUSTED' }); }, 20);
                 if (m.setup) setTimeout(() => this.onmessage && this.onmessage({ data: new Blob([JSON.stringify({ setupComplete: {} })]) }), 20);
             }
             emit(m) { this.onmessage && this.onmessage({ data: JSON.stringify(m) }); }
@@ -159,6 +214,7 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.waitForFunction(() => /On the call/.test((document.querySelector('#fdd-phone') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => fail('Answer didn\'t connect the call'));
     const sock = await page.evaluate(() => { const w = window.__ws[window.__ws.length - 1]; return w && { url: w.url, first: w.sent[0] }; });
     if (!sock || sock.url !== 'wss://live.test/ws?access_token=auth_tokens%2Fci' || !sock.first || !sock.first.setup || sock.first.setup.model !== 'models/gemini-3.8-live') fail(`the socket wasn't opened with the token and model: ${JSON.stringify(sock)}`);
+    if (JSON.stringify(liveReqs.slice(0, 2).map(b => b.failed)) !== '[[],[1]]') fail(`a refused line wasn't retried with the refused try named: ${JSON.stringify(liveReqs)}`);
     await page.waitForFunction(() => window.__ws[window.__ws.length - 1].sent.some(m => m.realtimeInput && m.realtimeInput.audio), null, { timeout: 5000 }).catch(() => fail('the microphone isn\'t streamed to the call'));
     const audio = await page.evaluate(() => window.__ws[window.__ws.length - 1].sent.find(m => m.realtimeInput && m.realtimeInput.audio).realtimeInput.audio);
     if (!/^audio\/pcm;rate=\d+$/.test(audio.mimeType) || !audio.data || atob(audio.data).length < 1000) fail(`the microphone audio isn't PCM chunks: ${JSON.stringify({ m: audio.mimeType, n: audio.data && audio.data.length })}`);
@@ -202,8 +258,22 @@ const failures = []; const fail = (m) => failures.push(m);
         await page.waitForTimeout(200);
         const closed = await page.evaluate(() => window.__ws[window.__ws.length - 1].readyState === 3);
         if (!closed) fail('scoring the call didn\'t hang up');
+        if (!liveReqs.some(b => b.end === 2)) fail(`hanging up didn't tell the server the call ended: ${JSON.stringify(liveReqs)}`);
         if (!(await page.isVisible('.fdd-fb :text("Live call")'))) fail('the feedback doesn\'t mention the live call');
     }
+    // the time limit: a warning, then the call hangs up by itself
+    liveMode = 'short';
+    await page.click('button:has-text("Next call")');
+    await page.click('#fdd-phone button:has-text("Answer")');
+    await page.waitForSelector('#fdd-phone .note:has-text("seconds left")', { timeout: 5000 }).catch(() => fail('no warning before the call\'s time limit'));
+    await page.waitForSelector('#fdd-phone :text("Call ended")', { timeout: 5000 }).catch(() => fail('the call didn\'t hang up at its time limit'));
+    if (!(await page.evaluate(() => window.__ws[window.__ws.length - 1].readyState === 3))) fail('the socket stayed open after the time limit');
+    const cs = await page.evaluate(() => { const t = [...document.querySelectorAll('#fdd-panel .fdd-opt span')].map(s => s.textContent); return DRILL_CALLS.find(d => d.actions.every(a => t.includes(a))); });
+    await page.fill('.fdd-search', cs.mock || 'zzzz-no-match');
+    if (cs.mock) await page.click(`.fdd-row:has(.id:text-is("${cs.mock}"))`); else await page.click('button:has-text("No matching case on file")');
+    await page.check(`input[name="fdd-auth"][value="${cs.auth}"]`);
+    await page.check(`input[name="fdd-act"][value="${cs.answer}"]`);
+    await page.click('#fdd-submit');
     // live voice not set up: this call runs as text, and so does the rest of the drill
     liveMode = 'off';
     await page.click('button:has-text("Next call")');
@@ -237,7 +307,7 @@ const failures = []; const fail = (m) => failures.push(m);
         const first = saved.details[0];
         if (!first.live || !/You: Thank you for calling/.test(first.transcript || '') || !/Caller: Sure, it's Maria Santos/.test(first.transcript || '')) fail(`the saved result doesn't keep the live call's transcript: ${JSON.stringify(first).slice(0, 300)}`);
         if (JSON.stringify(first.picked.asked) !== '["name","dob","address"]') fail(`the saved identifiers asked are ${JSON.stringify(first.picked.asked)}`);
-        if (saved.details[1].live) fail('the text call is saved as live');
+        if (saved.details[2].live) fail('the text call is saved as live');
     }
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }

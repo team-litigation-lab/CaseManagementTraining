@@ -63,9 +63,26 @@ With **🎙 Live voice calls** ticked on the drill's start screen (the default i
 
 Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. The default order is `gemini-3.8-live`, then `gemini-3.1-flash-live-preview`, then `gemini-2.5-flash-native-audio-preview-12-2025`. The drill moves to the next model on its own if one doesn't accept the call.
 
+**Capacity and cost (a whole class at once):**
+- **Limits are per Google Cloud project, not per key.** Google caps how many live calls run at once, and how much audio is used per minute and per day, for each project. Keys from **different projects** add capacity; two keys from the same project share one allowance. Your current limits are on the [AI Studio rate-limit page](https://aistudio.google.com/rate-limit). Free-tier limits are low; turning on billing for a project (paid tier) raises them a lot.
+- **Spreading the load:** each new call goes to the key with the fewest calls in progress. When a call ends (or the page closes), its place is freed.
+- **When a key is busy:** if Google refuses a call (busy, out of quota, model unavailable), the drill tries the next key, then the next model. Only when none takes the call does that one call run as text. The next call tries live again, so a trainee is never stuck.
+- **Paid price:** Gemini Live costs about $0.005 per minute of the trainee's audio and $0.018 per minute of the caller's. That is about $0.023 per minute of call when the caller talks the whole time, so a 3-minute call costs a few cents. Ten trainees each doing an 8-call drill is roughly 80 calls, about 240 minutes, **roughly $5–6**. Google's billing page has the exact amounts.
+- **Time limit:** every call hangs up at a time limit (6 minutes by default), with a warning 30 seconds before. A forgotten open call can't keep running.
+- **Optional caps:** set these Cloudflare variables (plain text):
+  - `LIVE_MAX_MINUTES`: the time limit per call (1–15; default 6).
+  - `LIVE_CALLS_PER_KEY`: the most calls at once on one key. Calls past it run as text. Use it to stay under a free-tier limit on concurrent calls.
+  - `LIVE_DAILY_MINUTES`: the whole site's live minutes in any 24 hours. Past it, the drill runs as text until minutes free up. This is a spending cap.
+- **Usage for Admins:** the drill panel shows **🎙 Live voice calls**:
+  - calls in progress now;
+  - calls, minutes and estimated cost over the last 24 hours;
+  - each key's calls in progress;
+  - how many tries Google refused.
+- **Budget alert:** for extra safety, set one on the Google Cloud billing account (Billing → Budgets & alerts).
+
 **How it works:**
 - **The key stays on the server.** `functions/api/live-call.js` makes a single-use token that expires quickly, with the caller's script locked in (`functions/_live.js`). The browser (`live-call.js`) then talks straight to Google with that token. The key never reaches the browser, and the token can't be used for anything but that one call.
-- **Limit:** 60 live calls per trainee per hour (table `live_call_log`, created on first use).
+- **Log:** 60 live calls per trainee per hour. Each call is logged in `live_call_log` (created on first use, kept 3 days) with its key, model, start and end, which is what the balancing, the caps and the usage panel read.
 - **Region:** Google refuses some regions. If this site's server runs in one of them for a trainee, that trainee's calls run as text.
 
 ## Using the CMS from any training program
@@ -291,14 +308,22 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
 - **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
-  - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It moves to the next model when asked, and hands over to the next key when one is rate-limited. It refuses unknown calls and signed-out users, and applies the hourly cap.
+  - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
+    - calls spread over the keys (least busy first), and an ended call frees its key;
+    - a try Google refused moves to the other key, then the next model, then text;
+    - `LIVE_CALLS_PER_KEY`, `LIVE_DAILY_MINUTES` and `LIVE_MAX_MINUTES`;
+    - the Admin usage report;
+    - a rate-limited key hands over to the next;
+    - unknown calls and signed-out users are refused, and the hourly cap applies.
   - **Browser:**
     - the call rings and Answer connects;
     - the microphone streams as PCM;
     - the caller's voice plays and is transcribed;
     - identifiers asked out loud are ticked, and a tapped one is asked in writing;
     - Mute stops the microphone;
-    - scoring hangs up and keeps the transcript;
+    - a refused line is retried on another;
+    - the time limit warns, then hangs up;
+    - scoring hangs up, frees the line and keeps the transcript;
     - without live voice set up, the call and the rest of the drill run as text.
 - **Name sign-in** (`.github/scripts/guest.cjs`, in the same job): the real `guest-login.js` on SQLite. It checks that:
   - a registered trainee's name signs in to their account, with or without the M.I.;

@@ -98,15 +98,15 @@ export function liveSetup(call, model) {
 
 export const LIVE_WS = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained';
 
-// A single-use token: the call must start within 2 minutes and can run for up to
-// 20 (Gemini ends audio sessions at 15 minutes anyway).
-export async function createLiveToken(apiKey, call, model, now = Date.now()) {
+// A single-use token: the call must start within 2 minutes, and the token stops
+// working a little after the call's time limit (the page hangs up at the limit).
+export async function createLiveToken(apiKey, call, model, now = Date.now(), maxMinutes = 6) {
     const res = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
             uses: 1,
-            expireTime: new Date(now + 20 * 60000).toISOString(),
+            expireTime: new Date(now + (maxMinutes + 2) * 60000).toISOString(),
             newSessionExpireTime: new Date(now + 2 * 60000).toISOString(),
             bidiGenerateContentSetup: liveSetup(call, model)
         })

@@ -19,7 +19,9 @@
      onState(state)         connecting · live · ended
      onLine(role, text, id) role 'you' | 'caller'; the same id is
                             sent again as a line grows
-     onError(message, code) the call couldn't start or dropped
+     onError(message, code) the call couldn't start, dropped, or hit
+                            its time limit
+     onNotice(message)      e.g. 30 seconds left
    LiveCall.stop() · LiveCall.setMuted(bool) · LiveCall.sendText(text)
    ========================================================= */
 (function () {
@@ -74,22 +76,31 @@
                 : 'No microphone was found. Plug in a headset, then try again.', 'MIC');
         }
         if (C !== call) return;
-        let attempt = 0, attempts = 1;
-        while (attempt < attempts && C === call) {
+        // Google refused the line (busy, out of quota, model unavailable): the server
+        // skips that key + model and gives the next one, until one takes the call or
+        // none is left (then the server says so and the call runs as text).
+        const failed = [];
+        for (let tries = 0; tries < 8 && C === call; tries++) {
             let t;
             try {
-                const res = await fetch('/api/live-call', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: opts.callId, attempt }) });
+                const res = await fetch('/api/live-call', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: opts.callId, failed }) });
                 t = await res.json().catch(() => ({}));
                 if (!res.ok || !t.success) return fail(t.error || `Live voice couldn't start (error ${res.status}).`, t.code || 'TOKEN');
             } catch (e) { return fail('Live voice couldn\'t connect. Check your internet connection.', 'NETWORK'); }
-            if (C !== call) return;
-            attempts = t.attempts || 1;
+            if (C !== call) return report(t.id);
+            call.logId = t.id; call.maxSeconds = t.maxSeconds || 0;
             const ok = await openSocket(call, t);
             if (ok === true) return;          // the call is live
-            if (C !== call || call.ended) return;
-            attempt++;
-            if (attempt >= attempts) return fail('The voice service didn\'t accept the call' + (ok ? ` (${ok})` : '') + '.', 'SOCKET');
+            call.logId = null;
+            if (C !== call || call.ended) return report(t.id);
+            failed.push(t.id);
         }
+        fail('The voice service didn\'t accept the call.', 'SOCKET');
+    }
+    // Frees the call's place on its key (also when the page closes mid-call).
+    function report(id) {
+        if (!id) return;
+        try { fetch('/api/live-call', { method: 'POST', credentials: 'include', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ end: id }) }).catch(() => {}); } catch (e) {}
     }
 
     // Resolves true once the session is set up, or the close reason if it never was.
@@ -146,6 +157,12 @@
             return stop(true);
         }
         if (opts.onState) opts.onState('live');
+        // The time limit: a warning 30 seconds before, then the call hangs up.
+        if (call.maxSeconds) {
+            const ms = call.maxSeconds * 1000, lead = Math.min(30000, ms / 2);
+            call.warn = setTimeout(() => { if (C === call && opts.onNotice) opts.onNotice(`⏱ ${Math.round(lead / 1000)} seconds left on this call. Wrap it up.`); }, ms - lead);
+            call.limit = setTimeout(() => { if (C === call) { stop(true); if (opts.onError) opts.onError(`The call reached its ${Math.round(call.maxSeconds / 60)}-minute limit and ended.`, 'TIME'); } }, ms);
+        }
         // Silence after picking up: the caller says "Hello?" as a caller would.
         call.kick = setTimeout(() => { if (C === call && !call.heard) sendText('(The receptionist picked up but hasn\'t said anything yet.)', true); }, 4500);
     }
@@ -190,7 +207,8 @@
     function stop(silent) {
         const call = C; if (!call) return;
         call.ended = true; C = null;
-        clearTimeout(call.kick);
+        clearTimeout(call.kick); clearTimeout(call.warn); clearTimeout(call.limit);
+        report(call.logId); call.logId = null;
         try { if (call.ws && call.ws.readyState <= 1) call.ws.close(1000); } catch (e) {}
         flush(call);
         try { if (call.src) call.src.disconnect(); } catch (e) {}
@@ -220,6 +238,8 @@
             setTimeout(() => { if (ringCtx === ctx) stopRing(); }, (times || 2) * 2200 + 200);
         } catch (e) { ringCtx = null; }
     }
+
+    window.addEventListener('pagehide', () => { if (C) stop(true); });
 
     window.LiveCall = { supported, start, stop: () => { stopRing(); stop(false); }, setMuted, sendText, ring, stopRing, active: () => !!C };
 })();

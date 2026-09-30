@@ -230,11 +230,14 @@
                 lv.talking = role === 'caller';
                 paintLines(); paintAvatar();
             },
+            onNotice: (msg) => { if (D && D.cur === cur && cur.live) { lv.note = msg; paintPhone(); } },
             onError: (msg, code) => {
                 if (!D || D.cur !== cur || !cur.live) return;
-                // No microphone, or live voice isn't set up here: the rest of the drill runs as text.
-                if (['MIC', 'NOT_CONFIGURED', 'NO_MODEL'].includes(code)) D.live = false;
-                if (lv.lines.length) { lv.status = 'ended'; lv.note = msg; paintPhone(); return; }
+                // No microphone, live voice not set up, the day's minutes used up, or a refused
+                // region: the rest of the drill runs as text. (Busy lines: the next call tries again.)
+                if (['MIC', 'NOT_CONFIGURED', 'BUDGET', 'REGION'].includes(code)) D.live = false;
+                // A call that was already connected ends on the phone; one that never started runs as text.
+                if (lv.lines.length || ['TIME', 'DROPPED'].includes(code)) { lv.status = 'ended'; lv.note = msg; paintPhone(); return; }
                 cur.live = null; cur.liveNote = msg; paint();
             }
         });
@@ -331,7 +334,16 @@
         } catch (e) { D.saved = 'failed'; }
         paint(); loadHistory();
     }
+    let liveUsage = null;
+    async function loadLiveUsage() {
+        try {
+            const res = await fetch('/api/live-call', { credentials: 'include' });
+            const data = await res.json();
+            liveUsage = data && data.success ? data : null;
+        } catch (e) { liveUsage = null; }
+    }
     async function loadHistory() {
+        if (isAdmin()) await loadLiveUsage();
         try {
             const res = await fetch('/api/drill-results', { credentials: 'include' });
             const data = await res.json();
@@ -373,6 +385,14 @@
             ${historyHTML()}`;
     }
 
+    // Admins: how much the live voice calls are being used (and roughly what they cost).
+    function liveUsageHTML() {
+        const u = liveUsage; if (!u) return '';
+        const lim = u.limits || {};
+        return `<div class="fdd-sec"><h4>🎙 Live voice calls</h4>
+            <div class="fdd-grid"><div><span>On calls now</span><b>${u.activeNow}</b></div><div><span>Calls · 24 h</span><b>${u.last24h.calls}</b></div><div><span>Minutes · 24 h</span><b>${u.last24h.minutes}${lim.dailyMinutes ? `<span style="display:inline;font-size:10px"> / ${lim.dailyMinutes}</span>` : ''}</b></div><div><span>Est. cost · 24 h</span><b>$${u.last24h.estCost.toFixed(2)}</b></div></div>
+            <p style="margin:4px 0 0;font-size:11.5px;color:#64748b;line-height:1.5">${u.keys.length} key${u.keys.length === 1 ? '' : 's'}: ${u.keys.map(k => `${esc(k.slot)} (${k.activeNow} now)`).join(', ') || 'none set'} · calls end at ${lim.maxMinutes} min${lim.perKey ? ` · at most ${lim.perKey} at once per key` : ''}${u.last24h.refused ? ` · ${u.last24h.refused} tr${u.last24h.refused === 1 ? 'y' : 'ies'} refused by Google (busy), moved to another key or to text` : ''}. The cost is an estimate at Google's paid per-minute price (Google's billing page has the exact amount). Google's limits are per Google Cloud project, so keys from different projects add capacity.</p></div>`;
+    }
     function historyHTML() {
         if (!history) return `<p style="color:#64748b;font-size:12px">Loading results…</p>`;
         const rows = history.results || [];
@@ -383,7 +403,7 @@
                 const n = rs.length, avg = (k) => Math.round(rs.reduce((a, r) => a + (r[k] || 0), 0) / n);
                 return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: avg('find_pct'), auth: avg('auth_pct'), act: avg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
             }).sort((a, b) => b.score - a.score);
-            return `<div class="fdd-sec"><h4>Team results (${rows.length} drills)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Drills</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
+            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} drills)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Drills</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
                 ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}%</td><td>${t.auth}%</td><td>${t.act}%</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>`;
         }
         return `<div class="fdd-sec"><h4>My results</h4>${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Calls</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
