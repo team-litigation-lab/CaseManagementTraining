@@ -27,7 +27,7 @@ const bad = (msg) => problems.push(msg);
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'mock-cases.js'), 'utf8'), ctx);
-const { MOCK_CASES = [], DRILL_CALLS = [], MOCK_PROGRAMS = [], MOCK_FIRM = {} } = ctx.window;
+const { MOCK_CASES = [], DRILL_CALLS = [], MOCK_PROGRAMS = [], MOCK_FIRM = {}, MOCK_NAME_SOUNDS = {} } = ctx.window;
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const app = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
@@ -107,6 +107,14 @@ for (const d of DRILL_CALLS) {
         if (d.auth !== 'failed' && !verified) bad(`${where}: the key says "${d.auth}" but the caller's DOB plus address or SSN last 4 don't match ${c.id}`);
         if (d.auth === 'failed' && verified) bad(`${where}: the key says "failed" but the caller's details match ${c.id}`);
     }
+}
+
+// Hard-to-say names: one word each, with how it's said and how it sounds written down
+// (different from the real spelling, or the text drill would give the spelling away).
+for (const [w, v] of Object.entries(MOCK_NAME_SOUNDS)) {
+    if (!/^[A-Z][a-z]+$/.test(w)) bad(`MOCK_NAME_SOUNDS: "${w}" must be one capitalized word`);
+    if (!v || !has(v.say) || !has(v.heard)) bad(`MOCK_NAME_SOUNDS.${w}: needs say and heard`);
+    else if (v.heard.toLowerCase() === w.toLowerCase()) bad(`MOCK_NAME_SOUNDS.${w}: heard is the same as the spelling`);
 }
 
 console.log(`Checked ${MOCK_CASES.length} mock cases and ${DRILL_CALLS.length} drill calls.`);

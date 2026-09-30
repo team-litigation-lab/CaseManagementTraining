@@ -210,10 +210,21 @@ const SAVED = [
     await page.selectOption('#fdd-len', { index: 3 });
     await page.click('button:has-text("Take the first call")');
     const n = await page.evaluate(() => DRILL_CALLS.length);
-    let topSearchUsed = false;
+    let topSearchUsed = false, spelled = 0;
+    const HARD = await page.evaluate(() => Object.keys(MOCK_NAME_SOUNDS));
+    const hardCalls = await page.evaluate((h) => DRILL_CALLS.filter(d => h.some(w => new RegExp('\\b' + w + '\\b').test(d.opening + ' ' + d.gives.name))).length, HARD);
     for (let k = 0; k < n; k++) {
-        const c = await page.evaluate(() => { const t = document.querySelector('.fdd-caller').textContent; return DRILL_CALLS.find(d => t.includes(d.opening.slice(1, 30))); });
+        const c = await page.evaluate(() => { const t = document.querySelector('.fdd-caller').textContent; return DRILL_CALLS.find(d => t.includes(fddHeardAs(d.opening).slice(1, 30))); });
         for (const a of ['Full name', 'Date of birth', 'Address', 'Last 4 of SSN', 'Callback number', 'Relationship to the client', 'Date of the accident (DOL)']) await page.click(`.fdd-asks button:has-text("${a}")`);
+        // A hard-to-say name: the caller's words show it as it sounds; the spelling comes when asked, read back in NATO.
+        if (await page.locator('.fdd-asks button:has-text("Ask them to spell it")').count()) {
+            spelled++;
+            await page.click('.fdd-asks button:has-text("Ask them to spell it")'); await page.click('.fdd-asks button:has-text("Read it back (NATO)")');
+            const said = await page.evaluate(() => document.querySelector('.fdd-caller').textContent + ' ' + document.querySelector('.fdd-tr').textContent);
+            const shown = HARD.filter(w => new RegExp('\\b' + w + '\\b').test(said));
+            if (shown.length) fail(`drill call ${c.id} shows the real spelling of ${shown.join(', ')} before it's spelled`);
+            if (!/\b[A-Z](-[A-Z]){3,}\b/.test(said) || !/[A-Z] as in (Alpha|Bravo|Charlie|Delta|Echo|Foxtrot|Golf|Hotel|India|Juliett|Kilo|Lima|Mike|November|Oscar|Papa|Quebec|Romeo|Sierra|Tango|Uniform|Victor|Whiskey|X-ray|Yankee|Zulu)\b/.test(said)) fail(`drill call ${c.id}: no spelling or NATO read-back in the transcript`);
+        }
         if (c.mock && !topSearchUsed) {
             topSearchUsed = true;
             await page.fill('#cl-bar-input', CN[c.mock]);
@@ -233,6 +244,7 @@ const SAVED = [
         if (sc !== '100/100') fail(`drill call ${c.id} scored ${sc} with the answer key`);
         await page.click('button:has-text("Next call"), button:has-text("See my results")');
     }
+    if (spelled !== hardCalls) fail(`${spelled} drill calls offered the spelling asks, expected ${hardCalls} (calls with hard-to-say names)`);
     await page.waitForTimeout(500);
     if (!drills.length || drills[0].score !== 100) fail(`drill result not saved as 100 (${JSON.stringify(drills[0] && drills[0].score)})`);
 
@@ -242,10 +254,10 @@ const SAVED = [
     await page.click('button:has-text("Take the first call")');
     const seen = { same: false, single: false };
     for (let k = 0; k < n && !(seen.same && seen.single); k++) {
-        const c = await page.evaluate(() => { const el = document.querySelector('.fdd-caller'); return el && DRILL_CALLS.find(d => el.textContent.includes(d.opening.slice(1, 30))); });
+        const c = await page.evaluate(() => { const el = document.querySelector('.fdd-caller'); return el && DRILL_CALLS.find(d => el.textContent.includes(fddHeardAs(d.opening).slice(1, 30))); });
         if (!c) break;
         const same = await page.evaluate((id) => { const k = MOCK_CASES.find(x => x.id === id); return k ? MOCK_CASES.filter(x => x.client.name === k.client.name).length > 1 : false; }, c.mock);
-        for (const a of ['Full name', 'Date of birth', 'Address', 'Last 4 of SSN', 'Callback number', 'Relationship to the client']) await page.click(`.fdd-asks button:has-text("${a}")`);
+        for (const a of ['Full name', 'Date of birth', 'Address', 'Last 4 of SSN', 'Callback number', 'Relationship to the client', 'Ask them to spell it', 'Read it back (NATO)']) { const b = page.locator(`.fdd-asks button:has-text("${a}")`); if (await b.count()) await b.click(); }
         await page.fill('.fdd-search', c.mock || 'zzzz-no-match');
         if (c.mock) await page.click(`.fdd-row:has(.id:text-is("${c.mock}"))`); else await page.click('button:has-text("No matching case on file")');
         await page.check(`input[name="fdd-auth"][value="${c.auth}"]`);
@@ -258,6 +270,28 @@ const SAVED = [
         await page.click('button:has-text("Next call"), button:has-text("See my results")');
     }
     if (!seen.same || !seen.single) fail('the DOL scoring check never saw both kinds of call');
+
+    // A hard-to-say name that isn't spelled and read back costs the 10 identifier points.
+    await page.evaluate(() => fddHome()); await page.waitForTimeout(200);
+    await page.selectOption('#fdd-len', { index: 3 });
+    await page.click('button:has-text("Take the first call")');
+    let unspelled = null;
+    for (let k = 0; k < n && !unspelled; k++) {
+        const c = await page.evaluate(() => { const el = document.querySelector('.fdd-caller'); return el && DRILL_CALLS.find(d => el.textContent.includes(fddHeardAs(d.opening).slice(1, 30))); });
+        if (!c) break;
+        const hard = await page.locator('.fdd-asks button:has-text("Ask them to spell it")').count() > 0;
+        for (const a of ['Full name', 'Date of birth', 'Address', 'Last 4 of SSN', 'Callback number', 'Relationship to the client', 'Date of the accident (DOL)']) await page.click(`.fdd-asks button:has-text("${a}")`);
+        await page.fill('.fdd-search', c.mock || 'zzzz-no-match');
+        if (c.mock) await page.click(`.fdd-row:has(.id:text-is("${c.mock}"))`); else await page.click('button:has-text("No matching case on file")');
+        await page.check(`input[name="fdd-auth"][value="${c.auth}"]`);
+        await page.check(`input[name="fdd-act"][value="${c.answer}"]`);
+        await page.click('#fdd-submit');
+        const sc = await page.textContent('.fdd-fb b');
+        if (sc !== (hard ? '90/100' : '100/100')) fail(`drill call ${c.id} without the spelling asks scored ${sc}, expected ${hard ? '90/100 (hard-to-say name)' : '100/100'}`);
+        if (hard) unspelled = c.id;
+        await page.click('button:has-text("Next call"), button:has-text("See my results")');
+    }
+    if (!unspelled) fail('the spelling scoring check never saw a call with a hard-to-say name');
     await page.evaluate(() => fddClose());
 
     // A practice call on the standard voice: no script, the caller answers what the trainee types.
@@ -273,10 +307,10 @@ const SAVED = [
     const lines = await page.evaluate(() => [...document.querySelectorAll('#fdd-pc-tr .fdd-msg')].map(m => m.className.split(' ')[1] + ':' + m.textContent));
     if (turns.length !== 2 || lines.join('|') !== 'y:Thank you for calling LSH, this is the front desk. May I have your full name and date of birth?|c:Sure, one second.') fail(`the caller's reply after a busy line (retried once) didn't show: ${turns.length} requests, transcript ${JSON.stringify(lines)}`);
     const sys = (turns[0] && turns[0].system) || '';
-    const lc = await page.evaluate((s) => DRILL_CALLS.find(d => s.includes(d.opening.slice(1, 40))), sys);
+    const lc = await page.evaluate((s) => { const d = DRILL_CALLS.find(x => s.includes(fddHeardAs(x.opening).slice(1, 40))); return d && Object.assign({ heardName: fddHeardAs(d.gives.name) }, d); }, sys);
     if (!lc || !pcCall.includes(lc.id)) fail('couldn\'t tell which caller the practice call is (the caller ID or the caller\'s instructions are wrong)');
     else {
-        if (!sys.includes(lc.gives.name) || !/\[END_CALL\]/.test(sys)) fail('the caller\'s instructions don\'t say who they are and how to end the call');
+        if (!sys.includes(lc.heardName) || !/\[END_CALL\]/.test(sys)) fail('the caller\'s instructions don\'t say who they are and how to end the call');
         if (sys.includes(lc.why) || sys.includes(lc.actions[lc.answer])) fail('the caller\'s instructions include the answer key');
         const m0 = (turns[0] && turns[0].messages) || [];
         if (m0.length !== 1 || m0[0].role !== 'user') fail(`the first caller turn should carry just the greeting: ${JSON.stringify(m0)}`);
@@ -398,6 +432,8 @@ const SAVED = [
         calls.forEach(d => {
             const t = (panel.querySelector(`.fdd-script[data-call="${d.id}"]`) || {}).innerText || '';
             if (!t.includes(d.gives.name) || !t.includes(d.gives.callback) || !t.includes(d.actions[d.answer])) issues.push(`${d.id}'s script misses the caller's name, number or the right handling`);
+            const hard = Object.keys(MOCK_NAME_SOUNDS).filter(w => new RegExp('\\b' + w + '\\b').test(d.opening + ' ' + d.gives.name));
+            if (hard.length && !(hard.every(w => t.includes(`${w} = “${MOCK_NAME_SOUNDS[w].say}”`)) && / as in November| as in Sierra| as in Charlie| as in Bravo| as in Mike| as in Alpha/.test(t))) issues.push(`${d.id}'s script misses how to say ${hard.join(', ')} or the NATO read-back`);
         });
         if (/\bundefined\b|\bnull\b|\[object/.test(panel.innerText)) issues.push('undefined/null in a script');
         closeCallsPanel();

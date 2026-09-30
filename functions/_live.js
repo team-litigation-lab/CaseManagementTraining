@@ -22,6 +22,24 @@ export const drillCall = (id) => drillCalls().find(c => c.id === id) || null;
 const caseOf = (id) => (mock.MOCK_CASES || []).find(c => c.id === id) || null;
 const unquote = (s) => String(s || '').trim().replace(/^["“]+|["”]+$/g, '');
 
+// Hard-to-say names (MOCK_NAME_SOUNDS): the caller says them as they sound and spells
+// them only when asked, so the receptionist has to ask and read the spelling back.
+export function hardNames(call) {
+    const sounds = mock.MOCK_NAME_SOUNDS || {}, k = caseOf(call.mock), out = [];
+    `${call.opening} ${(call.gives && call.gives.name) || ''} ${k ? k.client.name : ''}`.replace(/[A-Za-z]+/g, w => { if (sounds[w] && !out.includes(w)) out.push(w); return w; });
+    return out.map(w => ({ name: w, say: sounds[w].say, letters: w.toUpperCase().split('').join('-') }));
+}
+function namesRule(call) {
+    const names = hardNames(call);
+    if (!names.length) return '';
+    return `
+HOW TO SAY THE NAMES
+${names.map(n => `- ${n.name} is pronounced "${n.say}".`).join('\n')}
+- Always say them that way, at a normal pace. Don't spell a name unless the receptionist asks you to; then spell it slowly, letter by letter (${names.map(n => `${n.name}: ${n.letters}`).join('; ')}).
+- If they read the spelling back wrong, correct the letter they got wrong. If they read it back right (for example with the phonetic alphabet), say that's right.
+`;
+}
+
 // The same caller always gets the same voice, female or male as the call's `voice`
 // says (from the first name for a call without one).
 export function voiceFor(call) {
@@ -66,7 +84,7 @@ ${MANNER[call.auth] || ''}
 
 YOUR DETAILS. Give each one only when the receptionist asks for it, exactly as written here. Some of them may not match what the firm has on file; that is expected, so never correct yourself, and never offer a different answer:
 ${facts}
-
+${namesRule(call)}
 RULES
 - Speak like a real person on the phone: short turns (one or two sentences), plain American English, natural pauses and small words like "um" now and then. No lists, no narration, no stage directions.
 - Don't volunteer your date of birth, address, SSN or callback number; wait to be asked. You may say your name when asked who is calling.

@@ -1546,6 +1546,805 @@ const MOCK_CASES = [
             { from: 'Walter Grant (client)', ask: '"Who is my case manager? Nobody has called me."', handle: 'Verify. Brand-new file (retainer 09/27): a case manager is being assigned this week. Remind him to send back the intake packet (HIPAA forms, insurance card, photos). Message Intake (ext 100). Log a Note.' }
         ]
     }
+},
+/* ---------- Recep2: front-desk call scenarios (caller type, DOL, DOB, status, attorney availability and
+   notes as given in the Recep2 sheet; four clients have two files each, told apart by the DOL) ---------- */
+{
+    id: 'MC-37',
+    caseNumber: 'LSH-2025-MVA-902417',
+    level: 'Intermediate',
+    programs: ['reception'],
+    summary: 'Recep2 · Adjuster call. Demanded file: client finished treatment long ago; waiting for the third party\'s adjuster to respond to the demand. Attorney available. Same client as MC-51 (check the DOL).',
+    client: { name: 'Schuyler Beauchamp', phone: '(555) 010-6810', email: 'schuyler.beauchamp@example.com', dob: '01/03/2000', ssn: 'XXX-XX-5073', address: '22 Linden Row, Riverton, GA 30312', emergency: { name: 'Marisol Beauchamp', phone: '(555) 010-6811', relationship: 'Mother' }, employment: { status: 'Employed', employer: 'Riverton Parcel Hub', title: 'Package Handler' } },
+    caseType: 'MVA',
+    phase: 'Bi Demand',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Tom Alvarez',
+    dateOfLoss: '07/02/2025',
+    sol: '07/02/2027',
+    target: '',
+    narrative: 'Client was driving home on Route 9 when a pickup ran the stop sign at Mill Road and hit the passenger side of his car. Neck and back strain. Treated at Align Chiropractic until he was released on 10/14/2025.',
+    police: { agency: 'Riverton Police Department', number: 'RPD-25-070214', officer: 'Ofc. R. Nunez #1876', narrative: 'Unit 2 (Dale Pruitt, Ford F-150) failed to stop at the stop sign and struck Unit 1 (Beauchamp, Toyota Corolla) on the passenger side. Driver 2 cited: failure to obey a stop sign.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-7730915', group: 'RPH-OPS' },
+    bi: [
+        { holder: 'Dale Pruitt', carrier: 'Summit Casualty Insurance', policy: 'SCI-AU-5518203', claim: 'SCI-25-40672', adjuster: 'Craig Donnelly', contact: '(555) 010-7730', liability: 'Yes', limits: '$50,000 / $100,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Align Chiropractic', specialty: 'Chiro', phone: '(555) 010-3240', email: 'billing@alignchiro.example.com', dates: '07/08/2025 – 10/14/2025', status: 'Discharged', charges: '$ 6,450.00' }
+    ],
+    chrono: [
+        { dos: ['07/08/2025', '10/14/2025'], facility: 'Align Chiropractic', next: '', notes: 'Released from care 10/14/2025.' }
+    ],
+    treatmentNotes: 'Treatment finished 10/14/2025. All bills and records are in.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'BI demand sent to Summit Casualty (claim SCI-25-40672) on 03/10/2026. No response yet.' }
+    ],
+    notes: [
+        { date: '03/10/2026', staff: 'Demand Specialist', text: 'BI demand sent to Summit Casualty, adjuster Craig Donnelly (555) 010-7730.' },
+        { date: '09/15/2026', staff: 'Case Manager', text: 'Client finished treatment a long time ago. We\'re just waiting for the 3P\'s adjuster to respond to the demand. Only the client is authorized.' },
+        { date: '09/29/2026', staff: 'Case Manager', text: 'Atty. Reyes is in the office and available today (ext 201).' }
+    ],
+    tasks: [
+        { date: '09/29/2026', staff: 'Demand Specialist', text: 'Follow up with Summit Casualty on the demand response.' }
+    ],
+    reception: {
+        verify: 'Schuyler Beauchamp · DOB 01/03/2000 · 22 Linden Row or SSN last 4 (5073). Two files: this one is DOL 07/02/2025 (the other, MC-51, is 12/05/2023). Only the client is authorized.',
+        calls: [
+            { from: 'Craig Donnelly, Summit Casualty (the other driver\'s adjuster)', ask: '"I got your demand on Schuyler Beauchamp. Is he still treating, and would he take $8,000 today?"', handle: 'Business caller: no identity check, route only. Don\'t confirm treatment and never accept or relay a decision on an offer. Atty. Reyes is available: transfer to him (ext 201), or take a complete message with the offer for him and Tom Alvarez (ext 312). Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-38',
+    caseNumber: 'LSH-2025-DOG-902428',
+    level: 'Intermediate',
+    programs: ['reception'],
+    summary: 'Recep2 · Provider call. A child\'s dog-bite case in treatment: just finished physical therapy, started orthopedic treatment, missed 2 sessions. Attorney available.',
+    client: { name: 'Saoirse Witwicky (minor), by her mother Gabriela Witwicky', phone: '(555) 010-6820', email: 'gabriela.witwicky@example.com', dob: '04/04/2016', ssn: 'XXX-XX-6148', address: '318 Cypress Hollow Drive, Riverton, GA 30314', emergency: { name: 'Gabriela Witwicky', phone: '(555) 010-6820', relationship: 'Mother / legal guardian (client contact)' }, employment: { status: 'Student', employer: 'Riverton Elementary', title: 'Student' } },
+    caseType: 'Dog Bite',
+    phase: 'Treatment',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Grace Kim',
+    dateOfLoss: '02/11/2025',
+    sol: '04/04/2036',
+    target: '',
+    narrative: 'Saoirse (8) was bitten on the left knee and calf by the neighbors\' dog, which got loose from their yard on Cypress Hollow Drive. ER stitches, then physical therapy for the knee; now orthopedic follow-up for knee stiffness. Minor client: her mother Gabriela is the client contact (SOL runs from her 18th birthday).',
+    police: { agency: 'Riverton County Animal Control', number: 'RCAC-25-0211', officer: 'Officer J. Tate', narrative: 'Dog (German shepherd mix, owners Frank and Diane Lott) left its yard and bit a child on the left leg. Dog quarantined 10 days; owners cited for dog at large.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-4418702', group: 'RES-FAM' },
+    bi: [
+        { holder: 'Frank & Diane Lott (dog owners)', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-5520931', claim: 'HFC-25-11408', adjuster: 'Ben Strauss', contact: '(555) 010-7741', liability: 'Yes', limits: '$300,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '02/11/2025 – 02/11/2025', status: 'Discharged', charges: '$ 2,870.00' },
+        { name: 'Riverside Physical Therapy', specialty: 'Physical Therapy (PT)', phone: '(555) 010-3270', email: 'frontdesk@riversidept.example.com', dates: '02/24/2025 – 05/30/2025', status: 'Discharged', charges: '$ 4,120.00' },
+        { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '06/03/2025 – ', status: 'Ongoing', charges: '$ 0.00' }
+    ],
+    chrono: [
+        { dos: ['02/11/2025'], facility: 'St. Mary\'s Hospital', next: '', notes: 'Bite wounds cleaned and stitched; tetanus shot.' },
+        { dos: ['02/24/2025', '05/30/2025'], facility: 'Riverside Physical Therapy', next: '', notes: 'Just finished physical therapy (05/30/2025).' },
+        { dos: ['06/03/2025'], facility: 'Riverton Orthopedic Associates', next: '06/17/2025 3:30 PM', notes: 'Orthopedic treatment started. Missed 06/05 and 06/10 visits.' }
+    ],
+    treatmentNotes: 'Just finished physical therapy. Client started Orthopedic treatment. Client missed 2 sessions.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Police Report', summary: 'Animal Control report RCAC-25-0211.' }
+    ],
+    notes: [
+        { date: '06/02/2025', staff: 'Case Manager', text: 'Just finished physical therapy. Client started Orthopedic treatment.' },
+        { date: '06/11/2025', staff: 'Case Manager', text: 'Client missed 2 sessions (orthopedic 06/05 and 06/10). Left a message for Mrs. Witwicky. Only the mother (guardian) is authorized.' },
+        { date: '06/12/2025', staff: 'Case Manager', text: 'Atty. Reyes is available today (ext 201).' }
+    ],
+    tasks: [
+        { date: '06/12/2025', staff: 'Case Manager', text: 'Reach Mrs. Witwicky about the missed orthopedic visits and reschedule.' }
+    ],
+    reception: {
+        verify: 'Client contact is Gabriela Witwicky (mother/guardian). Verify with Saoirse\'s name and DOB (04/04/2016) plus 318 Cypress Hollow Drive or Saoirse\'s SSN last 4 (6148). No one else is authorized.',
+        calls: [
+            { from: 'Scheduling at Riverton Orthopedic Associates (provider)', ask: '"Saoirse Witwicky missed her last two appointments with us. Is the family still going ahead with the case? We need to know before we book more visits."', handle: 'Provider (business caller): don\'t discuss the case or its status. Take a complete message about the two missed visits for the case manager Grace Kim (ext 313), who follows up with the mother. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-39',
+    caseNumber: 'LSH-2024-MVA-902439',
+    level: 'Intermediate',
+    programs: ['reception'],
+    summary: 'Recep2 · Client\'s husband calls. Client is Mireille Featherstonhaugh; litigation, discovery; mediation set for June 24, 2025. Attorney in court.',
+    client: { name: 'Mireille Featherstonhaugh', phone: '(555) 010-6830', email: 'mireille.featherstonhaugh@example.com', dob: '04/20/1994', ssn: 'XXX-XX-2297', address: '71 Fairview Terrace, Riverton, GA 30309', emergency: { name: 'Daniel Featherstonhaugh', phone: '(555) 010-6831', relationship: 'Husband' }, employment: { status: 'Employed', employer: 'Northgate Dental', title: 'Office Manager' } },
+    caseType: 'MVA',
+    phase: 'Discovery',
+    attorney: 'Atty. Elena Brooks',
+    caseManager: 'Grace Kim',
+    dateOfLoss: '09/15/2024',
+    sol: '09/15/2026',
+    target: '',
+    narrative: 'Client was stopped in traffic on Harbor Street when a sedan rear-ended her at speed. Neck and shoulder injuries; treated with chiropractic and physical therapy. Suit filed after the insurer disputed the damages; in discovery.',
+    police: { agency: 'Riverton Police Department', number: 'RPD-24-091533', officer: 'Ofc. L. Ortiz #2044', narrative: 'Unit 2 (Kyle Mercer, Nissan Altima) struck the stopped Unit 1 (Featherstonhaugh, Honda CR-V) in the rear. Driver 2 cited: following too closely.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-2290416', group: 'NGD-STAFF' },
+    bi: [
+        { holder: 'Kyle Mercer', carrier: 'Keystone Mutual Insurance', policy: 'KM-5580214', claim: 'KM-24-77310', adjuster: 'Laura Pike', contact: '(555) 010-7752', liability: 'Pending', limits: '$100,000 / $300,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Align Chiropractic', specialty: 'Chiro', phone: '(555) 010-3240', email: 'billing@alignchiro.example.com', dates: '09/18/2024 – 01/22/2025', status: 'Discharged', charges: '$ 7,300.00' }
+    ],
+    chrono: [
+        { dos: ['09/18/2024', '01/22/2025'], facility: 'Align Chiropractic', next: '', notes: 'Released from care 01/22/2025.' }
+    ],
+    treatmentNotes: 'Treatment complete (01/22/2025).',
+    pd: null,
+    lit: { sol: '09/15/2026', filed: '02/03/2025', cutoff: '08/29/2025', trial: '01/12/2026', rows: [{ type: 'Motion', party: 'Court-ordered mediation: 06/24/2025, 9:00 AM, Riverton Dispute Resolution Center', due: '06/24/2025', status: 'Pending' }] },
+    finance: [],
+    docs: [
+        { cat: 'Litigation Documents', summary: 'Complaint filed 02/03/2025. Order setting mediation for 06/24/2025.' }
+    ],
+    notes: [
+        { date: '02/03/2025', staff: 'Paralegal', text: 'Complaint filed. Only the client, Mireille Featherstonhaugh, is authorized. Her husband Daniel is the emergency contact only.' },
+        { date: '06/10/2025', staff: 'Paralegal', text: 'Client\'s name is Mireille Featherstonhaugh. Mediation set for June 24, 2025.' },
+        { date: '06/16/2025', staff: 'Paralegal', text: 'Atty. Brooks is in court today. Messages to Janelle Price (ext 221).' }
+    ],
+    tasks: [
+        { date: '06/16/2025', staff: 'Paralegal', text: 'Prepare the mediation summary by 06/20/2025.' }
+    ],
+    reception: {
+        verify: 'Mireille Featherstonhaugh · DOB 04/20/1994 · 71 Fairview Terrace or SSN last 4 (2297). Only the client is authorized; her husband Daniel is the emergency contact only.',
+        calls: [
+            { from: 'Daniel Featherstonhaugh (Mireille\'s husband)', ask: '"When is my wife\'s mediation, and can I come with her?"', handle: 'Not authorized: only Mireille is on the file, so don\'t confirm the mediation, or even that she is a client, however much he knows. "I\'m not able to share any information, but I can take a message." Message for Janelle Price (ext 221); Atty. Brooks is in court. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-40',
+    caseNumber: 'LSH-2020-PRL-902440',
+    level: 'Starter',
+    programs: ['reception'],
+    summary: 'Recep2 · Client call. Litigation; arbitration set for Sep 11, 2023. Attorney in court. Same client as MC-48 (check the DOL).',
+    client: { name: 'Niamh Cholmondeley', phone: '(555) 010-6840', email: 'niamh.cholmondeley@example.com', dob: '06/06/1998', ssn: 'XXX-XX-8816', address: '905 Juniper Lane, Apt 12, Riverton, GA 30318', emergency: { name: 'Paula Cholmondeley', phone: '(555) 010-6841', relationship: 'Mother' }, employment: { status: 'Employed', employer: 'Riverton Community College', title: 'Admissions Assistant' } },
+    caseType: 'Premise Liability',
+    phase: 'Litigation',
+    attorney: 'Atty. Elena Brooks',
+    caseManager: 'Priya Natarajan',
+    dateOfLoss: '11/29/2020',
+    sol: '11/29/2022',
+    target: '',
+    narrative: 'Client fell on a broken, unlit stairwell in the Centerpoint parking garage downtown. Fractured right wrist (surgery) and a sprained ankle. The garage owner denied the claim; suit filed and sent to arbitration.',
+    police: { agency: 'Centerpoint Parking security', number: 'CP-IR-20-1129', officer: 'Security Officer M. Grady', narrative: 'Patron fell on stairwell B, level 3; two stair lights out and a broken tread noted. Photos taken.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-6630098', group: 'RCC-STAFF' },
+    bi: [
+        { holder: 'Centerpoint Parking LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-440198', claim: 'ARC-20-30912', adjuster: 'Sheila Novak', contact: '(555) 010-7763', liability: 'No', limits: '$1,000,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '11/30/2020 – 06/15/2021', status: 'Discharged', charges: '$ 18,900.00' }
+    ],
+    chrono: [
+        { dos: ['12/04/2020'], facility: 'Riverton Orthopedic Associates', next: '', notes: 'Right wrist ORIF surgery.' }
+    ],
+    treatmentNotes: 'Treatment complete (06/15/2021).',
+    pd: null,
+    lit: { sol: '11/29/2022', filed: '10/14/2022', cutoff: '06/30/2023', trial: '', rows: [{ type: 'Motion', party: 'Binding arbitration: 09/11/2023, 10:00 AM, Riverton Dispute Resolution Center', due: '09/11/2023', status: 'Pending' }] },
+    finance: [],
+    docs: [
+        { cat: 'Litigation Documents', summary: 'Complaint filed 10/14/2022. Order sending the case to arbitration on 09/11/2023.' }
+    ],
+    notes: [
+        { date: '07/20/2023', staff: 'Paralegal', text: 'Arbitration set for Sep 11, 2023. Only the client is authorized.' },
+        { date: '08/28/2023', staff: 'Paralegal', text: 'Atty. Brooks is in court today. Messages to Janelle Price (ext 221).' }
+    ],
+    tasks: [
+        { date: '08/28/2023', staff: 'Paralegal', text: 'Prep session with the client before the 09/11/2023 arbitration.' }
+    ],
+    reception: {
+        verify: 'Niamh Cholmondeley · DOB 06/06/1998 · 905 Juniper Lane or SSN last 4 (8816). Two files: this one is DOL 11/29/2020 (the other, MC-48, is 10/10/2023). Only the client is authorized.',
+        calls: [
+            { from: 'Niamh Cholmondeley (client)', ask: '"What date is my arbitration again, and can I talk to Atty. Brooks?"', handle: 'Verify, and ask the DOL to open the right file (11/29/2020). Arbitration is set for 09/11/2023 (you can read a date on her own file to a verified client). Atty. Brooks is in court: take a message for her or Janelle Price (ext 221). No advice. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-41',
+    caseNumber: 'LSH-2023-MVA-902451',
+    level: 'Starter',
+    programs: ['reception'],
+    summary: 'Recep2 · Client call (a young child\'s case: the parent calls). Treating: physical therapy due to finish, orthopedic after PT. Attorney out of office.',
+    client: { name: 'Cian Acheson (minor), by his mother Amber Acheson', phone: '(555) 010-6850', email: 'amber.acheson@example.com', dob: '04/04/2020', ssn: 'XXX-XX-3902', address: '14 Briar Glen Court, Riverton, GA 30316', emergency: { name: 'Amber Acheson', phone: '(555) 010-6850', relationship: 'Mother / legal guardian (client contact)' }, employment: { status: 'N/A', employer: '', title: '' } },
+    caseType: 'MVA',
+    phase: 'Treatment',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Priya Natarajan',
+    dateOfLoss: '12/11/2023',
+    sol: '04/04/2040',
+    target: '',
+    narrative: 'Cian (3) was in his car seat when the family car was T-boned at Oak Street and 5th. Hip and leg injuries; physical therapy, with orthopedic care to follow. Minor client: his mother Amber is the client contact (SOL runs from his 18th birthday).',
+    police: { agency: 'Riverton Police Department', number: 'RPD-23-121108', officer: 'Ofc. D. Walsh #1902', narrative: 'Unit 2 (Terrence Boyd, Dodge Ram) ran the red light and struck Unit 1 (Acheson, Kia Sorento) on the driver side. Child passenger transported.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-8812203', group: 'FAM-ACHESON' },
+    bi: [
+        { holder: 'Terrence Boyd', carrier: 'Summit Casualty Insurance', policy: 'SCI-AU-6630418', claim: 'SCI-23-58820', adjuster: 'Holly Stevens', contact: '(555) 010-7774', liability: 'Yes', limits: '$25,000 / $50,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Riverside Physical Therapy', specialty: 'Physical Therapy (PT)', phone: '(555) 010-3270', email: 'frontdesk@riversidept.example.com', dates: '01/08/2024 – ', status: 'Ongoing', charges: '$ 3,960.00' }
+    ],
+    chrono: [
+        { dos: ['01/08/2024'], facility: 'Riverside Physical Therapy', next: '', notes: 'Physical therapy is due to finish on June 1, 2023. Orthopedic will start after PT is done.' }
+    ],
+    treatmentNotes: 'Physical therapy is due to finish on June 1, 2023. Orthopedic will start after PT is done.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Police Report', summary: 'Police report RPD-23-121108.' }
+    ],
+    notes: [
+        { date: '05/20/2024', staff: 'Case Manager', text: 'Physical therapy is due to finish on June 1, 2023. Orthopedic will start after PT is done. Only the mother (guardian) is authorized.' },
+        { date: '05/28/2024', staff: 'Case Manager', text: 'Atty. Reyes is out of the office this week. Messages to Priya Natarajan (ext 311).' }
+    ],
+    tasks: [
+        { date: '05/28/2024', staff: 'Case Manager', text: 'Schedule the orthopedic referral once PT ends.' }
+    ],
+    reception: {
+        verify: 'Client contact is Amber Acheson (mother/guardian). Verify with Cian\'s name and DOB (04/04/2020) plus 14 Briar Glen Court or Cian\'s SSN last 4 (3902).',
+        calls: [
+            { from: 'Amber Acheson (Cian\'s mother, the client contact)', ask: '"When does Cian\'s physical therapy end, and can I speak to the attorney today?"', handle: 'Verify the guardian (Cian\'s DOB plus the address or his SSN last 4). The file says PT is due to finish June 1, 2023, then orthopedic starts. Atty. Reyes is out of the office: offer the case manager Priya Natarajan (ext 311) or take a message. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-42',
+    caseNumber: 'LSH-2023-MVA-902462',
+    level: 'Intermediate',
+    programs: ['reception'],
+    summary: 'Recep2 · 1P adjuster call. Pending demand: the client\'s bills are incomplete and being collected. Attorney available. Same client as MC-49 (check the DOL).',
+    client: { name: 'Mstislav Shaughnessy (minor), by his mother Tasha Shaughnessy', phone: '(555) 010-6860', email: 'tasha.shaughnessy@example.com', dob: '03/16/2015', ssn: 'XXX-XX-4417', address: '260 Ridgeview Avenue, Riverton, GA 30311', emergency: { name: 'Tasha Shaughnessy', phone: '(555) 010-6860', relationship: 'Mother / legal guardian (client contact)' }, employment: { status: 'Student', employer: 'Riverton Elementary', title: 'Student' } },
+    caseType: 'MVA',
+    phase: 'Demand Review',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Tom Alvarez',
+    dateOfLoss: '12/03/2023',
+    sol: '03/16/2035',
+    target: '',
+    narrative: 'Mstislav (8) was a passenger in his mother\'s car when an underinsured driver merged into them on I-85. Broken collarbone. Treatment is done; the file is being built for the demand. Minor client: his mother Tasha is the client contact.',
+    police: { agency: 'Georgia State Patrol', number: 'GSP-23-120377', officer: 'Tpr. K. Moss #611', narrative: 'Unit 2 (Rick Soto, Chevy Malibu) changed lanes into Unit 1 (Shaughnessy, Honda Pilot). Driver 2 cited: improper lane change.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-5501876', group: 'FAM-SHAUGHNESSY' },
+    bi: [
+        { holder: 'Rick Soto', carrier: 'Keystone Mutual Insurance', policy: 'KM-6630127', claim: 'KM-23-81144', adjuster: 'Laura Pike', contact: '(555) 010-7752', liability: 'Yes', limits: '$25,000 / $50,000' }
+    ],
+    pipum: [
+        { type: 'UM/UIM', holder: 'Tasha Shaughnessy', carrier: 'Harbor Point Insurance', policy: 'HP-3318046', claim: 'HP-23-7719', adjuster: 'Linda Cho', contact: '(555) 010-7815', limits: '$50,000 / $100,000' }
+    ],
+    liens: [],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '12/03/2023 – 12/03/2023', status: 'Discharged', charges: '$ 5,600.00' },
+        { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '12/08/2023 – 04/02/2024', status: 'Discharged', charges: '' }
+    ],
+    chrono: [
+        { dos: ['12/08/2023', '04/02/2024'], facility: 'Riverton Orthopedic Associates', next: '', notes: 'Collarbone healed; released 04/02/2024.' }
+    ],
+    treatmentNotes: 'Treatment complete. Incomplete bills: the orthopedic bill has not come in yet.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Bills', summary: 'ER bill in. Orthopedic bill requested 05/06/2024 and again 06/03/2024.' }
+    ],
+    notes: [
+        { date: '06/03/2024', staff: 'Records Specialist', text: 'Incomplete bills for the client and is in the process of receiving them.' },
+        { date: '06/10/2024', staff: 'Case Manager', text: 'Only the mother (guardian) is authorized. Atty. Reyes is available today (ext 201).' }
+    ],
+    tasks: [
+        { date: '06/10/2024', staff: 'Records Specialist', text: 'Follow up on the orthopedic bill; then send the file for the demand.' }
+    ],
+    reception: {
+        verify: 'Client contact is Tasha Shaughnessy (mother/guardian). Verify with Mstislav\'s name and DOB (03/16/2015) plus 260 Ridgeview Avenue or Mstislav\'s SSN last 4 (4417). Two files: this one is DOL 12/03/2023 (the other, MC-49, is 11/02/2021).',
+        calls: [
+            { from: 'Linda Cho, Harbor Point Insurance (the family\'s own UM carrier, 1P adjuster)', ask: '"I still don\'t have Mstislav Shaughnessy\'s bills. Can you just read me the totals?"', handle: 'Business caller: nothing read out over the phone. Bills are still being collected. Take a message for the case manager Tom Alvarez (ext 312), or transfer to Atty. Reyes (ext 201, available). Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-43',
+    caseNumber: 'LSH-2023-SNF-902473',
+    level: 'Starter',
+    programs: ['reception'],
+    summary: 'Recep2 · Client call. Intake: the client was set for treatment last May 21, 2024. Attorney available. Same client as MC-50 (check the DOL).',
+    client: { name: 'Bjorn Courthope', phone: '(555) 010-6870', email: 'bjorn.courthope@example.com', dob: '12/14/1988', ssn: 'XXX-XX-7751', address: '48 Quarry Hill Road, Riverton, GA 30319', emergency: { name: 'Lena Courthope', phone: '(555) 010-6871', relationship: 'Sister' }, employment: { status: 'Self-Employed', employer: 'Courthope Mobile Detailing', title: 'Owner' } },
+    caseType: 'Slip and Fall',
+    phase: 'Intake',
+    attorney: 'Atty. David Okafor',
+    caseManager: '',
+    dateOfLoss: '05/10/2023',
+    sol: '05/10/2025',
+    target: '',
+    narrative: 'Client slipped on a wet locker-room floor at IronWorks Fitness (no warning sign). Lower back and right hip pain. Intake file: treatment not confirmed yet.',
+    police: { agency: 'IronWorks Fitness incident report', number: 'IWF-IR-230510', officer: 'Manager: S. Reeve', narrative: 'Member fell on the wet locker-room floor after cleaning; no wet-floor sign out. Ice pack given.' },
+    health: { carrier: 'Blue Horizon PPO', memberId: 'PSH-3390772', group: 'IND-COURTHOPE' },
+    bi: [
+        { holder: 'IronWorks Fitness LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-551207', claim: 'ARC-23-51207', adjuster: 'Not yet assigned', contact: '(555) 010-7763', liability: 'Pending', limits: '$1,000,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Peachtree Pain & Spine', specialty: 'Pain Management', phone: '(555) 010-3290', email: 'billing@peachtreepain.example.com', dates: '', status: 'Ongoing', charges: '$ 0.00' }
+    ],
+    chrono: [
+        { dos: [], facility: 'Peachtree Pain & Spine', next: '05/21/2024 9:00 AM', notes: 'Client is set for treatment last May 21, 2024.' }
+    ],
+    treatmentNotes: 'Client is set for treatment last May 21, 2024.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'Retainer signed. Gym incident report requested.' }
+    ],
+    notes: [
+        { date: '05/14/2024', staff: 'Intake Specialist', text: 'Client is set for treatment last May 21, 2024. Only the client is authorized.' },
+        { date: '06/03/2024', staff: 'Intake Specialist', text: 'Atty. Okafor is available today (ext 203).' }
+    ],
+    tasks: [
+        { date: '06/03/2024', staff: 'Intake Specialist', text: 'Confirm with Peachtree Pain & Spine whether the client went on 05/21/2024.' }
+    ],
+    reception: {
+        verify: 'Bjorn Courthope · DOB 12/14/1988 · 48 Quarry Hill Road or SSN last 4 (7751). Two files: this one is DOL 05/10/2023 (the other, MC-50, is 04/11/2022). Only the client is authorized.',
+        calls: [
+            { from: 'Bjorn Courthope (client)', ask: '"I was supposed to start treatment back in May and I never went. Is my case still open?"', handle: 'Verify, and ask the DOL to open the right file (05/10/2023, the gym fall, in Intake). The file shows treatment was set for 05/21/2024. No advice on the case: transfer to Atty. Okafor (ext 203, available) or take a message for Intake (ext 100). Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-44',
+    caseNumber: 'LSH-2023-PRL-902484',
+    level: 'Intermediate',
+    programs: ['reception'],
+    summary: 'Recep2 · Provider call. Treating: the client started treating Jan 12, 2024. Attorney available.',
+    client: { name: 'Siobhan Masserene', phone: '(555) 010-6880', email: 'siobhan.masserene@example.com', dob: '11/20/1968', ssn: 'XXX-XX-5329', address: '1200 Oakmont Drive, Apt 3C, Riverton, GA 30310', emergency: { name: 'Raymond Masserene', phone: '(555) 010-6881', relationship: 'Husband' }, employment: { status: 'Employed', employer: 'Riverton Public Library', title: 'Library Assistant' } },
+    caseType: 'Premise Liability',
+    phase: 'Treatment',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Priya Natarajan',
+    dateOfLoss: '12/30/2023',
+    sol: '12/30/2025',
+    target: '',
+    narrative: 'Client fell on a broken outdoor stair at her apartment complex (Oakmont Apartments); the landlord had been told about the loose step. Lower back and left knee injuries.',
+    police: { agency: 'Oakmont Property Group incident report', number: 'OPG-IR-231230', officer: 'Property manager: T. Kline', narrative: 'Resident fell on the east stairwell; loose tread reported by residents on 12/12/2023, repair not completed.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-1120569', group: 'RPL-STAFF' },
+    bi: [
+        { holder: 'Oakmont Property Group', carrier: 'Crestline Property & Casualty', policy: 'CPC-GL-771204', claim: 'CPC-24-00418', adjuster: 'Jill Harmon', contact: '(555) 010-7790', liability: 'Pending', limits: '$1,000,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Peachtree Pain & Spine', specialty: 'Pain Management', phone: '(555) 010-3290', email: 'billing@peachtreepain.example.com', dates: '01/12/2024 – ', status: 'Ongoing', charges: '$ 2,340.00' }
+    ],
+    chrono: [
+        { dos: ['01/12/2024', '02/09/2024'], facility: 'Peachtree Pain & Spine', next: '03/08/2024 10:30 AM', notes: 'Client started treating Jan 12, 2024.' }
+    ],
+    treatmentNotes: 'Client started treating Jan 12, 2024.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'Letter of representation sent to Crestline Property & Casualty.' }
+    ],
+    notes: [
+        { date: '01/15/2024', staff: 'Case Manager', text: 'Client started treating Jan 12, 2024. Only the client is authorized.' },
+        { date: '02/26/2024', staff: 'Case Manager', text: 'Atty. Reyes is available today (ext 201).' }
+    ],
+    tasks: [
+        { date: '02/26/2024', staff: 'Case Manager', text: 'Check in with the client after her 03/08 visit.' }
+    ],
+    reception: {
+        verify: 'Siobhan Masserene · DOB 11/20/1968 · 1200 Oakmont Drive or SSN last 4 (5329). Only the client is authorized.',
+        calls: [
+            { from: 'Billing at Peachtree Pain & Spine (provider)', ask: '"Siobhan Masserene has been treating with us since January 12th. Can you give me the landlord\'s insurance claim number so we can bill it?"', handle: 'Provider (business caller): don\'t read out claim numbers. Take the message for the case manager Priya Natarajan (ext 311), who decides what to send and where. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-45',
+    caseNumber: 'LSH-2025-MVA-902495',
+    level: 'Starter',
+    programs: ['reception'],
+    summary: 'Recep2 · Client call. Pending demand: the client just finished treatment; bills and records are being collected. Attorney available.',
+    client: { name: 'Rhys Beaumont', phone: '(555) 010-6890', email: 'rhys.beaumont@example.com', dob: '01/01/1991', ssn: 'XXX-XX-6604', address: '33 Brantley Street, Riverton, GA 30308', emergency: { name: 'Monique Beaumont', phone: '(555) 010-6891', relationship: 'Wife' }, employment: { status: 'Employed', employer: 'Southline Freight', title: 'Forklift Operator' } },
+    caseType: 'MVA',
+    phase: 'Demand Review',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Tom Alvarez',
+    dateOfLoss: '03/11/2025',
+    sol: '03/11/2027',
+    target: '',
+    narrative: 'Client was rear-ended at a red light on Peachtree Parkway by a delivery van. Neck and lower back injuries; chiropractic and physical therapy, now finished.',
+    police: { agency: 'Riverton Police Department', number: 'RPD-25-031127', officer: 'Ofc. R. Nunez #1876', narrative: 'Unit 2 (QuickDrop Couriers van, driver Ray Delacroix) struck the stopped Unit 1 (Beaumont, Chevy Impala) in the rear. Driver 2 cited: following too closely.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-7009443', group: 'SLF-WHSE' },
+    bi: [
+        { holder: 'QuickDrop Couriers LLC', carrier: 'Keystone Mutual Insurance', policy: 'KM-7740088', claim: 'KM-25-80155', adjuster: 'Laura Pike', contact: '(555) 010-7752', liability: 'Yes', limits: '$100,000 / $300,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Align Chiropractic', specialty: 'Chiro', phone: '(555) 010-3240', email: 'billing@alignchiro.example.com', dates: '03/14/2025 – 08/28/2025', status: 'Discharged', charges: '' },
+        { name: 'Riverside Physical Therapy', specialty: 'Physical Therapy (PT)', phone: '(555) 010-3270', email: 'frontdesk@riversidept.example.com', dates: '05/05/2025 – 09/02/2025', status: 'Discharged', charges: '' }
+    ],
+    chrono: [
+        { dos: ['09/02/2025'], facility: 'Riverside Physical Therapy', next: '', notes: 'Last visit; released.' }
+    ],
+    treatmentNotes: 'Client just finished treatment. In the process of collecting bills and records.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Medical Records', summary: 'Records and bills requested from Align Chiropractic and Riverside PT on 09/08/2025.' }
+    ],
+    notes: [
+        { date: '09/08/2025', staff: 'Records Specialist', text: 'Client just finished treatment. In the process of collecting bills and records.' },
+        { date: '09/15/2025', staff: 'Case Manager', text: 'Only the client is authorized. Atty. Reyes is available today (ext 201).' }
+    ],
+    tasks: [
+        { date: '09/15/2025', staff: 'Records Specialist', text: 'Follow up on the outstanding bills and records by 09/29/2025.' }
+    ],
+    reception: {
+        verify: 'Rhys Beaumont · DOB 01/01/1991 · 33 Brantley Street or SSN last 4 (6604). Only the client is authorized.',
+        calls: [
+            { from: 'Rhys Beaumont (client)', ask: '"I finished my treatment. How much is my case worth, and when do I get paid?"', handle: 'Verify. No case value or timeline from the front desk. The file shows treatment just finished and bills and records are being collected before the demand. Message the case manager Tom Alvarez (ext 312) or offer Atty. Reyes (ext 201, available). Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-46',
+    caseNumber: 'LSH-2025-MVA-902506',
+    level: 'Advanced',
+    programs: ['reception'],
+    summary: 'Recep2 · Uncooperative client. Treating: she should have finished physical therapy last week. Attorney available.',
+    client: { name: 'Brittany Kirkcudbright', phone: '(555) 010-6900', email: 'brittany.kirkcudbright@example.com', dob: '09/13/1996', ssn: 'XXX-XX-2185', address: '612 Sycamore Bend Way, Riverton, GA 30315', emergency: { name: 'Curtis Kirkcudbright', phone: '(555) 010-6901', relationship: 'Brother' }, employment: { status: 'Employed', employer: 'Peach Street Café', title: 'Barista' } },
+    caseType: 'MVA',
+    phase: 'Treatment',
+    attorney: 'Atty. David Okafor',
+    caseManager: 'Luis Ortega',
+    dateOfLoss: '03/07/2025',
+    sol: '03/07/2027',
+    target: '',
+    narrative: 'Client\'s car was sideswiped on Route 9 by a driver drifting out of his lane. Neck and shoulder strain; physical therapy.',
+    police: { agency: 'Riverton Police Department', number: 'RPD-25-030711', officer: 'Ofc. L. Ortiz #2044', narrative: 'Unit 2 (Mason Tully, Toyota Tacoma) drifted into Unit 1 (Kirkcudbright, Hyundai Elantra). Driver 2 cited: failure to maintain lane.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-9951230', group: 'PSC-STAFF' },
+    bi: [
+        { holder: 'Mason Tully', carrier: 'Summit Casualty Insurance', policy: 'SCI-AU-7719032', claim: 'SCI-25-60117', adjuster: 'Craig Donnelly', contact: '(555) 010-7730', liability: 'Yes', limits: '$50,000 / $100,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Riverside Physical Therapy', specialty: 'Physical Therapy (PT)', phone: '(555) 010-3270', email: 'frontdesk@riversidept.example.com', dates: '03/17/2025 – ', status: 'Ongoing', charges: '$ 3,150.00' }
+    ],
+    chrono: [
+        { dos: ['03/17/2025', '06/20/2025'], facility: 'Riverside Physical Therapy', next: '', notes: 'Should have been finished with physical therapy last week.' }
+    ],
+    treatmentNotes: 'Should have been finished with physical therapy last week.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Police Report', summary: 'Police report RPD-25-030711.' }
+    ],
+    notes: [
+        { date: '07/07/2025', staff: 'Case Manager', text: 'Should have been finished with physical therapy last week. Client has not returned calls. Only the client is authorized.' },
+        { date: '07/08/2025', staff: 'Case Manager', text: 'Atty. Okafor is available today (ext 203).' }
+    ],
+    tasks: [
+        { date: '07/08/2025', staff: 'Case Manager', text: 'Reach the client about finishing PT; confirm the discharge date with Riverside PT.' }
+    ],
+    reception: {
+        verify: 'Brittany Kirkcudbright · DOB 09/13/1996 · 612 Sycamore Bend Way or SSN last 4 (2185). Only the client is authorized.',
+        calls: [
+            { from: 'Brittany Kirkcudbright (client, uncooperative)', ask: '"Why do you people keep calling me about therapy? Just tell me what\'s going on with my case, you have all my information."', handle: 'Stay calm and polite. You can\'t discuss the case until she verifies (name, DOB and one more identifier). If she won\'t, offer a callback from her case manager Luis Ortega (ext 314) to the number on file. Don\'t read anything from the file to her. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-47',
+    caseNumber: 'LSH-2023-SNF-902517',
+    level: 'Intermediate',
+    programs: ['reception'],
+    summary: 'Recep2 · Clueless client. Litigation; arbitration set for Mar 12, 2025. Attorney in court.',
+    client: { name: 'Saoirse Shaughnessy', phone: '(555) 010-6910', email: 'saoirse.shaughnessy@example.com', dob: '06/06/1955', ssn: 'XXX-XX-9046', address: '8 Chestnut Hill Road, Riverton, GA 30307', emergency: { name: 'Ruth Greene', phone: '(555) 010-6911', relationship: 'Daughter (emergency contact only)' }, employment: { status: 'Retired', employer: '', title: '' } },
+    caseType: 'Slip and Fall',
+    phase: 'Litigation',
+    attorney: 'Atty. Elena Brooks',
+    caseManager: 'Grace Kim',
+    dateOfLoss: '09/29/2023',
+    sol: '09/29/2025',
+    target: '',
+    narrative: 'Client slipped on spilled juice in the produce aisle at FreshWay Grocers; no cone or sign. Fractured left hip (surgery). The store denied liability; suit filed and set for arbitration.',
+    police: { agency: 'FreshWay Grocers incident report', number: 'FWG-IR-230929', officer: 'Store manager: P. Dunn', narrative: 'Customer fell in aisle 2 (produce); spill not yet cleaned up. Ambulance called.' },
+    health: { carrier: 'Medicare', memberId: 'MCR-1EG4-TE5-MK72', group: 'Medicare' },
+    bi: [
+        { holder: 'FreshWay Grocers Inc.', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-660190', claim: 'ARC-23-66019', adjuster: 'Sheila Novak', contact: '(555) 010-7763', liability: 'No', limits: '$2,000,000' }
+    ],
+    pipum: [],
+    liens: [{ type: 'Medical Lien', entity: 'Medicare (MSPRC)', file: 'MSP-23-448120', amount: '$ 21,400.00' }],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '09/29/2023 – 10/04/2023', status: 'Discharged', charges: '$ 38,900.00' }
+    ],
+    chrono: [
+        { dos: ['09/30/2023'], facility: 'St. Mary\'s Hospital', next: '', notes: 'Left hip surgery.' }
+    ],
+    treatmentNotes: 'Treatment complete.',
+    pd: null,
+    lit: { sol: '09/29/2025', filed: '05/20/2024', cutoff: '01/15/2025', trial: '', rows: [{ type: 'Motion', party: 'Arbitration: 03/12/2025, 9:30 AM, Riverton Dispute Resolution Center', due: '03/12/2025', status: 'Pending' }] },
+    finance: [],
+    docs: [
+        { cat: 'Litigation Documents', summary: 'Notice of arbitration for 03/12/2025 mailed to the client 02/20/2025.' }
+    ],
+    notes: [
+        { date: '02/20/2025', staff: 'Paralegal', text: 'Arbitration set for Mar 12, 2025. Notice mailed to the client. Only the client is authorized; her daughter is the emergency contact only.' },
+        { date: '03/03/2025', staff: 'Paralegal', text: 'Atty. Brooks is in court today. Messages to Janelle Price (ext 221).' }
+    ],
+    tasks: [
+        { date: '03/03/2025', staff: 'Paralegal', text: 'Call the client to prepare for the 03/12/2025 arbitration and arrange her ride.' }
+    ],
+    reception: {
+        verify: 'Saoirse Shaughnessy · DOB 06/06/1955 · 8 Chestnut Hill Road or SSN last 4 (9046). Only the client is authorized.',
+        calls: [
+            { from: 'Saoirse Shaughnessy (client, confused)', ask: '"I got a letter about an arbitration. What is that? Do I have to go to court? I don\'t understand any of this."', handle: 'Be patient and kind, and verify. The file shows the arbitration set for 03/12/2025. Don\'t explain the law or tell her what to do. Atty. Brooks is in court: take a message for Janelle Price (ext 221) to call her back today. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-48',
+    caseNumber: 'LSH-2023-MVA-902528',
+    level: 'Advanced',
+    programs: ['reception'],
+    summary: 'Recep2 · Defense counsel call. Litigation (deposition stage): deposition set for June 20, 2025. Attorney in court. Same client as MC-40 (check the DOL).',
+    client: { name: 'Niamh Cholmondeley', phone: '(555) 010-6840', email: 'niamh.cholmondeley@example.com', dob: '06/06/1998', ssn: 'XXX-XX-8816', address: '905 Juniper Lane, Apt 12, Riverton, GA 30318', emergency: { name: 'Paula Cholmondeley', phone: '(555) 010-6841', relationship: 'Mother' }, employment: { status: 'Employed', employer: 'Riverton Community College', title: 'Admissions Assistant' } },
+    caseType: 'MVA',
+    phase: 'Discovery',
+    attorney: 'Atty. Elena Brooks',
+    caseManager: 'Priya Natarajan',
+    dateOfLoss: '10/10/2023',
+    sol: '10/10/2025',
+    target: '',
+    narrative: 'Client was hit head-on by a driver who crossed the center line on Old Mill Road. Broken ribs and a concussion. Suit filed; in discovery (depositions).',
+    police: { agency: 'Riverton Police Department', number: 'RPD-23-101019', officer: 'Ofc. D. Walsh #1902', narrative: 'Unit 2 (Brian Kessler, Jeep Wrangler) crossed the center line and struck Unit 1 (Cholmondeley, Mazda 3) head-on. Driver 2 cited: failure to maintain lane.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-6630098', group: 'RCC-STAFF' },
+    bi: [
+        { holder: 'Brian Kessler', carrier: 'Keystone Mutual Insurance', policy: 'KM-9913304', claim: 'KM-23-70442', adjuster: 'Laura Pike', contact: '(555) 010-7752', liability: 'Pending', limits: '$100,000 / $300,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '10/10/2023 – 10/12/2023', status: 'Discharged', charges: '$ 16,200.00' }
+    ],
+    chrono: [
+        { dos: ['10/10/2023'], facility: 'St. Mary\'s Hospital', next: '', notes: 'Rib fractures; concussion.' }
+    ],
+    treatmentNotes: 'Treatment complete.',
+    pd: null,
+    lit: { sol: '10/10/2025', filed: '11/18/2024', cutoff: '09/30/2025', trial: '02/09/2026', rows: [{ type: 'Deposition Notice', party: 'Plaintiff Niamh Cholmondeley: 06/20/2025, 10:00 AM, at Hendricks & Vale LLP (defense counsel)', due: '06/20/2025', status: 'Pending' }] },
+    finance: [],
+    docs: [
+        { cat: 'Litigation Documents', summary: 'Notice of deposition of the plaintiff for 06/20/2025 (Hendricks & Vale LLP).' }
+    ],
+    notes: [
+        { date: '05/30/2025', staff: 'Paralegal', text: 'Deposition set for June 20, 2025. Defense counsel: Paul Hendricks, Hendricks & Vale LLP. Only the client is authorized.' },
+        { date: '06/16/2025', staff: 'Paralegal', text: 'Atty. Brooks is in court today. Litigation calls to Janelle Price (ext 221).' }
+    ],
+    tasks: [
+        { date: '06/16/2025', staff: 'Paralegal', text: 'Deposition prep with the client on 06/18/2025.' }
+    ],
+    reception: {
+        verify: 'Niamh Cholmondeley · DOB 06/06/1998 · 905 Juniper Lane or SSN last 4 (8816). Two files: this one is DOL 10/10/2023 (the other, MC-40, is 11/29/2020). Only the client is authorized.',
+        calls: [
+            { from: 'Paul Hendricks, Hendricks & Vale LLP (defense counsel)', ask: '"We need to move Niamh Cholmondeley\'s deposition on June 20th. Can you confirm she\'ll be available the 27th instead?"', handle: 'Opposing counsel: don\'t confirm or agree to anything, and don\'t discuss the client\'s availability. A deposition within 7 days is urgent: Atty. Brooks is in court, so transfer to Janelle Price (ext 221) now or take a priority message. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-49',
+    caseNumber: 'LSH-2021-MVA-902539',
+    level: 'Advanced',
+    programs: ['reception'],
+    summary: 'Recep2 · Third-party adjuster probing for information. Demanded: demand packet sent last month; waiting for the adjuster\'s response. Attorney available. Same client as MC-42 (check the DOL).',
+    client: { name: 'Mstislav Shaughnessy (minor), by his mother Tasha Shaughnessy', phone: '(555) 010-6860', email: 'tasha.shaughnessy@example.com', dob: '03/16/2015', ssn: 'XXX-XX-4417', address: '260 Ridgeview Avenue, Riverton, GA 30311', emergency: { name: 'Tasha Shaughnessy', phone: '(555) 010-6860', relationship: 'Mother / legal guardian (client contact)' }, employment: { status: 'Student', employer: 'Riverton Elementary', title: 'Student' } },
+    caseType: 'MVA',
+    phase: 'Bi Demand',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Tom Alvarez',
+    dateOfLoss: '11/02/2021',
+    sol: '03/16/2035',
+    target: '',
+    narrative: 'Mstislav (6) was a passenger when a pickup rear-ended his mother\'s car at a school-zone crosswalk. Concussion and a wrist sprain; treatment finished. Minor client: his mother Tasha is the client contact.',
+    police: { agency: 'Riverton Police Department', number: 'RPD-21-110245', officer: 'Ofc. T. Hale #2231', narrative: 'Unit 2 (Gary Lund, Ford F-250) failed to stop for traffic in the school zone and struck Unit 1 (Shaughnessy, Honda Pilot) in the rear.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-5501876', group: 'FAM-SHAUGHNESSY' },
+    bi: [
+        { holder: 'Gary Lund', carrier: 'Allied Crest Insurance', policy: 'ACI-AU-2207741', claim: 'ACI-21-19077', adjuster: 'Nate Farris', contact: '(555) 010-7785', liability: 'Yes', limits: '$100,000 / $300,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Riverton Pediatrics', specialty: 'Other', phone: '(555) 010-3310', email: 'records@riverpeds.example.com', dates: '11/03/2021 – 03/18/2022', status: 'Discharged', charges: '$ 4,880.00' }
+    ],
+    chrono: [
+        { dos: ['11/03/2021', '03/18/2022'], facility: 'Riverton Pediatrics', next: '', notes: 'Released 03/18/2022.' }
+    ],
+    treatmentNotes: 'Treatment complete (03/18/2022).',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'Demand packet sent to Allied Crest Insurance (claim ACI-21-19077) on 08/15/2022.' }
+    ],
+    notes: [
+        { date: '08/15/2022', staff: 'Demand Specialist', text: 'Demand Packet sent to Allied Crest (adjuster Nate Farris).' },
+        { date: '09/14/2022', staff: 'Case Manager', text: 'Demand Packet sent last month. Waiting for Adjuster\'s response. Only the mother (guardian) is authorized. Atty. Reyes is available today (ext 201).' }
+    ],
+    tasks: [
+        { date: '09/14/2022', staff: 'Demand Specialist', text: 'Follow up with Allied Crest if no response by 09/30/2022.' }
+    ],
+    reception: {
+        verify: 'Client contact is Tasha Shaughnessy (mother/guardian). Verify with Mstislav\'s name and DOB (03/16/2015) plus 260 Ridgeview Avenue or Mstislav\'s SSN last 4 (4417). Two files: this one is DOL 11/02/2021 (the other, MC-42, is 12/03/2023).',
+        calls: [
+            { from: 'Nate Farris, Allied Crest Insurance (the other driver\'s adjuster)', ask: '"I got the demand on Mstislav Shaughnessy. Quick questions: where does he go to school, is he playing sports again, and was he hurt before?"', handle: 'Third-party adjuster fishing for information: answer none of it (not school, activities, prior injuries, not even that the client is a minor). Transfer to Atty. Reyes (ext 201, available) or take a message. Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-50',
+    caseNumber: 'LSH-2022-MVA-902540',
+    level: 'Advanced',
+    programs: ['reception'],
+    summary: 'Recep2 · Uncooperative client. Intake: the client hasn\'t started treating yet, according to the providers. Attorney available. Same client as MC-43 (check the DOL).',
+    client: { name: 'Bjorn Courthope', phone: '(555) 010-6870', email: 'bjorn.courthope@example.com', dob: '12/14/1988', ssn: 'XXX-XX-7751', address: '48 Quarry Hill Road, Riverton, GA 30319', emergency: { name: 'Lena Courthope', phone: '(555) 010-6871', relationship: 'Sister' }, employment: { status: 'Self-Employed', employer: 'Courthope Mobile Detailing', title: 'Owner' } },
+    caseType: 'MVA',
+    phase: 'Intake',
+    attorney: 'Atty. David Okafor',
+    caseManager: '',
+    dateOfLoss: '04/11/2022',
+    sol: '04/11/2024',
+    target: '',
+    narrative: 'Client\'s work van was T-boned at the Main Street and 3rd intersection by a driver who ran the red light. Complains of back pain but has not started treatment.',
+    police: { agency: 'Riverton Police Department', number: 'RPD-22-041109', officer: 'Ofc. R. Nunez #1876', narrative: 'Unit 2 (Sandra Voight, Subaru Outback) ran the red light and struck Unit 1 (Courthope, Ford Transit) on the driver side. Driver 2 cited.' },
+    health: { carrier: 'Blue Horizon PPO', memberId: 'PSH-3390772', group: 'IND-COURTHOPE' },
+    bi: [
+        { holder: 'Sandra Voight', carrier: 'Keystone Mutual Insurance', policy: 'KM-4410987', claim: 'KM-22-31986', adjuster: 'Not yet assigned', contact: '(555) 010-7752', liability: 'Pending', limits: '$50,000 / $100,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Align Chiropractic', specialty: 'Chiro', phone: '(555) 010-3240', email: 'billing@alignchiro.example.com', dates: '', status: 'Ongoing', charges: '$ 0.00' }
+    ],
+    chrono: [
+        { dos: [], facility: 'Align Chiropractic', next: '', notes: 'Client hasn\'t started treating yet according to providers.' }
+    ],
+    treatmentNotes: 'Client hasn\'t started treating yet according to providers.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'Retainer signed 04/18/2022.' }
+    ],
+    notes: [
+        { date: '06/06/2022', staff: 'Intake Specialist', text: 'Client hasn\'t started treating yet according to providers. Only the client is authorized.' },
+        { date: '06/13/2022', staff: 'Intake Specialist', text: 'Atty. Okafor is available today (ext 203).' }
+    ],
+    tasks: [
+        { date: '06/13/2022', staff: 'Intake Specialist', text: 'Reach the client about starting treatment; confirm with Align Chiropractic.' }
+    ],
+    reception: {
+        verify: 'Bjorn Courthope · DOB 12/14/1988 · 48 Quarry Hill Road or SSN last 4 (7751). Two files: this one is DOL 04/11/2022 (the other, MC-43, is 05/10/2023). Only the client is authorized.',
+        calls: [
+            { from: 'Bjorn Courthope (client, uncooperative)', ask: '"Stop having people call me about doctors. I feel fine. Just settle it and send me my money."', handle: 'Stay calm; verify, and ask the DOL (04/11/2022, the car accident). No legal advice and no promises. The providers say he hasn\'t started treating. Offer Atty. Okafor (ext 203, available) or take a message for Intake (ext 100). Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-51',
+    caseNumber: 'LSH-2023-MVA-902551',
+    level: 'Intermediate',
+    programs: ['reception'],
+    summary: 'Recep2 · 1P adjuster call. Demanded: the client\'s last treatment was a month ago; the demand packet was sent to Geico for review. Attorney available. Same client as MC-37 (check the DOL).',
+    client: { name: 'Schuyler Beauchamp', phone: '(555) 010-6810', email: 'schuyler.beauchamp@example.com', dob: '01/03/2000', ssn: 'XXX-XX-5073', address: '22 Linden Row, Riverton, GA 30312', emergency: { name: 'Marisol Beauchamp', phone: '(555) 010-6811', relationship: 'Mother' }, employment: { status: 'Employed', employer: 'Riverton Parcel Hub', title: 'Package Handler' } },
+    caseType: 'MVA',
+    phase: 'UM Demand',
+    attorney: 'Atty. Marcus Reyes',
+    caseManager: 'Tom Alvarez',
+    dateOfLoss: '12/05/2023',
+    sol: '12/05/2025',
+    target: '',
+    narrative: 'Client was hit by an uninsured driver who backed out of a gas station into traffic on Route 9. Lower back injury. The at-fault driver had no insurance, so the claim is on the client\'s own uninsured motorist coverage with Geico.',
+    police: { agency: 'Riverton Police Department', number: 'RPD-23-120514', officer: 'Ofc. L. Ortiz #2044', narrative: 'Unit 2 (Curtis Lyle, Chevy Cavalier) pulled out of a gas station into Unit 1 (Beauchamp, Toyota Corolla). Driver 2 uninsured; cited for no insurance.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-7730915', group: 'RPH-OPS' },
+    bi: [
+        { holder: 'Curtis Lyle', carrier: 'None (uninsured)', policy: '', claim: '', adjuster: '', contact: '', liability: 'Yes', limits: '$0' }
+    ],
+    pipum: [
+        { type: 'UM/UIM', holder: 'Schuyler Beauchamp', carrier: 'Geico', policy: 'GEI-4471-22-908', claim: 'GC-23-0092451', adjuster: 'Pam Whitley', contact: '(555) 010-7796', limits: '$50,000 / $100,000' }
+    ],
+    liens: [],
+    facilities: [
+        { name: 'Peachtree Pain & Spine', specialty: 'Pain Management', phone: '(555) 010-3290', email: 'billing@peachtreepain.example.com', dates: '12/11/2023 – 07/08/2024', status: 'Discharged', charges: '$ 11,760.00' }
+    ],
+    chrono: [
+        { dos: ['12/11/2023', '07/08/2024'], facility: 'Peachtree Pain & Spine', next: '', notes: 'Last treatment 07/08/2024.' }
+    ],
+    treatmentNotes: 'Client last treatment was from a month ago.',
+    pd: null,
+    lit: null,
+    finance: [],
+    docs: [
+        { cat: 'Case Files', summary: 'UM demand packet sent to Geico (claim GC-23-0092451) on 08/01/2024.' }
+    ],
+    notes: [
+        { date: '08/01/2024', staff: 'Demand Specialist', text: 'Client last treatment was from a month ago. Demand packet was sent to Geico for review.' },
+        { date: '08/12/2024', staff: 'Case Manager', text: 'Only the client is authorized. Atty. Reyes is available today (ext 201).' }
+    ],
+    tasks: [
+        { date: '08/12/2024', staff: 'Demand Specialist', text: 'Follow up with Geico (Pam Whitley) on the UM demand.' }
+    ],
+    reception: {
+        verify: 'Schuyler Beauchamp · DOB 01/03/2000 · 22 Linden Row or SSN last 4 (5073). Two files: this one is DOL 12/05/2023 (the other, MC-37, is 07/02/2025). Only the client is authorized.',
+        calls: [
+            { from: 'Pam Whitley, Geico (the client\'s own UM carrier, 1P adjuster)', ask: '"I have the demand packet on Schuyler Beauchamp. Did he treat anywhere after his last visit a month ago?"', handle: 'Business caller (the client\'s own insurer, but still opposite the firm on this claim): no treatment details. Transfer to Atty. Reyes (ext 201, available) or take a message for him and Sam Whitaker (ext 331). Log a Note.' }
+        ]
+    }
+},
+{
+    id: 'MC-52',
+    caseNumber: 'LSH-2024-MVA-902562',
+    level: 'Advanced',
+    programs: ['reception'],
+    summary: 'Recep2 · Court official call. Litigation, discovery: the plaintiff is out of the country. Attorney available.',
+    client: { name: 'Cian Masserene', phone: '(555) 010-6920', email: 'cian.masserene@example.com', dob: '03/24/1970', ssn: 'XXX-XX-1388', address: '3401 Old Mill Road, Riverton, GA 30320', emergency: { name: 'Lucia Masserene', phone: '(555) 010-6921', relationship: 'Wife' }, employment: { status: 'Self-Employed', employer: 'Masserene Landscaping', title: 'Owner' } },
+    caseType: 'MVA',
+    phase: 'Discovery',
+    attorney: 'Atty. Elena Brooks',
+    caseManager: 'Luis Ortega',
+    dateOfLoss: '10/11/2024',
+    sol: '10/11/2026',
+    target: '',
+    narrative: 'Client\'s pickup was rear-ended on I-85 by a Kestrel Logistics tractor-trailer. Neck and back injuries with injections. Suit filed against the driver and the trucking company; in discovery.',
+    police: { agency: 'Georgia State Patrol', number: 'GSP-24-101188', officer: 'Tpr. K. Moss #611', narrative: 'Unit 2 (Kestrel Logistics tractor-trailer) failed to slow for stopped traffic and struck Unit 1 (Masserene, Ford F-150) in the rear.' },
+    health: { carrier: 'Blue Horizon PPO', memberId: 'PSH-4471190', group: 'IND-MASSERENE' },
+    bi: [
+        { holder: 'Kestrel Logistics Inc.', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-880412', claim: 'TFI-24-80233', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'Pending', limits: '$1,000,000' }
+    ],
+    pipum: [],
+    liens: [],
+    facilities: [
+        { name: 'Peachtree Pain & Spine', specialty: 'Pain Management', phone: '(555) 010-3290', email: 'billing@peachtreepain.example.com', dates: '10/21/2024 – 05/30/2025', status: 'Discharged', charges: '$ 24,300.00' }
+    ],
+    chrono: [
+        { dos: ['05/30/2025'], facility: 'Peachtree Pain & Spine', next: '', notes: 'Last injection; released.' }
+    ],
+    treatmentNotes: 'Treatment complete (05/30/2025).',
+    pd: null,
+    lit: { sol: '10/11/2026', filed: '04/07/2025', cutoff: '12/19/2025', trial: '', rows: [{ type: 'Interrogatories', party: 'Plaintiff\'s answers to the trucking company\'s interrogatories', due: '08/29/2025', status: 'Pending' }] },
+    finance: [],
+    docs: [
+        { cat: 'Litigation Documents', summary: 'Complaint filed 04/07/2025 in Riverton County State Court.' }
+    ],
+    notes: [
+        { date: '08/11/2025', staff: 'Paralegal', text: 'Plaintiff is out of the country. Only the client is authorized. Do not share his whereabouts with anyone.' },
+        { date: '08/18/2025', staff: 'Paralegal', text: 'Atty. Brooks is in the office and available today (ext 202).' }
+    ],
+    tasks: [
+        { date: '08/18/2025', staff: 'Paralegal', text: 'Ask the client when he returns; interrogatory answers due 08/29/2025.' }
+    ],
+    reception: {
+        verify: 'Cian Masserene · DOB 03/24/1970 · 3401 Old Mill Road or SSN last 4 (1388). Only the client is authorized.',
+        calls: [
+            { from: 'Irene Park, clerk at Riverton County State Court (court official)', ask: '"The court needs the plaintiff at a status conference next Tuesday on Masserene v. Kestrel Logistics. Is Mr. Masserene in town?"', handle: 'Court calls are urgent: route now. Don\'t say where the plaintiff is (the note that he\'s out of the country is internal). Transfer to Atty. Brooks (ext 202, available) or Janelle Price (ext 221). Log a Note.' }
+        ]
+    }
 }
 ];
 /* =========================================================
@@ -1787,14 +2586,65 @@ const DRILL_CALLS = [
       opening: '"Hi, this is Jose Hernandez, case number LSH-2026-MVA-901924. I need a note for work saying when I can go back."',
       gives: { name: 'Jose Hernandez', dob: '11/02/1994', address: '2210 Brookside Ave', ssn4: '8156', callback: '(555) 010-6640', relationship: 'I\'m the client.', dol: 'August 30th.' },
       actions: ['Verified (the case number and DOB are the son\'s file): the firm doesn\'t write work notes, his doctor does (Riverton Orthopedic); offer a message to Luis Ortega (ext 314)', 'Email him a note on the firm\'s letterhead', 'Tell him he can go back to work next week', 'Give him his father\'s appointment instead'],
-      answer: 0, why: 'The case number puts him on MC-26 (Jose Hernandez Jr.) and his DOB matches. Work notes come from the treating doctor (Notes 09/22).' }
+      answer: 0, why: 'The case number puts him on MC-26 (Jose Hernandez Jr.) and his DOB matches. Work notes come from the treating doctor (Notes 09/22).' },
+    // Recep2 callers (MC-37 to MC-52, and one caller with no file)
+    { id: 'D45', mock: 'MC-37', auth: 'business', level: 2, voice: 'm', opening: '"Craig Donnelly, Summit Casualty, claim SCI-25-40672 for Schuyler Beauchamp. I got your demand. Before I respond, is he still treating, and would he take $8,000 today?"', gives: { name: 'Craig Donnelly, Summit Casualty', dob: null, address: null, ssn4: null, callback: '(555) 010-7730', relationship: 'I\'m the other driver\'s adjuster.', dol: 'July 2nd, 2025.' }, actions: ['Business caller on a demanded file: no answers on treatment or the offer; transfer to Atty. Reyes (ext 201, available) or take the offer as a message for him', 'Tell him the client finished treatment a long time ago', 'Accept the $8,000 for the client', 'Tell him to call the client directly'], answer: 0, why: 'Schuyler Beauchamp has two files; the claim number and the DOL (07/02/2025) point to MC-37, in Bi Demand. Offers and adjusters go to the attorney on the file (Atty. Reyes, available). The front desk never accepts offers or confirms treatment.' },
+    { id: 'D46', mock: 'MC-38', auth: 'business', level: 2, voice: 'f', opening: '"Hi, this is Carmen at Riverton Orthopedic Associates. Saoirse Witwicky missed her last two appointments with us. Is the family still going ahead with the case? We need to know before we book more visits."', gives: { name: 'Carmen, scheduling at Riverton Orthopedic', dob: 'Saoirse\'s? 04/04/2016.', address: null, ssn4: null, callback: '(555) 010-3161', relationship: 'I schedule at the orthopedic office.', dol: 'I don\'t have that.' }, actions: ['Provider: don\'t discuss the case; take a complete message about the two missed visits for the case manager Grace Kim (ext 313)', 'Tell her the case is going ahead and to book more visits', 'Give her the mother\'s cell number', 'Tell her the family may drop the case'], answer: 0, why: 'MC-38 (Saoirse Witwicky, a minor) is in treatment: PT just finished, ortho started, 2 missed sessions. Providers go to the case manager, who follows up with the guardian; the front desk shares nothing about the case.' },
+    { id: 'D47', mock: 'MC-39', auth: 'unauthorized', level: 2, voice: 'm', opening: '"Hi, I\'m Daniel Featherstonhaugh, Mireille Featherstonhaugh\'s husband. When is her mediation, and can I come with her?"', gives: { name: 'Daniel Featherstonhaugh', dob: 'Mireille\'s birthday is 04/20/1994.', address: '71 Fairview Terrace', ssn4: null, callback: '(555) 010-6831', relationship: 'Her husband.', dol: 'September of last year, the car accident.' }, actions: ['Not authorized (only Mireille is on the file): don\'t confirm the mediation or the case; take a message for Janelle Price (ext 221)', 'Give him the mediation date, 06/24/2025, since he\'s her husband', 'Transfer him to Atty. Brooks', 'Tell him spouses can always attend mediation'], answer: 0, why: 'MC-39: only the client, Mireille Featherstonhaugh, is authorized; her husband is the emergency contact only, however much he knows. Atty. Brooks is in court.' },
+    { id: 'D48', mock: 'MC-40', auth: 'client', level: 2, voice: 'f', opening: '"Hi, this is Niamh Cholmondeley. I have that arbitration coming up for my fall at the parking garage. What date is it again, and can I talk to Atty. Brooks?"', gives: { name: 'Niamh Cholmondeley', dob: '06/06/1998', address: '905 Juniper Lane, Apt 12', ssn4: '8816', callback: '(555) 010-6840', relationship: 'I\'m the client.', dol: 'November 29th, 2020, at the parking garage.' }, actions: ['Verified (the DOL is her 2020 garage case): the arbitration is set for 09/11/2023; Atty. Brooks is in court, so take a message for her or Janelle Price (ext 221)', 'Transfer her to Atty. Brooks right away', 'Give her the deposition date on her other file (06/20/2025)', 'Tell her she doesn\'t need to attend'], answer: 0, why: 'Niamh Cholmondeley has two files: the 11/29/2020 garage fall (MC-40, arbitration 09/11/2023) and the 10/10/2023 car accident (MC-48). A verified client can be told a date on her file; the attorney is in court.' },
+    { id: 'D49', mock: 'MC-41', auth: 'client', level: 1, voice: 'f', opening: '"Hi, Amber Acheson, I\'m calling about my son Cian\'s case. When does his physical therapy end, and can I speak to the attorney today?"', gives: { name: 'Amber Acheson', dob: 'Cian\'s is 04/04/2020.', address: '14 Briar Glen Court', ssn4: '3902 (Cian\'s)', callback: '(555) 010-6850', relationship: 'I\'m his mom. I signed with you.', dol: 'December 11th, 2023.' }, actions: ['Verified guardian: the file says PT is due to finish June 1, 2023, then orthopedic; Atty. Reyes is out of the office, so offer Priya Natarajan (ext 311) or take a message', 'Transfer her to Atty. Reyes', 'Tell her Cian can stop PT now', 'Not verified: only Cian can call'], answer: 0, why: 'Amber is the mother/guardian on the file (MC-41). Treatment tab: PT due to finish June 1, 2023; orthopedic after PT. The attorney is out of the office, so the case manager takes it.' },
+    { id: 'D50', mock: 'MC-42', auth: 'business', level: 2, voice: 'f', opening: '"Linda Cho, Harbor Point Insurance, UM claim for Mstislav Shaughnessy, date of loss December 3rd, 2023. I still don\'t have his bills. Can you just read me the totals?"', gives: { name: 'Linda Cho, Harbor Point Insurance', dob: null, address: null, ssn4: null, callback: '(555) 010-7815', relationship: 'I\'m the family\'s own insurer.', dol: 'December 3rd, 2023.' }, actions: ['Business caller: no totals or records over the phone; bills are still being collected; take a message for Tom Alvarez (ext 312) or transfer to Atty. Reyes (ext 201)', 'Read her the bill totals', 'Email her the medical records', 'Tell her the demand went out last month'], answer: 0, why: 'Mstislav Shaughnessy (a minor) has two files; the DOL 12/03/2023 is MC-42 (Demand Review: bills incomplete, being collected). Adjusters are routed; nothing is read out. The demand sent last month is his other file, MC-49.' },
+    { id: 'D51', mock: 'MC-43', auth: 'client', level: 1, voice: 'm', opening: '"This is Bjorn Courthope. I was supposed to start treatment back on May 21st and I never went. Is my case still open?"', gives: { name: 'Bjorn Courthope', dob: '12/14/1988', address: '48 Quarry Hill Road', ssn4: '7751', callback: '(555) 010-6870', relationship: 'I\'m the client.', dol: 'May 10th, 2023, I slipped at the gym.' }, actions: ['Verified (DOL 05/10/2023 = the gym fall, in Intake): no advice; transfer to Atty. Okafor (ext 203, available) or take a message for Intake (ext 100)', 'Tell him the case is closed because he missed treatment', 'Book him a new doctor\'s appointment yourself', 'Give him an update on his 2022 car accident file'], answer: 0, why: 'Bjorn Courthope has two files; the gym fall is MC-43 (DOL 05/10/2023, Intake; treatment was set for 05/21/2024). Whether the case goes on is the attorney\'s call, never the front desk\'s.' },
+    { id: 'D52', mock: 'MC-44', auth: 'business', level: 2, voice: 'm', opening: '"Hi, this is Marco from Peachtree Pain & Spine billing. Siobhan Masserene has been treating with us since January 12th. Can you give me the landlord\'s insurance claim number so we can bill it?"', gives: { name: 'Marco, billing at Peachtree Pain & Spine', dob: '11/20/1968', address: null, ssn4: null, callback: '(555) 010-3291', relationship: 'I\'m her provider\'s billing office.', dol: 'December 30th, 2023.' }, actions: ['Provider: don\'t read out claim numbers; take the message for the case manager Priya Natarajan (ext 311)', 'Read him the claim number from the Insurance tab', 'Tell him to bill the client directly', 'Transfer him to Accounting (ext 500)'], answer: 0, why: 'MC-44 (Siobhan Masserene) is in treatment since 01/12/2024. Providers go to the case manager, who decides what to send and where; claim numbers aren\'t read over the phone.' },
+    { id: 'D53', mock: 'MC-45', auth: 'client', level: 1, voice: 'm', opening: '"Rhys Beaumont here. I finished my treatment. How much is my case worth, and when do I get paid?"', gives: { name: 'Rhys Beaumont', dob: '01/01/1991', address: '33 Brantley Street', ssn4: '6604', callback: '(555) 010-6890', relationship: 'I\'m the client.', dol: 'March 11th, 2025.' }, actions: ['Verified: no case value or timeline; bills and records are being collected before the demand; message Tom Alvarez (ext 312) or offer Atty. Reyes (ext 201)', 'Tell him cases like his settle for about $30,000', 'Tell him he\'ll be paid within 30 days', 'Tell him the demand has already been sent'], answer: 0, why: 'MC-45: treatment just finished; bills and records are being collected (Demand Review). Values and timelines are for the attorney, never the front desk.' },
+    { id: 'D54', mock: null, auth: 'newcaller', level: 1, voice: 'f', opening: '"Hi, I\'m Brittany Beauchamp. I\'m a client, I signed up with you guys a while ago. I just want an update."', gives: { name: 'Brittany Beauchamp', dob: '08/22/1993', address: '9 Poplar Street', ssn4: null, callback: '(555) 010-6940', relationship: 'I\'m a client, I think.', dol: 'I don\'t remember exactly.' }, actions: ['No file under her name (check the spelling, her DOB and phone first): don\'t confirm or deny anything; take her details for Intake (ext 100) or transfer, in case she\'s a new client or signed with another firm', 'Tell her the firm doesn\'t represent her and hang up', 'Open a new case for her yourself', 'Give her an update from a file with a similar name'], answer: 0, why: 'No case on file (DOL, DOB and status all N/A): nothing to share. Search every way first; then Intake handles it. The Beauchamp files (MC-37, MC-51) are Schuyler Beauchamp\'s, a man born 01/03/2000: a similar name is not her file.' },
+    { id: 'D55', mock: 'MC-46', auth: 'failed', level: 3, voice: 'f', opening: '"This is Brittany Kirkcudbright. Why do you people keep calling me about therapy? Just tell me what\'s going on with my case, you have all my information."', gives: { name: 'Brittany Kirkcudbright', dob: 'I\'m not giving you that, you already have it.', address: 'Same as before.', ssn4: 'No.', callback: '(555) 010-6900', relationship: 'It\'s my case!', dol: 'March.' }, actions: ['Not verified (she won\'t give identifiers): stay calm, explain you can\'t discuss the case without verifying; offer a callback from Luis Ortega (ext 314) to the number on file', 'Tell her anyway, it\'s obviously her', 'Tell her she should have finished PT last week', 'Hang up on her'], answer: 0, why: 'She gives only her name. Without her DOB and one more identifier there is no verification, however sure you are it\'s her (MC-46). A callback to the number on file keeps it safe.' },
+    { id: 'D56', mock: 'MC-47', auth: 'client', level: 2, voice: 'f', opening: '"Hello dear, this is Saoirse Shaughnessy. I got a letter about an arbitration. What is that? Do I have to go to court? I don\'t understand any of this."', gives: { name: 'Saoirse Shaughnessy', dob: '06/06/1955', address: '8 Chestnut Hill Road', ssn4: '9046', callback: '(555) 010-6910', relationship: 'It\'s my case, dear.', dol: 'It was at the grocery store, September of 2023, I think.' }, actions: ['Verified: be patient; the arbitration is set for 03/12/2025; no legal explanations; Atty. Brooks is in court, so take a message for Janelle Price (ext 221) to call her today', 'Explain what arbitration is and what she should say', 'Tell her she doesn\'t need to go', 'Transfer her to Atty. Brooks in court'], answer: 0, why: 'MC-47: arbitration 03/12/2025, attorney in court. A verified client can hear a date on her file; explaining the process is for the attorney or paralegal.' },
+    { id: 'D57', mock: 'MC-48', auth: 'business', level: 3, voice: 'm', opening: '"Paul Hendricks, Hendricks & Vale, defense counsel on the Niamh Cholmondeley case, the October 2023 accident. We need to move her deposition on June 20th. Can you confirm she\'ll be available the 27th instead?"', gives: { name: 'Paul Hendricks, Hendricks & Vale LLP', dob: null, address: null, ssn4: null, callback: '(555) 010-8120', relationship: 'Defense counsel.', dol: 'October 10th, 2023.' }, actions: ['Opposing counsel, and a deposition within days is urgent: confirm nothing; Atty. Brooks is in court, so transfer to Janelle Price (ext 221) now or take a priority message', 'Confirm June 27th for the client', 'Tell him the client is unavailable in June', 'Give him the arbitration date on her other file'], answer: 0, why: 'The DOL (10/10/2023) is MC-48, with the deposition set for 06/20/2025. Defense counsel goes to the attorney or paralegal; the front desk never agrees to dates.' },
+    { id: 'D58', mock: 'MC-49', auth: 'business', level: 3, voice: 'm', opening: '"Nate Farris, Allied Crest Insurance, on the Mstislav Shaughnessy claim, date of loss November 2nd, 2021. I got the demand. Quick questions: where does he go to school, is he playing sports again, and was he hurt before?"', gives: { name: 'Nate Farris, Allied Crest Insurance', dob: null, address: null, ssn4: null, callback: '(555) 010-7785', relationship: 'I\'m the other driver\'s adjuster.', dol: 'November 2nd, 2021.' }, actions: ['An adjuster probing for information: answer none of it; transfer to Atty. Reyes (ext 201, available) or take a message', 'Answer the questions, since the demand is already out', 'Confirm Mstislav is back playing soccer', 'Give him the mother\'s number so he can ask her'], answer: 0, why: 'The DOL (11/02/2021) is MC-49 (Bi Demand, demand sent last month). Adjusters\' questions go to the attorney; the front desk gives no facts about the client.' },
+    { id: 'D59', mock: 'MC-50', auth: 'client', level: 3, voice: 'm', opening: '"Yeah, Bjorn Courthope. Stop having people call me about doctors. I feel fine. Just settle it and send me my money."', gives: { name: 'Bjorn Courthope', dob: '12/14/1988', address: '48 Quarry Hill Road', ssn4: '7751', callback: '(555) 010-6870', relationship: 'It\'s my case.', dol: 'April 11th, 2022, the car wreck.' }, actions: ['Verified (DOL 04/11/2022 = his car accident file, in Intake): stay calm, no advice or promises; offer Atty. Okafor (ext 203, available) or take a message', 'Tell him the case is worth nothing if he doesn\'t treat', 'Promise to settle it this week', 'Give him an update on his 2023 gym-fall file'], answer: 0, why: 'Bjorn Courthope has two files; the car accident is MC-50 (DOL 04/11/2022, Intake; no treatment yet per the providers). Advice and settlement are for the attorney.' },
+    { id: 'D60', mock: 'MC-51', auth: 'business', level: 2, voice: 'f', opening: '"This is Pam Whitley with Geico, UM claim for Schuyler Beauchamp, date of loss December 5th, 2023. I have the demand packet. Did he treat anywhere after his last visit a month ago?"', gives: { name: 'Pam Whitley, Geico', dob: null, address: null, ssn4: null, callback: '(555) 010-7796', relationship: 'I\'m his own insurer\'s adjuster.', dol: 'December 5th, 2023.' }, actions: ['Business caller: no treatment details; transfer to Atty. Reyes (ext 201, available) or take a message for him and Sam Whitaker (ext 331)', 'Tell her his last treatment was a month ago', 'Send her the medical records', 'Tell her about his 2025 accident too'], answer: 0, why: 'Schuyler Beauchamp has two files; the Geico UM claim and the DOL 12/05/2023 point to MC-51 (UM Demand). Even the client\'s own insurer is routed to the attorney.' },
+    { id: 'D61', mock: 'MC-52', auth: 'business', level: 3, voice: 'f', opening: '"Good morning, this is Irene Park, clerk at Riverton County State Court, on Masserene v. Kestrel Logistics. The court needs the plaintiff at a status conference next Tuesday. Is Mr. Masserene in town?"', gives: { name: 'Irene Park, court clerk', dob: null, address: null, ssn4: null, callback: '(555) 010-8200', relationship: 'I\'m the judge\'s clerk.', dol: 'October 11th, 2024.' }, actions: ['A court call is urgent: don\'t say where the plaintiff is; transfer to Atty. Brooks (ext 202, available) now, or Janelle Price (ext 221)', 'Tell her the plaintiff is out of the country', 'Confirm he\'ll attend next Tuesday', 'Take a message for next week'], answer: 0, why: 'MC-52 is in litigation (discovery); the attorney is available. Court dates are routed now, and the client\'s whereabouts are never shared by the front desk.' }
 ];
 
+/* =========================================================
+   HARD-TO-SAY NAMES (the Recep2 callers and clients)
+   How each name sounds on the phone, for the NATO spelling practice:
+   - say: how it's pronounced (the stressed part in capitals). The live caller
+     says it this way, and the trainer's scripts tell the role-player to.
+   - heard: how a receptionist might write down what they hear. The text drill
+     shows the caller's words this way, so the name has to be spelled to be found.
+   A call that names one of these (front-desk-drill.js) also expects the receptionist
+   to ask for the spelling and read it back with the NATO phonetic alphabet.
+   ========================================================= */
+const MOCK_NAME_SOUNDS = {
+    Niamh: { say: 'NEEV', heard: 'Neev' },
+    Saoirse: { say: 'SEER-sha', heard: 'Seersha' },
+    Mireille: { say: 'meer-AY', heard: 'Miray' },
+    Schuyler: { say: 'SKY-ler', heard: 'Skyler' },
+    Cian: { say: 'KEE-an', heard: 'Keean' },
+    Rhys: { say: 'REESE', heard: 'Reese' },
+    Bjorn: { say: 'BYORN', heard: 'Byorn' },
+    Brittany: { say: 'BRIT-nee', heard: 'Britney' },
+    Siobhan: { say: 'shiv-AWN', heard: 'Shivaun' },
+    Mstislav: { say: 'mstee-SLAHV', heard: 'Mistislav' },
+    Cholmondeley: { say: 'CHUM-lee', heard: 'Chumley' },
+    Witwicky: { say: 'wit-WICK-ee', heard: 'Witwikki' },
+    Featherstonhaugh: { say: 'FAN-shaw', heard: 'Fanshaw' },
+    Beauchamp: { say: 'BEE-chum', heard: 'Beecham' },
+    Acheson: { say: 'ATCH-ih-sun', heard: 'Atchison' },
+    Beaumont: { say: 'BOH-mont', heard: 'Bomont' },
+    Courthope: { say: 'CORT-hope', heard: 'Corthope' },
+    Kirkcudbright: { say: 'kur-KOO-bree', heard: 'Kirkoobree' },
+    Masserene: { say: 'MASS-uh-reen', heard: 'Massereen' },
+    Shaughnessy: { say: 'SHAW-nuh-see', heard: 'Shawnessy' }
+};
 
 if (typeof window !== 'undefined') {
     window.MOCK_CASES = MOCK_CASES;
     window.MOCK_FIRM = MOCK_FIRM;
     window.MOCK_PROGRAMS = MOCK_PROGRAMS;
     window.DRILL_CALLS = DRILL_CALLS;
+    window.MOCK_NAME_SOUNDS = MOCK_NAME_SOUNDS;
 }
-if (typeof module !== 'undefined') module.exports = { MOCK_CASES, MOCK_FIRM, MOCK_PROGRAMS, DRILL_CALLS };
+if (typeof module !== 'undefined') module.exports = { MOCK_CASES, MOCK_FIRM, MOCK_PROGRAMS, DRILL_CALLS, MOCK_NAME_SOUNDS };

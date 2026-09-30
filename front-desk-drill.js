@@ -67,6 +67,24 @@
         ['dol', 'Date of the accident (DOL)']
     ];
     const PERSONAL = ['client', 'authorized', 'failed'];
+    // Hard-to-say names (MOCK_NAME_SOUNDS in mock-cases.js). A call that names one also asks the
+    // receptionist to get it spelled and read the spelling back with the NATO phonetic alphabet.
+    const SPELL_ASKS = [['spell', 'Ask them to spell it'], ['nato', 'Read it back (NATO)']];
+    const askLabel = (k) => (ASKS.concat(SPELL_ASKS).find(a => a[0] === k) || [])[1] || k;
+    const NATO = { A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot', G: 'Golf', H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima', M: 'Mike',
+        N: 'November', O: 'Oscar', P: 'Papa', Q: 'Quebec', R: 'Romeo', S: 'Sierra', T: 'Tango', U: 'Uniform', V: 'Victor', W: 'Whiskey', X: 'X-ray', Y: 'Yankee', Z: 'Zulu' };
+    const NATO_WORDS = /\b(alpha|alfa|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett?e?|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiske?y|x-? ?ray|yankee|zulu)\b/gi;
+    const sounds = () => window.MOCK_NAME_SOUNDS || {};
+    // The hard names in a text, each once, in order.
+    const hardWords = (text) => { const out = []; String(text || '').replace(/[A-Za-z]+/g, w => { if (sounds()[w] && !out.includes(w)) out.push(w); return w; }); return out; };
+    // The hard names a drill caller says: in their opening and their name.
+    const callNames = (c) => hardWords(`${c.opening} ${(c.gives || {}).name || ''}`);
+    // What the receptionist hears: each hard name written the way it sounds.
+    const heardAs = (text) => String(text == null ? '' : text).replace(/[A-Za-z]+/g, w => sounds()[w] ? sounds()[w].heard : w);
+    const spellOut = (w) => w.toUpperCase().split('').join('-');
+    const natoOf = (w) => w.toUpperCase().split('').map(ch => `${ch} as in ${NATO[ch] || ch}`).join(', ');
+    const sayList = (words) => words.map(w => `${w} = “${sounds()[w].say}”`).join(' · ');
+    window.fddHeardAs = heardAs;
 
     let D = null;         // the running drill
     let P = null;         // the practice call
@@ -233,6 +251,7 @@
         ssn4: /social|\bssn\b|last (four|4)|security number/i,
         callback: /call ?back|phone number|best number|number (to|where|we can|i can)|reach you|contact number|your number|number you're calling from/i,
         relationship: /relationship|related to|how do you know|who are you to|are you (the|a|his|her) (client|family|relative|son|daughter|mother|father|husband|wife)|are you (his|her|the client)|on behalf of|(your|what's your|what is your) (connection|relation)/i,
+        spell: /\bspell(ing|ed)?\b|how (is|do you|would you) (that|it|you) (spelled|spell)/i,
         dol: /date of (the |your )?(accident|loss|incident|injury|crash|fall)|\bd\.? ?o\.? ?l\b|when did (it|this|that|the accident|the crash|the incident|the fall|you get hurt|you get injured) (happen|occur)|when (was|did) (the|your) (accident|crash|incident|fall|injury)|what (date|day) (was|did) (the|your) (accident|crash|incident|fall)/i
     };
     const heardAsks = (text) => Object.keys(HEARD).filter(k => HEARD[k].test(text));
@@ -299,6 +318,9 @@
                 const l = lv.lines.find(x => x.id === id); if (l) l.text = text; else lv.lines.push({ id, role, text });
                 if (role === 'you' && !cur.submitted) {
                     heardAsks(text).forEach(k => { if (!cur.asked.includes(k)) cur.asked.push(k); if (!cur.heard.includes(k)) cur.heard.push(k); });
+                    // A read-back with the phonetic alphabet: three or more NATO words said on the call.
+                    const said = lv.lines.filter(x => x.role === 'you').map(x => x.text).join(' ');
+                    if ((said.match(NATO_WORDS) || []).length >= 3 && !cur.asked.includes('nato')) { cur.asked.push('nato'); cur.heard.push('nato'); }
                     paintAsks();
                 }
                 lv.talking = role === 'caller';
@@ -328,9 +350,12 @@
     window.fddHangUp = function () { const lv = D && D.cur && D.cur.live; if (!lv) return; hangUp(); lv.status = 'ended'; paintPhone(); };
     window.fddAskAloud = function (k) {
         const cur = D && D.cur; if (!cur || cur.submitted) return;
-        const label = (ASKS.find(a => a[0] === k) || [])[1] || k;
+        const label = askLabel(k);
         if (cur.live && cur.live.status === 'live') {
-            window.LiveCall.sendText(k === 'relationship' ? 'What is your relationship to the client?' : k === 'dol' ? 'What was the date of the accident?' : `Can I have your ${label.toLowerCase()}, please?`);
+            const c = D.calls[D.i].call;
+            window.LiveCall.sendText(k === 'relationship' ? 'What is your relationship to the client?' : k === 'dol' ? 'What was the date of the accident?'
+                : k === 'spell' ? 'Could you spell the name for me, please?' : k === 'nato' ? `Let me read that back: ${callNames(c).map(natoOf).join('; ')}. Is that right?`
+                : `Can I have your ${label.toLowerCase()}, please?`);
             if (!cur.asked.includes(k)) cur.asked.push(k);
             paintAsks();
         } else if (!cur.live) window.fddAsk(k);
@@ -379,6 +404,7 @@
         else if (c.auth === 'unauthorized') idsOk = cur.asked.includes('name') && cur.asked.includes('relationship');
         else idsOk = cur.asked.includes('name') && cur.asked.includes('callback');
         if (c.mock && sameNameCount(c.mock) > 1) idsOk = idsOk && cur.asked.includes('dol');
+        if (callNames(c).length) idsOk = idsOk && cur.asked.includes('spell') && cur.asked.includes('nato');
         const actOk = cur.action === c.answer;
         const secs = Math.round((Date.now() - cur.t0) / 1000);
         return { id: c.id, mock: c.mock, find, authOk, idsOk, actOk, secs,
@@ -517,7 +543,9 @@
     }
 
     function answerFor(c, k) {
-        let v = c.gives[k];
+        if (k === 'spell') return `Caller: "That's ${callNames(c).map(spellOut).join(', ')}."`;
+        if (k === 'nato') return 'Caller: "Yes, that\'s right."';
+        let v = c.gives[k] == null ? c.gives[k] : heardAs(c.gives[k]);
         if (k === 'dol' && v == null && caseOf(c.mock)) v = caseOf(c.mock).dateOfLoss;
         if (v == null) return c.auth === 'business' ? 'Caller: "I\'m calling for the company; I don\'t have that."' : 'Caller: "I don\'t know / I\'d rather not say."';
         return `Caller: "${v}"`;
@@ -530,10 +558,10 @@
         const lv = cur.live;
         return `${fb}
         ${lv ? `<div class="fdd-phone" id="fdd-phone">${phoneHTML()}</div>`
-             : `${cur.liveNote ? `<div class="fdd-dup">🎙 ${esc(cur.liveNote)}</div>` : ''}<div class="fdd-caller">📞 ${esc(c.opening)}</div>`}
+             : `${cur.liveNote ? `<div class="fdd-dup">🎙 ${esc(cur.liveNote)}</div>` : ''}<div class="fdd-caller">📞 ${esc(heardAs(c.opening))}</div>`}
         <div class="fdd-sec"><h4>1 · Ask the caller${lv ? ' (out loud)' : ''}</h4><div class="fdd-asks" id="fdd-asks">${asksHTML()}</div>
             ${lv ? `<p style="margin:6px 0 0;font-size:11.5px;color:#64748b">Ask out loud: each identifier is ticked as you ask for it. Tap one to ask it in writing instead.</p>`
-                 : `<div class="fdd-tr">${cur.asked.map(k => `<div><span class="q">You: ${esc((ASKS.find(a => a[0] === k) || [])[1])}?</span><br><span class="a">${esc(answerFor(c, k))}</span></div>`).join('')}</div>`}</div>
+                 : `<div class="fdd-tr">${cur.asked.map(k => `<div><span class="q">You: ${esc(askLine(c, k))}</span><br><span class="a">${esc(answerFor(c, k))}</span></div>`).join('')}</div>`}</div>
         <div class="fdd-sec"><h4>2 · Find the case</h4>
             <input class="fdd-search" placeholder="Search name, case number, DOL, DOB, phone, claim #, plate…" value="${esc(cur.q)}" oninput="fddSearch(this.value)" ${done ? 'disabled' : ''}>
             <div class="fdd-res" id="fdd-res"></div>
@@ -545,9 +573,15 @@
                : `<button class="fdd-go" id="fdd-submit" onclick="fddSubmit()" ${cur.selected && cur.auth && cur.action != null ? '' : 'disabled'}>End the call and score it</button>`}`;
     }
 
+    // What the receptionist says for each ask in the text drill.
+    function askLine(c, k) {
+        if (k === 'spell') return 'Could you spell that for me, please?';
+        if (k === 'nato') return `Let me read that back: ${callNames(c).map(natoOf).join('; ')}.`;
+        return askLabel(k) + '?';
+    }
     function asksHTML() {
         const cur = D.cur, lv = cur.live;
-        return ASKS.map(([k, l]) => {
+        return ASKS.concat(callNames(D.calls[D.i].call).length ? SPELL_ASKS : []).map(([k, l]) => {
             const asked = cur.asked.includes(k);
             return lv ? `<button class="${asked ? 'heard' : ''}" onclick="fddAskAloud('${k}')" ${asked || cur.submitted ? 'disabled' : ''}>${asked ? '✓ ' : ''}${l}</button>`
                       : `<button class="${asked ? 'on' : ''}" onclick="fddAsk('${k}')">${l}</button>`;
@@ -621,12 +655,14 @@
             <div class="sb">
             <h5>You play the caller · calls from ${esc(callerId(c))}</h5>
             <div class="say">“${esc(unquote(c.opening))}”</div>
+            ${sayNamesHTML(callNames(c))}
             <h5>If the receptionist asks for…</h5>
             <table>${SCRIPT_ASKS.map(([key, l]) => `<tr><td>${l}</td><td>${esc(val(key) || none)}</td></tr>`).join('')}</table>
             <h5>Stay in character</h5><div>${esc(ACTOR[c.auth] || '')} Don't volunteer details; answer what you're asked. Hang up once you have your answer, a next step, or a message is taken.</div>
             <h5>A ready receptionist</h5>
             <div class="rsay">1. “Thank you for calling ${esc(firmName())}, this is [name]. How may I help you?”</div>
             <div class="rsay">2. ${c.mock ? 'Finds the file (search by name, DOB, phone, case number, claim #…) and asks: ' : ''}“${esc(verifyLine(c))}”</div>
+            ${spellStepHTML(callNames(c))}
             <div class="rsay">3. Decides: <b>${esc(authLabel(c.auth))}</b></div>
             <div class="rsay">4. ${esc(c.actions[c.answer])}</div>
             <div class="rsay">5. Confirms the callback number and any message, then: “Is there anything else I can help you with? Thank you for calling.”</div>
@@ -636,6 +672,13 @@
             <h5>Score it (100)</h5>
             <ul><li>Found the right file (or knew there's none): 30</li><li>Right verification decision: 30</li><li>Asked for ${esc(needFor(c))}: 10</li><li>Handled it as above, shared nothing they shouldn't, closed well: 30</li></ul>
             </div></div>`;
+    }
+    // The role-player's pronunciation guide, and the receptionist's spell-back step, for a call with hard names.
+    function sayNamesHTML(words) {
+        return words.length ? `<h5>Say the names like this</h5><div>${esc(sayList(words))}. Say them naturally and don't spell them unless you're asked; then spell slowly, letter by letter. If the read-back is wrong, correct it.</div>` : '';
+    }
+    function spellStepHTML(words) {
+        return words.length ? `<div class="rsay">↳ Hears a name they can't be sure of: “Could you spell that for me, please?” Then reads it back with the NATO alphabet: “${esc(words.map(natoOf).join('; '))}.” Searches with the spelling, not the sound.</div>` : '';
     }
     // A ready script for one of a library file's own caller scenarios (reception.calls): the
     // file's verify rule and model handling, with the lines a ready receptionist says.
@@ -650,6 +693,7 @@
         const sameAsk = !same ? '' : twins.some(x => x.dateOfLoss === k.dateOfLoss)
             ? ' The same name, address and accident are on another file: the date of birth or the case number decides which file.'
             : ' Same name on more than one file: “And what was the date of the accident?”';
+        const names = hardWords(`${cl.name} ${s.from} ${s.ask}`);
         const caller = isClient
             ? `You're the client. When they ask, verify with the file's details:<table>
                 <tr><td>Full name</td><td>${esc(cl.name)}</td></tr><tr><td>Date of birth</td><td>${esc(cl.dob || '')}</td></tr>
@@ -663,9 +707,11 @@
             <h5>You play the caller · ${esc(unquote(s.from))}</h5>
             <div class="say">${quoted ? `“${esc(unquote(s.ask))}”` : `(In your own words) ${esc(s.ask)}`}</div>
             <div>${caller}</div>
+            ${sayNamesHTML(names)}
             <h5>A ready receptionist</h5>
             <div class="rsay">1. “Thank you for calling ${esc(firmName())}, this is [name]. How may I help you?”</div>
             <div class="rsay">2. “May I have your full name and a good callback number, in case we get disconnected? And who are you calling about?”</div>
+            ${spellStepHTML(names)}
             <div class="rsay">3. Before sharing anything. The client, or someone the file authorizes: “May I have ${isClient ? 'your' : 'the client\'s'} date of birth, and the address on file or the last 4 of the Social Security number?”${sameAsk} Anyone else: share nothing about the case, not even that it's a client.</div>
             <div class="rsay">4. ${esc(s.handle)}</div>
             <div class="rsay">5. Reads back the callback number and any message, then: “Is there anything else I can help you with? Thank you for calling.”</div>
@@ -703,7 +749,8 @@
         const k = c.mock && caseOf(c.mock), same = c.mock ? sameNameCount(c.mock) : 0;
         return (PERSONAL.includes(c.auth) ? 'name, date of birth, and address or SSN last 4'
             : c.auth === 'unauthorized' ? 'their name and their relationship to the client' : 'their name and a callback number')
-            + (same > 1 ? `, plus the date of the accident (${same} files are named ${k.client.name})` : '');
+            + (same > 1 ? `, plus the date of the accident (${same} files are named ${k.client.name})` : '')
+            + (callNames(c).length ? `, and the spelling of ${callNames(c).join(' ')}, read back with the NATO alphabet` : '');
     }
     function feedbackHTML(entry, r) {
         const c = entry.call, k = c.mock && caseOf(c.mock);
@@ -716,7 +763,7 @@
             <div>${r.actOk ? '✓' : '✗'} <b>Handle:</b> ${esc(c.actions[c.answer])}</div>
             <div style="margin-top:5px;color:#334155">${esc(c.why)}</div>
             ${k && k.reception ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px"><b>On file:</b> ${esc(k.reception.verify)}</div>` : ''}
-            ${r.live ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px">🎙 Live call · you asked for: ${r.picked.asked.length ? esc(r.picked.asked.map(a => (ASKS.find(x => x[0] === a) || [])[1]).join(', ')) : 'nothing'}</div>` : ''}</div>`;
+            ${r.live ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px">🎙 Live call · you asked for: ${r.picked.asked.length ? esc(r.picked.asked.map(askLabel).join(', ')) : 'nothing'}</div>` : ''}</div>`;
     }
 
     function summaryHTML() {
@@ -762,21 +809,26 @@
     };
     const GIVES = [['name', 'Your name'], ['dob', 'A date of birth, if asked'], ['address', 'An address, if asked'], ['ssn4', 'Last 4 of the Social Security number, if asked'],
         ['callback', 'Your callback number'], ['relationship', 'Who you are to the client'], ['dol', 'The date of the accident, if asked']];
+    // Hard names in a typed practice call: written the way they sound, spelled only when asked.
+    function namesRule(words) {
+        if (!words.length) return '';
+        return `\nSAYING NAMES (this is a phone call: the receptionist only hears you)\n- Always write these names the way they sound, never with their real spelling: ${words.map(w => `write "${sounds()[w].heard}" for ${w}`).join(', ')}.\n- Only when the receptionist asks you to spell a name, spell it letter by letter with the real spelling: ${words.map(w => `${w} is ${spellOut(w)}`).join(', ')}.\n- If they read a spelling back wrong, correct the letter they got wrong. If they read it back right (for example with the phonetic alphabet), say that's right.\n`;
+    }
     function callerPrompt(c) {
         const k = caseOf(c.mock), g = c.gives || {};
         const val = (key) => key === 'dol' && g.dol == null && k ? k.dateOfLoss : g[key];
-        const knows = GIVES.filter(([key]) => val(key) != null && String(val(key)).trim() !== '').map(([key, l]) => `- ${l}: ${val(key)}`).join('\n');
-        const bg = k && PERSONAL.includes(c.auth) ? `\nBACKGROUND (what you know about the accident; use it to answer naturally, never recite it):\n${k.narrative}\n` : '';
+        const knows = GIVES.filter(([key]) => val(key) != null && String(val(key)).trim() !== '').map(([key, l]) => `- ${l}: ${heardAs(val(key))}`).join('\n');
+        const bg = k && PERSONAL.includes(c.auth) ? `\nBACKGROUND (what you know about the accident; use it to answer naturally, never recite it):\n${heardAs(k.narrative)}\n` : '';
         return `You are role-playing a caller phoning the front desk of ${firmName()}, a personal injury law firm. The person answering is a receptionist. Stay in character for the whole call.
 
 WHO YOU ARE AND WHY YOU CALL
-Why you're calling (say it in your own words once they greet you): "${unquote(c.opening)}"
+Why you're calling (say it in your own words once they greet you): "${heardAs(unquote(c.opening))}"
 ${ROLE[c.auth] || ROLE.client}
 
 WHAT YOU SAY WHEN ASKED (give each detail only when the receptionist asks for it, exactly as written here, even if it seems wrong; never correct it or add to it):
 ${knows || '- Your name: you\'d rather not say.'}
 For anything not listed, say you don't know it or would rather not say.
-${bg}
+${bg}${namesRule(hardWords(`${c.opening} ${g.name || ''} ${k ? k.client.name : ''}`))}
 HOW TO TALK
 - Talk like a real person on the phone: 1 to 3 short sentences per turn, plain spoken English. No lists, no stage directions, no narration, no quotation marks.
 - Don't volunteer details before you're asked. Answer what the receptionist asks, then wait for them.
