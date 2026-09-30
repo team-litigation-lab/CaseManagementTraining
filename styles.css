@@ -315,8 +315,15 @@
         align-items: center;
         text-align: center;
     }
-    /* the logo on the sidebar: the Legal Support Help mark and name, white on navy, no frame */
-    #sidebar-logo { display: block; width: 150px; max-width: 100%; height: auto; }
+    /* the logo on the sidebar: the Legal Support Help mark and name (white text, transparent
+       background) on a slightly lighter rounded panel, so the navy half of the mark stands out
+       from the dark sidebar */
+    #sidebar-logo {
+        display: block; width: 176px; max-width: 100%; height: auto; box-sizing: border-box;
+        padding: 10px 14px; border-radius: 12px;
+        background: linear-gradient(180deg, #56688c 0%, #46577a 100%);
+        border: 1px solid rgba(255,255,255,.18); box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
     /* (#agency-seal: the logo on a white tile, kept for any page that still shows it; the sidebar
        now shows #sidebar-logo) */
     #agency-seal {
