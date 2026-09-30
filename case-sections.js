@@ -297,9 +297,20 @@
     };
     window.dismissTask = function (id) { savePending(pending().filter(x => String(x.id) !== String(id))); renderTaskCards(); };
 
+    /* ---------- Location of Incident: one line ---------- */
+    // Enter already finishes the field (app.js); a pasted address comes in as one line of plain text.
+    function initLocationLine() {
+        const el = $id('kf-incident-location'); if (!el) return;
+        el.addEventListener('paste', e => {
+            e.preventDefault();
+            const text = (e.clipboardData ? e.clipboardData.getData('text/plain') : '').replace(/\s*[\r\n]+\s*/g, ', ');
+            document.execCommand('insertText', false, text);
+        });
+    }
+
     /* ---------- start ---------- */
     function init() {
-        initChronoDrag(); initRowDrop(); renderDropCats(); window.afterKeyedApplied(); renderTaskCards();
+        initChronoDrag(); initRowDrop(); renderDropCats(); window.afterKeyedApplied(); renderTaskCards(); initLocationLine();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
     // redraw the counts and sums as people type in the new sections
