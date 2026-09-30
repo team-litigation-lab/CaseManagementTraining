@@ -68,7 +68,9 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     const today = lib.firmToday();
     const mon = addDays(today, 7 - ((new Date(today + 'T00:00:00Z').getUTCDay() + 6) % 7)); // next Monday
     const usd = (s) => `${s.slice(5, 7)}/${s.slice(8, 10)}/${s.slice(0, 4)}`;
-    sql.prepare(`INSERT INTO case_repository VALUES (7, 'LSH-2026-MVA-000007', 'Maria Santos', '02/02/2026', ?, '', '', '', '', 0, 'someone', '2026-09-20')`).run(usd(addDays(mon, 2)));
+    // the trainee's own saved case, and another trainee's (trainees see only their own cases' deadlines)
+    sql.prepare(`INSERT INTO case_repository VALUES (7, 'LSH-2026-MVA-000007', 'Maria Santos', '02/02/2026', ?, '', '', '', '', 0, 'ci', '2026-09-20')`).run(usd(addDays(mon, 2)));
+    sql.prepare(`INSERT INTO case_repository VALUES (8, 'LSH-2026-MVA-000008', 'Zora Otherfile', '02/03/2026', ?, '', '', '', '', 0, 'someone', '2026-09-20')`).run(usd(addDays(mon, 2)));
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret' };
     const tokens = {
         ci: await utils.createSessionToken({ username: 'ci', userType: 'Trainee', fullName: 'CI Trainee', batchId: 'B1' }, env.SESSION_SECRET),
@@ -207,6 +209,7 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     await page.evaluate(() => { fcClose(); fcView('month'); }); await page.waitForTimeout(400);
     await shot('4-month');
     if (!(await page.locator('#fc-main .chip.dl:has-text("SOL deadline: Maria Santos")').count())) fail('the case deadlines layer does not show the SOL on the saved case');
+    if (await page.locator('#fc-main .chip.dl:has-text("Zora Otherfile")').count()) fail('the case deadlines layer shows a trainee another trainee\'s case');
     await page.evaluate(() => fcView('agenda')); await page.waitForTimeout(400);
     if (!(await page.locator('#fc-main .ag-r:has-text("Deposition of the Redline Freight driver")').count())) fail('the agenda view does not list the new event');
 

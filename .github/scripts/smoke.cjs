@@ -11,6 +11,8 @@
 // caller hangs up, wrap up, debrief, saved as a practice call. The sidebar has one
 // calendar (the Firm Calendar; calendar.cjs tests it) and no .ics downloads. The Caller
 // scenarios panel (with its reception call scripts) is for Admins only, on every file.
+// Trainees never see the Training Library (its files are tagged by case number), and
+// an Admin's Trainee view shows the trainee screens, then switches back.
 // Fails on any page error.
 // Usage: node .github/scripts/smoke.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -103,14 +105,18 @@ const SAVED = [
     const s = saved[saved.length - 1];
     if (!s || s.content.trainingLibraryId !== 'MC-04' || s.content.program !== 'reception') fail(`practice copy did not save with its tags (${JSON.stringify(s && { lib: s.content.trainingLibraryId, program: s.content.program })})`);
 
-    // search bar above the case: saved and mock cases by name, same-name warning, search by DOL, open a result
+    // search bar above the case: saved and mock cases by name, same-name warning, search by DOL, open a result.
+    // Trainees never see the Training Library: its files are tagged with their case number, like any case.
+    const CN = await page.evaluate(() => Object.fromEntries(MOCK_CASES.map(c => [c.id, c.caseNumber])));
     await page.fill('#cl-bar-input', 'maria santos');
     const found = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .clb-row .cl-tag')].map(t => t.textContent));
-    for (const want of ['MC-01', 'MC-21', 'MC-22', 'LSH-2026-MVA-000007']) if (!found.some(t => t.includes(want))) fail(`search bar "maria santos" did not find ${want} (${found.join(', ')})`);
+    for (const want of [CN['MC-01'], CN['MC-21'], CN['MC-22']]) if (!found.some(t => t.includes(want))) fail(`search bar "maria santos" did not find ${want} (${found.join(', ')})`);
+    if (found.some(t => t.includes('LSH-2026-MVA-000007'))) fail('a trainee\'s search found another trainee\'s saved case');
+    if (found.some(t => /TRAINING LIBRARY|MC-\d/i.test(t))) fail(`a trainee's search results show Training Library tags (${found.join(', ')})`);
     if (!(await page.isVisible('#cl-bar-results .cl-dup'))) fail('the search bar did not warn that several files share the name Maria Santos');
     await page.fill('#cl-bar-input', '07/28/2026');
-    const byDol = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .cl-tag.mock')].map(t => t.textContent.split('· ')[1]));
-    if (byDol.join() !== 'MC-22') fail(`searching the DOL 07/28/2026 found ${byDol.join(', ') || 'nothing'} instead of MC-22`);
+    const byDol = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .clb-row .cl-tag')].map(t => t.textContent));
+    if (byDol.join() !== CN['MC-22']) fail(`searching the DOL 07/28/2026 found ${byDol.join(', ') || 'nothing'} instead of MC-22 (${CN['MC-22']})`);
     await page.click('#cl-bar-results .clb-row'); await page.waitForTimeout(300);
     if (await page.evaluate(() => mockCurrentId()) !== 'MC-22' || await page.isVisible('#cl-bar-results')) fail('clicking a search result did not open MC-22');
     // keyboard: Enter opens the first match (the newest James Wilson file, MC-24)
@@ -123,11 +129,17 @@ const SAVED = [
         const got = await page.evaluate(() => ({ id: mockCurrentId(), field: document.getElementById('case-id-field').innerText.trim() }));
         if (got.id !== 'MC-26' || got.field !== cn) fail(`searching the case number as "${typed}" opened ${got.id} (Case ID field "${got.field}") instead of MC-26 (${cn})`);
     }
-    // the Case Library window (sidebar) still searches, filters and warns
-    await page.click('#sidebar-actions button:has-text("Open Case Library")');
+    // the sidebar: no Case Library window button for trainees, just the cases they saved themselves
+    if (await page.isVisible('#cl-open-btn')) fail('a trainee has the Open Case Library button');
+    const mineRows = await page.evaluate(() => [...document.querySelectorAll('#repo-list .cl-mine-row')].map(r => r.innerText));
+    if (mineRows.length !== 1 || !/Zed Practice/.test(mineRows[0]) || (await page.textContent('#repo-label')) !== 'My cases') fail(`the sidebar should list only the trainee's own case (Zed Practice): ${JSON.stringify(mineRows)}`);
+    // the Case Library window (Ctrl+K when the search bar is off screen) still searches, filters and warns
+    await page.evaluate(() => openCaseLibrary());
     await page.fill('#cl-search', 'wilson');
     const inWindow = await page.locator('#cl-body .cl-row').count();
     if (inWindow !== 3 || !(await page.isVisible('#cl-body .cl-dup'))) fail(`Case Library window search "wilson" showed ${inWindow} files (expected the 3 James Wilson files and a same-name warning)`);
+    const chips = await page.evaluate(() => [...document.querySelectorAll('#case-library-modal .cl-chips button')].map(b => b.textContent));
+    if (chips.some(t => /training library/i.test(t)) || /training library/i.test(await page.innerText('#case-library-modal'))) fail(`the Case Library window shows a trainee the Training Library (${chips.join(', ')})`);
     await page.evaluate(() => closeCaseLibrary());
     await page.evaluate(() => openMockCase('MC-22', { silent: true })); await page.waitForTimeout(300);
 
@@ -167,8 +179,8 @@ const SAVED = [
         for (const a of ['Full name', 'Date of birth', 'Address', 'Last 4 of SSN', 'Callback number', 'Relationship to the client', 'Date of the accident (DOL)']) await page.click(`.fdd-asks button:has-text("${a}")`);
         if (c.mock && !topSearchUsed) {
             topSearchUsed = true;
-            await page.fill('#cl-bar-input', c.mock);
-            await page.locator('#cl-bar-results .clb-row').filter({ has: page.locator('.cl-tag.mock', { hasText: new RegExp(`· ${c.mock}$`) }) }).click();
+            await page.fill('#cl-bar-input', CN[c.mock]);
+            await page.locator('#cl-bar-results .clb-row').filter({ has: page.locator('.cl-tag', { hasText: CN[c.mock] }) }).click();
             if (!(await page.isVisible(`#fdd-panel p:has-text("Opened ${c.mock}")`))) {
                 fail(`opening ${c.mock} from the search bar during a drill call didn't count as the call's pick`);
                 await page.fill('.fdd-search', c.mock); await page.click(`.fdd-row:has(.id:text-is("${c.mock}"))`); // carry on with the drill
@@ -232,8 +244,8 @@ const SAVED = [
         const m0 = (turns[0] && turns[0].messages) || [];
         if (m0.length !== 1 || m0[0].role !== 'user') fail(`the first caller turn should carry just the greeting: ${JSON.stringify(m0)}`);
         if (lc.mock) {   // the search bar above the case picks the call's file
-            await page.fill('#cl-bar-input', lc.mock);
-            await page.locator('#cl-bar-results .clb-row').filter({ has: page.locator('.cl-tag.mock', { hasText: new RegExp(`· ${lc.mock}$`) }) }).click();
+            await page.fill('#cl-bar-input', CN[lc.mock]);
+            await page.locator('#cl-bar-results .clb-row').filter({ has: page.locator('.cl-tag', { hasText: CN[lc.mock] }) }).click();
             if (!(await page.textContent('#fdd-pick-line')).includes(lc.mock) || await page.evaluate(() => mockCurrentId()) !== lc.mock) fail(`opening ${lc.mock} from the search bar during a practice call didn't count as the call's file`);
         } else await page.click('#fdd-none');
         await page.fill('#fdd-pc-in', 'Thanks for calling, goodbye.');
@@ -265,21 +277,51 @@ const SAVED = [
     // original or a practice copy). An Admin gets a reception call script for every caller scenario
     // and a scripted mock call (the caller's answers) for every simulator caller on the file
     for (const copy of [false, true]) {
-        await page.evaluate((copy) => { openMockCase('MC-01', { silent: true }); if (copy) startPracticeCopy(); openCallsPanel(); }, copy);
+        await page.evaluate((copy) => { openMockCase('MC-01', { silent: true }); if (copy) startPracticeCopy(); openCallsPanel(); showTab('notes'); }, copy);
         const where = copy ? 'a practice copy' : 'a library case';
+        const onScreen = (await page.innerText('body')).match(/[^\n]*training library[^\n]*/i);
+        if (onScreen) fail(`a trainee sees the Training Library on ${where}: "${onScreen[0].trim().slice(0, 120)}"`);
+        if (!(await page.textContent('#mock-banner')).includes(CN['MC-01'])) fail(`the banner doesn't show a trainee the case number on ${where}`);
+        await page.evaluate(() => openTrainingLibrary());
+        if (await page.isVisible('#library-modal.open')) fail('openTrainingLibrary() opened the Training Library for a trainee');
         if (await page.locator('#mock-banner button:has-text("Caller scenarios")').count()) fail(`a trainee has the Caller scenarios button on ${where}`);
         if (await page.isVisible('#mock-calls-panel.open') || await page.locator('#mock-calls-panel .mcp-call, #mock-calls-panel .fdd-script').count()) fail(`openCallsPanel() showed a trainee the caller scenarios on ${where}`);
     }
     await page.evaluate(() => closeMockCase());
     const admin = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     admin.on('pageerror', e => fail(`page error (admin): ${e.message}`));
-    await admin.route('**/api/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(new URL(route.request().url()).pathname === '/api/case-repository' ? { success: true, cases: [] } : { success: true }) }));
+    const adminUpdates = [];
+    await admin.route('**/api/**', route => {
+        const u = new URL(route.request().url());
+        if (u.pathname === '/api/mock-case-updates' && route.request().method() === 'POST') adminUpdates.push(route.request().postData() || '');
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(u.pathname === '/api/case-repository' ? { success: true, cases: [] } : { success: true }) });
+    });
     await admin.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'trainer-ci', fullName: 'CI Trainer', batchId: 'B1', userType: 'Admin' })));
     await admin.goto(base, { waitUntil: 'load' }); await admin.waitForTimeout(1200);
+    if (!(await admin.isVisible('#cl-open-btn'))) fail('an Admin lost the Open Case Library button');
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');
     await admin.evaluate(() => closeCallsPanel());
+    // Trainee view: the trainer sees the site the way trainees do, then goes back. A note typed
+    // on a library case just before switching is saved, not lost to the reload.
+    await admin.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('notes'); });
+    await admin.click('#pane-notes .add-btn');
+    await admin.click('#note-body tr:last-child td:nth-child(3) [contenteditable]');
+    await admin.keyboard.type('Typed right before Trainee view');
+    await Promise.all([admin.waitForNavigation({ waitUntil: 'load' }), admin.click('#session-footer button:has-text("Trainee view")')]);
+    if (!adminUpdates.some(b => b.includes('Typed right before Trainee view'))) fail('a note typed on a library case just before switching to Trainee view was not saved');
+    await admin.waitForTimeout(1200);
+    await admin.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('notes'); });
+    const tv = await admin.evaluate(() => ({ type: getSession().userType, real: getRealSession().userType, bar: !!document.querySelector('#trainee-view-bar'),
+        lib: !!(document.getElementById('lib-open-btn') || {}).offsetParent, mc: !!document.querySelector('#session-footer button[onclick="openAdminDashboard()"]'),
+        calls: !!document.querySelector('#mock-banner button[onclick="openCallsPanel()"]'), text: /training library/i.test(document.body.innerText),
+        openLib: !!(document.getElementById('cl-open-btn') || {}).offsetParent }));
+    if (tv.type !== 'Trainee' || tv.real !== 'Admin' || !tv.bar || tv.lib || tv.mc || tv.calls || tv.text || tv.openLib) fail(`Trainee view doesn't look like a trainee's screen: ${JSON.stringify(tv)}`);
+    await Promise.all([admin.waitForNavigation({ waitUntil: 'load' }), admin.click('#trainee-view-bar button')]);
+    await admin.waitForTimeout(1200);
+    const back = await admin.evaluate(() => ({ type: getSession().userType, bar: !!document.querySelector('#trainee-view-bar'), lib: !!(document.getElementById('lib-open-btn') || {}).offsetParent }));
+    if (back.type !== 'Admin' || back.bar || !back.lib) fail(`Back to trainer view didn't restore the trainer's screen: ${JSON.stringify(back)}`);
     const scripts = await admin.evaluate(() => MOCK_CASES.map(c => {
         openMockCase(c.id, { silent: true }); openCallsPanel();
         const panel = document.getElementById('mock-calls-panel'), issues = [];

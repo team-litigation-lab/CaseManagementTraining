@@ -21,7 +21,7 @@
         let siteIsLocked = false;       // mirrors state.locked from /api/state
         let siteLockedByAdmin = false;  // true if current session is Admin (Admins stay through a lock)
         function hasAuthorizedAccess() {
-            const session = getSession();
+            const session = getRealSession();   // a trainer in Trainee view still gets through a lock
             if (!session) return false;
             if (siteIsLocked && session.userType !== 'Admin') return false;
             return true;
@@ -1774,7 +1774,8 @@
            switching, password validation) is genuinely used by the real
            API-backed login/registration flow below.
            ========================================================= */
-        function getSession() {
+        // The signed-in account as the server knows it (Admins stay Admins in Trainee view).
+        function getRealSession() {
             try {
                 let raw = sessionStorage.getItem(SESSION_KEY);
                 // One-time migration from the old localStorage session key.
@@ -1788,6 +1789,36 @@
                 return JSON.parse(raw || 'null');
             } catch (e) { return null; }
         }
+        /* Trainee view: a trainer (Admin) sees the site the way trainees do. Everything that
+           shapes the screen reads getSession(), which then answers as a trainee; the server
+           still knows them as an Admin, and the few Admin exemptions (Pause and Lock never
+           stop them) read getRealSession(). The switch reloads the page so every part of
+           the screen is drawn for the new view. */
+        const TRAINEE_VIEW_KEY = 'LSH_TRAINEE_VIEW_V1';
+        function isTraineeView() {
+            const s = getRealSession();
+            if (!s || s.userType !== 'Admin') return false;
+            try { return sessionStorage.getItem(TRAINEE_VIEW_KEY) === '1'; } catch (e) { return false; }
+        }
+        function getSession() {
+            const s = getRealSession();
+            return s && isTraineeView() ? Object.assign({}, s, { userType: 'Trainee', traineeView: true }) : s;
+        }
+        function setTraineeView(on) {
+            const s = getRealSession();
+            if (!s || s.userType !== 'Admin') return;
+            try { if (on) sessionStorage.setItem(TRAINEE_VIEW_KEY, '1'); else sessionStorage.removeItem(TRAINEE_VIEW_KEY); } catch (e) { return; }
+            if (window.mockFlushUpdates) window.mockFlushUpdates({ keepalive: true });   // Notes/Tasks typed on a library case survive the reload
+            location.reload();
+        }
+        function paintTraineeViewBar() {
+            let bar = document.getElementById('trainee-view-bar');
+            if (!isTraineeView()) { if (bar) bar.remove(); document.body.classList.remove('trainee-view'); return; }
+            document.body.classList.add('trainee-view');
+            if (!bar) {
+                document.body.insertAdjacentHTML('beforeend', `<div id="trainee-view-bar" class="no-print" role="status"><span>👁 <b>Trainee view</b> · you're seeing the site the way trainees do</span><button onclick="setTraineeView(false)">⇦ Back to trainer view</button></div>`);
+            }
+        }
         function setSession(user) {
             sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                 fullName: user.fullName,
@@ -1798,6 +1829,7 @@
         }
         function clearSession() {
             sessionStorage.removeItem(SESSION_KEY);
+            sessionStorage.removeItem(TRAINEE_VIEW_KEY);
             localStorage.removeItem(SESSION_KEY);
         }
 
@@ -1841,6 +1873,7 @@
             const footer = document.getElementById('session-footer');
             const portalTitle = document.getElementById('portal-title');
 
+            paintTraineeViewBar();
             if (!session) {
                 gate.classList.add('open');
                 gate.style.setProperty('display', 'flex', 'important');
@@ -1870,11 +1903,13 @@
                 footer.innerHTML = `
                     <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
                     <button class="session-btn active-admin" onclick="openAdminDashboard()">⇄ Master Control</button>
+                    <button class="session-btn trainee-view-btn" onclick="setTraineeView(true)" title="See the site the way trainees see it">👁 Trainee view</button>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             } else {
                 footer.innerHTML = `
                     <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
+                    ${session.traineeView ? '<button class="session-btn active-admin" onclick="setTraineeView(false)">⇦ Back to trainer view</button>' : ''}
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             }
@@ -2940,7 +2975,7 @@
             const pauseLabel = document.getElementById('pause-state-label');
             const pauseBtn = document.getElementById('pause-toggle-btn');
             const ovPause = document.getElementById('ov-pause-state');
-            const sessionForPause = getSession();
+            const sessionForPause = getRealSession();   // Pause and Lock never stop a trainer, Trainee view or not
             const isAdminSession = sessionForPause && sessionForPause.userType === 'Admin';
             if (state.paused) {
                 if (isAdminSession) {

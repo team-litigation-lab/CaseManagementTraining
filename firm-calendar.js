@@ -108,8 +108,10 @@
     const cal = (id) => id === 'google' ? { id, name: `${(S.data && S.data.google && S.data.google.calendarName) || 'Google Calendar'} (Google)`, color: GOOGLE_COLOR }
         : cals().find(c => c.id === id) || { id, name: id, color: '#64748b' };
     const types = () => (S.data && S.data.types) || Object.keys(TYPE_ICON);
-    const me = () => (S.data && S.data.me) || {};
+    // Trainee view (a trainer previewing): no Admin extras.
+    const me = () => { const m = (S.data && S.data.me) || {}; return window.isTraineeView && window.isTraineeView() ? Object.assign({}, m, { admin: false }) : m; };
     const onCal = (e, id) => e.calendar === id || (e.invite || []).includes(id);
+    const shownRef = (ref) => window.lshShownRef ? window.lshShownRef(ref) : ref;   // trainees see a library case's case number, not "MC-01"
 
     /* ---------- the open case ---------- */
     function openCase() {
@@ -254,7 +256,7 @@
     // An event as it is copied to Google (and for the "Add to Google Calendar" link).
     function payload(e) {
         const who = [e.calendar].concat(e.invite || []).map(c => cal(c).name).join(', ');
-        const lines = [`${e.type} · ${who}`, e.caseLabel ? `Case: ${e.caseLabel}${e.caseRef ? ' (' + e.caseRef + ')' : ''}` : '', e.notes || '',
+        const lines = [`${e.type} · ${who}`, e.caseLabel ? `Case: ${e.caseLabel}${e.caseRef ? ' (' + shownRef(e.caseRef) + ')' : ''}` : '', e.notes || '',
             '— Scheduled in the LSH CMS Firm Calendar (training).'];
         return { key: 'ev:' + e.id, title: e.title, allDay: !!e.allDay, start: e.allDay ? e.date : `${e.date}T${e.start}`, end: e.allDay ? e.date : `${e.date}T${e.end}`,
             tz: FIRM_TZ, location: e.location || '', description: lines.filter(Boolean).join('\n') };
@@ -712,7 +714,7 @@
             ${e.source === 'google' ? '' : `<div class="kv"><b>Type</b>${esc(e.type)}</div>`}
             <div class="kv"><b>Calendar</b>${esc(c.name)}${(e.invite || []).length ? ' · with ' + e.invite.map(i => esc(cal(i).name)).join(', ') : ''}</div>
             ${e.location ? `<div class="kv"><b>Where</b>${esc(e.location)}</div>` : ''}
-            ${e.caseLabel ? `<div class="kv"><b>Case</b>${esc(e.caseLabel)}${e.caseRef ? ' · ' + esc(e.caseRef) : ''}</div>` : ''}
+            ${e.caseLabel ? `<div class="kv"><b>Case</b>${esc(e.caseLabel)}${e.caseRef ? ' · ' + esc(shownRef(e.caseRef)) : ''}</div>` : ''}
             ${e.notes ? `<div class="kv"><b>Notes</b><div style="white-space:pre-wrap;margin-top:4px">${esc(e.notes)}</div></div>` : ''}
             <div class="note">${who}</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
@@ -755,7 +757,7 @@
             <label class="fl">Location</label>
             <input class="fi" id="fcf-location" value="${esc(f.location)}" placeholder="Office, court and department, Zoom link…" oninput="fcSet('location',this.value)">
             <label class="fl">Case</label>
-            ${f.caseLabel ? `<div class="note" style="margin-top:0;display:flex;justify-content:space-between;gap:8px;align-items:center"><span>🔗 <b style="color:#0f172a">${esc(f.caseLabel)}</b>${f.caseRef ? ' · ' + esc(f.caseRef) : ''}</span><button class="fc-btn" onclick="fcUnlink()">Unlink</button></div>`
+            ${f.caseLabel ? `<div class="note" style="margin-top:0;display:flex;justify-content:space-between;gap:8px;align-items:center"><span>🔗 <b style="color:#0f172a">${esc(f.caseLabel)}</b>${f.caseRef ? ' · ' + esc(shownRef(f.caseRef)) : ''}</span><button class="fc-btn" onclick="fcUnlink()">Unlink</button></div>`
                 : `${oc ? `<button class="fc-btn" style="width:100%" onclick="fcLinkOpen()">🔗 Link to the open case: ${esc(oc.label)}</button>` : ''}
                 <input class="fi" style="margin-top:6px" id="fcf-caselabel" value="" placeholder="…or type the client name" onchange="fcSet('caseLabel',this.value)">`}
             <label class="fl">Notes</label>

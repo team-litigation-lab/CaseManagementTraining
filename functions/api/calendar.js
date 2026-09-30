@@ -43,7 +43,7 @@ async function caseDeadlines(db, session, from, to) {
     try {
         const { results } = await db.prepare(
             `SELECT id, case_id, client_name, date_of_loss, sol_bar, sol_litigation, complaint_filed, discovery_cutoff, trial_date
-             FROM case_repository WHERE is_draft = 0 OR owner_username = ? OR ? = 'Admin' ORDER BY updated_at DESC LIMIT 500`
+             FROM case_repository WHERE owner_username = ? OR ? = 'Admin' ORDER BY updated_at DESC LIMIT 500`   // a trainee's own cases only
         ).bind(session.username, session.userType).all();
         rows = results || [];
     } catch (e) { return []; }

@@ -15,10 +15,12 @@
       back when they reopen the case. "Work on a practice copy" makes
       the whole editor editable; Save Case then creates the trainee's
       own case, stamped with content.trainingLibraryId.
-      Only Admins see the Training Library button. Trainees find mock
-      cases with the search bar above the case (case-library.js), and
-      every way into the library (the banner, ?library=1) takes them to
-      it; the firm directory opens in the Case Library window.
+      Only Admins see the Training Library (its button, its window and
+      its name). To trainees a mock case is a case file, known by its
+      case number: they find it with the search bar above the case
+      (case-library.js), and every way into the library (the banner,
+      ?library=1) takes them there; the firm directory opens in the Case
+      Library window.
    3. Caller scenarios (trainers/Admins only). For the front desk: how to
       verify the caller on this file, the calls it gets, the model handling
       and a reception call script for each, to run mock calls with trainees.
@@ -73,8 +75,8 @@
         const pending = updatesPending();
         if (pending) saveUpdates();
         if (!silent && typeof showToast === 'function') showToast(pending || upd.saved
-            ? 'Your Notes and Tasks on this Training Library case are saved to your account. The rest of the case is view only: click "Work on a practice copy" to save a full copy of your own.'
-            : 'This is a Training Library case (view only). You can add Notes and Tasks, or click "Work on a practice copy" to make your own copy you can save.', 'info', 5000);
+            ? `Your Notes and Tasks on this ${kindWord()} are saved to your account. The rest of the case is view only: click "Work on a practice copy" to save a full copy of your own.`
+            : `This ${kindWord()} is view only. You can add Notes and Tasks, or click "Work on a practice copy" to make your own copy you can save.`, 'info', 5000);
         return true;
     };
     // Extra keys stamped on every saved case payload.
@@ -131,6 +133,11 @@
     }
     window.mockSearch = (query) => (window.MOCK_CASES || []).filter(c => mockMatches(c, query));
     const isAdmin = () => { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); };
+    // Trainees never see the Training Library: to them a mock case is a case file, known by its case number.
+    const kindWord = () => isAdmin() ? 'Training Library case' : 'case file';
+    const fileRef = (c) => isAdmin() ? c.id : (c.caseNumber || c.id);
+    // How a stored case reference is shown (time entries and calendar events keep "MC-01"): trainees see the case number.
+    window.lshShownRef = (ref) => { const c = /^MC-\d+$/.test(ref || '') && findCase(ref); return c ? fileRef(c) : (ref || ''); };
 
     /* ---------- styles ---------- */
     const css = document.createElement('style');
@@ -230,15 +237,17 @@
             const pane = $id(id);
             if (!pane || pane.querySelector('.mock-upd-bar')) return;
             pane.classList.add('mock-upd');
-            pane.insertAdjacentHTML('afterbegin', `<div class="mock-upd-bar no-print"><span class="mub-text">✎ <b>Training Library case:</b> you can add and edit Notes and Tasks here (log the calls you take). They save to your account automatically and come back when you reopen this case.</span><span class="mub-state"></span><button onclick="mockResetUpdates()">↺ Reset to the original</button></div>`);
+            pane.insertAdjacentHTML('afterbegin', `<div class="mock-upd-bar no-print"><span class="mub-text"></span><span class="mub-state"></span><button onclick="mockResetUpdates()">↺ Reset to the original</button></div>`);
         });
         paintProgramUI();
         paintRoleUI();
     }
 
-    // Trainees don't browse the Training Library: they search the Case Library.
+    // Trainees don't browse the Training Library, or even see its name: they search the Case Library.
     function paintRoleUI() {
         const btn = $id('lib-open-btn'); if (btn) btn.style.display = isAdmin() ? '' : 'none';
+        document.querySelectorAll('.mock-upd-bar .mub-text').forEach(t => { t.innerHTML = `✎ <b>${isAdmin() ? 'Training Library case' : 'Case file'}:</b> you can add and edit Notes and Tasks here (log the calls you take). They save to your account automatically and come back when you reopen this case.`; });
+        if (!isAdmin()) closeTrainingLibrary();
     }
 
     function paintProgramUI() {
@@ -632,14 +641,16 @@
         }
     }
     // Called before anything clears the editor (app.js: blankCaseEditorContent, loadCase).
-    window.mockFlushUpdates = function () { if (updatesPending()) saveUpdates(); };
+    // opts.keepalive: the page is about to reload or close, so the save must outlive it.
+    window.mockFlushUpdates = function (opts) { if (updatesPending()) saveUpdates(opts); };
     const flushOnLeave = () => { if (upd.pending) saveUpdates({ keepalive: true }); };
     window.addEventListener('pagehide', flushOnLeave);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushOnLeave(); });
     const activeTab = () => { const p = document.querySelector('#capture-area .tab-pane.active'); return p ? p.id.replace(/^pane-/, '') : 'profile'; };
     window.mockResetUpdates = async function () {
         const id = mockId; if (!id || !mockViewOnly) return;
-        if (!confirm(`Reset the Notes and Tasks on ${id} to the Training Library original? Your saved updates on this case will be deleted.`)) return;
+        const rc = findCase(id) || { id };
+        if (!confirm(`Reset the Notes and Tasks on ${fileRef(rc)} to the ${isAdmin() ? 'Training Library original' : 'original file'}? Your saved updates on this case will be deleted.`)) return;
         clearTimeout(upd.timer); upd.pending = false;
         upd.base = snapshotRows();
         await upd.chain; // a save still on its way must land before the delete, not after
@@ -654,7 +665,7 @@
         if (mockId !== id || !mockViewOnly) return; // they moved on while it was resetting
         upd.base = snapshotRows(); // nothing left to flush: the reopen below starts from the original
         openMockCase(id, { silent: true, tab: activeTab() });
-        if (typeof showToast === 'function') showToast(`Notes and Tasks on ${id} are back to the original.`, 'success', 3000);
+        if (typeof showToast === 'function') showToast(`Notes and Tasks on ${fileRef(rc)} are back to the original.`, 'success', 3000);
     };
 
     function paintBanner() {
@@ -665,20 +676,20 @@
         const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="focusCaseSearch()">🔍 Search cases</button>`;
         const calls = isAdmin() ? `<button onclick="openCallsPanel()">☎ Caller scenarios</button>` : '';   // trainers only
         b.innerHTML = mockViewOnly
-            ? `<span class="mb-tag">TRAINING LIBRARY · ${c.id}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span><span class="mb-sp"></span>
+            ? `<span class="mb-tag">${isAdmin() ? 'TRAINING LIBRARY' : 'CASE FILE'} · ${esc(fileRef(c))}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span><span class="mb-sp"></span>
                ${calls}<button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
-            : `<span class="mb-tag">PRACTICE COPY · ${c.id}</span><span>Your own copy of <b>${esc(c.client.name)}</b>. Save Case adds it to your cases; the library original never changes.</span><span class="mb-sp"></span>
-               ${calls}<button onclick="openMockCase('${c.id}')">↺ Back to the library original</button>`;
+            : `<span class="mb-tag">PRACTICE COPY · ${esc(fileRef(c))}</span><span>Your own copy of <b>${esc(c.client.name)}</b>. Save Case adds it to your cases; the ${isAdmin() ? 'library original' : 'original file'} never changes.</span><span class="mb-sp"></span>
+               ${calls}<button onclick="openMockCase('${c.id}')">↺ Back to the ${isAdmin() ? 'library original' : 'original file'}</button>`;
     }
 
     window.openMockCase = function (id, opts) {
         opts = opts || {};
         const c = findCase(id);
-        if (!c) { if (typeof showToast === 'function') showToast('That Training Library case was not found.', 'error'); return false; }
+        if (!c) { if (typeof showToast === 'function') showToast(`That ${kindWord()} was not found.`, 'error'); return false; }
         if (typeof hasAuthorizedAccess === 'function' && !hasAuthorizedAccess()) return false;
         buildUI();
         const unsavedOwnWork = !mockViewOnly && typeof currentCaseId !== 'undefined' && currentCaseId === null && typeof hasCaseContent === 'function' && hasCaseContent();
-        if (!opts.silent && unsavedOwnWork && !confirm('Open this Training Library case? The unsaved case in the editor will be cleared.')) return false;
+        if (!opts.silent && unsavedOwnWork && !confirm(`Open this ${kindWord()}? The unsaved case in the editor will be cleared.`)) return false;
         if (typeof blankCaseEditorContent === 'function') blankCaseEditorContent();
         if (typeof revertOther === 'function') revertOther('main-case-type', 'main-case-other', 'main-revert');
         fillCase(c);
@@ -691,7 +702,7 @@
         closeTrainingLibrary();
         if (typeof showTab === 'function') showTab(opts.tab || 'profile');
         if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
-        if (!opts.silent && typeof showToast === 'function') showToast(`Opened ${c.id}: ${c.client.name} (view only)`, 'info', 3000);
+        if (!opts.silent && typeof showToast === 'function') showToast(`Opened ${fileRef(c)}: ${c.client.name} (view only)`, 'info', 3000);
         return true;
     };
     window.startPracticeCopy = function () {
