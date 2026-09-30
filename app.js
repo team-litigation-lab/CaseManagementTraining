@@ -185,7 +185,9 @@
             <option>Demand Specialist</option>
             <option>Records Specialist</option>
             <option>PD Specialist</option>
+            <option>Claims Specialist</option>
             <option>Lien Negotiator</option>
+            <option>Closer</option>
             <option>Intake Specialist</option>
             <option>Receptionist / Front Desk</option>
         `;

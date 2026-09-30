@@ -178,6 +178,15 @@
                             <div class="mb-4"><label>Employer Name</label><div contenteditable="true" data-ph="Enter employer" data-fmt="name"></div></div>
                             <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true" data-ph="Enter title"></div></div>
                         </div>
+                        <!-- Primary Injury: saved by id (data-keyed), not by position, so cases saved before it existed load unchanged. -->
+                        <div id="kx-injury" data-keyed class="pdf-card shadow-sm"><div class="section-head">Primary Injury</div>
+                            <div class="mb-4"><label>Primary Injury</label><div contenteditable="true" data-k="primary" data-ph="e.g. Neck and low-back strain"></div></div>
+                            <div class="mb-4"><label>Body Part(s)</label><div contenteditable="true" data-k="parts" data-ph="e.g. Neck, lower back, left knee"></div></div>
+                            <div class="mb-4"><label>Injury Type</label><select class="prof-input" data-k="type"><option value="">—</option><option>Soft tissue (sprain / strain)</option><option>Fracture</option><option>Head injury / concussion</option><option>Spine / disc</option><option>Joint / ligament / tendon tear</option><option>Laceration / bite / scarring</option><option>Burn</option><option>Multiple injuries</option><option>Wrongful death</option><option>Other</option></select></div>
+                            <div class="mb-4"><label>Surgery</label><select class="prof-input" data-k="surgery"><option value="">—</option><option>No</option><option>Recommended</option><option>Scheduled</option><option>Completed</option></select></div>
+                            <div class="mb-4"><label>Prior Injury to Same Area</label><div contenteditable="true" data-k="prior" data-ph="Any earlier injury or treatment to the same body part"></div></div>
+                            <div><label>Diagnosis / Details</label><div contenteditable="true" data-k="details" data-ph="Diagnosis, imaging, restrictions, future care..." style="min-height:90px"></div></div>
+                        </div>
                     </div>
                     <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div></div>
                 </div>
