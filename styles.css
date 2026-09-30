@@ -182,19 +182,20 @@
     #kf-incident-location br { display: none; }
 
     /* 3. NAVIGATION */
+    /* the case file's tabs: dark, full-size labels as written, so they read at a glance */
     .tab-btn {
         cursor: pointer;
-        color: #94a3b8;
-        font-weight: 800;
-        text-transform: uppercase;
-        font-size: 10.5px;
-        letter-spacing: 0.04em;
+        color: #334155;
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.01em;
         padding: 9px 4px;
         transition: color .15s, border-color .15s;
         border-bottom: 3px solid transparent;
         white-space: nowrap;
     }
-    .active-tab { border-bottom: 3px solid var(--orange) !important; color: var(--orange) !important; }
+    .tab-btn:hover { color: #0f172a; border-bottom-color: #cbd5e1; }
+    .active-tab { border-bottom: 3px solid var(--orange) !important; color: var(--orange) !important; font-weight: 700; }
     .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 220px; position: relative; z-index: 1; opacity: 0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease; }
     .tab-pane.active { opacity: 1; transform: translateY(0); }
 
