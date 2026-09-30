@@ -6,7 +6,7 @@
 //   - a phase, case type, lien type or facility specialty isn't one the CMS
 //     editor offers (it would load blank);
 //   - a drill call points at a case that doesn't exist, has an unknown auth
-//     code, or an answer index outside its options;
+//     code, an answer index outside its options, or no caller voice ('f'/'m');
 //   - a caller the key says is verified gave details that don't match the file
 //     (or a "not verified" caller's details all match);
 //   - two files with the same client name have the same date of loss AND date of
@@ -92,6 +92,7 @@ for (const d of DRILL_CALLS) {
     if (!Array.isArray(d.actions) || d.actions.length !== 4) bad(`${where}: needs exactly 4 actions`);
     if (!(d.answer >= 0 && d.answer < (d.actions || []).length)) bad(`${where}: answer index ${d.answer} is out of range`);
     if (!d.opening || !d.why) bad(`${where}: needs an opening line and a why`);
+    if (!['f', 'm'].includes(d.voice)) bad(`${where}: voice must be 'f' or 'm' (the caller's voice on a live call)`);
     const c = MOCK_CASES.find(x => x.id === d.mock);
     for (const quoted of String(d.opening || '').match(/LSH-\d{4}-[A-Z0-9]{3,4}-\d{6}/g) || []) {
         if (!c || quoted !== c.caseNumber) bad(`${where}: the caller quotes case number ${quoted}, but ${d.mock || 'their (no) file'}'s is ${c ? c.caseNumber : 'none'}`);

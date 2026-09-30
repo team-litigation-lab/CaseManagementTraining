@@ -51,6 +51,8 @@ const SAVED = [
         return j({ success: true });
     });
     await page.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'ci', fullName: 'CI Trainee', batchId: 'B1', userType: 'Trainee' })));
+    // the drill as text (live voice calls are tested in livecall.cjs)
+    await page.addInitScript(() => localStorage.setItem('LSH_FDD_LIVE_V1', 'off'));
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
 
