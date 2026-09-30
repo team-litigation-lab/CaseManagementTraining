@@ -103,11 +103,11 @@
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const findCase = (id) => (window.MOCK_CASES || []).find(c => c.id === String(id || '').toUpperCase());
-    // Everything a front-desk caller might give you: names (client, contacts, adjusters,
-    // other drivers), phone numbers, email, DOB, address, claim/policy/file numbers,
+    // Everything a front-desk caller might give you: our case number, names (client, contacts,
+    // adjusters, other drivers), phone numbers, email, DOB, address, claim/policy/file numbers,
     // report numbers, plates, and the narrative. Digits-only matching for numbers.
     const searchText = (c) => {
-        const bits = [c.id, c.client.name, c.client.phone, c.client.email, c.client.dob, c.client.address, c.dateOfLoss,
+        const bits = [c.id, c.caseNumber, c.client.name, c.client.phone, c.client.email, c.client.dob, c.client.address, c.dateOfLoss,
             c.client.emergency && c.client.emergency.name, c.client.emergency && c.client.emergency.phone,
             c.caseType, c.caseTypeOther, c.phase, c.attorney, c.caseManager, c.narrative,
             c.police && c.police.number];
@@ -119,6 +119,8 @@
         return bits.filter(Boolean).join(' | ');
     };
     const _idx = {};
+    // Numbers match on their digits, so a case number works however it's typed
+    // ("LSH-2026-MVA-901379", "lsh 2026 mva 901379", "MVA901379", "901379").
     function mockMatches(c, query) {
         const q = norm(query); if (!q) return true;
         const text = _idx[c.id] || (_idx[c.id] = searchText(c));
@@ -280,7 +282,7 @@
             <div class="id">${c.id}</div>
             <div><div class="nm">${esc(c.client.name)}</div><div class="sm">${esc(c.summary)}</div>
                 <div class="pills">${c.programs.map(p => `<span>${esc(programLabel(p))}</span>`).join('')}</div></div>
-            <div class="meta">${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}<br>DOL ${esc(c.dateOfLoss)}<br>${esc(c.level)}</div>
+            <div class="meta">${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}<br>DOL ${esc(c.dateOfLoss)}<br><span class="mono">${esc(c.caseNumber || '')}</span><br>${esc(c.level)}</div>
             <div><button onclick="openMockCase('${c.id}')">Open case</button></div>
         </div>`).join('') : '<p style="font-size:12px;color:#94a3b8">No mock cases match.</p>';
     }
@@ -678,7 +680,8 @@
         if (typeof revertOther === 'function') revertOther('main-case-type', 'main-case-other', 'main-revert');
         fillCase(c);
         mockId = c.id; mockViewOnly = true;
-        const idField = $id('case-id-field'); if (idField) idField.innerText = `${c.id} · TRAINING LIBRARY`;
+        // The file's case number, as on a real file (the banner says it's a library case).
+        const idField = $id('case-id-field'); if (idField) idField.innerText = c.caseNumber || `${c.id} · TRAINING LIBRARY`;
         setReadOnly(true);
         paintBanner();
         loadUpdates(c.id);

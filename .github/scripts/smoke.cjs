@@ -102,6 +102,13 @@ const SAVED = [
     // keyboard: Enter opens the first match (the newest James Wilson file, MC-24)
     await page.click('#cl-bar-input'); await page.fill('#cl-bar-input', 'james wilson'); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
     if (await page.evaluate(() => mockCurrentId()) !== 'MC-24') fail(`Enter in the search bar opened ${await page.evaluate(() => mockCurrentId())} instead of MC-24`);
+    // case numbers: shown in the Case ID field, and found however they're typed
+    const cn = await page.evaluate(() => MOCK_CASES.find(c => c.id === 'MC-26').caseNumber);   // one of the two Jose Hernandez files
+    for (const typed of [cn, cn.toLowerCase().replace(/-/g, ' '), cn.split('-').slice(2).join(''), cn.slice(-6)]) {
+        await page.click('#cl-bar-input'); await page.fill('#cl-bar-input', typed); await page.keyboard.press('Enter'); await page.waitForTimeout(250);
+        const got = await page.evaluate(() => ({ id: mockCurrentId(), field: document.getElementById('case-id-field').innerText.trim() }));
+        if (got.id !== 'MC-26' || got.field !== cn) fail(`searching the case number as "${typed}" opened ${got.id} (Case ID field "${got.field}") instead of MC-26 (${cn})`);
+    }
     // the Case Library window (sidebar) still searches, filters and warns
     await page.click('#sidebar-actions button:has-text("Open Case Library")');
     await page.fill('#cl-search', 'wilson');
