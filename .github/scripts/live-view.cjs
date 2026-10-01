@@ -92,8 +92,10 @@ const failures = []; const fail = (m) => failures.push(m);
     await new Promise(res => server.listen(0, res));
     const base = `http://localhost:${server.address().port}/`;
     const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+    const beats = {};   // heartbeats sent, by cookie
     const bridge = (c) => async (route) => {
         const req = route.request(), u = new URL(req.url()), m = req.method();
+        if (u.pathname === '/api/heartbeat' && m === 'POST') beats[c] = (beats[c] || 0) + 1;
         const send = async (resp) => route.fulfill({ status: resp.status, contentType: 'application/json', body: await resp.text() });
         const real = new Request('http://x' + u.pathname + u.search, { method: m, headers: { Cookie: c }, body: m === 'POST' ? req.postData() : undefined });
         if (u.pathname === '/api/heartbeat') return send(m === 'POST' ? await hbApi.onRequestPost({ request: real, env }) : await hbApi.onRequestGet({ request: real, env }));
@@ -127,21 +129,29 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!typed) fail('found no Profile field to type in');
     else { await trainee.click('[data-lv-field]'); await trainee.keyboard.type('Rear-ended at a red light <img src=x onerror="window.__xss=1">'); }
     await trainee.click('#tab-medical');
+    // a heartbeat every 30 s: the two as the page opens (is the session alive? then the first beat), and no more yet (they were every 2 s)
+    if (!(beats[tia] <= 2)) fail(`the trainee's page sent ${beats[tia]} heartbeats in its first seconds (expected 2 at most: one every 30 s)`);
     const admin = await open(ann, { username: 'trainer-ann', fullName: 'Ann Trainer', batchId: 'B300926', userType: 'Admin' });
     await admin.evaluate(() => { openAdminDashboard(); showAdminDashTab('monitoring'); });
     await admin.waitForSelector('#monitoring-online-list .reg-row[data-username="tia"] button:has-text("Watch live")', { timeout: 6000 }).catch(() => fail('Monitoring has no 👁 Watch live for the online trainee'));
     if (await admin.locator('#monitoring-online-list .reg-row[data-username="trainer-ann"] button:has-text("Watch live")').count()) fail('an Admin can be watched live');
     await admin.click('#monitoring-online-list .reg-row[data-username="tia"] button:has-text("Watch live")');
+    await admin.waitForSelector('#live-view-modal.open', { timeout: 4000 }).catch(() => fail('👁 Watch live didn\'t open the live view'));
+    await admin.waitForTimeout(500);
+    // the trainee's next heartbeat (every 30 s; sent now so the test needn't wait) learns they're watched: then every 3 s
+    await trainee.evaluate(() => sendHeartbeat());
     await admin.waitForFunction(() => /Maria Live/.test((document.getElementById('lv-now') || {}).textContent || '') && /Treatment/.test(document.getElementById('lv-now').textContent), null, { timeout: 8000 })
         .catch(async () => fail(`the live view doesn't show where the trainee is: ${await admin.textContent('#lv-now').catch(() => '')}`));
     if (await admin.isVisible('#monitor-case-modal.open')) fail('👁 Watch live also opened "View Latest Saved"');
-    await admin.waitForFunction(() => /Rear-ended at a red light/.test((document.getElementById('lv-case') || {}).textContent || ''), null, { timeout: 9000 })
+    await admin.waitForFunction(() => /Rear-ended at a red light/.test((document.getElementById('lv-case') || {}).textContent || ''), null, { timeout: 12000 })
         .catch(async () => fail(`the live view doesn't show what the trainee typed: ${(await admin.textContent('#lv-case').catch(() => '')).slice(0, 300)}`));
     const shown = await admin.evaluate(() => ({ text: document.getElementById('lv-case').textContent, img: !!document.querySelector('#lv-case img'), xss: !!window.__xss, client: document.getElementById('lv-case').querySelector('.lv-headgrid').textContent }));
     if (shown.img || shown.xss || !/<img src=x/.test(shown.text)) fail(`what the trainee typed wasn't shown as plain text: ${JSON.stringify({ img: shown.img, xss: shown.xss })}`);
     if (!/Maria Live/.test(shown.client) || /Rear-ended/.test(shown.client) || !/Treatment/.test(shown.client)) fail(`the live view's case header is wrong: ${shown.client}`);
     if (typed && !new RegExp(typed.slice(0, 12), 'i').test(shown.text)) fail(`the section the trainee typed in (${typed}) isn't in the live view`);
     await trainee.waitForSelector('#lv-watched-chip.on', { timeout: 6000 }).catch(() => fail('the trainee isn\'t told their trainer is viewing their screen'));
+    const watchedBeats = beats[tia]; await trainee.waitForTimeout(6500);
+    if (!(beats[tia] - watchedBeats >= 2)) fail(`while watched, the trainee's page doesn't send a heartbeat every 3 s (${beats[tia] - watchedBeats} in 6.5 s)`);
     // what they open shows up, and goes on the trail
     await trainee.evaluate(() => openNewIntake());
     await admin.waitForFunction(() => /New Intake/.test((document.getElementById('lv-now') || {}).textContent || ''), null, { timeout: 8000 })
@@ -152,7 +162,9 @@ const failures = []; const fail = (m) => failures.push(m);
     await admin.click('#live-view-modal button:has-text("Close")');
     if (await admin.isVisible('#live-view-modal.open')) fail('Close didn\'t close the live view');
     sql.prepare("UPDATE live_view SET watched_until = 0 WHERE username = 'tia'").run();   // as 15 s after the last look
-    await trainee.waitForSelector('#lv-watched-chip.on', { state: 'hidden', timeout: 6000 }).catch(() => fail('the trainee is still told they\'re watched after the trainer stopped'));
+    await trainee.waitForSelector('#lv-watched-chip.on', { state: 'hidden', timeout: 8000 }).catch(() => fail('the trainee is still told they\'re watched after the trainer stopped'));
+    const unwatched = beats[tia]; await trainee.waitForTimeout(7000);
+    if (beats[tia] - unwatched > 1) fail(`after the watch ended, the trainee's page still sends a heartbeat every 3 s (${beats[tia] - unwatched} in 7 s)`);
     if (process.env.SHOTS) { await admin.evaluate(() => openLiveView('tia')); await admin.waitForTimeout(2500); await admin.screenshot({ path: path.join(process.env.SHOTS, 'live-view.png') }); }
 
     await browser.close(); server.close();

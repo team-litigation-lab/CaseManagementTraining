@@ -1,7 +1,8 @@
 /* =========================================================
    LSH CMS — LIVE VIEW (an Admin watches a trainee's screen as they work)
    ---------------------------------------------------------
-   Trainee's page: every heartbeat (app.js, every 2 s) says where it is:
+   Trainee's page: every heartbeat (app.js: every 30 s, every 3 s while
+   watched) says where it is:
    the screen, the open case, the tab and any open panel (lshLiveReport).
    While an Admin is watching, the heartbeat's answer says so
    (lshLiveWatched): the page then also sends a snapshot of the case as it
@@ -9,7 +10,7 @@
    sees "👁 Your trainer is viewing your screen".
 
    Admin: Master Control → Monitoring → 👁 Watch live on an online trainee
-   (openLiveView). The window reads /api/live-view every 2 s and shows
+   (openLiveView). The window reads /api/live-view every 3 s and shows
    where they are now, the trail of where they've been, and their case as
    it is on their screen. Server side: functions/_liveview.js.
 
@@ -23,7 +24,7 @@
     const $id = (id) => document.getElementById(id);
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const txt = (el) => el ? String(el.textContent || '').replace(/\s+/g, ' ').trim() : '';
-    const SNAP_EVERY_MS = 3000, POLL_MS = 2000;
+    const SNAP_EVERY_MS = 3000, POLL_MS = 3000;
 
     const css = document.createElement('style');
     css.textContent = `
@@ -122,12 +123,12 @@
         document.body.insertAdjacentHTML('beforeend', `
             <div class="modal-overlay no-print" id="live-view-modal" style="z-index:2960;" role="dialog" aria-label="Live view">
                 <div class="modal-box wide lv-box">
-                    <div class="lv-head"><div><h2 class="serif" id="lv-title">Live view</h2><div class="sub mono" id="lv-sub">Their screen, as they work · updates every 2 seconds</div></div>
+                    <div class="lv-head"><div><h2 class="serif" id="lv-title">Live view</h2><div class="sub mono" id="lv-sub">Their screen, as they work · updates every 3 seconds</div></div>
                         <button class="btn-ghost" onclick="closeLiveView()">Close</button></div>
                     <div class="lv-now" id="lv-now"><span class="lv-wait">Connecting…</span></div>
                     <div class="lv-grid">
                         <div class="lv-trail"><h4>Where they've been</h4><ol id="lv-trail"></ol></div>
-                        <div class="lv-case"><h4>Their case, as on their screen <span id="lv-snap-age"></span></h4><div id="lv-case"><p class="lv-wait">Waiting for their screen… it shows within a few seconds while they're online.</p></div></div>
+                        <div class="lv-case"><h4>Their case, as on their screen <span id="lv-snap-age"></span></h4><div id="lv-case"><p class="lv-wait">Waiting for their screen… it shows within 30 seconds while they're online.</p></div></div>
                     </div>
                 </div>
             </div>`);
@@ -171,7 +172,7 @@
         if (!W) return;
         W.data = d;
         $id('lv-title').textContent = `👁 ${d.fullName || d.username}`;
-        $id('lv-sub').textContent = `@${d.username} · their screen, as they work · updates every 2 seconds`;
+        $id('lv-sub').textContent = `@${d.username} · their screen, as they work · updates every 3 seconds`;
         paintNow(d); paintTrail(d);
         if (d.snapshot && d.snapshotAt !== W.snapAt) { W.snapAt = d.snapshotAt; $id('lv-case').innerHTML = caseHTML(d.snapshot); }
         $id('lv-snap-age').textContent = d.snapshotAt ? `· updated ${ago(d.snapshotAt, d.serverNow)}` : '';
@@ -194,7 +195,7 @@
         $id('lv-title').textContent = 'Live view';
         $id('lv-now').innerHTML = '<span class="lv-wait" style="color:#cbd5e1">Connecting…</span>';
         $id('lv-trail').innerHTML = '';
-        $id('lv-case').innerHTML = '<p class="lv-wait">Waiting for their screen… it shows within a few seconds while they\'re online.</p>';
+        $id('lv-case').innerHTML = '<p class="lv-wait">Waiting for their screen… it shows within 30 seconds while they\'re online.</p>';
         $id('lv-snap-age').textContent = '';
         m.classList.add('open');
         W = { username: String(username), timer: null, snapAt: null, data: null };

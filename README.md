@@ -408,19 +408,51 @@ Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#captur
 
 ## 👁 Live view (watch a trainee's screen as they work)
 
-**Master Control → Monitoring → 👁 Watch live** on any trainee who is online opens their live view. It updates every 2 seconds and shows:
+**Master Control → Monitoring → 👁 Watch live** on any trainee who is online opens their live view. It updates every 3 seconds and shows:
 - **Now:** where they are: the screen (case workspace, My Dashboard, sign-in), the case (client and Case ID) and the tab, plus anything open over it (📝 New Intake and the step they're on, 📞 Reception Simulator and the call, 🔍 Case Library, another window). It also says when the CMS tab is in the background.
 - **Where they've been:** a trail of each change, newest first, with the time (the last 40 steps).
 - **Their case, as on their screen:** the case header (client, Case ID, status, type, DOL, SOL, attorney, case manager, the tab they're on) and every filled-in section, refreshed as they type (within a few seconds).
 
 How it works:
-- The trainee's page reports where it is with each heartbeat (every 2 seconds).
-- Only while a trainer is watching does it also send the case itself, at most every 3 seconds and only when something changed. Watching ends 15 seconds after the trainer closes the window.
+- The trainee's page reports where it is with each heartbeat: every 30 seconds, and every 3 seconds while a trainer is watching. The trainee's page learns it's being watched at its next heartbeat, so the live view can take up to 30 seconds to start.
+- Only while a trainer is watching does it also send the case itself, at most every 3 seconds and only when something changed. Watching ends 15 seconds after the trainer closes the window, and the heartbeat goes back to every 30 seconds.
 - The trainee sees **👁 Your trainer is viewing your screen** at the top right while they're watched.
 - What trainees type is shown as text, never run as HTML. The same now holds for Monitoring's "View Latest Saved" and the Case Logs views.
 - Trainers' own screens aren't watched.
 
 Code: `live-view.js`, `functions/_liveview.js` (the `live_view` table, made on first use), `/api/live-view`, and the heartbeat.
+
+## 🔄 New versions load by themselves
+
+When a new version of the site goes live, every open page loads it by itself, so nobody keeps working on old files.
+- Once a minute (every 5 minutes in a background tab, and right away when the tab comes back into view), the page looks at its own files (the page and every local script and stylesheet) and compares them with what it loaded. A change is confirmed by a second look.
+- A note at the bottom says **🔄 A new version of the CMS is ready**, with **Update now**.
+- It reloads at a quiet moment: right away in a background tab, otherwise after a minute with no typing, clicking or scrolling. It waits while a window, the Reception Simulator or a call is open, while a Training Library case has unsaved edits, and while there's typing in a field that isn't part of the case (sign-in, a calendar entry).
+- The case in the editor is kept, and the page comes back on the same tab (or Master Control tab, or My Dashboard), with "Updated to the latest version of the CMS."
+- Pages opened before this feature went live don't have it: they need one manual refresh (Ctrl+Shift+R). After that they update themselves.
+
+These checks fetch static files, which Cloudflare serves free; they don't count toward the daily Functions requests.
+
+Code: `cms-update.js`.
+
+## 📉 Staying under Cloudflare's daily request limit
+
+On Cloudflare's free plan, Pages Functions (everything under `/api/`) get **100,000 requests a day for the whole account**, previews included. When they run out, Cloudflare serves the site as static files only until 00:00 UTC: pages load, but nothing that needs the server works. Signing in fails (`/api/login` answers 405 with an empty body; the sign-in screen says "The CMS server isn't answering right now"; before, it said "Network error. Failed to hit validation server."), and `/api/state` returns the page's HTML instead of JSON. Every way of signing in needs the server, so none works until it's back. The Workers Paid plan ($5 a month) raises the limit to 10 million requests a month. Usage is under **Workers & Pages** in the Cloudflare dashboard.
+
+To keep well under it:
+- `_routes.json` sends only `/api/*` to Functions. The page, scripts, stylesheets and images are served as static files, which are free and don't count. Before this, the root `_middleware.js` made every file request run a Function.
+- An open page asks the server only as often as it needs to:
+
+  | What | How often (tab in view) | Tab in the background |
+  |---|---|---|
+  | Heartbeat (keeps the session alive; the server allows 120 s between them) | every 30 s (every 3 s while a trainer watches it live) | every 45 s |
+  | Site state (announcements, alerts, pings, pause and lock) | every 15 s | every 30 s (a ping stays up for a minute) |
+  | The case list | every minute, and after each save | paused; refreshed when the tab comes back |
+  | Timer | every minute | paused |
+  | Autosave (only with a case open) | every minute | every minute |
+
+  These used to be every 2 s (heartbeat), 4 s (site state) and 15 s (case list), about 50 requests a minute for each open page. Now it's about 8.
+- Monitoring's **Online now** counts anyone with a heartbeat in the last 90 seconds.
 
 ## 🗑 Deleting trainees' cases (Master Control → Case Logs)
 
@@ -646,7 +678,15 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - only Admins can read the live view, and reading it marks the trainee as watched;
   - Admins aren't recorded, and a watch ends when it isn't renewed;
   - in the browser: 👁 Watch live in Monitoring shows the case and tab, what the trainee typed (as plain text, never run), the New Intake form and the trail;
-  - the trainee is told while they're watched, and not after.
+  - the trainee is told while they're watched, and not after;
+  - the trainee's page sends a heartbeat every 30 s (not every 2 s), every 3 s while watched, and every 30 s again once the watch ends.
+- **New versions** (`.github/scripts/cms-update.cjs`, in the same job): a test server that answers like Cloudflare Pages (scripts and stylesheets with an ETag, the page without one), with "deploying" a new file. It checks that:
+  - the page watches its own scripts, stylesheets and page, and nothing from a CDN; with nothing new deployed, nothing happens;
+  - a new `app.js`, `styles.css` or `index.html` is noticed, and the note says a new version is ready;
+  - it doesn't reload while a window is open or while the trainee is typing, then reloads by itself at a quiet moment;
+  - after the reload the trainee's case and tab are still there, the note is gone, and they're told the page was updated;
+  - **Update now** reloads right away, even over an open window;
+  - an Admin comes back to Master Control → Monitoring.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
   - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;
@@ -658,6 +698,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - with a name, each trainer gets their own Admin account on first sign-in (the same name, the same account; suspended and revoked trainers are refused, and a revoked one isn't made again), and `trainer-` usernames can't be registered;
   - `MASTER_ADMIN_PASSWORD` and the older `ADMIN_PORTAL_PASSWORD` both work;
   - a wrong or unset admin password, and a name without a last name, are refused;
+  - when the server's Functions aren't running (`/api/login` answers an empty 405), the sign-in screen says the server isn't answering, not "Network error";
   - trainees sign in with their username and Batch ID (any capitals or spacing); a wrong or old Batch ID is refused; an older account's password still works; an Admin is never signed in by Batch ID;
   - a session stays alive with a heartbeat up to 2 minutes old (a background tab, e.g. while on a Google Meet tab) and ends after that;
   - `/api/state` lists the last minute's pings with their age measured on the server;

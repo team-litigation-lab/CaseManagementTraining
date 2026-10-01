@@ -809,6 +809,7 @@
         paintBanner();
     }
     const editDirty = () => !!(mockId && mockEditing && editTouched);
+    window.mockEditDirty = editDirty;   // cms-update.js waits while there are unsaved changes
     window.addEventListener('beforeunload', (e) => { if (editDirty()) { e.preventDefault(); e.returnValue = ''; } });
     // Anything that's about to replace the case in the editor asks first when an Admin has unsaved changes to it.
     window.mockConfirmLeave = function () {
