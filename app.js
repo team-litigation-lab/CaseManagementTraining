@@ -181,6 +181,7 @@
             <option>Lead Attorney</option>
             <option>Associate Attorney</option>
             <option>Paralegal</option>
+            <option>Litigation Assistant</option>
             <option>Case Manager</option>
             <option>Demand Specialist</option>
             <option>Records Specialist</option>
@@ -188,6 +189,7 @@
             <option>Claims Specialist</option>
             <option>Lien Negotiator</option>
             <option>Closer</option>
+            <option>Accounting Department</option>
             <option>Intake Specialist</option>
             <option>Receptionist / Front Desk</option>
         `;

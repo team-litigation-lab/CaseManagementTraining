@@ -119,7 +119,7 @@ const failures = []; const fail = (m) => failures.push(m);
     for (const [old, now] of Object.entries(legacyWant)) if (legacy[old][0] !== now || legacy[old][1] !== now.toUpperCase()) fail(`a case saved as "${old}" opens as ${JSON.stringify(legacy[old])}, expected ${now}`);
     // staff roles on Notes and Tasks rows
     const staff = await page.evaluate(() => { addRow('note-body'); const tr = document.getElementById('note-body').lastElementChild; const o = [...tr.querySelector('select').options].map(x => x.value); tr.remove(); return o; });
-    ['PD Specialist', 'Claims Specialist', 'Lien Negotiator', 'Closer'].forEach(o => { if (!staff.includes(o)) fail(`staff role "${o}" missing from Notes and Tasks (${staff.join(', ')})`); });
+    ['Litigation Assistant', 'PD Specialist', 'Claims Specialist', 'Lien Negotiator', 'Closer', 'Accounting Department'].forEach(o => { if (!staff.includes(o)) fail(`staff role "${o}" missing from Notes and Tasks (${staff.join(', ')})`); });
     if (!opts.intake) fail('the Doc Hub has no Intake category');
     if (!opts.heads.includes('Other Treatment Notes') || opts.heads.includes('Treatment Notes')) fail(`the Treatment tab's notes aren't "Other Treatment Notes" (${opts.heads.join(' | ')})`);
     await page.evaluate(() => { blankCaseEditorContent(); });

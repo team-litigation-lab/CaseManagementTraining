@@ -277,6 +277,7 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
   - Clearing the editor for a new case resets every dropdown to its default.
 - **Treatment tab:** its notes are now **Other Treatment Notes**, so they aren't confused with the Notes tab.
 - **Notes tab:** the card is **Case Notes** (it was "Case Chronology", easy to confuse with the Treatment tab's Medical Chronology), and its button is **+ Add Case Note**.
+- **Staff roles** (the dropdown on Notes, Tasks and Expenses rows): adds **Litigation Assistant** (after Paralegal) and **Accounting Department** (after Closer).
 - **Medical Chronology:**
   - Drag a row by its left edge (⠿) to move it.
   - **⇅ Sort by Date** orders the rows by their first date of service.
