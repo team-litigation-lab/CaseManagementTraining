@@ -100,3 +100,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/reception-mic.cjs
+      - name: Live view (an Admin watches a trainee's screen)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/live-view.cjs

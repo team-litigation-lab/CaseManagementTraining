@@ -406,6 +406,22 @@ Trainees see only the first three groups, so their sidebar is the program, their
 
 Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#capture-area`, so it's never part of a saved case.
 
+## 👁 Live view (watch a trainee's screen as they work)
+
+**Master Control → Monitoring → 👁 Watch live** on any trainee who is online opens their live view. It updates every 2 seconds and shows:
+- **Now:** where they are: the screen (case workspace, My Dashboard, sign-in), the case (client and Case ID) and the tab, plus anything open over it (📝 New Intake and the step they're on, 📞 Reception Simulator and the call, 🔍 Case Library, another window). It also says when the CMS tab is in the background.
+- **Where they've been:** a trail of each change, newest first, with the time (the last 40 steps).
+- **Their case, as on their screen:** the case header (client, Case ID, status, type, DOL, SOL, attorney, case manager, the tab they're on) and every filled-in section, refreshed as they type (within a few seconds).
+
+How it works:
+- The trainee's page reports where it is with each heartbeat (every 2 seconds).
+- Only while a trainer is watching does it also send the case itself, at most every 3 seconds and only when something changed. Watching ends 15 seconds after the trainer closes the window.
+- The trainee sees **👁 Your trainer is viewing your screen** at the top right while they're watched.
+- What trainees type is shown as text, never run as HTML. The same now holds for Monitoring's "View Latest Saved" and the Case Logs views.
+- Trainers' own screens aren't watched.
+
+Code: `live-view.js`, `functions/_liveview.js` (the `live_view` table, made on first use), `/api/live-view`, and the heartbeat.
+
 ## 🗑 Deleting trainees' cases (Master Control → Case Logs)
 
 **Master Control → Case Logs** lists every case in the repository, drafts included, newest first.
@@ -624,6 +640,13 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - an unknown name is sent to Register, with the name and batch filled in;
   - name sign-in is refused without a platform;
   - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
+- **Live view** (`.github/scripts/live-view.cjs`, in the same job): the real heartbeat and `/api/live-view` code on SQLite, with a trainee's page and an Admin's page in a browser. It checks:
+  - where a trainee is, and a new step on the trail only when it changes;
+  - a snapshot is kept only while an Admin watches, and an oversized one is skipped;
+  - only Admins can read the live view, and reading it marks the trainee as watched;
+  - Admins aren't recorded, and a watch ends when it isn't renewed;
+  - in the browser: 👁 Watch live in Monitoring shows the case and tab, what the trainee typed (as plain text, never run), the New Intake form and the trail;
+  - the trainee is told while they're watched, and not after.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
   - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;

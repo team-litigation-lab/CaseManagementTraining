@@ -720,6 +720,14 @@
         // downloadPDF()'s card walking, reused here for the Monitoring
         // "view latest saved case" preview so nothing needs a second parallel
         // rendering implementation.
+        // An empty copy of the case editor in an inert document, to lay out someone else's case in: nothing
+        // in it loads or runs (an <img onerror> typed into a field stays text). Read back with extractReadableSections.
+        function inertCaseCopy() {
+            const doc = document.implementation.createHTMLDocument('case');
+            const root = doc.importNode(_emptyCaptureAreaTemplate, true);
+            doc.body.appendChild(root);
+            return root;
+        }
         function extractReadableSections(root) {
             let html = '';
             root.querySelectorAll('.pdf-card').forEach(card => {
@@ -732,12 +740,13 @@
                         let labelText = 'Detail';
                         if (input.previousElementSibling && input.previousElementSibling.tagName === 'LABEL') labelText = input.previousElementSibling.innerText;
                         else if (input.closest('div') && input.closest('div').querySelector('label')) labelText = input.closest('div').querySelector('label').innerText;
-                        sectionContent += `<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;">${labelText}</div><div style="font-size:12px;font-weight:600;color:#0f2148;">${val}</div></div>`;
+                        // escaped: these views show what someone else typed (Monitoring, Case Logs, the live view)
+                        sectionContent += `<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;">${escapeHtmlAttr(labelText)}</div><div style="font-size:12px;font-weight:600;color:#0f2148;white-space:pre-wrap;">${escapeHtmlAttr(val)}</div></div>`;
                     }
                 });
                 if (sectionContent) {
                     html += `<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
-                        <div style="background:#0f2148;color:#f97316;font-size:10px;font-weight:800;padding:7px 12px;text-transform:uppercase;">${header.innerText}</div>
+                        <div style="background:#0f2148;color:#f97316;font-size:10px;font-weight:800;padding:7px 12px;text-transform:uppercase;">${escapeHtmlAttr(header.innerText)}</div>
                         <div style="padding:12px 14px;">${sectionContent}</div>
                     </div>`;
                 }
@@ -2415,7 +2424,9 @@
                 return '<div class="reg-row" style="cursor:pointer;" data-username="' + escapeHtmlAttr(u.username) + '" onclick="openMonitorCase(this.dataset.username)"><div class="reg-info">' +
                     '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + escapeHtmlAttr(u.full_name || u.username) + '</b>' +
                     '<div class="reg-meta">' + escapeHtmlAttr(u.user_type || '') + ' \u00B7 @' + escapeHtmlAttr(u.username) + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + new Date(u.last_seen).toLocaleString()) + (u.current_case ? (' \u00B7 Working on: ' + escapeHtmlAttr(u.current_case)) : '') + '</div>' +
-                    '</div><div style="font-size:11px;color:#64748b;">View Latest Saved \u2192</div></div>';
+                    '</div><div style="display:flex;align-items:center;gap:10px;">' +
+                    ((u._online && (u.user_type || 'Trainee') !== 'Admin') ? '<button class="mini-btn live-watch" onclick="event.stopPropagation(); openLiveView(this.closest(\'.reg-row\').dataset.username)">\u{1F441} Watch live</button>' : '') +
+                    '<span style="font-size:11px;color:#64748b;">View Latest Saved \u2192</span></div></div>';
             }
 
             const sorted = list.slice().sort((a, b) => (b._online - a._online) || (new Date(b.last_seen) - new Date(a.last_seen)));
@@ -2576,7 +2587,7 @@
             document.getElementById(elIds.sub).innerText = meta.sub;
             document.getElementById(elIds.meta).innerHTML = meta.metaHtml;
             if (_emptyCaptureAreaTemplate) {
-                const offscreen = _emptyCaptureAreaTemplate.cloneNode(true);
+                const offscreen = inertCaseCopy();
                 applyCaseContentToDOM(content, offscreen);
                 document.getElementById(elIds.body).innerHTML = extractReadableSections(offscreen);
             } else {
@@ -2601,7 +2612,7 @@
                     {
                         title: 'Previous Version \u2014 ' + (v.clientName || 'Unnamed'),
                         sub: 'Saved by ' + (v.savedBy || '\u2014') + ' \u00B7 ' + new Date(v.savedAt).toLocaleString(),
-                        metaHtml: '<div class="reg-meta" style="margin-bottom:10px;">' + (v.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + v.caseId)) + ' \u00B7 Phase: ' + (v.phase || '\u2014') + '</div>'
+                        metaHtml: '<div class="reg-meta" style="margin-bottom:10px;">' + (v.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + escapeHtmlAttr(v.caseId || ''))) + ' \u00B7 Phase: ' + escapeHtmlAttr(v.phase || '\u2014') + '</div>'
                     },
                     v.content
                 );
@@ -2628,7 +2639,7 @@
                     {
                         title: 'Full Case \u2014 ' + (c.clientName || 'Unnamed'),
                         sub: 'Current version \u00B7 last saved ' + new Date(c.updatedAt).toLocaleString(),
-                        metaHtml: '<div class="reg-meta" style="margin-bottom:10px;">' + (c.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + c.caseId)) + ' \u00B7 Phase: ' + (c.phase || '\u2014') + ' \u00B7 By ' + (c.submittedBy || c.ownerUsername) + '</div>'
+                        metaHtml: '<div class="reg-meta" style="margin-bottom:10px;">' + (c.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + escapeHtmlAttr(c.caseId || ''))) + ' \u00B7 Phase: ' + escapeHtmlAttr(c.phase || '\u2014') + ' \u00B7 By ' + escapeHtmlAttr(c.submittedBy || c.ownerUsername || '') + '</div>'
                     },
                     c.content
                 );
@@ -2658,11 +2669,11 @@
                 }
                 const c = data.case;
                 document.getElementById('monitor-case-meta').innerHTML =
-                    '<div class="reg-meta" style="margin-bottom:10px;">Client: <b>' + (c.clientName || 'Unnamed') + '</b> &middot; Phase: ' + (c.phase || '\u2014') +
-                    ' &middot; ' + (c.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + c.caseId)) +
+                    '<div class="reg-meta" style="margin-bottom:10px;">Client: <b>' + escapeHtmlAttr(c.clientName || 'Unnamed') + '</b> &middot; Phase: ' + escapeHtmlAttr(c.phase || '\u2014') +
+                    ' &middot; ' + (c.isDraft ? 'DRAFT (no Case ID yet)' : ('Case ID ' + escapeHtmlAttr(c.caseId || ''))) +
                     ' &middot; Last saved ' + new Date(c.updatedAt).toLocaleString() + '</div>';
                 if (_emptyCaptureAreaTemplate) {
-                    const offscreen = _emptyCaptureAreaTemplate.cloneNode(true);
+                    const offscreen = inertCaseCopy();
                     applyCaseContentToDOM(c.content, offscreen);
                     document.getElementById('monitor-case-body').innerHTML = extractReadableSections(offscreen);
                 } else {
@@ -2683,16 +2694,17 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
+                body: JSON.stringify(Object.assign({
                     fullName: session.fullName,
                     currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
-                })
+                }, window.lshLiveReport ? window.lshLiveReport() : {}))   // live view (live-view.js): where the trainee is
             })
             .then(r => {
                 if (r.status === 401) {
                     handleSessionExpired('Your session has expired. Please log in again.');
                     return false;
                 }
+                if (r.ok && window.lshLiveWatched) r.clone().json().then(d => window.lshLiveWatched(!!(d && d.watched))).catch(() => {});
                 return r.ok;
             })
             .catch(() => false);
