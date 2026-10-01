@@ -190,8 +190,11 @@
                     </div>
                     <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div></div>
                 </div>
-                <div class="mt-6">
-                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase mb-0">Passenger Records</label><button onclick="addPassenger()" class="add-btn no-print">+ Add Passenger</button></div>
+                <!-- Passenger Records: retired (passengers go in the Parties Involved tab). The container stays so older
+                     cases' passenger rows still load into place (saved fields are restored by position), and the block
+                     shows only when a case has some (styles.css). -->
+                <div id="legacy-passengers" class="mt-6">
+                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase mb-0">Passenger Records</label><span class="kx-hint no-print" style="margin:0;">From an older case. Add passengers in the Parties Involved tab.</span></div>
                     <div id="passenger-container" class="space-y-4"></div>
                 </div>
             </div>
