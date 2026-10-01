@@ -10,7 +10,7 @@
 //   - a name-only account made before this (guest-…) keeps working;
 //   - no registered trainee with that name: they're asked to register first.
 // Admin accounts are never reached this way (Trainee accounts only).
-import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName } from '../_utils.js';
+import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey } from '../_utils.js';
 import { GUEST_SOURCES, ensureGuestTables, cleanGuestName, cleanGuestBatch, guestUsername } from '../_guest.js';
 
 const BLOCKED = {
@@ -39,7 +39,6 @@ async function registeredByName(db, name) {
     ).all();
     return (results || []).filter(u => nameVariants(u).has(typed));
 }
-const batchKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 // A failed look-up counts against the connection (slows down guessing names).
 async function countFailure(db, request) {
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';

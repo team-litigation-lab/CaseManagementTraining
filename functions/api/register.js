@@ -1,32 +1,39 @@
-import { json, logActivity, hashPassword, isUsernameTombstoned } from '../_utils.js';
-import { isGuestUsername, isTrainerUsername } from '../_guest.js';
-const REG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,}$/;
+import { json, logActivity, isUsernameTombstoned, cleanBatchId } from '../_utils.js';
+import { isGuestUsername, isTrainerUsername, cleanGuestName, parseFullName } from '../_guest.js';
+// Trainees register with three things: their full name, their Batch ID (the batch
+// code their trainer gave them) and a username. There's no password: once an Admin
+// approves the registration, they sign in with their username and Batch ID
+// (login.js), or with just their name from a training platform (guest-login.js).
+// Accounts registered earlier with a password keep it.
+const USERNAME_RE = /^[A-Za-z0-9_]{3,30}$/;
+// Day 1 of training is the day they register: the trainee's own date (their time
+// zone) when it's within a day of the server's, otherwise the server's.
+function startDate(sent) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(sent || ''))) return today;
+    const t = new Date(sent + 'T00:00:00Z').getTime();
+    return !isNaN(t) && Math.abs(t - new Date(today + 'T00:00:00Z').getTime()) <= 86400000 ? sent : today;
+}
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
-    const { firstName, mi, lastName, suffix, email, userType, username, password, trainingStartDate } = body;
-    if (!firstName || !lastName || !email || !userType || !username || !password) {
-        return json({ success: false, error: 'Please fill out all required fields.' }, 400);
+    const rawName = String(body.fullName || '').trim();
+    const rawBatch = String(body.batchId || '').trim();
+    const username = String(body.username || '').trim();
+    if (!rawName || !rawBatch || !username) {
+        return json({ success: false, error: 'Please fill in your full name, Batch ID and username.' }, 400);
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-        return json({ success: false, error: 'Please enter a valid email address.' }, 400);
+    const name = cleanGuestName(rawName);
+    if (!name) {
+        return json({ success: false, error: 'Enter your first and last name (letters, spaces, periods, hyphens or apostrophes; up to 60 characters).' }, 400);
     }
-    if (!['Admin', 'Trainee'].includes(userType)) {
-        return json({ success: false, error: 'Invalid user type.' }, 400);
+    const batchId = cleanBatchId(rawBatch);
+    if (!batchId) {
+        return json({ success: false, error: 'Enter your Batch ID: letters, numbers, spaces or dashes, up to 40 characters.' }, 400);
     }
-    if (!REG_PASSWORD_RE.test(password)) {
-        return json({
-            success: false,
-            error: 'Password must be at least 8 characters long and contain only letters and numbers (at least one letter and one number).'
-        }, 400);
-    }
-    let normalizedTrainingStartDate = null;
-    if (userType === 'Trainee') {
-        if (!trainingStartDate || !/^\d{4}-\d{2}-\d{2}$/.test(trainingStartDate) || isNaN(new Date(trainingStartDate).getTime())) {
-            return json({ success: false, error: 'Please enter a valid start of training date.' }, 400);
-        }
-        normalizedTrainingStartDate = trainingStartDate;
+    if (!USERNAME_RE.test(username)) {
+        return json({ success: false, error: 'Usernames are 3 to 30 letters, numbers or underscores.' }, 400);
     }
     // Usernames starting "guest-" belong to trainees who sign in with just their
     // name from another training platform (guest-login.js, _guest.js).
@@ -48,11 +55,14 @@ export async function onRequestPost({ request, env }) {
     if (await isUsernameTombstoned(db, username)) {
         return json({ success: false, error: 'That username has been permanently retired and cannot be used again.' }, 409);
     }
-    const hashedPassword = await hashPassword(password);
+    const { first, mi, last, suffix } = parseFullName(name);
+    // email and password stay filled for the table: a placeholder address, and a
+    // password no sign-in accepts (as for trainers' accounts in login.js).
     await db.prepare(
         `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Pending', ?)`
-    ).bind(firstName, mi || null, lastName, suffix || null, email, userType, username, hashedPassword, normalizedTrainingStartDate).run();
-    await logActivity(db, username, null, 'register', { userType });
-    return json({ success: true });
+         VALUES (?, ?, ?, ?, ?, 'Trainee', ?, ?, ?, 'Pending', ?)`
+    ).bind(first, mi, last, suffix, `${username.toLowerCase()}@trainee.invalid`, batchId, username,
+        'disabled:' + crypto.randomUUID() + crypto.randomUUID(), startDate(body.trainingStartDate)).run();
+    await logActivity(db, username, batchId, 'register', { userType: 'Trainee' });
+    return json({ success: true, batchId });
 }

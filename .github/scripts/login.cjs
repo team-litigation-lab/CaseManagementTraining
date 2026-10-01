@@ -11,8 +11,11 @@
 // registered; a session stays alive with a heartbeat up to 2 minutes old (a
 // background tab) and ends after that; /api/state lists the last minute's pings,
 // with their age measured on the server; trainees still sign in with
-// username and password; registration offers Trainee only; the registration form
-// scrolls on a small screen; a browser tab still running the old Training
+// username and Batch ID (an older account's password still works); registration
+// asks for just the full name, Batch ID and username (no grayed-out field), keeps the
+// typed Batch ID through approval, and scrolls on a small screen; an Admin changes a
+// trainee's Batch ID in the Registrations and Users tabs (never an Admin's), and the
+// trainee signs in with the new one; a browser tab still running the old Training
 // Calendar gets told to reload. The admin password here is a test value.
 // Usage: node .github/scripts/login.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
 const { chromium } = require('playwright');
@@ -44,11 +47,14 @@ const failures = []; const fail = (m) => failures.push(m);
     const utils = await import(pathToFileURL(path.join(ROOT, 'functions/_utils.js')).href);
     const loginApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/login.js')).href);
     const registerApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/register.js')).href);
+    const statusApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/update-status.js')).href);
+    const batchApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/update-batch.js')).href);
+    const usersApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/users.js')).href);
     const stateApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/state.js')).href);
     const oldCal = await import(pathToFileURL(path.join(ROOT, 'functions/api/training-calendar.js')).href);
     const sql = new DatabaseSync(':memory:');
     sql.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT, email TEXT, user_type TEXT,
-            batch_id TEXT, username TEXT UNIQUE, password TEXT, status TEXT, training_start_date TEXT);
+            batch_id TEXT, username TEXT UNIQUE, password TEXT, status TEXT, training_start_date TEXT, created_at TEXT DEFAULT (datetime('now')));
         CREATE TABLE heartbeats (username TEXT PRIMARY KEY, full_name TEXT, batch_id TEXT, user_type TEXT, current_case TEXT, last_seen TEXT);
         CREATE TABLE activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_username TEXT, actor_batch TEXT, action TEXT, details TEXT, created_at TEXT DEFAULT (datetime('now')));
         CREATE TABLE deleted_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, user_type TEXT, batch_id TEXT, email TEXT, full_name TEXT, deleted_by TEXT, deleted_at TEXT NOT NULL);
@@ -109,8 +115,69 @@ const failures = []; const fail = (m) => failures.push(m);
     sql.prepare("INSERT INTO deleted_users (username, user_type, deleted_at) VALUES ('trainer-tom-reyes', 'Admin', datetime('now'))").run();
     r = await post({ portalMode: 'Admin', name: 'Tom Reyes', password: 'ci-master-pass' });
     if (r.status !== 403 || sql.prepare("SELECT COUNT(*) AS n FROM users WHERE username = 'trainer-tom-reyes'").get().n) fail(`a permanently revoked trainer's account was made again (${r.status})`);
-    const reg = await registerApi.onRequestPost({ request: new Request('http://x/api/register', { method: 'POST', body: JSON.stringify({ firstName: 'Sly', lastName: 'Fox', email: 's@x.io', userType: 'Trainee', username: 'trainer-sly-fox', password: 'abcd1234', trainingStartDate: '2026-09-28' }) }), env });
-    if (reg.status !== 400) fail(`a "trainer-" username could be registered (${reg.status})`);
+    // registration: full name, Batch ID and username, nothing else (no password)
+    const regApi = async (body) => { const x = await registerApi.onRequestPost({ request: new Request('http://x/api/register', { method: 'POST', body: JSON.stringify(body) }), env }); return { status: x.status, data: await x.json() }; };
+    let g = await regApi({ fullName: 'Sly Fox', batchId: 'B050225', username: 'trainer-sly-fox' });
+    if (g.status !== 400) fail(`a "trainer-" username could be registered (${g.status})`);
+    for (const [body, why] of [
+        [{ batchId: 'B050225', username: 'nobody1' }, 'no name'],
+        [{ fullName: 'Juan', batchId: 'B050225', username: 'nobody1' }, 'only a first name'],
+        [{ fullName: '<b>Juan</b> Cruz', batchId: 'B050225', username: 'nobody1' }, 'markup in the name'],
+        [{ fullName: 'Juan Cruz', username: 'nobody1' }, 'no Batch ID'],
+        [{ fullName: 'Juan Cruz', batchId: '<B05>', username: 'nobody1' }, 'symbols in the Batch ID'],
+        [{ fullName: 'Juan Cruz', batchId: 'B050225' }, 'no username'],
+        [{ fullName: 'Juan Cruz', batchId: 'B050225', username: 'jc' }, 'a 2-letter username'],
+        [{ fullName: 'Juan Cruz', batchId: 'B050225', username: 'juan cruz' }, 'a space in the username'],
+    ]) { g = await regApi(body); if (g.status !== 400) fail(`a registration with ${why} was accepted (${g.status})`); }
+    const today = new Date().toISOString().slice(0, 10);
+    g = await regApi({ fullName: '  Juan  P.  Dela Cruz ', batchId: ' b0502 2026 ', username: 'juan_dc', trainingStartDate: '2020-01-01' });
+    const juan = sql.prepare("SELECT * FROM users WHERE username = 'juan_dc'").get();
+    if (g.status !== 200 || !juan) fail(`a registration with a full name, Batch ID and username failed: ${g.status} ${JSON.stringify(g.data)}`);
+    else if (juan.first_name !== 'Juan' || juan.mi !== 'P' || juan.last_name !== 'Dela Cruz' || juan.suffix !== null || juan.batch_id !== 'B0502 2026' || juan.status !== 'Pending' || juan.user_type !== 'Trainee'
+        || !/^disabled:/.test(juan.password) || juan.email !== 'juan_dc@trainee.invalid' || juan.training_start_date !== today) fail(`the registration was saved wrong: ${JSON.stringify(juan)}`);
+    g = await regApi({ fullName: 'Ana Maria Reyes Jr.', batchId: 'B050225', username: 'ana_r', trainingStartDate: today });
+    const ana = sql.prepare("SELECT first_name, mi, last_name, suffix, training_start_date FROM users WHERE username = 'ana_r'").get();
+    if (g.status !== 200 || JSON.stringify(ana) !== JSON.stringify({ first_name: 'Ana Maria', mi: null, last_name: 'Reyes', suffix: 'Jr.', training_start_date: today })) fail(`a name with a suffix was split wrong: ${JSON.stringify(ana)}`);
+    g = await regApi({ fullName: 'Juan Other', batchId: 'B050225', username: 'juan_dc' });
+    if (g.status !== 409) fail(`a taken username could be registered again (${g.status})`);
+    // signing in: username and Batch ID, once approved; a password still works for an account that has one
+    r = await post({ username: 'juan_dc', batchId: 'B0502 2026', portalMode: 'Trainee' });
+    if (r.status !== 403 || !/pending/i.test(r.data.error || '')) fail(`a registration waiting for approval wasn't told so (${r.status} ${r.data.error})`);
+    const adminCookie = (await post({ portalMode: 'Admin', password: 'ci-master-pass' })).cookie.match(/lsh_session=[^;]+/)[0];
+    const asAdmin = async (api, url, body, cookie = adminCookie) => { const x = await api.onRequestPost({ request: new Request('http://x' + url, { method: 'POST', headers: cookie ? { Cookie: cookie } : {}, body: JSON.stringify(body) }), env }); return { status: x.status, data: await x.json() }; };
+    let a = await asAdmin(statusApi, '/api/update-status', { userId: juan.id, newStatus: 'Approved' });
+    if (a.status !== 200 || a.data.batchId !== 'B0502 2026' || sql.prepare("SELECT value FROM batch_id_counter WHERE user_type = 'Trainee'").get().value !== 0) fail(`approving kept no typed Batch ID: ${JSON.stringify(a.data)}`);
+    r = await post({ username: 'juan_dc', batchId: 'b05022026', portalMode: 'Trainee' });
+    if (r.status !== 200 || r.data.user.batch_id !== 'B0502 2026' || !/lsh_session=/.test(r.cookie)) fail(`an approved trainee couldn't sign in with username and Batch ID (any capitals or spacing): ${r.status} ${JSON.stringify(r.data)}`);
+    const juanCookie = r.cookie.match(/lsh_session=[^;]+/)[0];
+    r = await post({ username: 'juan_dc', batchId: 'B05022027', portalMode: 'Trainee' });
+    if (r.status !== 401 || !/Batch ID/.test(r.data.error || '')) fail(`a wrong Batch ID signed in, or the message doesn't say Batch ID (${r.status} ${r.data.error})`);
+    r = await post({ username: 'juan_dc', password: juan.password, portalMode: 'Trainee' });
+    if (r.status === 200) fail('a registered trainee could be reached with the placeholder password');
+    r = await post({ username: 'tia', batchId: 'trainee123', portalMode: 'Trainee' });
+    if (r.status !== 200) fail(`a trainee who registered with a password can't use it any more (${r.status})`);
+    r = await post({ username: 'tia', batchId: 'b1', portalMode: 'Trainee' });
+    if (r.status !== 200) fail(`a trainee who registered with a password can't sign in with their Batch ID (${r.status})`);
+    r = await post({ username: 'trainer-maria-lopez', batchId: maria.batch_id, portalMode: 'Trainee' });
+    const r2 = await post({ username: 'trainer-maria-lopez', batchId: maria.batch_id });
+    if (r.status === 200 || r2.status === 200) fail('an Admin account could be signed in with its Batch ID');
+    // an Admin changes a trainee's Batch ID; the trainee signs in with the new one
+    a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: 'B2' }, juanCookie);
+    if (a.status !== 403) fail(`a trainee could change a Batch ID (${a.status})`);
+    a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: 'B2' }, '');
+    if (a.status !== 401) fail(`a Batch ID could be changed without signing in (${a.status})`);
+    a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: 'B2;drop' });
+    if (a.status !== 400) fail(`a Batch ID with symbols was accepted (${a.status})`);
+    a = await asAdmin(batchApi, '/api/update-batch', { userId: maria.id, batchId: 'X1' });
+    if (a.status !== 403 || sql.prepare('SELECT batch_id FROM users WHERE id = ?').get(maria.id).batch_id !== maria.batch_id) fail(`an Admin's Batch ID could be changed (${a.status})`);
+    a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: '  b12102026 ' });
+    const moved = sql.prepare("SELECT u.batch_id AS u, h.batch_id AS h FROM users u JOIN heartbeats h ON h.username = u.username WHERE u.id = ?").get(juan.id);
+    if (a.status !== 200 || a.data.batchId !== 'B12102026' || moved.u !== 'B12102026' || moved.h !== 'B12102026') fail(`an Admin couldn't change a trainee's Batch ID: ${a.status} ${JSON.stringify(a.data)} ${JSON.stringify(moved)}`);
+    if (!sql.prepare("SELECT 1 FROM activity_log WHERE action = 'update-batch'").get()) fail('changing a Batch ID was not logged');
+    r = await post({ username: 'juan_dc', batchId: 'B0502 2026', portalMode: 'Trainee' });
+    if (r.status !== 401) fail(`the old Batch ID still signs in after an Admin changed it (${r.status})`);
+    r = await post({ username: 'juan_dc', batchId: 'B12102026', portalMode: 'Trainee' });
+    if (r.status !== 200) fail(`the new Batch ID doesn't sign in (${r.status})`);
     // a background tab's heartbeat (browsers slow it to one a minute) keeps the session; a closed tab's ends
     sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', '-60 seconds') WHERE username = 'tia'").run();
     if (!(await utils.isSessionHeartbeatAlive(env.DB, 'tia'))) fail('a session with a 60 s old heartbeat (a background tab) was treated as expired');
@@ -128,9 +195,9 @@ const failures = []; const fail = (m) => failures.push(m);
     const st = await (await stateApi.onRequestGet({ env })).json();
     const got = (st.pings || []).map(p => `${p.text}@${Math.round(p.ageMs / 1000)}`).join(',');
     if (got !== '[TASK] second@2,[TASK] first@5' || !Array.isArray(st.pings[1].target) || st.ping.text !== '[TASK] second' || typeof st.ping.ageMs !== 'number') fail(`/api/state's pings are wrong: ${JSON.stringify(st.pings)} / ${JSON.stringify(st.ping)}`);
-    const moved = await oldCal.onRequestGet({ request: new Request('http://x/api/training-calendar'), env });
-    const mj = await moved.json();
-    if (moved.status !== 410 || !/Reload the page/.test(mj.error || '')) fail('the old Training Calendar endpoint does not tell the tab to reload');
+    const gone = await oldCal.onRequestGet({ request: new Request('http://x/api/training-calendar'), env });
+    const mj = await gone.json();
+    if (gone.status !== 410 || !/Reload the page/.test(mj.error || '')) fail('the old Training Calendar endpoint does not tell the tab to reload');
 
     // the sign-in screen
     await new Promise(res => server.listen(0, res));
@@ -138,11 +205,12 @@ const failures = []; const fail = (m) => failures.push(m);
     const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     page.on('pageerror', e => fail(`page error: ${e.message}`));
-    const posted = [];
+    const posted = [], registered = [];
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url());
         const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/login') { const b = JSON.parse(route.request().postData()); posted.push(b); return j({ success: false, error: 'CI stops here.' }, 401); }
+        if (u.pathname === '/api/register') { registered.push(JSON.parse(route.request().postData())); return j({ success: true, batchId: 'B0502-2026' }); }
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
         return j({ success: true });
     });
@@ -167,28 +235,87 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.click('#portal-tab-trainee');
     if (await page.isVisible('#login-trainer-name')) fail('the Trainee tab shows the trainer name field');
     await page.click('#portal-tab-admin');
-    // registration: trainees only, and it scrolls on a phone
+    // the Trainee tab signs in with the username and Batch ID (shown as typed); the admin password typed on the Admin tab doesn't carry over
     await page.click('#portal-tab-trainee');
-    await page.setViewportSize({ width: 375, height: 560 });
+    const tf = await page.evaluate(() => { const f = document.getElementById('login-password'); return [document.getElementById('login-password-label').textContent, f.type, f.value].join('|'); });
+    if (tf !== 'Batch ID|text|') fail(`the Trainee tab's second field should be an empty "Batch ID" text box (got ${tf})`);
+    await page.click('#portal-tab-admin');
+    if ((await page.getAttribute('#login-password', 'type')) !== 'password') fail('the Admin tab shows the admin password as plain text');
+    // registration: full name, Batch ID and username only, typed in (nothing grayed out), and it scrolls on a phone
+    await page.click('#portal-tab-trainee');
+    await page.setViewportSize({ width: 375, height: 420 });
     await page.click('#auth-login-view .auth-register-link a');
-    const opts = await page.$$eval('#reg-usertype option', os => os.map(o => o.value));
-    if (opts.join() !== 'Trainee') fail(`registration still offers ${opts.join(', ')}`);
-    // the Batch ID isn't typed (it's issued on approval): a note, not a grayed-out box, previewing the server's format from the start date
-    if (await page.$('input#reg-batchid, #reg-batchid[disabled]')) fail('the registration form still shows the Batch ID as a grayed-out box');
-    if (!/Assigned when your registration is approved/.test(await page.textContent('#reg-batchid'))) fail(`the Batch ID note doesn't say it's assigned on approval: ${await page.textContent('#reg-batchid')}`);
-    await page.fill('#reg-training-date', '2026-02-05');
-    const issued = await utils.nextBatchId({ prepare: () => ({ bind: () => ({ first: async () => ({ value: 7 }) }) }) }, 'Trainee', '2026-02-05');
-    const shown = (await page.textContent('#reg-batchid b').catch(() => '')) || '';
-    if (shown !== issued.replace(/\d{3}$/, '###')) fail(`the Batch ID preview (${shown}) doesn't match what approval issues (${issued})`);
+    const fields = await page.$$eval('#auth-register-view input, #auth-register-view select, #auth-register-view textarea', els => els.filter(e => e.offsetParent).map(e => e.id));
+    if (fields.join() !== 'reg-fullname,reg-batchid,reg-username') fail(`registration asks for ${fields.join(', ')} (expected Full Name, Batch ID and Username only)`);
+    const labels = await page.$$eval('#auth-register-view .auth-field > label', els => els.map(e => e.textContent.trim()));
+    if (labels.join('|') !== 'Full Name|Batch ID|Username') fail(`the registration labels are ${labels.join(', ')}`);
+    if (await page.$('#auth-register-view [disabled], #auth-register-view [readonly]')) fail('the registration form still has a grayed-out field');
     await page.locator('#auth-register-view .auth-submit').scrollIntoViewIfNeeded();
     const box = await page.locator('#auth-register-view .auth-submit').boundingBox();
     const top = await page.locator('#auth-gate .auth-brand').boundingBox().catch(() => null);
-    if (!box || box.y + box.height > 560 || box.y < 0) fail(`on a small screen the Submit Registration button can't be scrolled into view (${JSON.stringify(box)})`);
+    if (!box || box.y + box.height > 421 || box.y < 0) fail(`on a small screen the Submit Registration button can't be scrolled into view (${JSON.stringify(box)})`);
     const scrolls = await page.evaluate(() => { const g = document.getElementById('auth-gate'); return g.scrollHeight > g.clientHeight && getComputedStyle(g).overflowY === 'auto'; });
     if (!scrolls) fail('the registration screen does not scroll on a small screen');
     await page.evaluate(() => { document.getElementById('auth-gate').scrollTop = 0; });
     const brand = await page.locator('#auth-gate .auth-brand').boundingBox();
     if (!brand || brand.y < 0) fail(`the top of the registration form is cut off on a small screen (${JSON.stringify(brand || top)})`);
+    // typing the Batch ID gives capitals; Submit sends the three fields (and today's date), then sign-in opens with the username filled in
+    await page.fill('#reg-fullname', 'Rosa  Newcomer'); await page.fill('#reg-batchid', 'b0502-2026!'); await page.fill('#reg-username', 'rosa_n');
+    if ((await page.inputValue('#reg-batchid')) !== 'B0502-2026') fail(`the Batch ID box shows ${await page.inputValue('#reg-batchid')} (expected B0502-2026)`);
+    await page.click('#auth-register-view .auth-submit'); await page.waitForTimeout(300);
+    const localToday = await page.evaluate(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; });
+    if (JSON.stringify(registered) !== JSON.stringify([{ fullName: 'Rosa Newcomer', batchId: 'B0502-2026', username: 'rosa_n', trainingStartDate: localToday }])) fail(`registration sent ${JSON.stringify(registered)}`);
+    if (!/sign in with your username and Batch ID/.test(await page.textContent('#auth-register-msg'))) fail(`after registering, the message doesn't say how to sign in: ${await page.textContent('#auth-register-msg')}`);
+    await page.waitForSelector('#auth-login-view', { state: 'visible', timeout: 5000 }).catch(() => fail('registering did not go back to the sign-in screen'));
+    if ((await page.inputValue('#login-username')) !== 'rosa_n') fail('the sign-in screen did not fill in the username just registered');
+    await page.fill('#login-password', 'B0502-2026'); await page.click('#auth-login-view .auth-submit'); await page.waitForTimeout(400);
+    last = posted[posted.length - 1] || {};
+    if (JSON.stringify(last) !== JSON.stringify({ username: 'rosa_n', batchId: 'B0502-2026', portalMode: 'Trainee' })) fail(`the Trainee tab sent ${JSON.stringify(last)} (expected the username and Batch ID)`);
+
+    // an Admin changes Batch IDs from the Registrations and Users tabs (the real /api/users and /api/update-batch)
+    sql.prepare("UPDATE heartbeats SET last_seen = datetime('now') WHERE username = ?").run(utils.MASTER_USERNAME);
+    const admin = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    admin.on('pageerror', e => fail(`admin page error: ${e.message}`));
+    const batchPosts = [];
+    await admin.route('**/api/**', async route => {
+        const u = new URL(route.request().url());
+        const send = async (resp) => route.fulfill({ status: resp.status, contentType: 'application/json', body: await resp.text() });
+        const req = (method) => new Request('http://x' + u.pathname, { method, headers: { Cookie: adminCookie }, body: method === 'POST' ? route.request().postData() : undefined });
+        if (u.pathname === '/api/users') return send(await usersApi.onRequestGet({ request: req('GET'), env }));
+        if (u.pathname === '/api/update-batch') { batchPosts.push(JSON.parse(route.request().postData())); return send(await batchApi.onRequestPost({ request: req('POST'), env })); }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, users: [], online: [], logs: [], cases: [] }) });
+    });
+    await admin.route(/cdn\.tailwindcss\.com|html2pdf/, r => r.fulfill({ contentType: 'text/javascript', body: '' }));
+    await admin.addInitScript((m) => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: m, fullName: 'LSH Admin', batchId: 'B1', userType: 'Admin' })), utils.MASTER_USERNAME);
+    await admin.goto(base, { waitUntil: 'load' }); await admin.waitForTimeout(800);
+    await admin.evaluate(() => { openAdminDashboard(); showAdminDashTab('registrations'); }); await admin.waitForTimeout(500);
+    const rowOf = (list, user) => admin.locator(`#${list} .reg-row`, { hasText: '@' + user });
+    const anaRow = rowOf('registrations-list', 'ana_r');
+    if (!(await anaRow.count())) fail('the pending registration is not in the Registrations tab');
+    else {
+        const meta = await anaRow.locator('.reg-meta').textContent();
+        if (!/Batch B050225/.test(meta) || /invalid/.test(meta)) fail(`the registration row shows: ${meta}`);
+        await anaRow.locator('button:has-text("Batch ID")').click();
+        if ((await anaRow.locator('.batch-edit input').inputValue()) !== 'B050225') fail('the Batch ID box does not start with the current Batch ID');
+        await anaRow.locator('.batch-edit input').fill('');
+        await anaRow.locator('.batch-edit button:has-text("Save")').click(); await admin.waitForTimeout(200);
+        if (batchPosts.length || !/Letters, numbers/.test(await anaRow.locator('.batch-edit-msg').textContent())) fail('an empty Batch ID was sent, or no message said what to type');
+        await anaRow.locator('.batch-edit input').fill('b0601 2026'); await anaRow.locator('.batch-edit input').press('Enter'); await admin.waitForTimeout(600);
+        const saved = sql.prepare("SELECT batch_id FROM users WHERE username = 'ana_r'").get().batch_id;
+        if (saved !== 'B0601 2026' || !/Batch B0601 2026/.test(await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent())) fail(`changing a registration's Batch ID: saved ${saved}, the row shows ${await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent()}`);
+        if (!(await admin.isVisible('text=Batch ID changed to B0601 2026'))) fail('no message said the Batch ID was changed');
+    }
+    await admin.evaluate(() => showAdminDashTab('users')); await admin.waitForTimeout(500);
+    const juanRow = rowOf('users-list', 'juan_dc');
+    if (!(await juanRow.count()) || !(await juanRow.locator('button:has-text("Batch ID")').count())) fail('an approved trainee has no Batch ID button in the Users tab');
+    else {
+        if (!(await admin.locator('#users-list .group-heading', { hasText: 'B12102026' }).count())) fail('trainees are not grouped under their typed Batch ID');
+        await juanRow.locator('button:has-text("Batch ID")').click();
+        await juanRow.locator('.batch-edit input').press('Escape');
+        if (await juanRow.locator('.batch-edit').count()) fail('Escape did not close the Batch ID box');
+    }
+    if (await rowOf('users-list', 'trainer-maria-lopez').locator('button:has-text("Batch ID")').count()) fail('an Admin account has a Batch ID button');
+    await admin.close();
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }

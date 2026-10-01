@@ -473,6 +473,17 @@ export async function upgradePasswordHash(db, userId, plainPassword) {
 //   );
 //   INSERT OR IGNORE INTO batch_id_counter (user_type, value) VALUES ('Admin', 0);
 //   INSERT OR IGNORE INTO batch_id_counter (user_type, value) VALUES ('Trainee', 0);
+// A Batch ID as a trainee types it at registration, or an Admin edits it (update-batch.js):
+// letters, numbers, spaces and dashes, up to 40 characters, kept in capitals.
+// '' when blank, null when it isn't valid.
+export function cleanBatchId(raw) {
+    const v = String(raw || '').trim().replace(/\s+/g, ' ').toUpperCase();
+    if (!v) return '';
+    return /^[A-Z0-9][A-Z0-9 \-]{0,39}$/.test(v) ? v : null;
+}
+// The same Batch ID whatever the capitals, spaces or dashes (signing in, name sign-in).
+export const batchKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
 export async function nextBatchId(db, userType, referenceDate) {
     const d = referenceDate ? new Date(referenceDate) : new Date();
     const dd = String(d.getUTCDate()).padStart(2, '0');

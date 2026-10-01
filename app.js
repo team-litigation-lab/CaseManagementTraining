@@ -1904,39 +1904,10 @@
             document.getElementById('auth-login-view').classList.remove('hidden');
             document.getElementById('auth-register-view').classList.add('hidden');
         }
+        // Registration is for trainees only (admins sign in with the admin password): full name, Batch ID, username.
         function showRegisterView() {
             document.getElementById('auth-login-view').classList.add('hidden');
             document.getElementById('auth-register-view').classList.remove('hidden');
-            document.getElementById('reg-usertype').value = 'Trainee';   // admins sign in with the admin password; only trainees register
-            onRegUserTypeChange();
-        }
-        const REG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,}$/;
-        function validateRegPassword(password) {
-            if (!password || password.length < 8) {
-                return 'Password must be at least 8 characters long.';
-            }
-            if (!REG_PASSWORD_RE.test(password)) {
-                return 'Password must contain only letters and numbers (no symbols or spaces), with at least one letter and one number.';
-            }
-            return null;
-        }
-
-        function onRegUserTypeChange() {
-            const type = document.getElementById('reg-usertype').value;
-            const trainingWrap = document.getElementById('reg-training-date-wrap');
-            if (trainingWrap) trainingWrap.style.display = type === 'Trainee' ? '' : 'none';
-            regBatchPreview();
-        }
-        // The Batch ID isn't typed at registration: the server issues it when the registration is approved
-        // (nextBatchId in functions/_utils.js): B + the start of training date (DDMMYYYY) + -LSHTRAINEE- + a
-        // number. This shows the trainee what theirs will be, so the field doesn't look broken.
-        function regBatchPreview() {
-            const el = document.getElementById('reg-batchid');
-            if (!el) return;
-            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((document.getElementById('reg-training-date') || {}).value || '');
-            el.innerHTML = m
-                ? `<b>B${m[3]}${m[2]}${m[1]}-LSHTRAINEE-###</b><span>Made from your start of training date. The number (###) is added when your registration is approved.</span>`
-                : '<span>Assigned when your registration is approved, from your start of training date (for example B05022026-LSHTRAINEE-001). Pick your start date above to see yours.</span>';
         }
 
         function applySessionUI() {
@@ -2170,13 +2141,14 @@
             } else {
                 const byBatchDate = {};
                 trainees.forEach(u => {
+                    // Issued IDs group by their date; Batch IDs typed at registration group by themselves
                     const p = parseBatchId(u.batch_id || u.batchId);
-                    const key = p ? ('B' + p.dateStr) : 'Unassigned Batch';
+                    const key = p ? ('B' + p.dateStr) : (String(u.batch_id || u.batchId || '').trim() || 'Unassigned Batch');
                     (byBatchDate[key] = byBatchDate[key] || []).push(u);
                 });
                 Object.keys(byBatchDate).sort().forEach(batchKey => {
                     const members = byBatchDate[batchKey].sort((a, b) => seqOf(a) - seqOf(b));
-                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + batchKey + ' &middot; ' + members.length + ' trainee(s)</div>';
+                    html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + escapeHtmlAttr(batchKey) + ' &middot; ' + members.length + ' trainee(s)</div>';
                     html += members.map(u => renderUserRow(u, false)).join('');
                 });
             }
@@ -2238,13 +2210,61 @@
 
             const trainingStart = u.training_start_date || u.trainingStartDate;
             const trainingStartLabel = trainingStart ? (' \u00B7 Training Start ' + new Date(trainingStart + 'T00:00:00').toLocaleDateString()) : '';
-            return '<div class="reg-row">' +
+            const batch = u.batch_id || u.batchId || '';
+            // Trainees registered without an email get a placeholder address (register.js): not shown
+            const email = u.email && !/\.invalid$/i.test(u.email) ? ' \u00B7 ' + escapeHtmlAttr(u.email) : '';
+            // A trainee's Batch ID is what they sign in with: an Admin can change it (editUserBatch)
+            const batchBtn = userType === 'Trainee' ? '<button class="mini-btn batch" onclick="editUserBatch(' + u.id + ', this)">\u270E Batch ID</button>' : '';
+            return '<div class="reg-row" data-user-id="' + u.id + '" data-batch="' + escapeHtmlAttr(batch) + '">' +
                     '<div class="reg-info">' +
-                        '<b>' + fullName + ' <span class="status-pill ' + pillClass + '">' + statusLabel + '</span></b>' +
-                        '<div class="reg-meta">' + userType + ' \u00B7 Batch ' + (u.batch_id || u.batchId || '\u2014') + ' \u00B7 @' + u.username + ' \u00B7 ' + (u.email || '') + ' \u00B7 Registered ' + createdLabel + (userType === 'Trainee' ? trainingStartLabel : '') + '</div>' +
+                        '<b>' + escapeHtmlAttr(fullName) + ' <span class="status-pill ' + pillClass + '">' + statusLabel + '</span></b>' +
+                        '<div class="reg-meta">' + userType + ' \u00B7 Batch <span class="reg-batch">' + (escapeHtmlAttr(batch) || '\u2014') + '</span> \u00B7 @' + escapeHtmlAttr(u.username) + email + ' \u00B7 Registered ' + createdLabel + (userType === 'Trainee' ? trainingStartLabel : '') + '</div>' +
                     '</div>' +
-                    '<div style="display:flex; gap:6px; align-items:center;">' + actions + '</div>' +
+                    '<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">' + batchBtn + actions + '</div>' +
                 '</div>';
+        }
+        // ✎ Batch ID: a box in the row to change a trainee's Batch ID (functions/api/update-batch.js).
+        function editUserBatch(userId, btn) {
+            const row = btn && btn.closest('.reg-row');
+            if (!row) return;
+            const open = row.querySelector('.batch-edit');
+            if (open) { open.querySelector('input').focus(); return; }
+            const box = document.createElement('div');
+            box.className = 'batch-edit';
+            box.innerHTML = '<label>New Batch ID <input type="text" maxlength="40" autocomplete="off" data-allow="batch"></label>' +
+                '<button type="button" class="mini-btn approve">Save</button><button type="button" class="mini-btn revoke">Cancel</button><span class="batch-edit-msg" role="alert"></span>';
+            const input = box.querySelector('input');
+            input.value = row.getAttribute('data-batch') || '';
+            const [save, cancel] = box.querySelectorAll('button');
+            cancel.onclick = () => box.remove();
+            save.onclick = () => saveUserBatch(userId, input.value, box);
+            input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } else if (e.key === 'Escape') cancel.click(); };
+            row.querySelector('.reg-info').appendChild(box);
+            input.focus(); input.select();
+        }
+        function saveUserBatch(userId, value, box) {
+            const msg = box.querySelector('.batch-edit-msg');
+            const batchId = String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+            if (!/^[A-Z0-9][A-Z0-9 \-]{0,39}$/.test(batchId)) { msg.textContent = 'Letters, numbers, spaces or dashes, up to 40 characters.'; return; }
+            box.querySelectorAll('button').forEach(b => { b.disabled = true; });
+            msg.textContent = '';
+            fetch('/api/update-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ userId, batchId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    showToast('Batch ID changed to ' + data.batchId + '. The trainee signs in with it from now on.', 'success');
+                    refreshUsersAndRegistrations();
+                } else {
+                    msg.textContent = (data && data.error) || 'Couldn\'t change the Batch ID.';
+                    box.querySelectorAll('button').forEach(b => { b.disabled = false; });
+                }
+            })
+            .catch(() => { msg.textContent = 'Network error. Please try again.'; box.querySelectorAll('button').forEach(b => { b.disabled = false; }); });
         }
         function updateUserStatus(userId, newStatus) {
             // Only ever called with 'Approved' or 'Rejected' now — permanent
@@ -3595,7 +3615,8 @@
         // Character-set restriction for plain <input> fields (registration, download confirmation, etc.)
         // Keeps only characters valid for the field's declared type as the user types.
         const ALLOW_PATTERNS = {
-            'name': /[^a-zA-Z\s'\-.]/g,
+            'name': /[^\p{L}\p{M}\s'\-.]/gu,
+            'batch': /[^a-zA-Z0-9 \-]/g,
             'alnum': /[^a-zA-Z0-9]/g,
             'alnum-upper': /[^a-zA-Z0-9]/g,
             'alnum-underscore': /[^a-zA-Z0-9_]/g,
@@ -3610,7 +3631,7 @@
             if (!pattern) return;
             const start = el.selectionStart, end = el.selectionEnd;
             let val = el.value.replace(pattern, '');
-            if (type === 'alnum-upper') val = val.toUpperCase();
+            if (type === 'alnum-upper' || type === 'batch') val = val.toUpperCase();
             if (val !== el.value) {
                 const removedBeforeCaret = el.value.slice(0, start).replace(pattern, '').length;
                 el.value = val;
