@@ -371,7 +371,8 @@
     .session-btn.logout-btn { border-color: #7f1d1d; color: #fca5a5; }
     .session-btn.trainee-view-btn { border-color: #0369a1; color: #7dd3fc; }
     /* Trainee view (a trainer previewing the trainee screens): always-visible way back */
-    #trainee-view-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5000; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); background: #0c4a6e; color: #fff; border: 2px solid #38bdf8; border-radius: 999px; padding: 7px 8px 7px 16px; font-size: 12.5px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+    #trainee-view-bar { position: fixed; left: 50%; bottom: 68px; transform: translateX(-50%); z-index: 5000; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); background: #0c4a6e; color: #fff; border: 2px solid #38bdf8; border-radius: 999px; padding: 7px 8px 7px 16px; font-size: 12.5px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+    /* the Trainee view bar floats just above the case's action bar, so it never covers Close, Archive or Discard */
     #trainee-view-bar button { background: #fff; color: #0c4a6e; border: none; border-radius: 999px; padding: 6px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
     .session-btn.logout-btn:hover { border-color: var(--classified-red); background: rgba(185,28,28,0.12); }
     .session-user-tag { text-align:center; font-size:10.5px; line-height:1.45; color:#94a3b8; margin-bottom:8px; font-family:'IBM Plex Mono','Courier New',monospace; }
@@ -598,6 +599,10 @@
     .case-close-x { position:absolute; top:-13px; right:-13px; width:28px; height:28px; border-radius:50%; border:2px solid #f97316; background:#fff; color:#0f2148; font-size:13px; font-weight:900; line-height:1; cursor:pointer; box-shadow:0 2px 6px rgba(15,33,72,.25); z-index:2; }
     .case-close-x:hover { background:#f97316; color:#fff; }
     #capture-area.mock-ro .pdf-card > .case-close-x { display:block !important; }   /* a view-only library case hides the card's buttons, not this one */
+    /* the case workspace: the case scrolls, and its action bar stays at the bottom of the screen
+       (the same as main's Tailwind classes, so it holds even when the Tailwind CDN doesn't load) */
+    #app-shell > main { display:flex; flex-direction:column; flex:1 1 auto; min-width:0; overflow:hidden; }
+    #app-shell > main > #capture-area { flex:1 1 auto; min-height:0; overflow-y:auto; }
     #case-actions-bar { flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 32px; background:#fff; border-top:2px solid #e2e8f0; box-shadow:0 -4px 12px rgba(15,33,72,.06); }
     .cab-btn { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; border-radius:7px; padding:8px 14px; cursor:pointer; border:1px solid #cbd5e1; background:#fff; color:#0f2148; white-space:nowrap; }
     .cab-btn:hover { border-color:#0f2148; }

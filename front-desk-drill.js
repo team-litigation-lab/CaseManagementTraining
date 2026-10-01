@@ -182,6 +182,9 @@
     .fdd-note{min-height:74px;font-size:12.5px}
     .fdd-comp button,.fdd-ctl button{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:8px;padding:8px 10px;font-weight:800;font-size:11.5px;cursor:pointer}
     .fdd-comp button.send{background:#0f2148;color:#fff;border-color:#0f2148;padding:10px 14px}
+    .fdd-comp button.mic{width:46px;height:46px;flex:0 0 46px;border-radius:50%;padding:0;font-size:20px;background:#ecfdf5;border:2px solid #10b981;color:#047857}
+    .fdd-comp button.mic.rec{background:#ef4444;border-color:#ef4444;color:#fff;font-size:16px;animation:fddRec 1.2s ease-in-out infinite}
+    @keyframes fddRec{50%{box-shadow:0 0 0 6px rgba(239,68,68,.25)}}
     .fdd-comp button:disabled,.fdd-ctl button:disabled{opacity:.45;cursor:not-allowed}
     .fdd-ctl{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
     .fdd-ctl button.on{background:#ecfdf5;border-color:#10b981;color:#047857}
@@ -213,9 +216,10 @@
     document.head.appendChild(css);
 
     function buildUI() {
-        const lib = $id('lib-open-btn');
-        if (lib && !$id('fdd-open-btn')) {
-            lib.insertAdjacentHTML('afterend', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Front Desk · practice calls</button>`);
+        // 📞 Reception Simulator: in the sidebar right before 📊 My Dashboard (index.html, #sb-work).
+        const dash = $id('dash-open-btn');
+        if (dash && !$id('fdd-open-btn')) {
+            dash.insertAdjacentHTML('beforebegin', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Reception Simulator</button>`);
         }
         // Like the Training Library button, the sidebar button is for Admins. Trainees open the
         // drill from their course's link (?drill=1), and their scores are saved the same way.
@@ -896,7 +900,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const V = voice();
         hangUp(); stopTimer(); D = null; endPractice();
         P = { call, transport: liveOK() && livePref() && Date.now() > pcLiveOff ? 'live' : 'standard', answered: false, t0: null, t1: null, msgs: [],
-            speak: !!(V && V.canSpeak && pcPref('SPEAK', true)), hands: !!(V && V.canListen && pcPref('HANDS', false)),
+            speak: !!(V && V.canSpeak && pcPref('SPEAK', true)), hands: !!(V && V.canListen && pcPref('HANDS', true)),
             selected: null, q: '', auth: null, note: '', draft: '', busy: false, closing: false, ended: false, req: 0, muted: false,
             status: 'Incoming call… press 📞 Answer.', warn: false, voiceNote: '', program: (window.lshProgram && window.lshProgram()) || '' };
         document.body.classList.add('fdd-on');
@@ -913,12 +917,14 @@ The call has just been answered. When the receptionist greets you, say why you'r
         if (my.transport === 'live') startLive(my);
         else {
             const V = voice(); if (V && my.speak) V.unlock();
-            if (liveOK() && livePref() && pcLiveWhy) my.voiceNote = `🎙 ${pcLiveWhy} This call uses the standard voice: type your reply${V && V.canListen ? ' or press 🎙 Talk' : ''}.`;
+            if (liveOK() && livePref() && pcLiveWhy) my.voiceNote = `🎙 ${pcLiveWhy} This call uses the standard voice: ${V && V.canListen ? 'talk (🎙) or type your reply' : 'type your reply'}.`;
             pcStatus('Connected. Greet the caller the way you answer the firm\'s phone.');
-            my.kick = setTimeout(() => { if (P === my && !my.ended && !my.msgs.length && !my.busy) callerSays('Hello?', false); }, 6000);
+            // No greeting in 6 s: "Hello?" (not while they're in the middle of saying one)
+            my.kick = setTimeout(() => { const b = $id('fdd-pc-in'); if (P === my && !my.ended && !my.msgs.length && !my.busy && !(b && b.value.trim())) callerSays('Hello?', false); }, 6000);
         }
         pcIdCard(); pcControls(); pcTr();
-        const b = $id('fdd-pc-in'); if (b) b.focus({ preventScroll: true });
+        if (my.transport === 'standard' && my.hands) pcListen(true);   // hands-free: say the greeting
+        else { const b = $id('fdd-pc-in'); if (b) b.focus({ preventScroll: true }); }
     };
 
     // Live voice (live-call.js): the caller hears the trainee and talks back. If it can't start,
@@ -957,7 +963,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         // this visit. Busy or dropped: the next practice call tries live voice again.
         const off = ['NOT_CONFIGURED', 'NO_MODEL', 'MIC', 'BUDGET', 'REGION'].includes(code);
         pcLiveWhy = off ? why : ''; pcLiveOff = off ? Infinity : 0;
-        my.voiceNote = `🎙 ${why} The call goes on with the standard voice: type your reply${voice() && voice().canListen ? ' or press 🎙 Talk' : ''}.`;
+        my.voiceNote = `🎙 ${why} The call goes on with the standard voice: ${voice() && voice().canListen ? 'talk (🎙) or type your reply' : 'type your reply'}.`;
         const V = voice(); if (V && my.speak) V.unlock();
         pcStatus(my.msgs.length ? 'Your turn.' : 'Greet the caller the way you answer the firm\'s phone.');
         pcControls(); pcTr();
@@ -966,7 +972,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
     function yourTurn() {
         const l = P; if (!l || l.ended) return;
         const V = voice();
-        pcStatus(`Your turn: ${V && V.canListen ? 'press 🎙 Talk or type' : 'type'} your reply (Enter sends).`);
+        pcStatus(`Your turn: ${V && V.canListen ? 'press 🎙 and talk, or type' : 'type'} your reply (Enter sends).`);
         pcControls();
         if (l.hands) pcListen();
         else { const b = $id('fdd-pc-in'); if (b && document.activeElement !== b && $id('fdd-panel').classList.contains('open')) b.focus({ preventScroll: true }); }
@@ -978,6 +984,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         my.afterSpeak = fin;
         const V = voice();
         if (!my.speak || !V || !V.canSpeak) return fin();
+        if (V.isListening()) { V.stopListening(); pcControls(); }   // the microphone waits while the caller talks
         pcStatus('The caller is talking…');
         V.speak(text, { gender: my.call.voice, name: (my.call.gives || {}).name, onDone: fin,
             onNoVoice: () => { if (P === my && !my.noVoice) { my.noVoice = true; my.speak = false; pcControls(); } } });
@@ -1029,28 +1036,34 @@ The call has just been answered. When the receptionist greets you, say why you'r
     };
 
     // Standard voice: the trainee's reply by microphone (Chrome/Edge), sent when they pause.
-    function pcListen() {
+    // Hands-free (on unless the trainee turns it off) listens from the greeting on, after each of the
+    // caller's lines; a silence is tried twice more before it asks them to press 🎙 or type.
+    function pcListen(greeting) {
         const my = P, V = voice();
         if (!pcOn() || my.transport !== 'standard' || my.busy || my.closing || !V || !V.canListen) return;
         const box = $id('fdd-pc-in'); const before = box ? box.value.trim() : '';
+        let blocked = false;
         const ok = V.listen({
             onText: (t) => { const b = $id('fdd-pc-in'); if (b && P === my) { b.value = (before ? before + ' ' : '') + t; my.draft = b.value; } },
             onEnd: (t) => {
                 if (P !== my || my.ended) return;
                 pcControls();
+                if (blocked) return;
                 const b = $id('fdd-pc-in');
-                if (t && b && b.value.trim()) fddPracticeSend();
-                else pcStatus('Didn\'t catch that. Press 🎙 Talk to try again, or type.');
+                if (t && b && b.value.trim()) { my.silences = 0; fddPracticeSend(); }
+                else if (my.hands && (my.silences || 0) < 2 && !my.busy && !my.afterSpeak) { my.silences = (my.silences || 0) + 1; pcListen(greeting && !my.msgs.length); }
+                else { my.silences = 0; pcStatus('Didn\'t catch that. Press 🎙 and talk, or type your reply.'); }
             },
-            onBlocked: () => { if (P === my) { my.hands = false; pcStatus('The microphone is blocked. Allow it in the browser\'s address bar, or type your reply.', true); pcControls(); } }
+            onBlocked: () => { blocked = true; if (P === my) { my.hands = false; pcStatus('The microphone is blocked. Allow it in the browser\'s address bar, or type your reply.', true); pcControls(); } }
         });
-        if (ok) { pcStatus('🎙 Listening… speak now (it sends when you pause).'); pcControls(); }
+        if (ok) { pcStatus(greeting ? '🎙 Listening… greet the caller (it sends when you pause).' : '🎙 Listening… speak now (it sends when you pause).'); pcControls(); }
     }
     window.fddPracticeTalk = function () {
         const V = voice(); if (!pcOn() || !V || P.transport !== 'standard') return;
         if (V.isListening()) { V.stopListening(true); return; }
         if (P.afterSpeak) { V.stopSpeaking(); P.afterSpeak = null; }   // talking over the caller
-        pcListen();
+        P.silences = 0;
+        pcListen(!P.msgs.length);
     };
     window.fddPracticeHands = function () {
         const V = voice(); if (!P || !V || !V.canListen) return;
@@ -1135,12 +1148,22 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const box = $id('fdd-pc-in'); if (box) box.disabled = !on;
         el.innerHTML = (!std ? `<button class="${l.muted ? 'rec' : ''}" onclick="fddPracticeMute()" ${on ? '' : 'disabled'}>${l.muted ? '🔇 Unmute' : '🎙 Mute'}</button>
                 <button class="${l.speakerOn ? 'on' : ''}" onclick="fddPracticeSpeakerphone()" ${on ? '' : 'disabled'} title="Speakerphone: louder, for a room or a Google Meet (share this tab with its audio)">${l.speakerOn ? '🔊 Speakerphone on' : '🔈 Speakerphone'}</button>` : '')
-            + (std && V.canListen ? `<button id="fdd-pc-talk" class="${listening ? 'rec' : ''}" onclick="fddPracticeTalk()" ${can ? '' : 'disabled'}>${listening ? '■ Done talking' : '🎙 Talk'}</button>
-                <button class="${l.hands ? 'on' : ''}" onclick="fddPracticeHands()" title="Listen for your reply after the caller speaks">🔁 Hands-free ${l.hands ? 'on' : 'off'}</button>` : '')
+            + (std && V.canListen ? `<button class="${l.hands ? 'on' : ''}" onclick="fddPracticeHands()" title="Listen for your reply after the caller speaks, and send it when you pause">🔁 Hands-free ${l.hands ? 'on' : 'off'}</button>` : '')
             + (std && V.canSpeak ? `<button class="${l.speak ? 'on' : ''}" onclick="fddPracticeSpeaker()" title="Read the caller's lines out loud">${l.speak ? '🔊 Voice on' : '🔇 Voice off'}</button>
                 <button onclick="fddPracticeReplay()" ${on && !l.busy && l.msgs.some(m => m.who === 'caller') ? '' : 'disabled'} title="Hear the caller's last line again">↻ Replay</button>` : '')
             + (l.voiceNote ? `<div class="fdd-pc-note">${esc(l.voiceNote)}</div>` : '')
-            + (std && l.noVoice ? `<div class="fdd-pc-note">This computer has no voice for the caller: read their lines.</div>` : '');
+            + (std && l.noVoice ? `<div class="fdd-pc-note">This computer has no voice for the caller: read their lines.</div>` : '')
+            + (std && !V.canListen ? `<div class="fdd-pc-note">🎙 To answer by voice instead of typing, use Chrome or Edge.</div>` : '');
+        // 🎙 next to the reply box: press and talk (it sends when you pause); press again to send now
+        const talk = $id('fdd-pc-talk');
+        if (talk) {
+            talk.style.display = std && V.canListen ? '' : 'none';
+            talk.disabled = !can;
+            talk.classList.toggle('rec', !!listening);
+            talk.textContent = listening ? '■' : '🎙';
+            talk.title = listening ? 'Done talking: send it now' : 'Talk: press, then speak. It sends when you pause.';
+            talk.setAttribute('aria-label', talk.title);
+        }
     }
     function pcPick() {
         const el = $id('fdd-pick-line'), l = P; if (!l) return;
@@ -1173,7 +1196,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         return `<div id="fdd-pc-id"></div>
             <p id="fdd-pc-status" class="${l.warn ? 'warn' : ''}">${esc(l.status)}</p>
             <div class="fdd-sec" style="padding:8px 10px"><div class="fdd-tx" id="fdd-pc-tr"></div>
-              <div class="fdd-comp"><textarea id="fdd-pc-in" maxlength="1000" placeholder="Type what you say to the caller…" onkeydown="fddPracticeKey(event)" oninput="fddPracticeInput(this)"></textarea>
+              <div class="fdd-comp"><button class="mic" id="fdd-pc-talk" onclick="fddPracticeTalk()" disabled>🎙</button><textarea id="fdd-pc-in" maxlength="1000" placeholder="${voice() && voice().canListen ? 'Press 🎙 and talk, or type what you say to the caller…' : 'Type what you say to the caller…'}" onkeydown="fddPracticeKey(event)" oninput="fddPracticeInput(this)"></textarea>
                 <button class="send" id="fdd-pc-send" onclick="fddPracticeSend()" disabled>Send</button></div>
               <div class="fdd-ctl" id="fdd-pc-ctl"></div></div>
             <button class="fdd-hang" onclick="fddPracticeHangUp()">✆ Hang up</button>

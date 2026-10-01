@@ -423,7 +423,9 @@ const SAVED = [
     if (!(await admin.isVisible('#cl-open-btn'))) fail('an Admin lost the Open Case Library button');
     const tools = await admin.evaluate(() => ({ updates: !!(document.getElementById('cl-updates-btn') || {}).offsetParent,
         tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
-    if (!tools.updates || tools.tools.join() !== 'lib-open-btn,fdd-open-btn,intake-open-btn,fc-open-btn,export-repo-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
+    const work = await admin.evaluate(() => [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id));
+    if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn,export-repo-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
+    if (work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's 📞 Reception Simulator isn't right before My Dashboard: ${work.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');

@@ -96,3 +96,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/livecall.cjs
+      - name: Reception Simulator (answering a practice call by microphone)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/reception-mic.cjs
