@@ -10,3 +10,10 @@ database_id = "10414834-819b-47c4-8918-77f66a24b9e9"
 [[r2_buckets]]
 binding = "DOCUMENTS"
 bucket_name = "lshtraining"
+
+# The courses' KV namespace, shared by every LSH site. Read-only here: the server
+# request meter (functions/api/request-budget.js) reads "_request-usage", which
+# EA-PA-TRAINING's Request budget workflow saves there.
+[[kv_namespaces]]
+binding = "COURSE_KV"
+id = "b121aa911590471bbad351d03274d7f4"
