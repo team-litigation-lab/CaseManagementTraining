@@ -1900,14 +1900,20 @@
 
         function onRegUserTypeChange() {
             const type = document.getElementById('reg-usertype').value;
-            const batchField = document.getElementById('reg-batchid');
             const trainingWrap = document.getElementById('reg-training-date-wrap');
-            if (batchField) {
-                batchField.value = '';
-                batchField.placeholder = 'Batch ID will be assigned upon the approval of your registration.';
-                batchField.disabled = true;
-            }
             if (trainingWrap) trainingWrap.style.display = type === 'Trainee' ? '' : 'none';
+            regBatchPreview();
+        }
+        // The Batch ID isn't typed at registration: the server issues it when the registration is approved
+        // (nextBatchId in functions/_utils.js): B + the start of training date (DDMMYYYY) + -LSHTRAINEE- + a
+        // number. This shows the trainee what theirs will be, so the field doesn't look broken.
+        function regBatchPreview() {
+            const el = document.getElementById('reg-batchid');
+            if (!el) return;
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((document.getElementById('reg-training-date') || {}).value || '');
+            el.innerHTML = m
+                ? `<b>B${m[3]}${m[2]}${m[1]}-LSHTRAINEE-###</b><span>Made from your start of training date. The number (###) is added when your registration is approved.</span>`
+                : '<span>Assigned when your registration is approved, from your start of training date (for example B05022026-LSHTRAINEE-001). Pick your start date above to see yours.</span>';
         }
 
         function applySessionUI() {

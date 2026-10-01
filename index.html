@@ -612,8 +612,10 @@
                         <option value="Trainee">Trainee</option>
                     </select>
                 </div>
-                <div class="auth-field" id="reg-training-date-wrap"><label>Start of Training Date</label><input type="date" id="reg-training-date" autocomplete="off"></div>
-                <div class="auth-field"><label>Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" readonly placeholder="Batch ID will be assigned upon the approval of your registration." disabled style="opacity:0.6; cursor:not-allowed;"></div>
+                <div class="auth-field" id="reg-training-date-wrap"><label>Start of Training Date</label><input type="date" id="reg-training-date" autocomplete="off" oninput="regBatchPreview()" onchange="regBatchPreview()"></div>
+                <!-- Batch ID: not typed. The server issues it when the registration is approved (nextBatchId in functions/_utils.js),
+                     from the start of training date; regBatchPreview() in app.js shows what it will be. -->
+                <div class="auth-field"><label>Batch ID <span style="text-transform:none;">(assigned automatically)</span></label><div id="reg-batchid" class="reg-batch-preview" aria-live="polite"></div></div>
                 <div class="auth-field"><label>Username</label><input type="text" id="reg-username" autocomplete="off" data-allow="alnum-underscore" placeholder="Choose a username"></div>
                 <div class="auth-field"><label>Password</label><input type="password" id="reg-password" autocomplete="new-password" placeholder="Create a password" minlength="8"><p style="font-size:11px;color:#64748b;margin:4px 0 0;line-height:1.4;">At least 8 characters, letters and numbers only (must include at least one of each).</p></div>
                 <div class="auth-field"><label>Retype Password</label><input type="password" id="reg-password2" autocomplete="new-password" placeholder="Retype your password" minlength="8"></div>

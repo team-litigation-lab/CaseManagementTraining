@@ -173,6 +173,13 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.click('#auth-login-view .auth-register-link a');
     const opts = await page.$$eval('#reg-usertype option', os => os.map(o => o.value));
     if (opts.join() !== 'Trainee') fail(`registration still offers ${opts.join(', ')}`);
+    // the Batch ID isn't typed (it's issued on approval): a note, not a grayed-out box, previewing the server's format from the start date
+    if (await page.$('input#reg-batchid, #reg-batchid[disabled]')) fail('the registration form still shows the Batch ID as a grayed-out box');
+    if (!/Assigned when your registration is approved/.test(await page.textContent('#reg-batchid'))) fail(`the Batch ID note doesn't say it's assigned on approval: ${await page.textContent('#reg-batchid')}`);
+    await page.fill('#reg-training-date', '2026-02-05');
+    const issued = await utils.nextBatchId({ prepare: () => ({ bind: () => ({ first: async () => ({ value: 7 }) }) }) }, 'Trainee', '2026-02-05');
+    const shown = (await page.textContent('#reg-batchid b').catch(() => '')) || '';
+    if (shown !== issued.replace(/\d{3}$/, '###')) fail(`the Batch ID preview (${shown}) doesn't match what approval issues (${issued})`);
     await page.locator('#auth-register-view .auth-submit').scrollIntoViewIfNeeded();
     const box = await page.locator('#auth-register-view .auth-submit').boundingBox();
     const top = await page.locator('#auth-gate .auth-brand').boundingBox().catch(() => null);
