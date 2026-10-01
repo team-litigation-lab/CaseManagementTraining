@@ -166,8 +166,14 @@
         let _emptyCaptureAreaTemplate = null; // pristine clone of #capture-area, captured once at load, used to render read-only previews of OTHER users' cases without touching the live editor
         const LOCK_KEY = 'LSH_PAGE_LOCKED';
         const SESSION_KEY = 'LSH_SESSION_V1';
-        const HEARTBEAT_INTERVAL_MS = 2000;
-        const HEARTBEAT_GRACE_MS = 6000;
+        // Heartbeats keep the session alive (the server allows 120 s between them) and show who's
+        // online. Every 30 s, every 45 s in a background tab, and every 3 s while a trainer watches
+        // this trainee live (live-view.js). Sparing on purpose: every /api/ request counts toward
+        // Cloudflare's daily Functions requests, and the site stops answering when they run out.
+        const HEARTBEAT_INTERVAL_MS = 30000;
+        const HEARTBEAT_HIDDEN_MS = 45000;
+        const HEARTBEAT_WATCHED_MS = 3000;
+        const HEARTBEAT_GRACE_MS = 45000;   // "online" = a heartbeat in the last 90 s (twice this)
         const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes — adjust if needed
         const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
         // Agency logo is hardcoded (no admin-editable/localStorage-backed
@@ -1527,7 +1533,12 @@
             if (window.renderCaseLibrary) renderCaseLibrary();
             renderCaseLogs();
         }
-        setInterval(refreshRepoCache, 15000); // passive background refresh so shared changes show up without a manual reload
+        // Passive background refresh so shared changes show up without a manual reload: every minute
+        // while the tab is in view (each save refreshes it too), and when the tab comes back into view.
+        const REPO_REFRESH_MS = 60000;
+        let _repoRefreshAt = Date.now();
+        setInterval(() => { if (!document.hidden) { _repoRefreshAt = Date.now(); refreshRepoCache(); } }, REPO_REFRESH_MS);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - _repoRefreshAt > REPO_REFRESH_MS) { _repoRefreshAt = Date.now(); refreshRepoCache(); } });
 
         // The sidebar doesn't list everyone's cases. Saved cases go into the
         // Case Library with the Training Library mock cases, and show here
@@ -2479,7 +2490,7 @@
         function refreshCaseLogs() {
             renderCaseLogs(); // reuses the already-fetched shared repo cache (_repoCache)
         }
-        // Cases ticked for deleting; kept across the list's redraws (the repo cache refreshes every 15 s).
+        // Cases ticked for deleting; kept across the list's redraws (the repo cache refreshes every minute).
         const _caseLogsSelected = new Set();
         let _caseLogsShown = [];
         function renderCaseLogs() {
@@ -2685,6 +2696,7 @@
         }
         function closeMonitorCase() { document.getElementById('monitor-case-modal').classList.remove('open'); }
         let heartbeatTimer = null;
+        let heartbeatWatched = false;   // the last heartbeat's answer: a trainer is watching (live-view.js)
         let idleTimer = null;
 
         function sendHeartbeat() {
@@ -2704,7 +2716,11 @@
                     handleSessionExpired('Your session has expired. Please log in again.');
                     return false;
                 }
-                if (r.ok && window.lshLiveWatched) r.clone().json().then(d => window.lshLiveWatched(!!(d && d.watched))).catch(() => {});
+                if (r.ok) r.clone().json().then(d => {
+                    const on = !!(d && d.watched);
+                    if (window.lshLiveWatched) window.lshLiveWatched(on);
+                    if (on !== heartbeatWatched) { heartbeatWatched = on; if (heartbeatTimer) scheduleHeartbeat(); }   // a trainer started or stopped watching
+                }).catch(() => {});
                 return r.ok;
             })
             .catch(() => false);
@@ -2729,15 +2745,22 @@
 
         function stopHeartbeat() {
             if (heartbeatTimer) {
-                clearInterval(heartbeatTimer);
+                clearTimeout(heartbeatTimer);
                 heartbeatTimer = null;
             }
+            heartbeatWatched = false;
+        }
+
+        function scheduleHeartbeat() {
+            clearTimeout(heartbeatTimer);
+            const wait = heartbeatWatched ? HEARTBEAT_WATCHED_MS : document.hidden ? HEARTBEAT_HIDDEN_MS : HEARTBEAT_INTERVAL_MS;
+            heartbeatTimer = setTimeout(() => { sendHeartbeat(); scheduleHeartbeat(); }, wait);
         }
 
         function startHeartbeat() {
             stopHeartbeat();
             sendHeartbeat();
-            heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+            scheduleHeartbeat();
         }
 
         function onUserActivity() {
@@ -3091,6 +3114,15 @@
         function refreshSiteState() {
             fetch('/api/state').then(r => r.json()).then(state => applySiteState(state)).catch(() => {});
         }
+        // Every 15 s, every 30 s in a background tab (a ping stays up for a minute, so none is missed),
+        // and right away when the tab comes back into view.
+        const SITE_STATE_MS = 15000, SITE_STATE_HIDDEN_MS = 30000;
+        let _siteStateAt = Date.now();
+        function pollSiteState() {
+            if (Date.now() - _siteStateAt < (document.hidden ? SITE_STATE_HIDDEN_MS : SITE_STATE_MS) - 1000) return;
+            _siteStateAt = Date.now();
+            refreshSiteState();
+        }
         function deliverPing(ping) {
             if (!ping || !ping.id || seenPings.has(String(ping.id))) return;
             const pingSession = getSession();
@@ -3215,7 +3247,8 @@
             const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
             return `rgba(${r},${g},${b},${alpha})`;
         }
-        setInterval(refreshSiteState, 4000);
+        setInterval(pollSiteState, SITE_STATE_MS);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - _siteStateAt > 5000) { _siteStateAt = Date.now(); refreshSiteState(); } });
 
         /* =========================================================
            PAUSE — freezes activity site-wide, no logout, resumable

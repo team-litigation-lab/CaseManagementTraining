@@ -3,7 +3,7 @@ import { ensureLiveViewTable, WATCH_MS } from '../_liveview.js';
 // GET /api/live-view?username=…  (Admins only)
 // Where a trainee is right now, the trail of where they've been, and (while watched) a snapshot of the
 // case on their screen. Reading it marks the trainee as watched for the next WATCH_MS, so their page
-// starts sending snapshots (see _liveview.js); the Admin's live view reads it every 2 s.
+// starts sending snapshots (see _liveview.js); the Admin's live view reads it every 3 s.
 const parse = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (e) { return d; } };
 
 export async function onRequestGet({ request, env }) {
@@ -25,7 +25,7 @@ export async function onRequestGet({ request, env }) {
     return json({
         success: true, username,
         fullName: (hb && hb.full_name) || username,
-        online: !!seen && Date.now() - seen < 15000,   // an open page sends a heartbeat every 2 s (Monitoring's "Online now" allows 12 s)
+        online: !!seen && Date.now() - seen < 90000,   // an open page sends a heartbeat every 30 s, 45 s in a background tab (Monitoring's "Online now" also allows 90 s)
         lastSeen: hb ? hb.last_seen : null,
         where: parse(lv && lv.where_json, null),
         trail: parse(lv && lv.trail_json, []).slice().reverse(),   // newest first

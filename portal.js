@@ -57,7 +57,7 @@ function submitRegistration() {
         credentials: 'include',
         body: JSON.stringify(payload)
     })
-    .then(response => response.json())
+    .then(readServerReply)
     .then(data => {
         if (data.success) {
             say("Registration sent. Once your trainer approves it, sign in with your username and Batch ID.", "success");
@@ -74,10 +74,20 @@ function submitRegistration() {
     })
     .catch(error => {
         console.error("Network error:", error);
-        say("Network error. Failed to connect to server.", "error");
-        showToast("Network error. Failed to connect to server.", 'error');
+        const msg = error && error.serverOff ? "The CMS server isn't answering right now, so your registration can't be sent. Please try again later (it's usually back by 00:00 UTC), or let your trainer know." : "Network error. Failed to connect to server.";
+        say(msg, "error");
+        showToast(msg, 'error');
     });
 }
+
+// The server's answer. When the site's Functions aren't running (Cloudflare's daily request limit
+// ran out: README, "Staying under Cloudflare's daily request limit"), /api/ answers with the page's
+// HTML or an empty 405 instead: that's said plainly, not as a network error or a wrong password.
+async function readServerReply(response) {
+    const text = await response.text();
+    try { return JSON.parse(text); } catch (e) { const err = new Error('The server answered ' + response.status + ' without JSON.'); err.serverOff = true; throw err; }
+}
+const SERVER_OFF_MSG = "The CMS server isn't answering right now, so sign-in can't be checked. It isn't your details: please try again later (it's usually back by 00:00 UTC), or let your trainer know.";
 
 function attemptLogin() {
     const loginMsgDiv = document.getElementById('auth-login-msg');
@@ -125,7 +135,7 @@ function attemptLogin() {
         body: JSON.stringify(adminMode ? { username: usernameInput, password: passwordInput, portalMode: currentPortalMode, name: trainerName }
             : { username: usernameInput, batchId: passwordInput, portalMode: currentPortalMode })
     })
-    .then(response => response.json())
+    .then(readServerReply)
     .then(data => {
         loginRequestSettled = true;
         clearTimeout(slowLoginTimer);
@@ -167,8 +177,9 @@ function attemptLogin() {
         clearTimeout(slowLoginTimer);
         if (loginBtn) loginBtn.disabled = false;
         console.error("Authentication connection failure:", error);
-        if (loginMsgDiv) { loginMsgDiv.className = "auth-msg error"; loginMsgDiv.innerText = "Network error. Failed to hit validation server."; }
-        showToast("Network error. Failed to hit validation server.", 'error');
+        const msg = error && error.serverOff ? SERVER_OFF_MSG : "Network error. Failed to hit validation server.";
+        if (loginMsgDiv) { loginMsgDiv.className = "auth-msg error"; loginMsgDiv.innerText = msg; }
+        showToast(msg, 'error');
     });
 }
 

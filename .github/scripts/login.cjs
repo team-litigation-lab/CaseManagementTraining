@@ -228,7 +228,9 @@ const failures = []; const fail = (m) => failures.push(m);
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     const posted = [], registered = [];
+    let serverOff = false;   // the site's Functions not running (Cloudflare's daily request limit ran out)
     await page.route('**/api/**', async route => {
+        if (serverOff) return route.fulfill({ status: 405, body: '' });
         const u = new URL(route.request().url());
         const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/login') { const b = JSON.parse(route.request().postData()); posted.push(b); return j({ success: false, error: 'CI stops here.' }, 401); }
@@ -254,6 +256,12 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.focus('#login-password'); await page.keyboard.press('Enter'); await page.waitForTimeout(400);
     last = posted[posted.length - 1] || {};
     if (posted.length !== 2 || last.name !== 'Maria Lopez' || last.password !== 'some-password') fail(`a trainer's name (and Enter to sign in) didn't go with the sign-in: ${JSON.stringify(posted)}`);
+    // /api/login answering an empty 405 (Functions off): said plainly, not "Network error" or a wrong password
+    serverOff = true;
+    await page.click('#auth-login-view .auth-submit'); await page.waitForTimeout(500);
+    const offMsg = await page.textContent('#auth-login-msg');
+    if (!/server isn't answering/.test(offMsg) || /Network error/.test(offMsg)) fail(`a sign-in server that isn't running isn't explained: "${offMsg}"`);
+    serverOff = false;
     await page.click('#portal-tab-trainee');
     if (await page.isVisible('#login-trainer-name')) fail('the Trainee tab shows the trainer name field');
     await page.click('#portal-tab-admin');
