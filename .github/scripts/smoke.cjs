@@ -350,15 +350,16 @@ const SAVED = [
     // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files
     await page.click('#intake-open-btn'); await page.waitForTimeout(400);
     if (!(await page.isVisible('#cl-tabs button.on:has-text("Intake folder")'))) fail('the Intake folder button did not open the Intake folder tab');
-    // New intake opens the client intake form (intake-form.js; new-matter.cjs tests it in full); completed, the case opens in Intake mode
+    // New intake opens the intake form (intake-form.js; new-matter.cjs tests it in full: saving it creates the case)
     await page.click('[data-if="new"]');
-    await page.waitForSelector('#nm-modal.open .nm-card', { timeout: 5000 }).catch(() => fail('New intake did not open the client intake form'));
-    await page.click('#nm-modal [data-form="slipfall"]');
-    await page.fill('#nm-first', 'Intake'); await page.fill('#nm-last', 'Client');
-    await page.type('#nm-cellPhone', '5550100'); await page.type('#nm-dol', '01152026');
-    await page.fill('#nm-description', 'Slipped on a wet floor at the store.');
-    await page.click('#nm-modal [data-nm="complete"]'); await page.waitForTimeout(300);
-    if (!(await page.evaluate(() => document.body.classList.contains('intake-mode'))) || !(await page.isVisible('#intake-bar'))) fail('the completed intake form did not open the editor in Intake mode');
+    await page.waitForSelector('#nm-modal.open .nm-card', { timeout: 5000 }).catch(() => fail('New intake did not open the intake form'));
+    await page.click('#nm-modal [data-nm="close"]');
+    // Intake mode, where typed intakes saved in the folder open
+    await page.evaluate(() => window.intakeFolderBegin()); await page.waitForTimeout(200);
+    if (!(await page.evaluate(() => document.body.classList.contains('intake-mode'))) || !(await page.isVisible('#intake-bar'))) fail('the editor did not switch to Intake mode');
+    await page.click('#client-name-field'); await page.keyboard.type('Intake Client');
+    await page.click('#client-phone-field'); await page.keyboard.type('5550100');
+    await page.click('#date-of-loss-field'); await page.keyboard.type('01152026');
     const casesBefore = saved.length;
     await page.evaluate(() => autoSaveProgress('interval')); await page.waitForTimeout(400);
     await page.click('#sidebar-actions button:has-text("Save Case")'); await page.waitForTimeout(800);
