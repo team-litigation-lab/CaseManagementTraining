@@ -578,6 +578,8 @@
     .side-card-orange:hover { background:#f97316; color:#fff; }
     .side-card-blue { border-color:#3b82f6; color:#93c5fd; background:rgba(59,130,246,.08); }
     .side-card-blue:hover { background:#3b82f6; color:#fff; }
+    .side-card-slate { border-color:#64748b; color:#cbd5e1; background:rgba(100,116,139,.10); }
+    .side-card-slate:hover { background:#64748b; color:#fff; }
     .mini-btn { font-size:10px; font-weight:800; text-transform:uppercase; padding:6px 12px; border-radius:5px; cursor:pointer; border:none; }
     .mini-btn[disabled] { opacity:.45; cursor:not-allowed; }
     /* Master Control > Case Logs: pick cases to delete */
