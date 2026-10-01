@@ -357,6 +357,15 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - The server reads the notes only when this view asks (`/api/case-repository?updates=1&q=…`), never in the 15-second background refresh of the case list.
 - Code: "Latest updates" in `case-library.js` and in `functions/api/case-repository.js`.
 
+## ✕ Close Case (sidebar)
+
+**✕ Close Case** closes the case in the editor and leaves it blank.
+- A saved case stays saved.
+- Anything not saved yet is lost, so it asks first when the case has a client name.
+- With nothing open, it says so.
+- It also leaves a Training Library case and Intake mode.
+- Code: `closeCase()` in `app.js`.
+
 ## 🗑 Deleting trainees' cases (Master Control → Case Logs)
 
 **Master Control → Case Logs** lists every case in the repository, drafts included, newest first.
@@ -528,7 +537,8 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - an MVA fills both vehicles, both insurers and the police report;
   - Premises Liability, Dog Bite and Medical Malpractice set their case types and parties;
   - a failed save says so and leaves the case in the editor;
-  - the Intake folder's New intake creates the case the same way.
+  - the Intake folder's New intake creates the case the same way;
+  - ✕ Close Case asks first and leaves the editor blank, and with nothing open it says so.
 
 - **Case Logs delete** (`.github/scripts/case-logs.cjs`, in the same job): Master Control as an Admin. It checks that:
   - every case has a Delete button;
