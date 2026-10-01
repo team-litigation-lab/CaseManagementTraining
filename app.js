@@ -916,6 +916,22 @@
             renderRepo();
         }
 
+        /* ---------- Close Case ----------
+           Sidebar → ✕ Close Case: closes the case in the editor and leaves it blank. A saved case
+           stays saved; anything not saved yet is lost, so it asks first when the case has a client
+           name. Goes through newCase() (and the modules that follow it: Intake mode, the calendar
+           tab, the timer). */
+        function closeCase() {
+            const libCase = !!(window.mockSnapshot && window.mockSnapshot().mockId);
+            const content = hasCaseContent();
+            if (!content && currentCaseId === null && !libCase && !document.body.classList.contains('intake-mode')) { showToast('No case is open.', 'info'); return; }
+            if (content && !confirm('Close this case? Anything not saved yet is lost. Save it first if you need it.')) return;
+            if (content) document.getElementById('client-name-field').innerText = ''; // already asked: newCase() needn't ask again
+            window.newCase();
+            if (window.mockSnapshot && window.mockSnapshot().mockId) return; // an Admin kept unsaved changes to a Training Library case
+            showToast('Case closed.', 'info');
+        }
+
         /* ---------- Export My Calendar (.ics) ----------
            Not a live Google Calendar connection — generates a downloadable
            .ics file of every date-bearing deadline across cases the

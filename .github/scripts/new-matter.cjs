@@ -8,7 +8,8 @@
 // providers, employment, lost wages, vehicles, a Case Note with the grade and the other answers) and
 // the case is saved with a Case ID; "New case created" shows the grade and what to ask next time; the
 // intake and its grade are saved with the case and can be viewed; an unfinished intake can be resumed;
-// a failed save says so and leaves the case in the editor; the Intake folder's New intake does the same.
+// a failed save says so and leaves the case in the editor; the Intake folder's New intake does the same;
+// ✕ Close Case (the sidebar) leaves the editor blank.
 // Usage: node .github/scripts/new-matter.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -299,6 +300,18 @@ const failures = []; const fail = (m) => failures.push(m);
     r = await complete();
     c = await ed();
     if (r.title !== '✅ New case created' || saved.length !== n + 1 || c.intakeMode || c.name !== 'Mireille Shaughnessy' || !c.record) fail(`the Intake folder's New intake didn't create the case: ${JSON.stringify({ title: r.title, saves: saved.length - n, intakeMode: c.intakeMode, name: c.name })}`);
+    // 11. ✕ Close Case: asks first, leaves the editor blank (the case stays saved), and says so when nothing is open
+    dialogs.length = 0;
+    const savesBefore = saved.length;
+    await page.click('#close-case-btn');
+    await page.waitForTimeout(200);
+    const closed = await page.evaluate(() => ({ name: document.getElementById('client-name-field').textContent.trim(), id: currentCaseId, rec: !!window.newMatterState().record, bar: document.getElementById('kx-intake').classList.contains('has') }));
+    if (!dialogs.some(m => /Close this case\?/.test(m)) || closed.name || closed.id !== null || closed.rec || closed.bar || saved.length !== savesBefore) fail(`Close Case: ${JSON.stringify({ asked: dialogs, closed, saves: saved.length - savesBefore })}`);
+    if (!(await page.isVisible('text=Case closed.'))) fail('no "Case closed." message');
+    dialogs.length = 0;
+    await page.click('#close-case-btn'); await page.waitForTimeout(200);
+    if (dialogs.length || !(await page.isVisible('text=No case is open.'))) fail(`Close Case with nothing open: ${dialogs.join(' / ') || 'no message'}`);
+
     const final = await positional();
     if (final.selects < before.selects) fail('fields are missing from the page after the intakes');
 
