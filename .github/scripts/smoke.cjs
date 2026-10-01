@@ -1,6 +1,7 @@
 // CMS smoke test (static files, API calls answered by the test).
 // Signs in as a trainee, opens every Training Library case, checks view-only
-// mode blocks saving, saves a practice copy, and plays every Front Desk Drill
+// mode (the Front Desk) blocks saving, saves a trainee's work on a case file in a
+// program that edits it (their own case, never a draft), and plays every Front Desk Drill
 // call with the answer key (must score 100). Also checks the Case Library:
 // trainees get no Training Library button and no list of everyone's cases,
 // the search bar above the case (and the Case Library window) finds saved and
@@ -118,14 +119,17 @@ const SAVED = [
     }).filter(Boolean));
     cases.forEach(c => fail(`case did not load correctly: ${c}`));
 
-    // view-only blocks saving; a practice copy saves with its tags
+    // view only for the Front Desk: Save Case doesn't save it; in a program that edits the file (Case Management),
+    // Save Case saves the trainee's own case for it, with its tags, never a draft
     await page.evaluate(() => openMockCase('MC-04', { silent: true }));
     await page.evaluate(() => saveCase()); await page.waitForTimeout(200);
     if (saved.length) fail('a view-only library case was saved');
-    await page.evaluate(() => startPracticeCopy());
+    await page.evaluate(() => mockChooseProgram('cm')); await page.waitForTimeout(500);
     await page.evaluate(() => saveCase()); await page.waitForTimeout(400);
     const s = saved[saved.length - 1];
-    if (!s || s.content.trainingLibraryId !== 'MC-04' || s.content.program !== 'reception') fail(`practice copy did not save with its tags (${JSON.stringify(s && { lib: s.content.trainingLibraryId, program: s.content.program })})`);
+    if (!s || s.isDraft !== false || !s.finalize || s.content.trainingLibraryId !== 'MC-04' || s.content.program !== 'cm') fail(`a trainee's work on a case file did not save as their own case with its tags (${JSON.stringify(s && { draft: s.isDraft, finalize: s.finalize, lib: s.content.trainingLibraryId, program: s.content.program })})`);
+    await page.evaluate(() => mockChooseProgram('reception')); await page.waitForTimeout(300);
+    saved.length = 0;
 
     // the search bar sits in the case header, under the case status, not in a strip above the case;
     // on a view-only library case it can still be typed in, without counting as a case edit
@@ -356,7 +360,8 @@ const SAVED = [
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
     if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn' || side.hidden.length || side.oldButtons
-        || side.bar.join('|') !== '✕ Close|🗄 Archive|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
+        // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
+        || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
 
     // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files
     await page.evaluate(() => openIntakeFolder()); await page.waitForTimeout(400);   // trainees: from a course link (?intake=1); the sidebar button is for Admins
@@ -395,12 +400,13 @@ const SAVED = [
     if (await page.locator('#if-list .if-row').count() !== 2) fail(`the Intake folder lists ${await page.locator('#if-list .if-row').count()} files instead of 2`);
     await page.evaluate(() => closeCaseLibrary());
 
-    // Caller scenarios are for trainers only: a trainee gets no button and no panel (on the library
-    // original or a practice copy). An Admin gets a reception call script for every caller scenario
+    // Caller scenarios are for trainers only: a trainee gets no button and no panel (on a view-only
+    // case file or one they work on). An Admin gets a reception call script for every caller scenario
     // and a scripted mock call (the caller's answers) for every simulator caller on the file
     for (const copy of [false, true]) {
-        await page.evaluate((copy) => { openMockCase('MC-01', { silent: true }); if (copy) startPracticeCopy(); openCallsPanel(); showTab('notes'); }, copy);
-        const where = copy ? 'a practice copy' : 'a library case';
+        await page.evaluate((copy) => { mockChooseProgram(copy ? 'cm' : 'reception'); openMockCase('MC-01', { silent: true }); openCallsPanel(); showTab('notes'); }, copy);
+        await page.waitForTimeout(300);
+        const where = copy ? 'a case file they work on' : 'a library case';
         const onScreen = (await page.innerText('body')).match(/[^\n]*training library[^\n]*/i);
         if (onScreen) fail(`a trainee sees the Training Library on ${where}: "${onScreen[0].trim().slice(0, 120)}"`);
         if (!(await page.textContent('#mock-banner')).includes(CN['MC-01'])) fail(`the banner doesn't show a trainee the case number on ${where}`);
@@ -409,7 +415,7 @@ const SAVED = [
         if (await page.locator('#mock-banner button:has-text("Caller scenarios")').count()) fail(`a trainee has the Caller scenarios button on ${where}`);
         if (await page.isVisible('#mock-calls-panel.open') || await page.locator('#mock-calls-panel .mcp-call, #mock-calls-panel .fdd-script').count()) fail(`openCallsPanel() showed a trainee the caller scenarios on ${where}`);
     }
-    await page.evaluate(() => closeMockCase());
+    await page.evaluate(() => { closeMockCase(); mockChooseProgram('reception'); });
     const admin = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     admin.on('pageerror', e => fail(`page error (admin): ${e.message}`));
     const adminUpdates = [];

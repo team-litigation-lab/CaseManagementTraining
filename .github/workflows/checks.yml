@@ -76,6 +76,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/library-edit.cjs
+      - name: Training Library by program (trainees edit their program's parts; one case per trainee per file, never a draft)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/library-rbac.cjs
       - name: Training Library PDF downloads (trainer copy, case files only, one case)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

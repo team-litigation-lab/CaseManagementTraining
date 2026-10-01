@@ -5,11 +5,11 @@
    (Receptionist / Front Desk, Intake, Case Management, EA/PA, …).
    They live in this file, not in the database, so they are identical
    for every trainee and can't be deleted (trainers' edits are saved on top,
-   /api/mock-case-edits). For trainees, opening one loads it into the case
-   editor as VIEW ONLY, except its Notes and Tasks:
-   what a trainee adds or edits there is saved for them only
-   (/api/mock-case-updates). "Work on a practice copy" lets a trainee
-   save their own copy (a normal case they own).
+   /api/mock-case-edits). A trainee works on one in the role of the program
+   they chose (training-library.js: who edits what): the parts their program
+   handles are editable, and Save Case keeps their work as their own case for
+   that file. The Front Desk (and a drill) gets it view only except its Notes
+   and Tasks, saved for them only (/api/mock-case-updates).
 
    Some client names are on more than one file on purpose (the same
    client with a second accident, or a different person with the same
@@ -77,13 +77,14 @@ const MOCK_PROGRAMS = [
     { id: 'reception', label: 'Receptionist / Front Desk' },
     { id: 'intake', label: 'Intake' },
     { id: 'cm', label: 'Case Management' },
+    { id: 'md', label: 'Medical Summary & Demand' },
     { id: 'ea', label: 'EA / PA' },
     { id: 'pd', label: 'Property Damage' }
 ];
 
 const MOCK_CASES = [
 {
-    id: 'MC-01', caseNumber: 'LSH-2026-MVA-901379', level: 'Starter', programs: ['reception', 'cm', 'ea', 'pd'],
+    id: 'MC-01', caseNumber: 'LSH-2026-MVA-901379', level: 'Starter', programs: ['reception', 'cm', 'ea', 'pd', 'md'],
     summary: 'Rear-end collision, in treatment. Client calls about her next appointment; a "cousin" asks about the settlement.',
     client: { name: 'Maria Santos', phone: '(555) 010-4417', email: 'maria.santos@example.com', dob: '03/22/1988', ssn: 'XXX-XX-4821',
         address: '1187 Willow Bend Dr, Riverton, GA 30301',
@@ -139,7 +140,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-02', caseNumber: 'LSH-2026-SNF-902099', level: 'Starter', programs: ['reception', 'intake', 'cm'],
+    id: 'MC-02', caseNumber: 'LSH-2026-SNF-902099', level: 'Starter', programs: ['reception', 'intake', 'cm', 'md'],
     summary: 'Grocery-store slip and fall, retainer still out. The store\'s insurer wants a recorded statement.',
     client: { name: 'Derek Thompson', phone: '(555) 010-4520', email: 'd.thompson@example.com', dob: '11/05/1975', ssn: 'XXX-XX-1934',
         address: '52 Harbor View Rd, Apt 3B, Riverton, GA 30303',
@@ -187,7 +188,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-03', caseNumber: 'LSH-2026-DOG-901145', level: 'Starter', programs: ['reception', 'cm'],
+    id: 'MC-03', caseNumber: 'LSH-2026-DOG-901145', level: 'Starter', programs: ['reception', 'cm', 'md'],
     summary: 'Dog bite at a neighbor\'s home, demand in review. Homeowner\'s insurer calls about the demand.',
     client: { name: 'Aisha Patel', phone: '(555) 010-4633', email: 'aisha.patel@example.com', dob: '07/14/1992', ssn: 'XXX-XX-6610',
         address: '309 Maple Court, Riverton, GA 30305',
@@ -234,7 +235,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-04', caseNumber: 'LSH-2025-MVA-900909', level: 'Intermediate', programs: ['reception', 'cm', 'pd'],
+    id: 'MC-04', caseNumber: 'LSH-2025-MVA-900909', level: 'Intermediate', programs: ['reception', 'cm', 'pd', 'md'],
     summary: 'Policy-limits demand is out. The adjuster calls with an offer that has a deadline.',
     client: { name: 'Robert Chen', phone: '(555) 010-4741', email: 'bobby.chen@example.com', dob: '01/30/1969', ssn: 'XXX-XX-2208',
         address: '88 Lantern Hill Rd, Riverton, GA 30307',
@@ -282,7 +283,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-05', caseNumber: 'LSH-2024-PRL-900171', level: 'Advanced', programs: ['reception', 'cm'],
+    id: 'MC-05', caseNumber: 'LSH-2024-PRL-900171', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'Apartment stairway fall in litigation. Defense counsel calls to move a deposition.',
     client: { name: 'Linda Garcia', phone: '(555) 010-4850', email: 'lgarcia61@example.com', dob: '05/09/1961', ssn: 'XXX-XX-7702',
         address: '2200 Pine Ridge Blvd, Unit 14, Riverton, GA 30309',
@@ -333,7 +334,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-06', caseNumber: 'LSH-2025-MVA-900353', level: 'Intermediate', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-06', caseNumber: 'LSH-2025-MVA-900353', level: 'Intermediate', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Settled and in disbursement. Client asks when his check is ready and wants his friend to pick it up.',
     client: { name: 'James Wilson', phone: '(555) 010-4962', email: 'jwilson.rvt@example.com', dob: '09/17/1983', ssn: 'XXX-XX-3390',
         address: '17 Birchwood Lane, Riverton, GA 30311',
@@ -380,7 +381,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-07', caseNumber: 'LSH-2025-MVA-900857', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-07', caseNumber: 'LSH-2025-MVA-900857', level: 'Intermediate', programs: ['reception', 'cm', 'md'],
     summary: 'Rideshare passenger, UM demand. Client moved, changed numbers and is upset nobody calls back.',
     client: { name: 'Keisha Brown', phone: '(555) 010-5073', email: 'keisha.brown@example.com', dob: '12/01/1995', ssn: 'XXX-XX-5149',
         address: '640 Crescent Ave, Apt 22, Riverton, GA 30312',
@@ -420,7 +421,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-08', caseNumber: 'LSH-2026-MOTO-901579', level: 'Intermediate', programs: ['reception', 'cm', 'pd'],
+    id: 'MC-08', caseNumber: 'LSH-2026-MOTO-901579', level: 'Intermediate', programs: ['reception', 'cm', 'pd', 'md'],
     summary: 'Motorcycle crash, surgery scheduled. Spanish-speaking client; his daughter is authorized.',
     client: { name: 'Tomás Rivera', phone: '(555) 010-5188', email: '', dob: '04/18/1964', ssn: 'XXX-XX-8043',
         address: '905 Mission Road, Riverton, GA 30314',
@@ -459,7 +460,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-09', caseNumber: 'LSH-2025-SNF-900593', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-09', caseNumber: 'LSH-2025-SNF-900593', level: 'Intermediate', programs: ['reception', 'cm', 'md'],
     summary: 'Restaurant slip and fall in negotiation. A provider threatens to send the bill to collections.',
     client: { name: 'Emily Nguyen', phone: '(555) 010-5291', email: 'emily.nguyen@example.com', dob: '02/26/1990', ssn: 'XXX-XX-0415',
         address: '71 Grove Street, Riverton, GA 30316',
@@ -493,7 +494,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-10', caseNumber: 'LSH-2026-DOG-901315', level: 'Advanced', programs: ['reception', 'cm'],
+    id: 'MC-10', caseNumber: 'LSH-2026-DOG-901315', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'Child dog-bite victim. The parent on file is the guardian; the other parent and the school are not.',
     client: { name: 'Sofia Morales (minor), by her father Frank Morales', phone: '(555) 010-5305', email: 'frank.morales@example.com', dob: '06/02/2018', ssn: 'XXX-XX-2718',
         address: '14 Orchard Lane, Riverton, GA 30318',
@@ -531,7 +532,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-11', caseNumber: 'LSH-2025-MVA-900639', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-11', caseNumber: 'LSH-2025-MVA-900639', level: 'Intermediate', programs: ['reception', 'cm', 'md'],
     summary: 'MVA in lien negotiations. The hospital lien department calls about a reduction.',
     client: { name: 'Ngozi Okonkwo', phone: '(555) 010-5412', email: 'ngozi.o@example.com', dob: '10/10/1979', ssn: 'XXX-XX-6254',
         address: '480 Summit Terrace, Riverton, GA 30320',
@@ -566,7 +567,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-12', caseNumber: 'LSH-2026-MVA-902051', level: 'Starter', programs: ['reception', 'cm', 'intake', 'pd'],
+    id: 'MC-12', caseNumber: 'LSH-2026-MVA-902051', level: 'Starter', programs: ['reception', 'cm', 'intake', 'pd', 'md'],
     summary: 'Early investigation. The body shop is charging storage and the client wants a rental car.',
     client: { name: 'William Harris', phone: '(555) 010-5520', email: 'will.harris@example.com', dob: '08/08/1958', ssn: 'XXX-XX-9136',
         address: '3 Colonial Drive, Riverton, GA 30322',
@@ -602,7 +603,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-13', caseNumber: 'LSH-2026-PRL-902184', level: 'Advanced', programs: ['reception', 'intake', 'cm'],
+    id: 'MC-13', caseNumber: 'LSH-2026-PRL-902184', level: 'Advanced', programs: ['reception', 'intake', 'cm', 'md'],
     summary: 'Potential client with the statute of limitations weeks away. Urgent routing, no advice.',
     client: { name: 'Nicole Adams', phone: '(555) 010-5634', email: 'nicole.adams@example.com', dob: '03/03/1984', ssn: 'XXX-XX-4470',
         address: '1520 Lakeshore Blvd, Riverton, GA 30324',
@@ -631,7 +632,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-14', caseNumber: 'LSH-2025-MVA-900470', level: 'Advanced', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-14', caseNumber: 'LSH-2025-MVA-900470', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Commercial-truck case in litigation. A reporter calls; the workers\' comp carrier asserts a lien.',
     client: { name: 'Carlos Mendoza', phone: '(555) 010-5745', email: 'cmendoza@example.com', dob: '12/19/1977', ssn: 'XXX-XX-3862',
         address: '250 Ironwood Street, Riverton, GA 30326',
@@ -673,7 +674,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-15', caseNumber: 'LSH-2026-MVA-901688', level: 'Intermediate', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-15', caseNumber: 'LSH-2026-MVA-901688', level: 'Intermediate', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Elderly pedestrian in treatment. Her son holds a power of attorney; she is worried about "a lawyer bill".',
     client: { name: 'Patricia Lewis', phone: '(555) 010-5850', email: '', dob: '01/14/1946', ssn: 'XXX-XX-1507',
         address: '12 Heritage Way, Riverton, GA 30328',
@@ -711,7 +712,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-16', caseNumber: 'LSH-2025-MVA-901053', level: 'Advanced', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-16', caseNumber: 'LSH-2025-MVA-901053', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Client says she is changing lawyers. Her new firm calls for the file.',
     client: { name: 'Hannah Pierce', phone: '(555) 010-5961', email: 'hannah.pierce@example.com', dob: '06/25/1987', ssn: 'XXX-XX-8820',
         address: '77 Cedar Hollow Rd, Riverton, GA 30330',
@@ -745,7 +746,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-17', caseNumber: 'LSH-2026-BICY-901803', level: 'Starter', programs: ['reception', 'cm'],
+    id: 'MC-17', caseNumber: 'LSH-2026-BICY-901803', level: 'Starter', programs: ['reception', 'cm', 'md'],
     summary: 'Cyclist "doored" by a parked car. Client wants to know about replacing his bike.',
     client: { name: 'Andre Coleman', phone: '(555) 010-6071', email: 'andre.coleman@example.com', dob: '09/03/1991', ssn: 'XXX-XX-5582',
         address: '19 Riverside Walk, Apt 7, Riverton, GA 30332',
@@ -772,7 +773,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-18', caseNumber: 'LSH-2026-PROD-901476', level: 'Advanced', programs: ['reception', 'cm'],
+    id: 'MC-18', caseNumber: 'LSH-2026-PROD-901476', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'Pressure-cooker burn (product liability). The manufacturer\'s insurer wants to pick up the cooker.',
     client: { name: 'Rachel Donovan', phone: '(555) 010-6183', email: 'rachel.donovan@example.com', dob: '11/27/1986', ssn: 'XXX-XX-7340',
         address: '63 Magnolia Circle, Riverton, GA 30334',
@@ -799,7 +800,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-19', caseNumber: 'LSH-2026-MVA-901409', level: 'Advanced', programs: ['reception', 'cm', 'intake'],
+    id: 'MC-19', caseNumber: 'LSH-2026-MVA-901409', level: 'Advanced', programs: ['reception', 'cm', 'intake', 'md'],
     summary: 'Pedestrian hit by a city bus. Government-claim notice deadline; the city\'s risk office calls.',
     client: { name: 'Samuel Boateng', phone: '(555) 010-6295', email: 'sam.boateng@example.com', dob: '02/14/1970', ssn: 'XXX-XX-0921',
         address: '301 Station Road, Riverton, GA 30336',
@@ -825,7 +826,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-20', caseNumber: 'LSH-2026-MVA-901288', level: 'Advanced', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-20', caseNumber: 'LSH-2026-MVA-901288', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Wrongful death. Only the estate\'s administrator is authorized; grieving relatives call.',
     client: { name: 'Estate of George Hammond (Carol Hammond, administrator)', phone: '(555) 010-6307', email: 'carol.hammond@example.com', dob: '12/05/1949', ssn: 'XXX-XX-6678',
         address: '8 Willow Creek Lane, Riverton, GA 30338',
@@ -860,7 +861,7 @@ const MOCK_CASES = [
    same for James Wilson (MC-06). A name search returns three files for each:
    the caller's date of the accident (DOL) and date of birth pick the right one. */
 {
-    id: 'MC-21', caseNumber: 'LSH-2025-SNF-900279', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-21', caseNumber: 'LSH-2025-SNF-900279', level: 'Intermediate', programs: ['reception', 'cm', 'md'],
     summary: 'Maria Santos\'s SECOND file (same client as MC-01): an older pharmacy slip and fall, settled, liens being negotiated. Her husband is authorized on this file only.',
     client: { name: 'Maria Santos', phone: '(555) 010-4417', email: 'maria.santos@example.com', dob: '03/22/1988', ssn: 'XXX-XX-4821',
         address: '1187 Willow Bend Dr, Riverton, GA 30301',
@@ -909,7 +910,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-22', caseNumber: 'LSH-2026-DOG-901615', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-22', caseNumber: 'LSH-2026-DOG-901615', level: 'Intermediate', programs: ['reception', 'cm', 'md'],
     summary: 'A DIFFERENT Maria Santos (not MC-01 or MC-21): a neighbor\'s dog bit her while she was gardening. Check the DOB before you share anything.',
     client: { name: 'Maria Santos', phone: '(555) 010-6412', email: 'msantos.garden@example.com', dob: '08/30/1971', ssn: 'XXX-XX-5307',
         address: '402 Magnolia Court, Riverton, GA 30318',
@@ -953,7 +954,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-23', caseNumber: 'LSH-2026-PRL-901227', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-23', caseNumber: 'LSH-2026-PRL-901227', level: 'Intermediate', programs: ['reception', 'cm', 'md'],
     summary: 'James Wilson\'s SECOND file (same client as MC-06): a garage handrail gave way. In treatment while his truck-crash case is being paid out.',
     client: { name: 'James Wilson', phone: '(555) 010-4962', email: 'jwilson.rvt@example.com', dob: '09/17/1983', ssn: 'XXX-XX-3390',
         address: '17 Birchwood Lane, Riverton, GA 30311',
@@ -997,7 +998,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-24', caseNumber: 'LSH-2026-SNF-901727', level: 'Advanced', programs: ['reception', 'cm', 'intake'],
+    id: 'MC-24', caseNumber: 'LSH-2026-SNF-901727', level: 'Advanced', programs: ['reception', 'cm', 'intake', 'md'],
     summary: 'A DIFFERENT James Wilson (not MC-06 or MC-23): a retiree who fell on a hotel pool deck. His son is authorized. Check the DOB before you share anything.',
     client: { name: 'James Wilson', phone: '(555) 010-6520', email: '', dob: '04/02/1956', ssn: 'XXX-XX-7718',
         address: '5 Quarry Road, Riverton, GA 30325',
@@ -1045,7 +1046,7 @@ const MOCK_CASES = [
    Also: a safety flag (MC-27), a prior attorney's lien (MC-32), pre-settlement funding (MC-33),
    joint custody with both parents authorized (MC-35), and a brand-new file (MC-36). */
 {
-    id: 'MC-25', caseNumber: 'LSH-2026-MVA-901845', level: 'Advanced', programs: ['reception', 'cm', 'pd'],
+    id: 'MC-25', caseNumber: 'LSH-2026-MVA-901845', level: 'Advanced', programs: ['reception', 'cm', 'pd', 'md'],
     summary: 'Jose Hernandez (the father, born 1962) and his son of the same name were hurt in the same crash, so the two files share a name, an address and a DOL. Only the DOB or the case number tells them apart. His wife is authorized on HIS file only.',
     client: { name: 'Jose Hernandez', phone: '(555) 010-6630', email: '', dob: '03/14/1962', ssn: 'XXX-XX-2741',
         address: '2210 Brookside Ave, Riverton, GA 30327',
@@ -1091,7 +1092,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-26', caseNumber: 'LSH-2026-MVA-901924', level: 'Advanced', programs: ['reception', 'cm'],
+    id: 'MC-26', caseNumber: 'LSH-2026-MVA-901924', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'Jose Hernandez Jr. (the son, born 1994): passenger in his father\'s car in the same crash as MC-25. Same name, same address, same DOL. Only he is authorized on his file, not his parents.',
     client: { name: 'Jose Hernandez', phone: '(555) 010-6640', email: 'jhernandez94@example.com', dob: '11/02/1994', ssn: 'XXX-XX-8156',
         address: '2210 Brookside Ave, Riverton, GA 30327',
@@ -1135,7 +1136,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-27', caseNumber: 'LSH-2025-PRL-900998', level: 'Advanced', programs: ['reception', 'cm'],
+    id: 'MC-27', caseNumber: 'LSH-2025-PRL-900998', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'Negligent security: client was assaulted in a dark apartment parking garage and has moved for her safety. Never confirm she is a client, or give out her address or phone.',
     client: { name: 'Olivia Bennett', phone: '(555) 010-6650', email: 'o.bennett.safe@example.com', dob: '07/07/1993', ssn: 'XXX-XX-3094',
         address: '415 Laurel Park Way, Apt 12, Riverton, GA 30330',
@@ -1181,7 +1182,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-28', caseNumber: 'LSH-2026-ESCO-901969', level: 'Intermediate', programs: ['reception', 'cm', 'intake'],
+    id: 'MC-28', caseNumber: 'LSH-2026-ESCO-901969', level: 'Intermediate', programs: ['reception', 'cm', 'intake', 'md'],
     summary: 'Rental e-scooter crash: the front brake failed on a hill. Early investigation; no health insurance. The client wants to post his crash video online.',
     client: { name: 'Marcus Lee', phone: '(555) 010-6660', email: 'marcus.lee@example.com', dob: '05/19/2000', ssn: 'XXX-XX-6619',
         address: '77 Canal Street, Apt 5C, Riverton, GA 30305',
@@ -1224,7 +1225,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-29', caseNumber: 'LSH-2025-MVA-900513', level: 'Intermediate', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-29', caseNumber: 'LSH-2025-MVA-900513', level: 'Intermediate', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Underinsured driver: the at-fault driver\'s $25,000 was paid; the client\'s own UM carrier agreed to $60,000. Her UM adjuster calls with only our case number.',
     client: { name: 'Denise Carter', phone: '(555) 010-6670', email: 'denise.carter@example.com', dob: '09/28/1981', ssn: 'XXX-XX-4307',
         address: '1450 Magnolia Heights Blvd, Riverton, GA 30319',
@@ -1268,7 +1269,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-30', caseNumber: 'LSH-2025-BOAT-900771', level: 'Intermediate', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-30', caseNumber: 'LSH-2025-BOAT-900771', level: 'Intermediate', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'A rental pontoon boat\'s railing gave way. Settled and in disbursement; Medicare is being paid first. His daughter holds a power of attorney.',
     client: { name: 'Harold Jenkins', phone: '(555) 010-6680', email: '', dob: '12/12/1948', ssn: 'XXX-XX-7265',
         address: '31 Lakeview Terrace, Riverton, GA 30331',
@@ -1313,7 +1314,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-31', caseNumber: 'LSH-2025-DOG-900722', level: 'Starter', programs: ['reception', 'cm'],
+    id: 'MC-31', caseNumber: 'LSH-2025-DOG-900722', level: 'Starter', programs: ['reception', 'cm', 'md'],
     summary: 'Dog bite at a friend\'s barbecue. The insurer offered $30,000 and the client wants the front desk to tell her whether to take it.',
     client: { name: 'Tanya Reed', phone: '(555) 010-6690', email: 'tanya.reed@example.com', dob: '04/25/1990', ssn: 'XXX-XX-9582',
         address: '608 Dogwood Circle, Riverton, GA 30312',
@@ -1355,7 +1356,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-32', caseNumber: 'LSH-2026-MVA-901203', level: 'Advanced', programs: ['reception', 'cm'],
+    id: 'MC-32', caseNumber: 'LSH-2026-MVA-901203', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'The client fired his first lawyers and moved his case here. The old firm has a lien for its costs and fees, and its office calls about it.',
     client: { name: 'Ahmed Rahman', phone: '(555) 010-6700', email: 'ahmed.rahman@example.com', dob: '08/15/1985', ssn: 'XXX-XX-1147',
         address: '92 Cedar Ridge Lane, Riverton, GA 30323',
@@ -1403,7 +1404,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-33', caseNumber: 'LSH-2024-MVA-900242', level: 'Advanced', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-33', caseNumber: 'LSH-2024-MVA-900242', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Settled; liens being negotiated, including a pre-settlement funding advance. The funding company calls with our case number, asking for amounts.',
     client: { name: 'Latoya Jackson', phone: '(555) 010-6710', email: 'latoya.jackson@example.com', dob: '01/09/1987', ssn: 'XXX-XX-6023',
         address: '240 Peachtree Commons, Unit 9, Riverton, GA 30306',
@@ -1451,7 +1452,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-34', caseNumber: 'LSH-2025-PRL-900393', level: 'Advanced', programs: ['reception', 'cm', 'ea'],
+    id: 'MC-34', caseNumber: 'LSH-2025-PRL-900393', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Elevator dropped two floors in a medical office building. In litigation; the mediation center calls with our case number, and his wife wants the mediation time.',
     client: { name: 'Brian O\'Neill', phone: '(555) 010-6720', email: 'brian.oneill@example.com', dob: '10/03/1972', ssn: 'XXX-XX-5530',
         address: '18 Foxglove Court, Riverton, GA 30329',
@@ -1508,7 +1509,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-35', caseNumber: 'LSH-2026-PRL-901509', level: 'Intermediate', programs: ['reception', 'cm'],
+    id: 'MC-35', caseNumber: 'LSH-2026-PRL-901509', level: 'Intermediate', programs: ['reception', 'cm', 'md'],
     summary: 'A child hurt at a trampoline park. Her parents are divorced with joint custody and BOTH are authorized (unlike Sofia Morales, MC-10). A waiver the mother signed online is an issue.',
     client: { name: 'Emma Collins (minor), by her mother Sarah Collins', phone: '(555) 010-6730', email: 'sarah.collins@example.com', dob: '02/17/2015', ssn: 'XXX-XX-4488',
         address: '65 Birch Hollow Road, Riverton, GA 30334',
@@ -1550,7 +1551,7 @@ const MOCK_CASES = [
     }
 },
 {
-    id: 'MC-36', caseNumber: 'LSH-2026-PEDE-902235', level: 'Starter', programs: ['reception', 'intake', 'cm'],
+    id: 'MC-36', caseNumber: 'LSH-2026-PEDE-902235', level: 'Starter', programs: ['reception', 'intake', 'cm', 'md'],
     summary: 'Brand-new file: a pedestrian hit in a crosswalk by a delivery van. Retainer signed yesterday; intake packet still missing; no case manager yet. His employer\'s HR calls.',
     client: { name: 'Walter Grant', phone: '(555) 010-6740', email: 'walter.grant@example.com', dob: '06/30/1968', ssn: 'XXX-XX-3371',
         address: '504 Riverbend Parkway, Riverton, GA 30317',

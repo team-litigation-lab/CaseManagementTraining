@@ -2,19 +2,25 @@
    LSH CMS — TRAINING LIBRARY + PROGRAM CONTEXT
    ---------------------------------------------------------
    1. Program context. Every LSH training program can open the CMS
-      with ?program=<id> (reception, intake, cm, ea, pd). It's remembered
-      for the browser tab, shown in the header, used as the Training
-      Library's default filter, and stamped on any practice copy a
-      trainee saves (content.program), so trainers can tell which
-      course a case came from.
-   2. Training Library. The hardcoded mock cases in mock-cases.js open
-      in the normal case editor as VIEW ONLY (nothing can be typed,
-      saved, archived or autosaved), except the Notes and Tasks tabs:
-      what a user adds or edits there (a call they logged, a task they
-      set) is saved for that user (/api/mock-case-updates) and comes
-      back when they reopen the case. "Work on a practice copy" makes
-      the whole editor editable; Save Case then creates the trainee's
-      own case, stamped with content.trainingLibraryId.
+      with ?program=<id> (reception, intake, cm, md, ea, pd), and a
+      trainee can choose theirs in the bar above a case file. It's
+      remembered (for the tab and the next visit), shown in the header,
+      used as the Training Library's default filter, decides what a
+      trainee can edit on a case file (who edits what, below), and is
+      stamped on the cases they save (content.program), so trainers can
+      tell which course a case came from.
+   2. Training Library. The mock cases in mock-cases.js open in the
+      normal case editor. Trainers (Admins) edit the library case itself
+      (Save goes to the library for everyone). A trainee works on a case
+      file in the role of their program: the parts their program handles
+      are editable, the rest is view only, and Save Case saves their work
+      as their own case for that file (content.trainingLibraryId): one per
+      trainee per file, never a draft, and reopening the file shows it.
+      Without a program, in a program that only logs calls (Front Desk),
+      and during a Front Desk Drill, the file is view only except its
+      Notes and Tasks: what a trainee adds there (a call they logged, a
+      task they set) is saved for them (/api/mock-case-updates) and comes
+      back when they reopen it.
       Only Admins see the Training Library (its button, its window and
       its name). To trainees a mock case is a case file, known by its
       case number: they find it with the search bar above the case
@@ -36,6 +42,7 @@
         reception: 'reception', receptionist: 'reception', frontdesk: 'reception', 'front-desk': 'reception',
         intake: 'intake', cm: 'cm', casemanagement: 'cm', 'case-management': 'cm',
         ea: 'ea', pa: 'ea', eapa: 'ea', 'ea-pa': 'ea',
+        md: 'md', medsum: 'md', 'medsum-demand': 'md', medsumanddemand: 'md', demand: 'md',
         pd: 'pd', propertydamage: 'pd', 'property-damage': 'pd'
     };
     function normProgram(p) {
@@ -43,12 +50,18 @@
         return PROGRAM_ALIASES[k] || '';
     }
     const params = new URLSearchParams(location.search);
-    try {
-        const fromUrl = normProgram(params.get('program'));
-        if (fromUrl) sessionStorage.setItem(PROGRAM_KEY, fromUrl);
-    } catch (e) { /* storage blocked: program just isn't remembered */ }
+    // Kept for the tab, and for the next visit (a trainee's choice of program).
+    function storeProgram(id) {
+        try { if (id) sessionStorage.setItem(PROGRAM_KEY, id); else sessionStorage.removeItem(PROGRAM_KEY); } catch (e) { /* storage blocked: program just isn't remembered */ }
+        try { if (id) localStorage.setItem(PROGRAM_KEY, id); else localStorage.removeItem(PROGRAM_KEY); } catch (e) { /* storage blocked */ }
+    }
+    const fromUrl = normProgram(params.get('program'));
+    if (fromUrl) storeProgram(fromUrl);
     function currentProgram() {
-        try { return sessionStorage.getItem(PROGRAM_KEY) || ''; } catch (e) { return ''; }
+        let p = '';
+        try { p = sessionStorage.getItem(PROGRAM_KEY) || ''; } catch (e) { /* storage blocked */ }
+        if (!p) try { p = localStorage.getItem(PROGRAM_KEY) || ''; } catch (e) { /* storage blocked */ }
+        return normProgram(p);
     }
     function programLabel(id) {
         const p = (window.MOCK_PROGRAMS || []).find(x => x.id === id);
@@ -56,31 +69,59 @@
     }
     window.lshProgram = currentProgram;
     window.lshSetProgram = function (id) {
-        try { id ? sessionStorage.setItem(PROGRAM_KEY, id) : sessionStorage.removeItem(PROGRAM_KEY); } catch (e) {}
+        storeProgram(normProgram(id));
         libState.program = id || 'all';
         paintProgramUI();
         renderLibraryList();
     };
 
+    /* ---------- who edits what on a case file (trainees) ----------
+       Trainers (Admins) edit the whole library case. A trainee works on a case file in the role of
+       the program they chose: the areas their program handles are editable, the rest is view only.
+       Areas: 'header' (the case header: client name and contacts, attorney, case manager, phase,
+       dates, case type) and the tabs (by their pane: pane-profile → 'profile'). A program whose areas
+       are only Notes and Tasks (the Front Desk logs calls) keeps the file view only, with its Notes
+       and Tasks saved for the trainee; any other program's work is saved as the trainee's own case
+       for that file. Change who edits what here (and in the README's table). */
+    const PROGRAM_AREAS = {
+        reception: ['notes', 'tasks'],
+        intake: ['header', 'profile', 'parties', 'police', 'matrix', 'docs', 'notes', 'tasks'],
+        cm: ['header', 'profile', 'parties', 'police', 'matrix', 'liens', 'medical', 'wages', 'pd', 'demand', 'settlement', 'docs', 'notes', 'tasks'],
+        md: ['medical', 'wages', 'liens', 'demand', 'docs', 'notes', 'tasks'],
+        ea: ['docs', 'notes', 'tasks'],
+        pd: ['pd', 'matrix', 'parties', 'police', 'docs', 'notes', 'tasks']
+    };
+    const AREA_LABELS = { header: 'Case header', profile: 'Profile', parties: 'Parties Involved', police: 'Police Report', matrix: 'Insurance', liens: 'Liens',
+        medical: 'Treatment', wages: 'Lost Wages', pd: 'Property Damage', demand: 'Demand', settlement: 'Settlement', docs: 'Doc Hub', notes: 'Notes', tasks: 'Tasks' };
+    const programAreas = (p) => PROGRAM_AREAS[p] || null;
+    const worksOnCopy = (p) => (programAreas(p) || []).some(a => a !== 'notes' && a !== 'tasks');
+    window.mockProgramAreas = (p) => (programAreas(p === undefined ? currentProgram() : p) || []).slice();
+
     /* ---------- mock case state ---------- */
-    let mockId = null;         // id of the Training Library case in the editor (view-only or practice copy)
-    let mockViewOnly = false;  // true while it's the untouched library copy
+    let mockId = null;         // id of the Training Library case in the editor
+    let mockViewOnly = false;  // the file as it is (Notes and Tasks aside): a trainee without a program, the Front Desk, a drill
     let mockEditing = false;   // an Admin has the library case open to edit (Save goes to the library)
-    let editTouched = false;   // …and has changed something since it opened or was saved
+    let mockMine = false;      // a trainee working on it in their program's role (Save keeps it as their own case for this file)
+    let viewReason = '';       // why a trainee's file is view only: 'drill' | 'program' | 'error'
+    let editTouched = false;   // an Admin or trainee has changed something since it opened or was saved
     let libState = { program: currentProgram() || 'all', q: '', tab: 'cases' };
     window.mockIsViewOnly = () => !!(mockId && mockViewOnly);
     window.mockIsLibraryEdit = () => !!(mockId && mockEditing);
+    window.mockIsMine = () => !!(mockId && mockMine);
     window.mockCurrentId = () => mockId;
     // Called by the save/archive/update buttons. Returns true (and explains) when saving must be blocked.
     // The case itself never saves; pending Notes and Tasks updates are saved right away instead.
     window.mockBlocksSave = function (silent) {
         if (mockId && mockEditing) { saveLibraryEdit(); return true; } // an Admin editing the library case: Save goes to the library
+        if (mockId && mockMine) return false; // a trainee's work on a case file: Save Case keeps it as their own case (never a draft)
         if (!(mockId && mockViewOnly)) return false;
         const pending = updatesPending();
         if (pending) saveUpdates();
+        const why = viewReason === 'drill' ? 'during the drill'
+            : currentProgram() ? `for ${programLabel(currentProgram())}` : 'until you choose your program (in the bar above the case)';
         if (!silent && typeof showToast === 'function') showToast(pending || upd.saved
-            ? `Your Notes and Tasks on this ${kindWord()} are saved to your account. The rest of the case is view only: click "Work on a practice copy" to save a full copy of your own.`
-            : `This ${kindWord()} is view only. You can add Notes and Tasks, or click "Work on a practice copy" to make your own copy you can save.`, 'info', 5000);
+            ? `Your Notes and Tasks on this ${kindWord()} are saved to your account. The rest of the case is view only ${why}.`
+            : `This ${kindWord()} is view only ${why}. You can add Notes and Tasks; they save to your account.`, 'info', 5000);
         return true;
     };
     // Extra keys stamped on every saved case payload.
@@ -92,21 +133,27 @@
     };
     // blankCaseEditorContent() calls this: any wipe of the editor ends library mode.
     window.mockReset = function () {
-        mockId = null; mockViewOnly = false; mockEditing = false;
+        mockId = null; mockViewOnly = false; mockEditing = false; mockMine = false; viewReason = '';
         setReadOnly(false);
         paintBanner();
     };
-    window.mockSnapshot = () => ({ mockId, mockViewOnly, mockEditing, mockEditDirty: !!(mockEditing && editTouched) });
+    window.mockSnapshot = () => ({ mockId, mockViewOnly, mockEditing, mockMine, viewReason, mockEditDirty: !!((mockEditing || mockMine) && editTouched) });
     // restoreCurrentEditorState() hands back what mockSnapshot() stored.
     window.mockRestore = function (data) {
         if (!data || !data.mockId || !findCase(data.mockId)) return false;
-        // The library case, reopened fresh: view only, or an Admin's with nothing unsaved (or someone who isn't an Admin now, in Trainee view).
-        if (data.mockViewOnly || (data.mockEditing && (!isAdmin() || !data.mockEditDirty))) { openMockCase(data.mockId, { silent: true }); return true; }
+        // The case reopened fresh: view only, an Admin's or a trainee's with nothing unsaved, or one whose role changed
+        // (an Admin now in Trainee view, a trainee whose program no longer edits it).
+        const freshly = data.mockViewOnly || !data.mockEditDirty
+            || (data.mockEditing && !isAdmin()) || (data.mockMine && (isAdmin() || !worksOnCopy(currentProgram())))
+            || (!data.mockEditing && !data.mockMine);
+        if (freshly) { openMockCase(data.mockId, { silent: true, viewOnly: data.viewReason === 'drill' }); return true; }
+        // Unsaved changes come back as unsaved changes (the normal restore puts the content back, and a trainee's
+        // is then saved to their case for this file, as after any interruption).
         mockId = data.mockId; mockViewOnly = false;
-        // An Admin's unsaved changes to the library case come back as unsaved changes (the normal restore puts the content back).
-        mockEditing = !!data.mockEditing; editTouched = mockEditing;
+        mockEditing = !!data.mockEditing; mockMine = !mockEditing; editTouched = true; viewReason = '';
+        if (mockMine) { setReadOnly(true); markAreas(programAreas(currentProgram())); }
         paintBanner();
-        return false; // the normal restore puts the practice copy back
+        return false;
     };
 
     const $id = (id) => document.getElementById(id);
@@ -162,7 +209,12 @@
     #capture-area.mock-loading{opacity:.45;pointer-events:none;transition:opacity .15s}
     .lib-row .ed{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:800;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:4px;padding:1px 5px;text-transform:uppercase;letter-spacing:.3px}
     #mock-banner button:hover{border-color:#f97316}
-    #capture-area.mock-ro .add-btn,#capture-area.mock-ro .hub-btn,#capture-area.mock-ro .revert-btn,#capture-area.mock-ro td button,#capture-area.mock-ro .pdf-card > button{display:none !important}
+    /* a trainee's program's open areas (.mock-open) keep their buttons; :where() keeps these rules' specificity as it was */
+    #capture-area.mock-ro .add-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .hub-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .revert-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro td button:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .pdf-card > button:where(:not(.mock-areas-ready .mock-open *)){display:none !important}
+    #capture-area.mock-ro.mock-areas-ready .mock-open [contenteditable]{cursor:text;caret-color:auto}
+    .tab-btn.mock-tab-open::after{content:' ✎';color:#10b981}
+    #capture-area.mock-areas-ready .mock-upd-bar{display:none !important}
+    #mock-banner select.mb-prog{font-size:11px;font-weight:700;border-radius:6px;padding:6px 8px;border:1px solid #f97316;background:#13284f;color:#fff;max-width:220px}
     #capture-area.mock-ro [contenteditable]{cursor:default;caret-color:transparent}
     #capture-area.mock-ro select:disabled,#capture-area.mock-ro input[readonly]{opacity:1;cursor:default}
     #capture-area.mock-ro.mock-upd-ready .mock-upd .add-btn,#capture-area.mock-ro.mock-upd-ready .mock-upd td button{display:inline-block !important}
@@ -554,11 +606,15 @@
     const inUpdates = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('.mock-upd') && updatesOpen()); };
     // Parts of the page that aren't the case (the Calendar tab) stay typeable on a view-only case.
     const freeEdit = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('[data-free-edit]')); };
-    const blockEdit = (e) => { if (mockId && mockViewOnly && !inUpdates(e.target) && !freeEdit(e.target)) { e.preventDefault(); e.stopPropagation(); } };
+    // A trainee's program's areas (.mock-open) are open once their saved work on the file has loaded.
+    const areasOpen = () => { const a = $id('capture-area'); return !!(a && a.classList.contains('mock-areas-ready')); };
+    const inOpenArea = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('.mock-open') && areasOpen()); };
+    const locked = (t) => !!mockId && !freeEdit(t) && ((mockViewOnly && !inUpdates(t)) || (mockMine && !inOpenArea(t)));
+    const blockEdit = (e) => { if (locked(e.target)) { e.preventDefault(); e.stopPropagation(); } };
     const blockKeys = (e) => {
-        if (!(mockId && mockViewOnly)) return;
+        if (!(mockId && (mockViewOnly || mockMine))) return;
         const t = e.target;
-        if (!t || !t.closest || !t.closest('#capture-area [contenteditable]') || inUpdates(t)) return;
+        if (!t || !t.closest || !t.closest('#capture-area [contenteditable]') || !locked(t)) return;
         if ((e.ctrlKey || e.metaKey) && /^[ca]$/i.test(e.key)) return; // copy / select all
         if (e.key.startsWith('Arrow') || e.key === 'Tab' || e.key === 'Home' || e.key === 'End' || e.key === 'Escape') return;
         e.preventDefault();
@@ -572,8 +628,8 @@
             area.addEventListener('drop', blockEdit, true);
             area.addEventListener('keydown', blockKeys, true);
             const changed = (e) => { if (inUpdates(e.target)) scheduleUpdateSave(); };
-            // An Admin's changes to the library case: typing, a dropdown, or a button that adds or removes something (not the tab buttons).
-            const touch = (e) => { if (mockId && mockEditing && !freeEdit(e.target)) editTouched = true; };
+            // An Admin's (or a trainee's) changes to the case: typing, a dropdown, or a button that adds or removes something (not the tab buttons).
+            const touch = (e) => { if (mockId && (mockEditing || mockMine) && !freeEdit(e.target)) editTouched = true; };
             area.addEventListener('input', touch, true);
             area.addEventListener('change', touch, true);
             area.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('button, [onclick]'); if (b && !b.closest('.tab-btn')) touch(e); }, true);
@@ -583,13 +639,29 @@
             listenersOn = true;
         }
         area.classList.toggle('mock-ro', !!on);
-        if (!on) area.classList.remove('mock-upd-ready');
+        if (!on) { area.classList.remove('mock-upd-ready'); markAreas(null); }
         area.querySelectorAll('select').forEach(s => {
             if (s.closest('.tab-btn')) return;
             if (on) { if (!s.disabled) { s.disabled = true; s.dataset.mockRo = '1'; } }
             else if (s.dataset.mockRo) { s.disabled = false; delete s.dataset.mockRo; }
         });
         ['attorney-field', 'case-manager-field'].forEach(id => { const el = $id(id); if (el) el.readOnly = !!on; });
+    }
+    // Opens a trainee's program's areas on a locked case (null: none). The tab buttons of the open areas get a ✎.
+    function markAreas(areas) {
+        const area = $id('capture-area'); if (!area) return;
+        area.querySelectorAll('.mock-open').forEach(el => el.classList.remove('mock-open'));
+        document.querySelectorAll('.tab-btn.mock-tab-open').forEach(el => el.classList.remove('mock-tab-open'));
+        area.classList.remove('mock-areas-ready');
+        if (!areas) return;
+        areas.forEach(a => {
+            const el = a === 'header' ? area.querySelector('.header-card') : $id('pane-' + a);
+            if (el) el.classList.add('mock-open');
+            const tab = a !== 'header' && $id('tab-' + a); if (tab) tab.classList.add('mock-tab-open');
+        });
+        area.querySelectorAll('.mock-open select').forEach(s => { if (s.dataset.mockRo) { s.disabled = false; delete s.dataset.mockRo; } });
+        ['attorney-field', 'case-manager-field'].forEach(id => { const el = $id(id); if (el && el.closest('.mock-open')) el.readOnly = false; });
+        area.classList.add('mock-areas-ready');
     }
 
     /* ---------- Notes & Tasks updates on a library case ----------
@@ -638,26 +710,29 @@
         area.classList.add('mock-upd-ready');
         area.querySelectorAll('.mock-upd select').forEach(s => { if (s.dataset.mockRo) { s.disabled = false; delete s.dataset.mockRo; } });
     }
+    // The user's saved Notes and Tasks on a library case (null: none, or offline).
+    async function fetchUpdates(id) {
+        try {
+            const res = await fetch('/api/mock-case-updates?mock=' + encodeURIComponent(id), { credentials: 'include' });
+            const data = await res.json();
+            return (data && data.success && data.updates) || null;
+        } catch (e) { return null; /* offline: keep the library original */ }
+    }
+    function showUpdates(u) {
+        Object.entries(UPD_BODIES).forEach(([key, bodyId]) => {
+            if (!Array.isArray(u[key])) return;
+            $id(bodyId).innerHTML = '';
+            fillRows(bodyId, u[key]);
+        });
+    }
     async function loadUpdates(id) {
         const seq = ++upd.seq;
         clearTimeout(upd.timer); upd.pending = false;
         upd.id = id; upd.saved = false; upd.base = snapshotRows();
         paintUpdState('loading');
-        let u = null;
-        try {
-            const res = await fetch('/api/mock-case-updates?mock=' + encodeURIComponent(id), { credentials: 'include' });
-            const data = await res.json();
-            u = data && data.success && data.updates;
-        } catch (e) { /* offline: keep the library original */ }
+        const u = await fetchUpdates(id);
         if (seq !== upd.seq || mockId !== id || !mockViewOnly) return;
-        if (u) {
-            Object.entries(UPD_BODIES).forEach(([key, bodyId]) => {
-                if (!Array.isArray(u[key])) return;
-                $id(bodyId).innerHTML = '';
-                fillRows(bodyId, u[key]);
-            });
-            upd.saved = true;
-        }
+        if (u) { showUpdates(u); upd.saved = true; }
         upd.base = snapshotRows();
         openUpdates();
         paintUpdState(u ? 'loaded' : '');
@@ -793,7 +868,7 @@
     }
     // Puts an Admin's edit on screen, or the original back when the edit is gone.
     function showEdit(c, e) {
-        const keep = { mockId, mockViewOnly, mockEditing };
+        const keep = { mockId, mockViewOnly, mockEditing, mockMine, viewReason };
         if (e && e.content) {
             edits[c.id] = { mock: c.id, facts: e.facts, updatedBy: e.updatedBy, updatedAt: e.updatedAt };
             patchFacts(c.id, e.facts);
@@ -804,15 +879,18 @@
             delete edits[c.id]; unpatchFacts(c.id);
             showBase(c);
         } else return;
-        ({ mockId, mockViewOnly, mockEditing } = keep); // showBase's wipe ends library mode; this is still the same case
-        setReadOnly(mockViewOnly);
+        ({ mockId, mockViewOnly, mockEditing, mockMine, viewReason } = keep); // showBase's wipe ends library mode; this is still the same case
+        setReadOnly(mockViewOnly || mockMine);
         paintBanner();
     }
-    const editDirty = () => !!(mockId && mockEditing && editTouched);
+    const editDirty = () => !!(mockId && (mockEditing || mockMine) && editTouched);
     window.mockEditDirty = editDirty;   // cms-update.js waits while there are unsaved changes
-    window.addEventListener('beforeunload', (e) => { if (editDirty()) { e.preventDefault(); e.returnValue = ''; } });
-    // Anything that's about to replace the case in the editor asks first when an Admin has unsaved changes to it.
+    // An Admin's unsaved changes to the library case are asked about before the page goes; a trainee's are saved (autosave on closing).
+    window.addEventListener('beforeunload', (e) => { if (mockId && mockEditing && editTouched) { e.preventDefault(); e.returnValue = ''; } });
+    // Anything that's about to replace the case in the editor asks first when an Admin has unsaved changes to it,
+    // and saves a trainee's unsaved work on a case file first (it's their own case).
     window.mockConfirmLeave = function () {
+        if (mockId && mockMine) { saveMineBeforeLeaving(); return true; }
         if (!editDirty()) return true;
         if (!confirm('Discard your unsaved changes to this Training Library case?')) return false;
         editTouched = false; return true;
@@ -859,25 +937,90 @@
         openMockCase(mockId, { silent: true, tab: activeTab() });
     };
 
+    /* ---------- a trainee's own work on a case file ----------
+       One case per trainee per file (content.trainingLibraryId): the first save creates it with its
+       Case ID, later saves and reopening the file use it; never a draft (the server keeps it to one,
+       functions/api/case-repository.js). */
+    async function fetchMine(id) {
+        try {
+            const res = await fetch('/api/case-repository?library=' + encodeURIComponent(id), { credentials: 'include', signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined });
+            const d = await res.json();
+            return d && d.success ? { ok: true, saved: d.case || null } : { ok: false };
+        } catch (e) { return { ok: false }; }
+    }
+    // Their saved work in the editor; or, starting over, the file as it is with their case kept (Save Case then replaces it).
+    function showMine(c, saved, fresh) {
+        const keep = { mockId, mockViewOnly, mockEditing, mockMine, viewReason };
+        if (!fresh && saved.content && typeof applyCaseContentToDOM === 'function') {
+            showBase(c);
+            applyCaseContentToDOM(saved.content, document);
+            const ph = $id('phase-selector'); if (ph && typeof updatePhaseDisplay === 'function') updatePhaseDisplay(ph.value);
+        }
+        ({ mockId, mockViewOnly, mockEditing, mockMine, viewReason } = keep);
+        setReadOnly(mockViewOnly || mockMine);
+        currentCaseId = saved.id; currentCaseIsDraft = !!saved.isDraft; currentCaseCanEdit = true;
+        const idField = $id('case-id-field'); if (idField && saved.caseId) idField.innerText = saved.caseId;
+        if (!fresh && typeof noteServerCopy === 'function') noteServerCopy();
+    }
+    // Leaving a case file (another case, a new one, Close, a reload) saves the trainee's unsaved work on it first.
+    // What's on screen is taken now, before the editor changes.
+    function saveMineBeforeLeaving() {
+        if (!(mockId && mockMine) || !(typeof hasUnsyncedChanges === 'function' && hasUnsyncedChanges())) return;
+        const c = findCase(mockId), ref = c ? fileRef(c) : mockId;
+        const body = JSON.stringify({
+            id: currentCaseId, content: buildCaseContentPayload(),
+            clientName: (($id('client-name-field') || {}).innerText || '').split('\n')[0].trim() || 'Unnamed Client',
+            phase: ($id('display-phase') || {}).innerText || '', medTotal: ($id('med-total') || {}).innerText || '',
+            isDraft: false, finalize: true, typeCode: typeof currentTypeCode === 'function' ? currentTypeCode() : undefined
+        });
+        editTouched = false;
+        fetch('/api/case-repository', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', keepalive: body.length < 60000, body })
+            .then(r => r.json()).then(d => {
+                if (!(d && d.success)) throw new Error((d && d.error) || '');
+                if (typeof showToast === 'function') showToast(`Your work on ${ref} is saved.`, 'success', 2500);
+                if (typeof refreshRepoCache === 'function') refreshRepoCache();
+            })
+            .catch(() => { if (typeof showToast === 'function') showToast(`Couldn't save your work on ${ref}. Reopen it to check what was saved.`, 'error', 6000); });
+    }
+
+    const programSelect = () => `<select class="mb-prog" onchange="mockChooseProgram(this.value)" title="Your program decides what you can edit on a case file" aria-label="Your program">
+        ${currentProgram() ? '' : '<option value="" selected>Choose your program…</option>'}${(window.MOCK_PROGRAMS || []).map(p => `<option value="${esc(p.id)}"${p.id === currentProgram() ? ' selected' : ''}>${esc(p.label)}</option>`).join('')}</select>`;
+    const areaList = (p) => (programAreas(p) || []).map(a => AREA_LABELS[a] || a).join(', ');
     function paintBanner() {
+        // No drafts of a library case: 🗄 Archive (save as a draft) is hidden while one is open (Save Case saves it).
+        const arch = $id('cab-archive'); if (arch) arch.style.display = mockId ? 'none' : '';
         const b = $id('mock-banner'); if (!b) return;
         const c = mockId && findCase(mockId);
         if (!c) { b.classList.remove('open'); b.innerHTML = ''; closeCallsPanel(); return; }
         b.classList.add('open');
         const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="focusCaseSearch()">🔍 Search cases</button>`;
         const calls = isAdmin() ? `<button onclick="openCallsPanel()">☎ Caller scenarios</button>` : '';   // trainers only
+        const close = `<button onclick="closeMockCase()">✕ Close</button>`;
         const ed = edits[c.id];
         const edNote = isAdmin() && ed ? `<span class="mb-ed">✎ Edited by ${esc(ed.updatedBy || 'an Admin')}${ed.updatedAt ? ' · ' + esc(ed.updatedAt) + ' UTC' : ''}</span>` : '';
+        const who = `<b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)}`;
         if (mockEditing) {   // trainers: the library case, open to edit
-            b.innerHTML = `<span class="mb-tag edit">TRAINING LIBRARY · EDITABLE · ${esc(fileRef(c))}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — edit it like any case. <b>Save</b> saves it to the library for everyone; trainees see it view only. The practice calls on this file keep their own answers.</span>${edNote}<span class="mb-sp"></span>
-               ${calls}<button class="pri" onclick="saveLibraryEdit()">💾 Save to the library</button><button onclick="cancelLibraryEdit()">↺ Undo my changes</button>${ed ? `<button onclick="restoreLibraryOriginal()">↺ Restore the original</button>` : ''}<button onclick="startPracticeCopy()">✍ Practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`;
+            b.innerHTML = `<span class="mb-tag edit">TRAINING LIBRARY · EDITABLE · ${esc(fileRef(c))}</span><span>${who} — edit it like any case. <b>Save</b> saves it to the library for everyone; trainees work on it in their program's role. The practice calls on this file keep their own answers.</span>${edNote}<span class="mb-sp"></span>
+               ${calls}<button class="pri" onclick="saveLibraryEdit()">💾 Save to the library</button><button onclick="cancelLibraryEdit()">↺ Undo my changes</button>${ed ? `<button onclick="restoreLibraryOriginal()">↺ Restore the original</button>` : ''}${find}${close}`;
             return;
         }
-        b.innerHTML = mockViewOnly
-            ? `<span class="mb-tag">${isAdmin() ? 'TRAINING LIBRARY' : 'CASE FILE'} · ${esc(fileRef(c))}</span><span><b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)} — view only; you can add Notes and Tasks. Look things up the way you would on a live call.</span>${edNote}<span class="mb-sp"></span>
-               ${calls}<button class="pri" onclick="startPracticeCopy()">✍ Work on a practice copy</button>${find}<button onclick="closeMockCase()">✕ Close</button>`
-            : `<span class="mb-tag">PRACTICE COPY · ${esc(fileRef(c))}</span><span>Your own copy of <b>${esc(c.client.name)}</b>. Save Case adds it to your cases; the ${isAdmin() ? 'library original' : 'original file'} never changes.</span><span class="mb-sp"></span>
-               ${calls}<button onclick="openMockCase('${c.id}')">↺ Back to the ${isAdmin() ? 'library original' : 'original file'}</button>`;
+        if (mockMine) {   // a trainee, in their program's role
+            const p = currentProgram();
+            b.innerHTML = `<span class="mb-tag edit">CASE FILE · ${esc(fileRef(c))}</span><span>${who} — as <b>${esc(programLabel(p))}</b> you can edit: ${esc(areaList(p))} (✎ tabs). The rest is view only. <b>Save Case</b> saves your work on this file as your own case; reopen the file any time to carry on.</span><span class="mb-sp"></span>
+               ${programSelect()}<button onclick="mockStartOver()" title="The file as it is, again (Save Case then replaces your saved work)">↺ Start over</button>${find}${close}`;
+            return;
+        }
+        if (isAdmin()) {   // a trainer whose library version couldn't load: view only for now
+            b.innerHTML = `<span class="mb-tag">TRAINING LIBRARY · ${esc(fileRef(c))}</span><span>${who} — view only for now; you can add Notes and Tasks.</span>${edNote}<span class="mb-sp"></span>
+               ${calls}<button class="pri" onclick="openMockCase('${c.id}')">✎ Reopen to edit</button>${find}${close}`;
+            return;
+        }
+        const why = viewReason === 'drill' ? 'view only during the drill; look things up the way you would on a live call'
+            : viewReason === 'error' ? 'view only for now (your saved work on it couldn\'t load: reopen it to work on it)'
+            : currentProgram() ? `view only for ${esc(programLabel(currentProgram()))}: log the calls you take in Notes and Tasks`
+            : 'view only until you choose your program (it decides what you can edit); you can add Notes and Tasks now';
+        b.innerHTML = `<span class="mb-tag">CASE FILE · ${esc(fileRef(c))}</span><span>${who} — ${why}.</span><span class="mb-sp"></span>
+               ${viewReason === 'drill' ? '' : programSelect()}${find}${close}`;
     }
 
     window.openMockCase = function (id, opts) {
@@ -887,50 +1030,78 @@
         if (typeof hasAuthorizedAccess === 'function' && !hasAuthorizedAccess()) return false;
         buildUI();
         if (!window.mockConfirmLeave()) return false;
-        const unsavedOwnWork = !mockViewOnly && typeof currentCaseId !== 'undefined' && currentCaseId === null && typeof hasCaseContent === 'function' && hasCaseContent();
+        const unsavedOwnWork = !mockViewOnly && !mockMine && typeof currentCaseId !== 'undefined' && currentCaseId === null && typeof hasCaseContent === 'function' && hasCaseContent();
         if (!opts.silent && unsavedOwnWork && !confirm(`Open this ${kindWord()}? The unsaved case in the editor will be cleared.`)) return false;
-        // Trainers (Admins) open library cases ready to edit (Save goes to the library); everyone else, view only.
-        const editor = isAdmin();
+        // Trainers (Admins) edit the library case itself (Save goes to the library). A trainee works on it in the role of their
+        // program (who edits what, above); a Front Desk Drill always shows the file as it is (opts.viewOnly).
+        const editor = isAdmin(), program = currentProgram();
+        const mine = !editor && !opts.viewOnly && worksOnCopy(program);
         showBase(c);
-        mockId = c.id; mockViewOnly = !editor; mockEditing = editor; editTouched = false;
-        if (editor) {
+        mockId = c.id; mockViewOnly = !editor && !mine; mockEditing = editor; mockMine = mine; editTouched = false;
+        viewReason = mockViewOnly ? (opts.viewOnly ? 'drill' : 'program') : '';
+        if (editor || mine) {
             upd.id = null; clearTimeout(upd.timer); upd.pending = false;
             if (typeof currentCaseId !== 'undefined') { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }
         }
         setReadOnly(!editor);
         paintBanner();
-        // An Admin's edit of this case (if any) replaces the original, then a trainee's own Notes and Tasks go on top.
-        // A trainer's copy stays shut until the library version is in, so nothing is typed over the wrong one.
+        // An Admin's edit of this case (if any) replaces the original, then a trainee's own work (or Notes and Tasks) goes on top.
+        // A copy stays shut until what goes on top of it is in, so nothing is typed over the wrong version.
         const seq = ++openSeq, area = $id('capture-area');
-        if (area && (editor || edits[c.id])) area.classList.add('mock-loading');
-        fetchEdit(c.id).then(r => {
-            if (seq !== openSeq || mockId !== c.id || (editor ? !mockEditing : !mockViewOnly)) return;
-            if (area) area.classList.remove('mock-loading');
+        if (area && (editor || mine || edits[c.id])) area.classList.add('mock-loading');
+        fetchEdit(c.id).then(async r => {
+            const current = () => seq === openSeq && mockId === c.id && (editor ? mockEditing : mine ? mockMine : mockViewOnly);
+            if (!current()) return;
             if (r.ok) showEdit(c, r.edit);
             if (editor && !r.ok) { // can't tell what the library has now: don't let an edit of an old version go over it
                 mockEditing = false; mockViewOnly = true; setReadOnly(true); paintBanner();
                 if (typeof showToast === 'function') showToast('Couldn\'t load the library version of this case, so it\'s view only for now. Reopen it to edit.', 'error', 5000);
             }
-            editTouched = false;
+            if (mine) {
+                const m = r.ok ? await fetchMine(c.id) : { ok: false };
+                if (!current()) return;
+                if (!m.ok) { // can't tell whether they saved work on this file before: view only, so a save can't go over it
+                    mockMine = false; mockViewOnly = true; viewReason = 'error'; paintBanner();
+                    if (typeof showToast === 'function') showToast('Couldn\'t load your saved work on this case file, so it\'s view only for now (you can still add Notes and Tasks). Reopen it to work on it.', 'error', 6000);
+                } else {
+                    if (m.saved) showMine(c, m.saved, !!opts.fresh);
+                    else {
+                        const u = await fetchUpdates(c.id); if (!current()) return;
+                        if (u) showUpdates(u); // their Notes and Tasks from before carry over
+                        if (typeof noteServerCopy === 'function') noteServerCopy(); // only their changes from here on are work to save
+                    }
+                    markAreas(programAreas(program));
+                    if (opts.fresh) editTouched = true;
+                    paintBanner();
+                }
+            }
+            if (area) area.classList.remove('mock-loading');
+            if (!opts.fresh) editTouched = false;
             if (mockViewOnly) loadUpdates(c.id);
             if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
         });
         closeTrainingLibrary();
         if (typeof showTab === 'function') showTab(opts.tab || 'profile');
         if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
-        if (!opts.silent && typeof showToast === 'function') showToast(`Opened ${fileRef(c)}: ${c.client.name} ${editor ? '(editable: Save saves it to the Training Library)' : '(view only)'}`, 'info', 3000);
+        if (!opts.silent && typeof showToast === 'function') showToast(`Opened ${fileRef(c)}: ${c.client.name} ${editor ? '(editable: Save saves it to the Training Library)' : mine ? `(as ${programLabel(program)}: ${areaList(program)} editable)` : '(view only)'}`, 'info', 3500);
         return true;
     };
-    window.startPracticeCopy = function () {
-        if (!mockId) return;
-        if (updatesPending()) saveUpdates(); // keep the library-case notes too; the copy carries them as well
-        mockViewOnly = false; mockEditing = false; editTouched = false;
-        setReadOnly(false);
-        if (typeof currentCaseId !== 'undefined') { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }
-        if (typeof generateCaseId === 'function') generateCaseId();
-        paintBanner();
-        if (typeof persistCurrentEditorState === 'function') persistCurrentEditorState();
-        if (typeof showToast === 'function') showToast('Practice copy ready. Edit freely; Save Case creates your own case (it autosaves as a draft).', 'success', 5000);
+    // A trainee chooses their program (in the bar above a case file): the file reopens in that role.
+    window.mockChooseProgram = function (p) {
+        p = normProgram(p);
+        if (!p) return;
+        window.lshSetProgram(p);
+        if (mockId && !isAdmin()) openMockCase(mockId, { silent: true, tab: activeTab(), viewOnly: viewReason === 'drill' });
+        if (typeof showToast === 'function') showToast(worksOnCopy(p) ? `Program: ${programLabel(p)}. You can edit ${areaList(p)} on a case file.` : `Program: ${programLabel(p)}. Case files are view only; log the calls you take in Notes and Tasks.`, 'info', 4500);
+    };
+    // ↺ Start over: the file as it is again; Save Case then replaces the trainee's saved work on it.
+    window.mockStartOver = function () {
+        if (!(mockId && mockMine)) return;
+        const c = findCase(mockId);
+        if (!confirm(`Start over on ${c ? fileRef(c) : mockId}? The file goes back to how it is in the library; Save Case then replaces your saved work on it.`)) return;
+        editTouched = false;
+        if (typeof noteServerCopy === 'function') noteServerCopy(); // what's on screen now isn't saved on the way out: they chose to start over
+        openMockCase(mockId, { silent: true, tab: activeTab(), fresh: true });
     };
     window.closeMockCase = function () {
         if (!window.mockConfirmLeave()) return;
