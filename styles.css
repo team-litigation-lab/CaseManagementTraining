@@ -47,14 +47,6 @@
         letter-spacing: 1px;
         z-index: 200;
     }
-    #classification-bar .cls-label {
-        background: var(--orange);
-        color: #0f2148;
-        padding: 3px 10px;
-        border-radius: 3px;
-        font-weight: 900;
-        letter-spacing: 1.5px;
-    }
     .cls-left { display: flex; align-items: center; gap: 10px; flex-shrink: 0; white-space: nowrap; }
     .cls-left #portal-title { font-size: 10px; color: #cbd5e1; letter-spacing: 0.5px; }
 

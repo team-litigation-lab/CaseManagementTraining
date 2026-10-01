@@ -221,10 +221,10 @@
         if (dash && !$id('fdd-open-btn')) {
             dash.insertAdjacentHTML('beforebegin', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Reception Simulator</button>`);
         }
-        // Like the Training Library button, the sidebar button is for Admins. Trainees open the
-        // drill from their course's link (?drill=1), and their scores are saved the same way.
+        // Everyone signed in gets it, trainees too (their calls and scores are saved for their trainer);
+        // a course link with ?drill=1 opens it as well.
         const btn = $id('fdd-open-btn');
-        if (btn) { const s = typeof getSession === 'function' ? getSession() : null; btn.style.display = s && s.userType === 'Admin' ? '' : 'none'; }
+        if (btn) { const s = typeof getSession === 'function' ? getSession() : null; btn.style.display = s ? '' : 'none'; }
         if (!$id('fdd-panel')) {
             document.body.insertAdjacentHTML('beforeend', `<div id="fdd-panel" class="no-print" aria-hidden="true"></div>
                 <button id="fdd-mini" class="no-print" onclick="fddRestore()">📞 Back to the call</button>`);

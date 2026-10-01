@@ -50,7 +50,7 @@ What the cases cover, from starter to advanced: every phase from Intake to Litig
 
 ## 📞 Front Desk calls: practice calls and the scored drill (measures the VA)
 
-Admins: sidebar → **📞 Reception Simulator** (right before 📊 My Dashboard). Trainees don't get the sidebar button (like the Training Library's); they open the panel from their course's link, `?drill=1`. The panel offers two things: a **practice call** (below), taken in the trainee's own words, and the **scored drill**, a run of calls taken step by step.
+Sidebar → **📞 Reception Simulator** (right before 📊 My Dashboard), for trainees and Admins alike. A course link with `?drill=1` opens it too. The panel offers two things: a **practice call** (below), taken in the trainee's own words, and the **scored drill**, a run of calls taken step by step.
 
 ### 📞 Practice calls (no script)
 
@@ -170,7 +170,7 @@ Until the secret is set, the Admin tab says the admin password isn't set up yet.
 ### 👁 Trainee view (see the site the way trainees do)
 
 A signed-in trainer clicks **👁 Trainee view** at the bottom of the sidebar. The page reloads showing exactly what a trainee sees:
-- no Training Library, Front Desk or Caller scenarios buttons, and no Master Control;
+- no Training Library or Caller scenarios buttons, and no Master Control (the 📞 Reception Simulator is there, as for trainees);
 - mock cases shown as ordinary case files, by case number;
 - a trainee's Case Library, time sheet and calendar, with no "All trainees" views and no other trainees' drafts.
 
@@ -382,10 +382,10 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 **The sidebar**, top to bottom (`index.html`, `#sidebar-actions`):
 1. **Training program** (All programs, or one program).
 2. **The cases:** a trainee's **My cases**, or an Admin's **Case Library** with **🔍 Open Case Library** and **🕑 Latest Updates**.
-3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget and **📊 My Dashboard**.
+3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget, **📞 Reception Simulator** (the Front Desk practice calls and drill) and **📊 My Dashboard**.
 4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar, Export Case List.
 
-Admins also get **📞 Reception Simulator** (the Front Desk practice calls and drill) in the third group, right before My Dashboard. The **👁 Trainee view** bar floats just above the case's action bar, so it never covers its buttons.
+The **👁 Trainee view** bar floats just above the case's action bar, so it never covers its buttons.
 
 Trainees see only the first three groups, so their sidebar is the program, their cases and their work. They still reach the Firm Calendar through the case's **📅 Calendar** tab, and the Intake folder through a course link (`?intake=1`). **👁 Trainee view** shows a trainer the same.
 
@@ -625,7 +625,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - name sign-in is refused without a platform;
   - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
-  - an Admin's 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view doesn't show it;
+  - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;
   - a silence is tried twice more, then it asks for 🎙 or typing; 🎙 listens and sends; typing takes over; hands-free off stops listening and is remembered;
   - a blocked microphone says so and the call goes on typed;
