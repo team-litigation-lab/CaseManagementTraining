@@ -116,3 +116,9 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/autosave.cjs
+      - name: Server request meter (Admins only; every level; sparing)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: |
+          node .github/scripts/request-meter-widget.cjs request-budget.js
+          node .github/scripts/request-meter.cjs

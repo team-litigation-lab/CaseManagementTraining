@@ -472,6 +472,27 @@ To keep well under it:
   These used to be every 2 s (heartbeat), 4 s (site state) and 15 s (case list), about 50 requests a minute for each open page. Now it's about 8.
 - Monitoring's **Online now** counts anyone with a heartbeat in the last 90 seconds.
 
+## 📊 Server request meter
+
+Every LSH site shares one Cloudflare account and one monthly request allowance. Admins see how much of it is used: a small chip at the top left of the page, just under the top bar (over the sidebar's logo, so it never covers Log Out, the case's ✕ or the Close/Save/Update bar). Trainees never see it, and neither does an Admin in 👁 Trainee view.
+
+| Chip | When |
+|---|---|
+| 🟢 **Requests 23%** | on track |
+| 🟠 **Getting close** / **On pace to run out Oct 24** | from 75%, or (after the month's first 3 days) when this month's pace reaches the limit before the allowance resets |
+| 🔴 **Nearly used up** | from 90% |
+| 🟥 **Paused until …** | the limit was reached: the sites' server parts are paused until the next billing month |
+| ⚪ **Not set up** / **Last checked 5 h ago** | no numbers yet, or the workflow hasn't saved any for over 3 hours |
+
+When it's amber or red, a note appears under the chip (Dismiss hides it until it gets closer, or until next month). Click the chip for the details: the total and the limit, the projection for the month, each day (with a day's share of the limit as a dashed line), each site (the CMS in bold), and what happens at the limit.
+
+How it works:
+- The numbers come from EA-PA-TRAINING's **Request budget** workflow (its Actions tab). It saves the month's numbers to the courses' KV namespace (`_request-usage`) about once an hour, and every 10 minutes from 75% on. Setting it up and what happens at the limit: EA-PA-TRAINING's README → Monthly request budget.
+- This site's server answers its Admins with them: `GET /api/request-budget` (`functions/api/request-budget.js`, Admins only). It reads that KV namespace through the `COURSE_KV` binding in `wrangler.toml` and never writes to it. Every LSH platform has the same endpoint for its own admins.
+- The meter is `request-budget.js`: **the same file in every LSH platform** (change it in one, copy it to all). It asks once when an Admin opens the page, then every 15 minutes while the tab is in view, so it costs next to nothing.
+
+Tests: `.github/scripts/request-meter-widget.cjs` (the meter itself; the same test in every platform) and `.github/scripts/request-meter.cjs` (this site).
+
 ## 💾 Autosave (only when something interrupts the work)
 
 Nothing is sent to the server while you work: no timer, and no save when you look at another tab. Every request counts toward the account's monthly requests. Your work is kept in this browser as you type, and autosave sends it to the server (as a draft; a finalized case stays final) only when something interrupts it:
@@ -723,6 +744,10 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - after the reload the trainee's case and tab are still there, the note is gone, and they're told the page was updated;
   - **Update now** reloads right away, even over an open window;
   - an Admin comes back to Master Control → Monitoring.
+- **Server request meter** (`.github/scripts/request-meter-widget.cjs` and `request-meter.cjs`, in the same job):
+  - the meter (the same test in every LSH platform): nothing for a non-admin; each level (not set up, OK, getting close, nearly used up, on pace to run out, paused, old numbers, no answer) shows as it should; the note under the chip, dismissed, stays away until it gets closer; the details list each day and site; it asks again only every so often, never in a background tab;
+  - this site: the real `/api/request-budget` on SQLite answers Admins only (no session, a revoked account and a trainee are refused without reading KV); before the Request budget workflow has run, without the KV binding or with a damaged entry it answers no numbers; after, the month's numbers without the workflow's own working data, and it never writes to KV;
+  - in a browser: a trainee's page and an Admin's in Trainee view have no meter and never ask for it; an Admin's page shows it after one request, with the numbers, at the top left clear of the top bar, Log Out, the case's ✕ and its action bar; clicking it shows the total.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
   - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;
