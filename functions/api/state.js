@@ -1,6 +1,7 @@
 import { json } from '../_utils.js';
+import { deployVersion } from '../_version.js';
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
     const db = env.DB;
 
     let [state, announcement, alert, ping] = await Promise.all([
@@ -55,6 +56,8 @@ export async function onRequestGet({ env }) {
         announcement: { text: (announcement && announcement.text) || 'Welcome to the LSH Training Interface.' },
         alert: alertPayload,
         ping: ping ? shape(ping) : null,
-        pings
+        pings,
+        // the deployed version: an open page with older files reloads itself (cms-update.js)
+        version: await deployVersion(env, request)
     });
 }

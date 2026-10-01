@@ -3097,6 +3097,7 @@
         }
         function applySiteState(state) {
             if (!state) return;
+            if (window.cmsUpdateSeen) window.cmsUpdateSeen(state.version);   // a newer deployment: cms-update.js reloads the page
             // Announcement ticker
             const annText = (state.announcement && state.announcement.text) || 'Welcome to the LSH Training Interface.';
             const tickerText = document.getElementById('ticker-text');
