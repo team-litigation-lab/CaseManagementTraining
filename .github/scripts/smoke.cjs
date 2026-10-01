@@ -90,9 +90,9 @@ const SAVED = [
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
 
-    // trainee view: no Training Library or Front Desk Drill button, no list of everyone's cases, a search bar above the case
+    // trainee view: no Training Library button, the 📞 Reception Simulator, no list of everyone's cases, a search bar above the case
     if (await page.isVisible('#lib-open-btn')) fail('trainees can see the Training Library button');
-    if (await page.isVisible('#fdd-open-btn')) fail('trainees can see the Front Desk Drill button');
+    if (!(await page.isVisible('#fdd-open-btn'))) fail('trainees don\'t see the 📞 Reception Simulator button');
     if (!(await page.isVisible('#cl-bar-input'))) fail('the search bar above the case is missing');
     if (await page.isVisible('#export-repo-btn')) fail('trainees can export the list of every case');
     if (await page.locator('#repo-list .repo-card').count()) fail('the sidebar lists saved cases');
@@ -351,11 +351,11 @@ const SAVED = [
     const side = await page.evaluate(() => ({
         groups: [...document.querySelectorAll('#sidebar-actions > .sb-group')].filter(g => g.offsetParent).map(g => g.id),
         work: [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id),
-        hidden: ['cl-updates-btn', 'intake-open-btn', 'fc-open-btn', 'lib-open-btn', 'fdd-open-btn', 'export-repo-btn', 'cl-open-btn'].filter(id => (document.getElementById(id) || {}).offsetParent),
+        hidden: ['cl-updates-btn', 'intake-open-btn', 'fc-open-btn', 'lib-open-btn', 'export-repo-btn', 'cl-open-btn'].filter(id => (document.getElementById(id) || {}).offsetParent),
         oldButtons: [...document.querySelectorAll('#sidebar-actions button')].filter(b => /save case|archive|update saved|close case/i.test(b.textContent)).length,
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
-    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,dash-open-btn' || side.hidden.length || side.oldButtons
+    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn' || side.hidden.length || side.oldButtons
         || side.bar.join('|') !== '✕ Close|🗄 Archive|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
 
     // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files

@@ -2,13 +2,13 @@
 // browser. The browser's speech recognition and speech output are stand-ins driven by the test (a headless
 // browser has neither a microphone nor voices); /api/ calls are answered by the test.
 //
-// Checks: an Admin's sidebar has 📞 Reception Simulator right before 📊 My Dashboard, and it opens the panel;
+// Checks: the sidebar has 📞 Reception Simulator right before 📊 My Dashboard (Admins and trainees), and it opens the panel;
 // on the standard voice, hands-free is on by default: the microphone listens from the greeting, the greeting
 // said out loud is sent when the trainee pauses, and after each of the caller's lines it listens again; it is
 // never listening while the caller talks; a silence is tried twice more, then it asks for 🎙 or typing; the 🎙
 // button next to the reply box listens and sends; typing takes over from the microphone; hands-free off stops
 // the automatic listening; a blocked microphone says so and the call goes on typed; the Trainee view bar sits
-// above the case's action bar, not over its buttons.
+// above the case's action bar, not over its buttons, and Trainee view shows the Reception Simulator.
 // Usage: node .github/scripts/reception-mic.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -160,7 +160,7 @@ function fakeSpeech() {
     await page.waitForTimeout(1000);
     const boxes = await page.evaluate(() => { const r = (id) => { const e = document.getElementById(id); if (!e) return null; const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom }; }; return { tv: r('trainee-view-bar'), bar: r('case-actions-bar'), sim: !!(document.getElementById('fdd-open-btn') || {}).offsetParent, vh: innerHeight }; });
     if (!boxes.tv || !boxes.bar || boxes.tv.bottom > boxes.bar.top || Math.round(boxes.bar.bottom) !== boxes.vh) fail(`the Trainee view bar covers the case's action bar, or the action bar isn't at the bottom of the screen: ${JSON.stringify(boxes)}`);
-    if (boxes.sim) fail('Trainee view still shows the Reception Simulator button (Admins only)');
+    if (!boxes.sim) fail('Trainee view doesn\'t show the 📞 Reception Simulator button (trainees have it too)');
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); }
