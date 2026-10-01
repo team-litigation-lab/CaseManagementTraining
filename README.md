@@ -348,6 +348,15 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - The form adds no dropdowns or typed boxes to the page that the case editor would save by position.
 - Code: `intake-form.js`. The fill helpers are shared with the Training Library (`window.caseFill`), and the save is `saveCase({ quiet: true })` in `app.js`.
 
+## 🗑 Deleting trainees' cases (Master Control → Case Logs)
+
+**Master Control → Case Logs** lists every case in the repository, drafts included, newest first.
+- **🗑 Delete** on a case removes it for good. It first asks, naming the case and the trainee who saved it.
+- **To delete several at once,** tick them, or search for a trainee (the search matches the client name, the Case ID and the trainee) and use **Select all shown**. Then click **🗑 Delete selected (N)**.
+- Ticked cases stay ticked when the list refreshes.
+- The server allows the delete for an Admin or the case's owner (`/api/case-repository` DELETE). A case it refuses stays in the list, with the reason.
+- Code: "Case Logs" in `app.js`.
+
 ## 📥 Intake folder (automatically checked and reviewed)
 
 A separate folder in the Case Repository for **intake files**, kept apart from the case files. Open it from the sidebar (**📥 Intake Folder**), from the Case Library window's **📥 Intake folder** tab, or with a course link ending `?intake=1`. Trainees see only their own intake files; Admins see every trainee's, with the trainee's name on each. Code: `intake-folder.js`, `functions/_intake.js` (checklist), `functions/_intake-review.js` (review), `/api/intake-files`.
@@ -511,6 +520,14 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - Premises Liability, Dog Bite and Medical Malpractice set their case types and parties;
   - a failed save says so and leaves the case in the editor;
   - the Intake folder's New intake creates the case the same way.
+
+- **Case Logs delete** (`.github/scripts/case-logs.cjs`, in the same job): Master Control as an Admin. It checks that:
+  - every case has a Delete button;
+  - the search finds a trainee's cases by the trainee's name;
+  - Delete asks first, and Cancel deletes nothing;
+  - ticked cases survive the list's refresh, and Delete selected deletes them all;
+  - Select all shown ticks only what the search shows;
+  - a refused delete leaves the case, with a message.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
   - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:

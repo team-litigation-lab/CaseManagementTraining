@@ -574,6 +574,14 @@
     .status-revoked { background:#f1f5f9; color:#475569; }
     .status-suspended { background:#fef9c3; color:#854d0e; }
     .mini-btn { font-size:10px; font-weight:800; text-transform:uppercase; padding:6px 12px; border-radius:5px; cursor:pointer; border:none; }
+    .mini-btn[disabled] { opacity:.45; cursor:not-allowed; }
+    /* Master Control > Case Logs: pick cases to delete */
+    .case-logs-bulk { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; font-size:12px; color:#334155; }
+    .case-logs-bulk label { display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; }
+    .case-logs-pick { display:flex; align-items:center; padding-right:10px; cursor:pointer; }
+    .case-logs-pick input, .case-logs-bulk input { width:16px; height:16px; accent-color:#b91c1c; cursor:pointer; }
+    .mini-btn.del { background:#fee2e2; color:#b91c1c; }
+    .mini-btn.del:hover:not([disabled]) { background:#b91c1c; color:#fff; }
     .mini-btn.approve { background:#166534; color:white; }
     .mini-btn.reject { background:#b91c1c; color:white; }
     .mini-btn.revoke { background:#64748b; color:white; }
