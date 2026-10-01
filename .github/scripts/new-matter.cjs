@@ -1,13 +1,14 @@
-// New Matter test: the client intake form (intake-form.js) in a browser, as a trainee.
-// /api/ calls are answered by the test, as in smoke.cjs.
+// New Intake test: the intake form (intake-form.js) in a browser, as a trainee. /api/ calls are answered by
+// the test, as in smoke.cjs; saved cases are recorded.
 //
-// Checks: ＋ New Matter opens the matter picker with the firm's five intake forms; the form adds no
-// select or contenteditable to the page (the case editor saves those by position); completing it
-// needs the client's name, a phone, the date of loss and what happened; a completed intake opens a
-// new case filled in from it (client, incident, case type, report, parties, insurance, providers,
-// employment, lost wages, vehicles, a Case Note with the other answers) and keeps the intake on the
-// case (saved with it, back after a reload of the content, viewable); an unfinished intake can be
-// resumed; the Intake folder's New intake opens the form and the case opens in Intake mode.
+// Checks: 📝 New Intake offers the five case types; the form adds no select or contenteditable to the
+// page (the case editor saves those by position); only the client's name is needed to save; 💾 Save
+// Intake grades the intake (key information, questions answered, facts of loss) and creates the case:
+// the editor is filled in from the answers (client, incident, case type, report, parties, insurance,
+// providers, employment, lost wages, vehicles, a Case Note with the grade and the other answers) and
+// the case is saved with a Case ID; "New case created" shows the grade and what to ask next time; the
+// intake and its grade are saved with the case and can be viewed; an unfinished intake can be resumed;
+// a failed save says so and leaves the case in the editor; the Intake folder's New intake does the same.
 // Usage: node .github/scripts/new-matter.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -28,9 +29,15 @@ const failures = []; const fail = (m) => failures.push(m);
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     const dialogs = [];
     page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
+    const saved = []; let failNext = false;
     await page.route('**/api/**', route => {
-        const u = new URL(route.request().url());
-        const body = u.pathname === '/api/case-repository' ? { success: true, cases: [] } : u.pathname === '/api/intake-files' ? { success: true, files: [], reviewConfigured: true } : { success: true };
+        const u = new URL(route.request().url()), m = route.request().method();
+        let body = u.pathname === '/api/case-repository' ? { success: true, cases: [] } : u.pathname === '/api/intake-files' ? { success: true, files: [], reviewConfigured: true } : { success: true };
+        if (u.pathname === '/api/case-repository' && m === 'POST') {
+            const b = JSON.parse(route.request().postData());
+            if (failNext) { failNext = false; body = { success: false, error: 'The database is busy.' }; }
+            else { saved.push(b); body = { success: true, id: saved.length, caseId: `LSH-2026-${b.typeCode || 'XX'}-${String(saved.length).padStart(6, '0')}`, isDraft: !b.finalize }; }
+        }
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     });
     await page.route(/cdn\.tailwindcss\.com|html2pdf/, r => r.fulfill({ contentType: 'text/javascript', body: '' }));
@@ -51,7 +58,15 @@ const failures = []; const fail = (m) => failures.push(m);
         await page.click(`#nm-modal [data-form="${form}"]`);
         await page.waitForSelector('#nm-body');
     };
-    const complete = async () => { await page.click('#nm-modal [data-nm="complete"]'); await page.waitForTimeout(300); };
+    // 💾 Save Intake, then (when it saved) the result screen's Done
+    const result = () => page.evaluate(() => ({ title: document.getElementById('nm-title').textContent, text: (document.querySelector('#nm-modal .nm-done') || {}).innerText || '' }));
+    const complete = async (keepOpen) => {
+        await page.click('#nm-modal [data-nm="complete"]');
+        await page.waitForFunction(() => window.newMatterState().step === 'done' || Object.keys(window.newMatterState().errors).length, null, { timeout: 5000 }).catch(() => {});
+        const r = await result();
+        if (!keepOpen && r.text) await page.click('#nm-modal .nm-foot [data-nm="close"]');
+        return r;
+    };
     const ed = () => page.evaluate(() => {
         const t = (id) => (document.getElementById(id) || {}).innerText || '';
         const card = (pane, head) => [...document.querySelectorAll(`#${pane} .pdf-card`)].find(c => (c.querySelector('.section-head') || {}).textContent === head);
@@ -83,24 +98,46 @@ const failures = []; const fail = (m) => failures.push(m);
     });
 
     // 1. the picker
+    if ((await page.textContent('#nm-open-btn')).trim() !== '📝 New Intake') fail(`the sidebar button reads "${(await page.textContent('#nm-open-btn')).trim()}"`);
     await page.click('#nm-open-btn');
-    await page.waitForSelector('#nm-modal.open .nm-card', { timeout: 5000 }).catch(() => fail('＋ New Matter didn\'t open the intake form'));
+    await page.waitForSelector('#nm-modal.open .nm-card', { timeout: 5000 }).catch(() => fail('📝 New Intake didn\'t open the intake form'));
+    if (!/What type of case is it\?/.test(await page.textContent('#nm-title'))) fail('the first step doesn\'t ask for the case type');
     const cards = await page.$$eval('#nm-modal .nm-card b', els => els.map(e => e.textContent));
-    if (cards.join('|') !== 'Personal Injury|Slip and Fall|Premises Liability|Dog Bite|Medical Malpractice') fail(`the matter picker offers ${cards.join(', ')}`);
+    if (cards.join('|') !== 'MVA|Slip and Fall|Premises Liability|Dog Bite|Medical Malpractice') fail(`the case types offered: ${cards.join(', ')}`);
+    if (await page.$$eval('#nm-modal .nm-card', els => els.some(e => e.children.length !== 2 || !e.querySelector('.ic') || !e.querySelector('b')))) fail('the case-type cards show more than their icon and title');
     await page.click('#nm-modal [data-form="slipfall"]');
     await page.waitForSelector('#nm-body');
     const during = await positional();
     if (during.edits !== before.edits || during.selects !== before.selects) fail(`the intake form changed the page's positional fields (${JSON.stringify(before)} → ${JSON.stringify(during)})`);
     if (!(await page.inputValue('#nm-today')).match(/^\d\d\/\d\d\/\d{4}$/)) fail('Today\'s Date isn\'t filled in');
+    if (!(await page.isVisible('#nm-modal .nm-h:has-text("Facts of loss")')) || !(await page.isVisible('#nm-modal [data-f="description"] .nm-hint'))) fail('the Facts of loss section isn\'t marked as graded');
+    const footer = await page.$$eval('#nm-modal .nm-foot button', bs => bs.map(b => b.textContent.trim()));
+    if (footer.join('|') !== '← Change case type|Cancel|💾 Save Intake') fail(`the form's buttons: ${footer.join(' | ')}`);
 
-    // 2. completing needs the essentials
-    await complete();
+    // 2. only the client's name is needed to save
+    await complete(true);
     const errs = Object.keys((await page.evaluate(() => window.newMatterState())).errors).sort().join(',');
-    if (errs !== 'cellPhone,description,dol,first,last') fail(`an empty intake should need first, last, phone, DOL and the description; it asked for ${errs}`);
-    if (!(await page.isVisible('#nm-modal .nm-errs'))) fail('no list of what\'s missing');
-    if (await page.evaluate(() => document.getElementById('client-name-field').innerText.trim())) fail('an incomplete intake opened a case');
+    if (errs !== 'first,last') fail(`an empty intake should need only the client's name; it asked for ${errs}`);
+    if (saved.length) fail('an intake with no name was saved as a case');
 
-    // 3. Slip and Fall: fill it in and complete it
+    // 3. a name-only intake saves as a case, graded low, with what to ask next time
+    await fill('first', 'Cian'); await fill('last', 'Beaumont');
+    let r = await complete(true);
+    if (r.title !== '✅ New case created' || !/Case ID LSH-2026-SNF-000001/.test(r.text)) fail(`saving the intake didn't create the case: ${r.title} / ${r.text.slice(0, 120)}`);
+    const thin = saved[saved.length - 1];
+    if (!thin || !thin.finalize || thin.isDraft || thin.clientName.toLowerCase() !== 'cian beaumont') fail(`the case wasn't saved as a final case: ${JSON.stringify(thin && { finalize: thin.finalize, isDraft: thin.isDraft, name: thin.clientName })}`);
+    let c = await ed();
+    const g1 = c.record && c.record.grade;
+    if (!g1 || g1.letter !== 'F' || g1.key.got !== 1 || g1.key.total !== 15 || g1.facts.words !== 0) fail(`a name-only intake's grade: ${JSON.stringify(g1)}`);
+    for (const must of ['Ask next time:', 'Phone number', 'Date of loss', 'Facts of loss', `${g1 && g1.score}%`, 'Facts of loss: get more detail'])
+        if (!r.text.includes(must)) fail(`the result doesn't show "${must}"`);
+    if (await page.evaluate(() => document.getElementById('case-id-field').innerText) !== 'LSH-2026-SNF-000001') fail('the editor doesn\'t show the new Case ID');
+    await page.click('#nm-modal .nm-foot [data-nm="close"]');
+    if (await page.isVisible('#nm-modal.open')) fail('Done didn\'t close the window');
+
+    // 4. Slip and Fall in full: the case is filled in field by field, and the grade is higher
+    dialogs.length = 0;
+    await pick('slipfall');
     await fill('first', 'Saoirse'); await fill('middle', 'M'); await fill('last', 'Featherstonhaugh');
     await fill('address', '12 Elm St'); await fill('city', 'Tampa'); await fill('state', 'FL');
     await page.type('#nm-cellPhone', '8135550142');
@@ -111,7 +148,7 @@ const failures = []; const fail = (m) => failures.push(m);
     await yes('incidentReport'); await fill('incidentNo', 'IR-2026-0214');
     await fill('propertyType', 'Commercial property (grocery store)');
     await fill('adverseParties', 'FreshWay Markets LLC');
-    await fill('description', 'Slipped on spilled liquid soap in aisle 7. No wet-floor sign. Fell on her right hip and wrist.');
+    await fill('description', 'Slipped on spilled liquid soap in aisle 7 at about 6 PM. There was no wet-floor sign and no employee nearby. She fell hard on her right hip and caught herself with her right wrist. A manager took an incident report and photos, and she went to the ER by ambulance.');
     await yes('witnessesYn'); await page.fill('#nm-witnesses-0-name', 'Rhys Acheson'); await page.fill('#nm-witnesses-0-relation', 'Stranger'); await page.fill('#nm-witnesses-0-phone', '(813) 555-0199');
     await page.click('#nm-modal [data-nm="addrow"][data-g="witnesses"]'); await page.fill('#nm-witnesses-1-name', 'Niamh Beauchamp');
     await yes('ownerInsKnown'); await fill('ownerInsurers', 'Coastal Mutual'); await fill('claimNumbers', 'CM-55120');
@@ -130,9 +167,17 @@ const failures = []; const fail = (m) => failures.push(m);
     await fill('hearAbout', 'Google');
     if ((await page.inputValue('#nm-cellPhone')) !== '(813) 555-0142' || (await page.inputValue('#nm-dol')) !== '02/14/2026') fail(`phone and date aren't formatted as typed: ${await page.inputValue('#nm-cellPhone')}, ${await page.inputValue('#nm-dol')}`);
     if ((await page.inputValue('#nm-medBills')) !== '$ 14,250.00') fail(`money isn't formatted: ${await page.inputValue('#nm-medBills')}`);
-    await complete();
-    if (await page.isVisible('#nm-modal.open')) fail(`the completed Slip and Fall intake didn't close: ${JSON.stringify((await page.evaluate(() => window.newMatterState())).errors)}`);
-    let c = await ed();
+    r = await complete(true);
+    if (!dialogs.some(m => /Save this intake as a new case\?/.test(m))) fail(`no warning before the case in the editor was closed (${dialogs.join(' / ')})`);
+    if (r.title !== '✅ New case created' || !r.text.includes('Every key item was gathered')) fail(`the full Slip and Fall result: ${r.title} / ${r.text.slice(0, 200)}`);
+    await page.click('#nm-modal .nm-foot [data-nm="close"]');
+    c = await ed();
+    const g2 = c.record && c.record.grade;
+    if (!g2 || g2.key.got !== 15 || g2.key.total !== 15 || g2.facts.score !== 80 || g2.score <= g1.score || !r.text.includes(`${g2.score}%`)) fail(`the full intake's grade: ${JSON.stringify(g2)}`);
+    const full = saved[saved.length - 1];
+    const keyed = full && full.content.keyed && full.content.keyed['kx-intake'] && full.content.keyed['kx-intake'].fields.data;
+    const savedRec = keyed ? JSON.parse(keyed.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')) : null;
+    if (!savedRec || savedRec.form !== 'slipfall' || !savedRec.grade || savedRec.grade.score !== g2.score || !full.finalize) fail('the saved case doesn\'t carry the intake and its grade');
     const want = { name: 'Saoirse M Featherstonhaugh', phone: '(813) 555-0142', dol: '02/14/2026', location: 'FreshWay Market, 400 Bay Rd, Tampa, FL', type: 'Slip and Fall', phase: 'Intake',
         dob: '04/12/1988', email: 'saoirse@example.com', address: '12 Elm St, Tampa, FL', emName: 'Bjorn Witwicky', employer: 'Tampa Bay Logistics', empStatus: 'Employed', report: 'Incident Report', health: 'Aetna' };
     Object.entries(want).forEach(([k, v]) => { if (c[k] !== v) fail(`Slip and Fall → ${k}: ${JSON.stringify(c[k])}, expected ${JSON.stringify(v)}`); });
@@ -148,47 +193,41 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!/Approximate medical bills: \$ 14,250\.00/.test(c.treatNotes) || !/Hospital stay: 1 night/.test(c.treatNotes)) fail(`Other Treatment Notes: ${c.treatNotes}`);
     if (c.wages.employer !== 'Tampa Bay Logistics' || !/Time missed: 3 weeks/.test(c.wages.notes)) fail(`Lost Wages: ${JSON.stringify(c.wages)}`);
     const note = c.notes[0] || {};
-    if (c.notes.length !== 1 || note.staff !== 'Intake Specialist' || !/New matter intake completed \(Slip and Fall intake form\) by CI Trainee/.test(note.text)) fail(`the Case Note: ${JSON.stringify(c.notes)}`);
+    if (c.notes.length !== 1 || note.staff !== 'Intake Specialist' || !/New intake \(Slip and Fall intake form\) by CI Trainee\. Intake grade \d+% \([A-F]\)/.test(note.text)) fail(`the Case Note: ${JSON.stringify(c.notes)}`);
     for (const must of ['Second emergency contact: Siobhan Witwicky', 'Are you paying child support?: Yes', 'Marital Status: Married', "Spouse's Name: Cian Featherstonhaugh", 'How did you hear about us?: Google'])
         if (!(note.text || '').includes(must)) fail(`the Case Note is missing "${must}"`);
     if ((note.text || '').includes('Tampa General Hospital')) fail('the Case Note repeats an answer that has its own case field');
-    if (!c.record || c.record.form !== 'slipfall' || c.record.answers.first !== 'Saoirse') fail(`the intake isn't kept on the case: ${JSON.stringify(c.record && c.record.form)}`);
-    if (!c.bar || !/Slip and Fall intake/.test(c.bar)) fail(`the Profile tab doesn't show the intake on file: ${c.bar}`);
-    if (await page.evaluate(() => !!localStorage.getItem('LSH_NEW_MATTER_DRAFT_V1:trainee-ci'))) fail('the draft is still there after the intake was completed');
+    if (!c.bar || !/Slip and Fall intake/.test(c.bar) || !c.bar.includes(`grade ${g2.score}% (${g2.letter})`)) fail(`the Profile tab doesn't show the intake and its grade: ${c.bar}`);
+    if (await page.evaluate(() => !!localStorage.getItem('LSH_NEW_MATTER_DRAFT_V1:trainee-ci'))) fail('the draft is still there after the intake was saved');
 
-    // 4. the intake is saved with the case and comes back with it
+    // 5. the intake comes back with the case, and can be viewed (read only)
     const rt = await page.evaluate(() => {
         const content = buildCaseContentPayload();
-        const saved = content.keyed && content.keyed['kx-intake'] && content.keyed['kx-intake'].fields.data;
         blankCaseEditorContent();
         const cleared = !!window.newMatterState().record || document.getElementById('kx-intake').classList.contains('has');
         applyCaseContentToDOM(content);
         const back = window.newMatterState().record;
-        return { saved: !!saved && JSON.parse(new DOMParser().parseFromString(`<p>${saved}</p>`, 'text/html').body.textContent).form, cleared, back: back && back.answers.last, has: document.getElementById('kx-intake').classList.contains('has') };
+        return { cleared, back: back && back.answers.last, grade: back && back.grade && back.grade.score, has: document.getElementById('kx-intake').classList.contains('has') };
     });
-    if (rt.saved !== 'slipfall' || rt.cleared || rt.back !== 'Featherstonhaugh' || !rt.has) fail(`saving and loading the case: ${JSON.stringify(rt)}`);
-    // view it
+    if (rt.cleared || rt.back !== 'Featherstonhaugh' || rt.grade !== g2.score || !rt.has) fail(`loading the case back: ${JSON.stringify(rt)}`);
     await page.click('#kx-intake button.go');
     await page.waitForSelector('#nm-modal.open #nm-body');
-    if ((await page.inputValue('#nm-last')) !== 'Featherstonhaugh' || !(await page.isVisible('#nm-modal [data-nm="saverec"]'))) fail('View intake form doesn\'t show the answers');
-    await page.fill('#nm-hearAbout', 'A friend');
-    await page.click('#nm-modal [data-nm="saverec"]');
-    const corrected = await page.evaluate(() => ({ rec: window.newMatterState().record, note: document.querySelector('#note-body tr td:nth-child(3)').innerText }));
-    if (!corrected.rec || corrected.rec.answers.hearAbout !== 'A friend' || !corrected.rec.editedAt || !/Google/.test(corrected.note)) fail('correcting the intake on file didn\'t update it (or changed the case)');
+    if ((await page.inputValue('#nm-last')) !== 'Featherstonhaugh' || !(await page.$('#nm-last[readonly]')) || await page.isVisible('#nm-modal [data-nm="complete"]')) fail('View intake form doesn\'t show the answers read only');
+    if (!(await page.textContent('#nm-sub')).includes(`grade ${g2.score}%`)) fail('View intake form doesn\'t show the grade');
+    await page.click('#nm-modal .nm-foot [data-nm="close"]');
 
-    // 5. an unfinished intake is kept and can be resumed
-    dialogs.length = 0;
+    // 6. an unfinished intake is kept and can be resumed
     await pick('pi');
     await fill('first', 'Mstislav'); await fill('last', 'Kirkcudbright');
     await page.waitForTimeout(600);
-    await page.click('#nm-modal [data-nm="close"]');
+    await page.click('#nm-modal .nm-foot [data-nm="close"]');
     await page.click('#nm-open-btn');
     await page.waitForSelector('#nm-modal .nm-resume');
-    if (!/Personal Injury · Mstislav Kirkcudbright/.test(await page.textContent('#nm-modal .nm-resume'))) fail(`the unfinished intake isn't offered: ${await page.textContent('#nm-modal .nm-resume')}`);
+    if (!/MVA · Mstislav Kirkcudbright/.test(await page.textContent('#nm-modal .nm-resume'))) fail(`the unfinished intake isn't offered: ${await page.textContent('#nm-modal .nm-resume')}`);
     await page.click('#nm-modal [data-nm="resume"]');
     if ((await page.inputValue('#nm-last')) !== 'Kirkcudbright') fail('Resume didn\'t bring the answers back');
 
-    // 6. Personal Injury, an auto accident: vehicles, both insurers, the police report; the editor had a case, so it asks first
+    // 7. MVA: vehicles, both insurers, the police report
     await page.type('#nm-cellPhone', '7275550100'); await page.type('#nm-dob', '01021990');
     await page.type('#nm-dol', '03022026');
     if ((await page.inputValue('#nm-dayOfWeek')) !== 'Monday') fail(`Day of Week isn't filled from the date: ${await page.inputValue('#nm-dayOfWeek')}`);
@@ -197,16 +236,15 @@ const failures = []; const fail = (m) => failures.push(m);
     await fill('afName', 'Brittany Masserene'); await fill('afPhone', '7275550188'); await fill('afDl', 'M256-110-90-512-0');
     await yes('policeReport'); await fill('policeAgency', 'Clearwater PD'); await fill('policeReportNo', 'CPD-26-0302'); await fill('officerName', 'Ofc. Shaughnessy'); await fill('officerId', '4471');
     await fill('ownCo', 'State Farm'); await fill('ownPolicy', 'SF-1180'); await fill('afCo', 'GEICO'); await fill('afPolicy', 'G-77'); await yes('afClaimMade'); await fill('afClaim', 'GC-9001'); await fill('afAdjuster', 'Pat Cholmondeley');
-    await yes('auto'); await fill('vMake', 'Toyota'); await fill('vModel', 'Camry'); await fill('vYear', '2021'); await fill('vPlate', 'ABC123'); await fill('vDamage', 'Rear bumper');
+    await fill('vMake', 'Toyota'); await fill('vModel', 'Camry'); await fill('vYear', '2021'); await fill('vPlate', 'ABC123'); await fill('vDamage', 'Rear bumper');
     await fill('dMake', 'Ford'); await fill('dModel', 'F-150'); await fill('dYear', '2018');
     await fill('injuries', 'Neck and low-back strain'); await fill('hospital', 'Morton Plant Hospital'); await fill('admitDates', '03/02/2026 – 03/02/2026');
     await fill('employer', 'Clearwater Marine'); await fill('wage', '22.50'); await page.type('#nm-lostFrom', '03032026'); await page.type('#nm-lostTo', '03172026'); await fill('lostTotal', '1800');
-    dialogs.length = 0;
-    await complete();
-    if (!dialogs.some(m => /Open the new matter as a new case\?/.test(m))) fail(`no warning before the case in the editor was replaced (${dialogs.join(' / ')})`);
+    r = await complete();
+    if (r.title !== '✅ New case created' || !/LSH-2026-MVA-/.test(r.text)) fail(`the MVA intake wasn't saved as an MVA case: ${r.title} / ${r.text.slice(0, 120)}`);
     c = await ed();
     const pi = { name: 'Mstislav Kirkcudbright', type: 'MVA', report: 'Police Report', dob: '01/02/1990', dol: '03/02/2026' };
-    Object.entries(pi).forEach(([k, v]) => { if (c[k] !== v) fail(`Personal Injury → ${k}: ${JSON.stringify(c[k])}, expected ${JSON.stringify(v)}`); });
+    Object.entries(pi).forEach(([k, v]) => { if (c[k] !== v) fail(`MVA → ${k}: ${JSON.stringify(c[k])}, expected ${JSON.stringify(v)}`); });
     if (c.police.slice(0, 3).join('|') !== 'Clearwater PD|CPD-26-0302|Ofc. Shaughnessy · ID 4471') fail(`the police report: ${c.police.join(' | ')}`);
     if (!c.parties[0] || c.parties[0].role !== 'At-Fault Driver' || c.parties[0].name !== 'Brittany Masserene' || !/GEICO · GC-9001/.test(c.parties[0].insurance)) fail(`the at-fault driver: ${JSON.stringify(c.parties[0])}`);
     if (c.bi.length !== 1 || c.bi[0].carrier !== 'GEICO' || c.bi[0].adjuster !== 'Pat Cholmondeley') fail(`the BI policy: ${JSON.stringify(c.bi)}`);
@@ -216,7 +254,7 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!/Weather: Rain/.test(c.narrative) || !/Client vehicle damage: Rear bumper/.test((c.notes[0] || {}).text)) fail('the PI details didn\'t land in the narrative / note');
     if (c.notes.length !== 1) fail(`the new case kept the last case's notes (${c.notes.length} notes)`);
 
-    // 7. the other forms: the case type and what's special to each
+    // 8. the other forms: the case type and what's special to each
     const quick = async (form, extra) => {
         await pick(form);
         if (form === 'premises' || form === 'medmal') await fill('name', 'Cian Beaumont'); else { await fill('first', 'Cian'); await fill('last', 'Beaumont'); }
@@ -224,8 +262,8 @@ const failures = []; const fail = (m) => failures.push(m);
         await page.type('#nm-dol', '01052026');
         await fill(form === 'medmal' ? 'improperCare' : 'description', 'What happened, in the client\'s words.');
         if (extra) await extra();
-        await complete();
-        if (await page.isVisible('#nm-modal.open')) fail(`${form}: the intake didn't complete: ${JSON.stringify((await page.evaluate(() => window.newMatterState())).errors)}`);
+        const res = await complete();
+        if (res.title !== '✅ New case created') fail(`${form}: the intake didn't save: ${res.title} ${JSON.stringify((await page.evaluate(() => window.newMatterState())).errors)}`);
         return ed();
     };
     c = await quick('premises', async () => {
@@ -241,21 +279,30 @@ const failures = []; const fail = (m) => failures.push(m);
     c = await quick('medmal', async () => { await fill('responsible', 'Dr. Rhys Courthope, Bayview Clinic'); await page.fill('#nm-healthPlans-0-name', 'Medicare'); await page.fill('#nm-healthPlans-0-id', '1EG4-TE5-MK72'); });
     if (c.type !== 'Others' || c.typeOther !== 'Medical Malpractice' || c.health !== 'Medicare' || !c.parties[0] || c.parties[0].name !== 'Dr. Rhys Courthope, Bayview Clinic') fail(`Medical Malpractice: ${c.type}/${c.typeOther}, ${c.health}, ${JSON.stringify(c.parties)}`);
 
-    // 8. the Intake folder's New intake: the same form, and the case opens in Intake mode
-    await page.evaluate(() => { blankCaseEditorContent(); openIntakeFolder(); });
+    // 9. a failed save says so, and the case stays in the editor to save again
+    failNext = true;
+    await pick('dogbite');
+    await fill('first', 'Rhys'); await fill('last', 'Witwicky');
+    r = await complete(true);
+    if (!/wasn't saved/.test(r.title) || !/The database is busy/.test(r.text) || !/Save Case/.test(r.text)) fail(`a failed save: ${r.title} / ${r.text.slice(0, 160)}`);
+    if ((await page.evaluate(() => document.getElementById('client-name-field').textContent.trim())) !== 'Rhys Witwicky') fail('after a failed save the case isn\'t in the editor');
+    await page.click('#nm-modal .nm-foot [data-nm="close"]');
+
+    // 10. the Intake folder's New intake: the same form, and saving creates the case
+    const n = saved.length;
+    await page.evaluate(() => openIntakeFolder());
     await page.waitForSelector('#case-library-modal.open [data-if="new"]', { timeout: 5000 });
     await page.click('#case-library-modal [data-if="new"]');
     await page.waitForSelector('#nm-modal.open .nm-card');
-    if (!/INTAKE FOLDER/.test(await page.textContent('#nm-kicker'))) fail('New intake doesn\'t open the intake form for the Intake folder');
     await page.click('#nm-modal [data-form="slipfall"]');
     await fill('first', 'Mireille'); await fill('last', 'Shaughnessy'); await page.type('#nm-cellPhone', '3055550101'); await page.type('#nm-dol', '02012026'); await fill('description', 'Fell on a wet ramp.');
-    await complete();
+    r = await complete();
     c = await ed();
-    if (!c.intakeMode || c.name !== 'Mireille Shaughnessy' || !c.record) fail(`the Intake folder's intake didn't open in Intake mode: ${JSON.stringify({ intakeMode: c.intakeMode, name: c.name, record: !!c.record })}`);
+    if (r.title !== '✅ New case created' || saved.length !== n + 1 || c.intakeMode || c.name !== 'Mireille Shaughnessy' || !c.record) fail(`the Intake folder's New intake didn't create the case: ${JSON.stringify({ title: r.title, saves: saved.length - n, intakeMode: c.intakeMode, name: c.name })}`);
     const final = await positional();
     if (final.selects < before.selects) fail('fields are missing from the page after the intakes');
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); }
-    console.log('New Matter intake form test passed (5 forms; the case filled in, the intake kept on the case, drafts, the Intake folder).');
+    console.log('New Intake test passed (5 case types; graded, the case filled in and saved, the intake kept on the case, drafts, a failed save, the Intake folder).');
 })().catch(e => { console.error(e); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); });

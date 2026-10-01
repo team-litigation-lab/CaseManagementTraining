@@ -1297,11 +1297,13 @@
            finalized, its existing Case ID is kept and this just re-saves the
            latest content. Blocked client-side (and enforced server-side) for
            anyone viewing a foreign case who isn't its owner or an Admin. */
-        async function saveCase() {
-            if (window.mockBlocksSave && window.mockBlocksSave()) return; // view-only Training Library case
+        // opts.quiet (the New Intake form, intake-form.js): no alerts; it returns { ok, caseId, error } and the caller says what happened.
+        async function saveCase(opts) {
+            const quiet = !!(opts && opts.quiet);
+            if (window.mockBlocksSave && window.mockBlocksSave()) return quiet ? { ok: false, error: 'This case can\'t be saved here.' } : undefined; // view-only Training Library case
             if (currentCaseId !== null && !currentCaseCanEdit) {
                 showToast('You can only view this case — only its owner or an Admin can modify it.', 'error');
-                return;
+                return quiet ? { ok: false, error: 'You can only view this case.' } : undefined;
             }
             const content = buildCaseContentPayload();
             const clientName = (document.getElementById('client-name-field').innerText.split('\n')[0] || 'Unnamed Client').trim();
@@ -1318,7 +1320,10 @@
                     })
                 });
                 const data = await res.json();
-                if (!data || !data.success) { alert('Could not save: ' + ((data && data.error) || 'Unknown error.')); return; }
+                if (!data || !data.success) {
+                    if (quiet) return { ok: false, error: (data && data.error) || 'Unknown error.' };
+                    alert('Could not save: ' + ((data && data.error) || 'Unknown error.')); return;
+                }
                 const wasAlreadyFinal = (currentCaseId !== null && !currentCaseIsDraft);
                 currentCaseId = data.id;
                 currentCaseIsDraft = false;
@@ -1326,8 +1331,10 @@
                 document.getElementById('case-id-field').innerText = data.caseId;
                 persistCurrentEditorState();
                 refreshRepoCache();
+                if (quiet) return { ok: true, caseId: data.caseId };
                 alert(wasAlreadyFinal ? 'Case saved.' : `Case saved. Case ID ${data.caseId} has been permanently assigned.`);
             } catch (e) {
+                if (quiet) return { ok: false, error: 'Network error while saving.' };
                 alert('Network error while saving. Check your connection and try again.');
             }
         }

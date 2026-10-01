@@ -297,51 +297,59 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - A case saved before these sections existed loads unchanged, with the new sections empty. `sections.cjs` checks this with a case saved by the previous version (`.github/scripts/fixtures/case-before-keyed.json`), and it fails if the page's positional fields change.
 - Code: `case-sections.js`, and "Keyed sections" in `app.js`.
 
-## 📝 New Matter: the client intake form
+## 📝 New Intake (graded, and it creates the case)
 
-**＋ New Matter** (the top of the sidebar) opens the client intake form. The intaker picks the kind of matter, and the form follows the firm's intake sheet for it:
+1. **📝 New Intake** (the top of the sidebar, or **📝 New intake** in the Intake folder).
+2. **Pick the case type:** MVA, Slip and Fall, Premises Liability, Dog Bite or Medical Malpractice. That type's intake form opens. It follows the firm's intake sheet:
 
-| Matter | Follows | The new case's type |
-|---|---|---|
-| 🚗 **Personal Injury** | Personal Injury – Client Intake Form (auto accident or general) | MVA for an auto accident, otherwise Others: Personal Injury |
-| ⚠️ **Slip and Fall** | Client Intake Form – Slip and Fall | Slip and Fall |
-| 🏢 **Premises Liability** | Client Intake and Case Information Questionnaire (Premise Liability) | Premise Liability |
-| 🐕 **Dog Bite** | Client Intake Form – Dog Bite | Dog Bite |
-| 🩺 **Medical Malpractice** | Client Questionnaire (Medical Malpractice) | Others: Medical Malpractice |
+   | Case type | Follows | The case's type |
+   |---|---|---|
+   | 🚗 **MVA** | Personal Injury – Client Intake Form | MVA |
+   | ⚠️ **Slip and Fall** | Client Intake Form – Slip and Fall | Slip and Fall |
+   | 🏢 **Premises Liability** | Client Intake and Case Information Questionnaire (Premise Liability) | Premise Liability |
+   | 🐕 **Dog Bite** | Client Intake Form – Dog Bite | Dog Bite |
+   | 🩺 **Medical Malpractice** | Client Questionnaire (Medical Malpractice) | Others: Medical Malpractice |
 
-- **Filling it in:**
-  - Every question on the sheet is there, section by section, with a list of sections and how much of each is answered.
-  - Questions that follow a Yes / No ("If yes…") show once it's Yes.
-  - Witnesses, providers, children and other lists take as many rows as the sheet has room for.
-  - Dates, phone numbers, SSNs and amounts format themselves as they're typed. Personal Injury fills in the day of the week from the date of injury.
-  - The paper forms' diagram of the scene is a box to describe the layout.
-  - Two questions are added because the case file needs them: the date of birth on the Personal Injury form, and the date of loss on the Medical Malpractice form. They're marked "for the case file".
-- **To complete it,** the form needs the client's name, a phone number, the date of loss and what happened. It lists anything missing and takes you to it.
-- **Completed,** a new case opens in the editor at the Intake stage, filled in from the answers:
-  - the client (name, phone, DOB, SSN, email, address), the emergency contact, employment;
-  - the date of loss, the location, the case type, and the narrative (the client's account plus the details of the scene);
-  - the Primary Injury card (for Premises Liability, the injured body parts);
-  - the police report or the store's incident report;
-  - the parties: the at-fault party or driver, the property owner or business, witnesses, another injured party;
-  - the health insurance, the at-fault side's policy (BI), and the client's own auto policy (PIP);
-  - the hospital, the ambulance and the other providers, each with a specialty from its name (Chiro, Ortho, PT…), plus Other Treatment Notes;
-  - Lost Wages, and for an auto accident both vehicles.
-- **A Case Note** records who did the intake. It also lists every answer that has no case field of its own (marital status, spouse, bankruptcy, child support, another attorney, how they heard about us, vehicle damage…), so nothing is lost.
-- **If the editor has a case open,** the form asks before replacing it.
-- **The intake stays with the case.** It is saved with the case, as a keyed section. The Profile tab shows **📋 Intake form** with the form and who completed it, and two buttons:
-  - **View intake form** opens the answers, which can be corrected. That changes the intake on file, not the case's fields.
-  - **🖨 Print** prints the whole intake.
-- **An unfinished intake** is kept in the browser for that user (**Save and close**, or just close it). ＋ New Matter offers to **Resume** or **Discard** it.
-- **From the Intake folder,** **📝 New intake** opens the same form. The case then opens in Intake mode, so it saves to the Intake folder.
+3. **Gather the information and the Facts of loss.** Only the client's name is needed to save; everything else counts toward the grade.
+   - Questions that follow a Yes / No show once it's Yes.
+   - Dates, phones, SSNs and amounts format themselves as they're typed.
+   - The MVA form fills in the day of the week from the date of injury.
+   - The paper diagram of the scene is a box to describe the layout.
+   - Two questions are added because the case file needs them: the date of birth on the MVA form and the date of loss on the Medical Malpractice form.
+4. **💾 Save Intake.** It does three things:
+   - **Grades the intake** on how much was gathered:
+     - **Key information**, 45%: the essentials the form asks for, such as name, phone, DOB, address, date of loss, where it happened, facts of loss, injuries, treatment, insurance, the report, who is at fault, emergency contact and employment.
+     - **Questions answered**, 30%: a follow-up counts only once its Yes is given.
+     - **Facts of loss**, 25%: the detail in the client's account. 60+ words is full marks.
+     - The letter: A 90+, B 80+, C 70+, D 60+, otherwise F.
+   - **Creates the case:** the editor is filled in from the answers, and the case is saved with its Case ID. The answers fill:
+     - the client, the emergency contact and employment;
+     - the date of loss, the location and the case type;
+     - the narrative and the Primary Injury card;
+     - the police or incident report;
+     - the parties and witnesses;
+     - health, BI and PIP insurance;
+     - the providers, with a specialty from each name;
+     - Lost Wages, and both vehicles for an MVA.
+   - **Shows "New case created"** with the Case ID, the grade, and what to ask next time.
+
+**What's kept with the case:**
+- **A Case Note** records the grade. It also lists every answer that has no case field of its own (marital status, spouse, bankruptcy, another attorney, vehicle damage…).
+- **The Profile tab** shows **📋 Intake form** with the grade, plus **View intake form** (read only) and **🖨 Print**.
+
+**Other details:**
+- If the editor has a case open, saving asks before closing it.
+- If the save fails, the result says so, and the filled-in case stays in the editor to save with **Save Case**.
+- An unfinished intake is kept in the browser for that user. **📝 New Intake** offers to **Resume** or **Discard** it.
 - The form adds no dropdowns or typed boxes to the page that the case editor would save by position.
-- Code: `intake-form.js`. The fill helpers are shared with the Training Library (`window.caseFill` in `training-library.js`).
+- Code: `intake-form.js`. The fill helpers are shared with the Training Library (`window.caseFill`), and the save is `saveCase({ quiet: true })` in `app.js`.
 
 ## 📥 Intake folder (automatically checked and reviewed)
 
 A separate folder in the Case Repository for **intake files**, kept apart from the case files. Open it from the sidebar (**📥 Intake Folder**), from the Case Library window's **📥 Intake folder** tab, or with a course link ending `?intake=1`. Trainees see only their own intake files; Admins see every trainee's, with the trainee's name on each. Code: `intake-folder.js`, `functions/_intake.js` (checklist), `functions/_intake-review.js` (review), `/api/intake-files`.
 
 **Two kinds of intake file:**
-- **Typed intakes.** **📝 New intake** opens the client intake form (see **New Matter** above). When it's complete, the case editor opens in **Intake mode**, filled in from it, with the orange bar above the case.
+- **Typed intakes.** **📝 New intake** opens the intake form (see **New Intake** above): saving it grades it and creates the case. Typed intakes saved in the folder earlier open in **Intake mode**, with the orange bar above the case.
   - **💾 Save to Intake folder** files it in the folder. **Save Case**, **Archive** and the one-minute autosave also save the intake while the bar shows, so an intake never lands in the case files by accident.
   - **📂 Move to case files** saves an accepted intake as a regular case (it gets a Case ID). The intake file stays in the folder, marked as moved.
   - **✕ Close intake** leaves Intake mode.
@@ -485,18 +493,20 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - the Property Damage filter narrows the file to exactly the cases listed, and a case's own **⬇ PDF** button gives just that case;
   - the file names, the "Downloaded … (N pages)" message, and that the page's own `window.jspdf` (html2pdf's) is left alone.
 
-- **New Matter intake form** (`.github/scripts/new-matter.cjs`, in the same job): the form in a browser, as a trainee. It checks that:
-  - ＋ New Matter offers the five intake forms, and the form adds no positional field to the page;
-  - an empty intake can't open a case, and the form lists what's needed;
-  - a completed Slip and Fall intake fills the case field by field:
+- **New Intake** (`.github/scripts/new-matter.cjs`, in the same job): the form in a browser, as a trainee. It checks that:
+  - 📝 New Intake offers the five case types (icon and title only), and the form adds no positional field to the page;
+  - only the client's name is needed to save. A name-only intake still creates the case, graded F, with what to ask next time;
+  - a full Slip and Fall intake gathers every key item, grades higher, and is saved as a final case with a Case ID. It fills the case field by field:
     - the client and the incident;
     - the incident report, the property owner and the witnesses, the BI policy, the providers and their specialties;
-    - Lost Wages, and the Case Note with the answers that have no field of their own (and none that do);
-  - the intake is saved with the case and comes back with it, and correcting it on file leaves the case alone;
+    - Lost Wages;
+    - the Case Note with the grade and the answers that have no field of their own;
+  - the intake and its grade are saved with the case, come back with it, and can be viewed read only;
   - an unfinished intake can be resumed;
-  - a Personal Injury auto accident fills both vehicles, both insurers and the police report, after asking before replacing the open case;
-  - Premises Liability (body parts, GL and Med Pay limits, salary), Dog Bite and Medical Malpractice set their case types and parties;
-  - the Intake folder's New intake opens the form, and the case opens in Intake mode.
+  - an MVA fills both vehicles, both insurers and the police report;
+  - Premises Liability, Dog Bite and Medical Malpractice set their case types and parties;
+  - a failed save says so and leaves the case in the editor;
+  - the Intake folder's New intake creates the case the same way.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
   - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
