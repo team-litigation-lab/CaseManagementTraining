@@ -437,7 +437,7 @@
                     <button class="open" onclick="caseLibraryOpen('saved',${Number(f.id)})" title="Open this case"><b>${esc(f.name)}</b><span>${f.ref ? esc(f.ref) : 'Draft · no case ID yet'}${f.dol ? ' · DOL ' + esc(f.dol) : ''}</span></button>
                     <button class="del" onclick="deleteCase(${Number(f.id)}, event)" title="Delete this case" aria-label="Delete ${esc(f.name)}">🗑</button></div>`).join('')
                 : '<p class="cl-side-hint">The cases you save (Save Case or Archive as draft) appear here.</p>';
-            if (note) note.innerHTML = '<p class="cl-side-hint">Find a case file with the 🔍 search bar above the case.</p>';
+            if (note) note.innerHTML = '';
             return;
         }
         const n = mineCount();
