@@ -50,18 +50,23 @@ What the cases cover, from starter to advanced: every phase from Intake to Litig
 
 ## 📞 Front Desk calls: practice calls and the scored drill (measures the VA)
 
-Admins: sidebar → **📞 Front Desk · practice calls**. Trainees don't get the sidebar button (like the Training Library's); they open the panel from their course's link, `?drill=1`. The panel offers two things: a **practice call** (below), taken in the trainee's own words, and the **scored drill**, a run of calls taken step by step.
+Admins: sidebar → **📞 Reception Simulator** (right before 📊 My Dashboard). Trainees don't get the sidebar button (like the Training Library's); they open the panel from their course's link, `?drill=1`. The panel offers two things: a **practice call** (below), taken in the trainee's own words, and the **scored drill**, a run of calls taken step by step.
 
 ### 📞 Practice calls (no script)
 
 Like the Training Portal's Call Simulator. A random caller from `DRILL_CALLS` phones in (the level buttons pick warm-up, harder or tricky callers), and the trainee takes the whole call in their own words. There are no answer choices and no identifier buttons, and the caller's lines aren't shown before they're said.
 
-- **The call:** the phone rings with the caller ID. The trainee presses **📞 Answer** and greets the caller, who then says why they're calling in their own words and answers what they're asked from what their `gives` says (wrong answers included). They react to what the trainee says and hang up when the call is done. The trainee talks (live voice, or **🎙 Talk** on the standard voice in Chrome and Edge) or types. They find the file with the panel's search or the 🔍 search bar above the case (the file they open counts as the call's file), and the ☎ firm directory and rules are one tap away.
+- **The call:** the phone rings with the caller ID. The trainee presses **📞 Answer** and greets the caller, who then says why they're calling in their own words and answers what they're asked from what their `gives` says (wrong answers included). They react to what the trainee says and hang up when the call is done. The trainee talks (live voice, or the **🎙** button on the standard voice in Chrome and Edge) or types. They find the file with the panel's search or the 🔍 search bar above the case (the file they open counts as the call's file), and the ☎ firm directory and rules are one tap away.
 - **After hanging up:** the trainee confirms which file the call was about (or "not in the system"), picks who the caller was (the same six authentication choices as the drill) and can write a call note.
 - **Debrief and score (100):** find the right file 30 and authentication 30, checked against the key; asked the right identifiers 10 and handled the call 30, from a review of the transcript and the note against the key and the firm's rules. Disclosing case information to a caller who isn't verified or authorized, reading an identifier out, or giving legal advice scores 0 for handling. The debrief says what went well, what to work on, a better line to say, the key and what the file says, with the transcript.
 - **Saved** with the drill results (as a practice call, with the transcript and the review), so trainers see practice calls in the team table.
 
-**Two voices.** With **🎙 Live voice calls** on (the default in Chrome and Edge), a practice call runs on live voice (Gemini Live, below): the caller hears the trainee and talks back naturally. **🎙 Mute** and **🔈 Speakerphone** work as in the drill (the speakerphone setting is shared), so a practice call can be shown in Google Meet too. When live voice is off, isn't set up, has no microphone, is busy or drops mid-call, the call goes on with the **standard voice**: the caller's next line comes from `/api/call-ai`, the browser reads it out (a female or male voice per caller; 🔊 Voice on/off, ↻ Replay), and the trainee types or talks (🎙 Talk, 🔁 Hands-free). A call that drops keeps its transcript, and the caller carries on from there. After live voice is found not set up, without a microphone, out of the day's minutes or refused in this region, practice calls use the standard voice for the rest of the visit; after a busy line, the next call tries live voice again. A live practice call ends at the live voice time limit (a warning comes 30 seconds before) and goes to the wrap-up.
+**Two voices.** With **🎙 Live voice calls** on (the default in Chrome and Edge), a practice call runs on live voice (Gemini Live, below): the caller hears the trainee and talks back naturally. **🎙 Mute** and **🔈 Speakerphone** work as in the drill (the speakerphone setting is shared), so a practice call can be shown in Google Meet too. When live voice is off, isn't set up, has no microphone, is busy or drops mid-call, the call goes on with the **standard voice**: the caller's next line comes from `/api/call-ai`, the browser reads it out (a female or male voice per caller; 🔊 Voice on/off, ↻ Replay), and the trainee talks or types:
+- **🎙 next to the reply box:** press it and talk; the reply goes when they pause (press ■ to send it at once).
+- **🔁 Hands-free** is on unless they turn it off (the choice is remembered). The microphone listens from the greeting on, after each of the caller's lines, so the whole call can be taken by voice without typing. It waits while the caller talks, so it never picks up the caller's voice. After a silence it listens twice more, then asks them to press 🎙 or type.
+- Typing always works, and typing takes over from the microphone.
+- A blocked microphone says so, and the call goes on typed.
+- Answering by voice needs Chrome or Edge; other browsers say so and type. A call that drops keeps its transcript, and the caller carries on from there. After live voice is found not set up, without a microphone, out of the day's minutes or refused in this region, practice calls use the standard voice for the rest of the visit; after a busy line, the next call tries live voice again. A live practice call ends at the live voice time limit (a warning comes 30 seconds before) and goes to the wrap-up.
 
 **Heavy use (a whole class at once).** Live voice spreads its calls over the keys itself (below). On the standard voice, every Gemini key on the project is used and the keys take turns (`functions/_ai.js`): each caller line and review starts on the next key, so the load is spread across all of them. A key that hits its limit rests (a minute, or an hour when its daily quota is used up; a rejected key 10 minutes) and the request moves to the next key at once, so later requests don't pay for a failed try. Caller lines start on Flash-Lite, which has the biggest free quota; reviews start on Flash. When every key is busy, the page retries the line three times (after 1.5, 3 and 6 seconds) and then puts the trainee's line back in the box to send again. Each user gets up to `CALL_AI_LIMIT` caller lines and reviews per 10 minutes (default 150; a call uses about 10 to 30), so one runaway page can't use up the class's quota. The more keys from separate Google Cloud projects, the more trainees can call at once. Admins can see how many keys are set up and which are resting at `/api/call-ai` (GET).
 
@@ -376,7 +381,9 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 1. **Training program** (All programs, or one program).
 2. **The cases:** a trainee's **My cases**, or an Admin's **Case Library** with **🔍 Open Case Library** and **🕑 Latest Updates**.
 3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget and **📊 My Dashboard**.
-4. **Trainer tools** (Admins only): 📚 Training Library, 📞 Front Desk, 📥 Intake Folder, 📅 Firm Calendar, Export Case List.
+4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar, Export Case List.
+
+Admins also get **📞 Reception Simulator** (the Front Desk practice calls and drill) in the third group, right before My Dashboard. The **👁 Trainee view** bar floats just above the case's action bar, so it never covers its buttons.
 
 Trainees see only the first three groups, so their sidebar is the program, their cases and their work. They still reach the Firm Calendar through the case's **📅 Calendar** tab, and the Intake folder through a course link (`?intake=1`). **👁 Trainee view** shows a trainer the same.
 
@@ -615,6 +622,12 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - an unknown name is sent to Register, with the name and batch filled in;
   - name sign-in is refused without a platform;
   - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
+- **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
+  - an Admin's 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view doesn't show it;
+  - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;
+  - a silence is tried twice more, then it asks for 🎙 or typing; 🎙 listens and sends; typing takes over; hands-free off stops listening and is remembered;
+  - a blocked microphone says so and the call goes on typed;
+  - the Trainee view bar sits above the case's action bar, which stays at the bottom of the screen.
 - **Sign-in** (`.github/scripts/login.cjs`, in the same job): the real login code on SQLite. It checks:
   - the Admin tab asks for the trainer's name and the admin password (Enter signs in); with no name it signs in as the Master Account;
   - with a name, each trainer gets their own Admin account on first sign-in (the same name, the same account; suspended and revoked trainers are refused, and a revoked one isn't made again), and `trainer-` usernames can't be registered;
