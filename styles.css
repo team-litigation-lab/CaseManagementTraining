@@ -317,12 +317,11 @@
     }
     /* the logo on the sidebar: the LSH mark (an image) and the name "Legal Support Help" as real
        text, so it stays sharp at any size (the name drawn into the image blurred when scaled down),
-       on a slightly lighter rounded panel so the navy half of the mark stands out from the sidebar */
+       straight on the sidebar, with no panel behind it */
     #sidebar-logo {
         display: flex; flex-direction: column; align-items: center; gap: 8px;
-        width: 176px; max-width: 100%; box-sizing: border-box; padding: 12px 14px 11px; border-radius: 12px;
-        background: linear-gradient(180deg, #56688c 0%, #46577a 100%);
-        border: 1px solid rgba(255,255,255,.18); box-shadow: 0 2px 10px rgba(0,0,0,.35);
+        width: 176px; max-width: 100%; box-sizing: border-box; padding: 4px 0 0;
+        background: none; border: none; box-shadow: none;
     }
     #sidebar-logo img { display: block; width: 92px; height: auto; }
     #sidebar-logo .lsh-name {
@@ -573,6 +572,12 @@
     .status-rejected { background:#fef2f2; color:#b91c1c; }
     .status-revoked { background:#f1f5f9; color:#475569; }
     .status-suspended { background:#fef9c3; color:#854d0e; }
+    /* Sidebar card buttons (New Intake, Download Case Summary), styled like the Training Library and Front Desk cards (.lib-btn, .fdd-btn) */
+    .side-card { display:block; width:100%; padding:9px 0; border-radius:8px; border:1px solid; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; cursor:pointer; margin-bottom:8px; transition:background .15s, color .15s; }
+    .side-card-orange { border-color:#f97316; color:#fdba74; background:rgba(249,115,22,.08); }
+    .side-card-orange:hover { background:#f97316; color:#fff; }
+    .side-card-blue { border-color:#3b82f6; color:#93c5fd; background:rgba(59,130,246,.08); }
+    .side-card-blue:hover { background:#3b82f6; color:#fff; }
     .mini-btn { font-size:10px; font-weight:800; text-transform:uppercase; padding:6px 12px; border-radius:5px; cursor:pointer; border:none; }
     .mini-btn.approve { background:#166534; color:white; }
     .mini-btn.reject { background:#b91c1c; color:white; }
