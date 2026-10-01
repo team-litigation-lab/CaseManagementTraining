@@ -65,7 +65,7 @@
     #intake-bar button.primary{background:#f97316;border-color:#f97316;color:#fff}
     #intake-bar button:hover{filter:brightness(.96)}
     #intake-bar button[disabled]{opacity:.6;cursor:wait}
-    .if-open-btn{width:100%;border:1px solid #f97316;color:#fdba74;background:rgba(249,115,22,.08);padding:8px 0;border-radius:8px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer;margin:0 0 24px}
+    .if-open-btn{width:100%;border:1px solid #f97316;color:#fdba74;background:rgba(249,115,22,.08);padding:8px 0;border-radius:8px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer;margin:0 0 8px}
     .if-open-btn:hover{background:#f97316;color:#fff}
     .if-top{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
     .if-top button{font-size:11px;font-weight:800;text-transform:uppercase;border-radius:8px;padding:9px 13px;cursor:pointer;border:1px solid #0f2148;background:#0f2148;color:#fff}
@@ -136,11 +136,9 @@
                 else if (a === 'close') closeIntake();
             });
         }
-        const lib = document.querySelector('#sidebar-actions button[onclick="openCaseLibrary()"]');
-        if (lib && !$id('intake-open-btn')) {
-            lib.insertAdjacentHTML('afterend', '<button id="intake-open-btn" class="if-open-btn" onclick="openIntakeFolder()">📥 Intake Folder</button>');
-            lib.classList.remove('mb-6'); lib.classList.add('mb-2');
-        }
+        // In the sidebar's Trainer tools (Admins), above the Firm Calendar. Trainees open it from a course link (?intake=1).
+        const fc = $id('fc-open-btn');
+        if (fc && !$id('intake-open-btn')) fc.insertAdjacentHTML('beforebegin', '<button id="intake-open-btn" class="if-open-btn" onclick="openIntakeFolder()">📥 Intake Folder</button>');
         const modal = $id('case-library-modal');
         if (modal && !modal.dataset.intakeWired) {
             modal.dataset.intakeWired = '1';

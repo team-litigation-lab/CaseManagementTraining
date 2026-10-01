@@ -9,7 +9,8 @@
 // the case is saved with a Case ID; "New case created" shows the grade and what to ask next time; the
 // intake and its grade are saved with the case and can be viewed; an unfinished intake can be resumed;
 // a failed save says so and leaves the case in the editor; the Intake folder's New intake does the same;
-// ✕ Close Case (the sidebar) leaves the editor blank.
+// ✕ at the top right of the case and Close in the bar at the bottom leave the editor blank; 🗑 Discard Case
+// clears a case that was never saved, and deletes a saved one (asking first; a refused delete keeps it).
 // Usage: node .github/scripts/new-matter.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -30,10 +31,11 @@ const failures = []; const fail = (m) => failures.push(m);
     page.on('pageerror', e => fail(`page error: ${e.message}`));
     const dialogs = [];
     page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
-    const saved = []; let failNext = false;
+    const saved = [], deletes = []; let failNext = false, refuseDelete = false;
     await page.route('**/api/**', route => {
         const u = new URL(route.request().url()), m = route.request().method();
         let body = u.pathname === '/api/case-repository' ? { success: true, cases: [] } : u.pathname === '/api/intake-files' ? { success: true, files: [], reviewConfigured: true } : { success: true };
+        if (u.pathname === '/api/case-repository' && m === 'DELETE') { deletes.push(+u.searchParams.get('id')); body = refuseDelete ? { success: false, error: 'Only the case owner or an Admin may delete this case.' } : { success: true }; }
         if (u.pathname === '/api/case-repository' && m === 'POST') {
             const b = JSON.parse(route.request().postData());
             if (failNext) { failNext = false; body = { success: false, error: 'The database is busy.' }; }
@@ -300,17 +302,37 @@ const failures = []; const fail = (m) => failures.push(m);
     r = await complete();
     c = await ed();
     if (r.title !== '✅ New case created' || saved.length !== n + 1 || c.intakeMode || c.name !== 'Mireille Shaughnessy' || !c.record) fail(`the Intake folder's New intake didn't create the case: ${JSON.stringify({ title: r.title, saves: saved.length - n, intakeMode: c.intakeMode, name: c.name })}`);
-    // 11. ✕ Close Case: asks first, leaves the editor blank (the case stays saved), and says so when nothing is open
+    // 11. ✕ (top right of the case) closes it: asks first, leaves the editor blank (the case stays saved), and says so when nothing is open
     dialogs.length = 0;
     const savesBefore = saved.length;
-    await page.click('#close-case-btn');
+    await page.click('#case-close-x');
     await page.waitForTimeout(200);
     const closed = await page.evaluate(() => ({ name: document.getElementById('client-name-field').textContent.trim(), id: currentCaseId, rec: !!window.newMatterState().record, bar: document.getElementById('kx-intake').classList.contains('has') }));
     if (!dialogs.some(m => /Close this case\?/.test(m)) || closed.name || closed.id !== null || closed.rec || closed.bar || saved.length !== savesBefore) fail(`Close Case: ${JSON.stringify({ asked: dialogs, closed, saves: saved.length - savesBefore })}`);
     if (!(await page.isVisible('text=Case closed.'))) fail('no "Case closed." message');
     dialogs.length = 0;
-    await page.click('#close-case-btn'); await page.waitForTimeout(200);
-    if (dialogs.length || !(await page.isVisible('text=No case is open.'))) fail(`Close Case with nothing open: ${dialogs.join(' / ') || 'no message'}`);
+    await page.click('#case-actions-bar button:has-text("Close")'); await page.waitForTimeout(200);
+    if (dialogs.length || !(await page.isVisible('text=No case is open.'))) fail(`Close with nothing open: ${dialogs.join(' / ') || 'no message'}`);
+
+    // 12. 🗑 Discard Case: nothing open says so; a case never saved is cleared (nothing deleted); a saved case is deleted
+    const discard = async () => { dialogs.length = 0; await page.click('#case-actions-bar button:has-text("Discard Case")'); await page.waitForTimeout(400); };
+    const state = () => page.evaluate(() => ({ name: document.getElementById('client-name-field').textContent.trim(), id: currentCaseId }));
+    await discard();
+    if (dialogs.length || deletes.length || !(await page.isVisible('text=No case is open.'))) fail(`Discard with nothing open: ${JSON.stringify({ dialogs, deletes })}`);
+    await page.click('#client-name-field'); await page.keyboard.type('Never Saved');
+    await discard();
+    let st = await state();
+    if (!dialogs.some(m => /never saved/.test(m)) || deletes.length || st.name || st.id !== null || !(await page.isVisible('text=Case discarded.'))) fail(`discarding a case never saved: ${JSON.stringify({ dialogs, deletes, st })}`);
+    await page.click('#client-name-field'); await page.keyboard.type('Discard Me');
+    const kept = await page.evaluate(async () => (await saveCase({ quiet: true })).caseId && currentCaseId);
+    refuseDelete = true;
+    await discard();
+    st = await state();
+    if (deletes.join() !== String(kept) || st.id !== kept || st.name !== 'Discard Me' || !(await page.isVisible('text=Only the case owner or an Admin may delete this case.'))) fail(`a discard the server refused didn't keep the case open: ${JSON.stringify({ deletes, st })}`);
+    refuseDelete = false; deletes.length = 0;
+    await discard();
+    st = await state();
+    if (!dialogs.some(m => /Discard Discard Me\? It is deleted from the saved cases/.test(m)) || deletes.join() !== String(kept) || st.name || st.id !== null) fail(`discarding a saved case: ${JSON.stringify({ dialogs, deletes, st, kept })}`);
 
     const final = await positional();
     if (final.selects < before.selects) fail('fields are missing from the page after the intakes');
