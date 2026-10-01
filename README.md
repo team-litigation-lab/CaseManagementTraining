@@ -449,10 +449,26 @@ To keep well under it:
   | Site state (announcements, alerts, pings, pause and lock) | every 15 s | every 30 s (a ping stays up for a minute) |
   | The case list | every minute, and after each save | paused; refreshed when the tab comes back |
   | Timer | every minute | paused |
-  | Autosave (only with a case open) | every minute | every minute |
+  | Autosave | never while you work: only when something interrupts it (see **💾 Autosave** below) | the same |
 
   These used to be every 2 s (heartbeat), 4 s (site state) and 15 s (case list), about 50 requests a minute for each open page. Now it's about 8.
 - Monitoring's **Online now** counts anyone with a heartbeat in the last 90 seconds.
+
+## 💾 Autosave (only when something interrupts the work)
+
+Nothing is sent to the server while you work: no timer, and no save when you look at another tab. Every request counts toward the account's monthly requests. Your work is kept in this browser as you type, and autosave sends it to the server (as a draft; a finalized case stays final) only when something interrupts it:
+
+| What happens | What autosave does |
+|---|---|
+| **The network drops** | Nothing can be sent; the note under the case says *Offline: your work is kept on this computer…*. The moment the connection is back, it's sent (*Saved when the connection came back*). A save that failed is sent then too. |
+| **The tab or browser closes by accident** | Sent as the page closes, in a way that outlives the page. A case that was never saved waits in this browser instead (sending it then would make a second draft on the next visit). |
+| **The device** puts the page to sleep, or the tab has been away for 2 minutes | Sent. |
+| **A crash or power cut** (the page gets no warning) | The work comes back from this browser on the next visit and is sent then (*Unsaved work from your last visit saved*). |
+| **5 minutes idle** | The *Still working?* prompt; with no answer in 30 seconds the case is archived as a draft. |
+
+Only work the server doesn't have yet is sent: a fingerprint of the case is taken each time it's saved to or opened from the server, and an interruption with nothing new sends nothing. **Save Case**, **Archive** and **Update Case** save right away, as before.
+
+Code: `saveOnInterruption()`, `autoSaveProgress()` and `caseSig()` in `app.js`. Test: `.github/scripts/autosave.cjs`.
 
 ## 🗑 Deleting trainees' cases (Master Control → Case Logs)
 
@@ -469,7 +485,7 @@ A separate folder in the Case Repository for **intake files**, kept apart from t
 
 **Two kinds of intake file:**
 - **Typed intakes.** **📝 New intake** opens the intake form (see **New Intake** above): saving it grades it and creates the case. Typed intakes saved in the folder earlier open in **Intake mode**, with the orange bar above the case.
-  - **💾 Save to Intake folder** files it in the folder. **Save Case**, **Archive** and the one-minute autosave also save the intake while the bar shows, so an intake never lands in the case files by accident.
+  - **💾 Save to Intake folder** files it in the folder. **Save Case**, **Archive** and autosave also save the intake while the bar shows, so an intake never lands in the case files by accident.
   - **📂 Move to case files** saves an accepted intake as a regular case (it gets a Case ID). The intake file stays in the folder, marked as moved.
   - **✕ Close intake** leaves Intake mode.
   - **Open** on a typed intake loads it back into the editor.
@@ -680,6 +696,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - in the browser: 👁 Watch live in Monitoring shows the case and tab, what the trainee typed (as plain text, never run), the New Intake form and the trail;
   - the trainee is told while they're watched, and not after;
   - the trainee's page sends a heartbeat every 30 s (not every 2 s), every 3 s while watched, and every 30 s again once the watch ends.
+- **Autosave** (`.github/scripts/autosave.cjs`): nothing is sent while the trainee types or glances at another tab; the tab away for a while sends the case once, and nothing again when nothing changed; offline sends nothing and says the work is kept here, and the connection back sends it; a suspended page (`freeze`) and a closing page send it; a case never saved isn't sent while the page closes; a save that never got through is sent on the next visit (and a visit with nothing unsaved sends nothing); the idle archive sends only unsaved work.
 - **New versions** (`.github/scripts/cms-update.cjs`, in the same job): a test server that answers like Cloudflare Pages (scripts and stylesheets with an ETag, the page without one), with "deploying" a new file. It checks that:
   - the page watches its own scripts, stylesheets and page, and nothing from a CDN; with nothing new deployed, nothing happens;
   - a new `app.js`, `styles.css` or `index.html` is noticed, and the note says a new version is ready;
