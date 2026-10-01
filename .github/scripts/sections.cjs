@@ -154,6 +154,10 @@ const failures = []; const fail = (m) => failures.push(m);
     if (inj.back.join('|') !== 'Left knee meniscus tear|Left knee|Joint / ligament / tendon tear|Recommended|MRI 02/02/2026 confirmed the tear.') fail(`the Primary Injury card didn't load back: ${inj.back.join(' | ')}`);
     await page.evaluate(() => blankCaseEditorContent());
 
+    // 2d. the Notes tab: "Case Notes", with "+ Add Case Note"
+    const notesHead = await page.evaluate(() => [document.querySelector('#pane-notes .section-head').textContent.trim(), document.querySelector('#pane-notes .add-btn').textContent.trim()]);
+    if (notesHead.join('|') !== 'Case Notes|+ Add Case Note') fail(`the Notes tab reads ${JSON.stringify(notesHead)}, expected "Case Notes" and "+ Add Case Note"`);
+
     // 3. the new sections: fill, save, clear, load back
     await page.evaluate(() => { document.getElementById('client-name-field').innerText = 'Nina Newcase'; });
     await page.click('#tab-parties');

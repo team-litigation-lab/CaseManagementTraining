@@ -189,7 +189,7 @@ const SAVED = [
     await page.click('#client-name-field'); await page.keyboard.type('XYZ');
     if (/XYZ/.test(await page.textContent('#client-name-field'))) fail('typing changed a view-only library case\'s profile');
     await page.evaluate(() => showTab('notes'));
-    if (!(await page.isVisible('#pane-notes .add-btn'))) fail('"+ Add Note" is hidden on a library case');
+    if (!(await page.isVisible('#pane-notes .add-btn'))) fail('"+ Add Case Note" is hidden on a library case');
     await page.click('#pane-notes .add-btn');
     await page.click('#note-body tr:last-child td:nth-child(3) [contenteditable]');
     await page.keyboard.type('CI call log: caller asked about the animal control report.');
