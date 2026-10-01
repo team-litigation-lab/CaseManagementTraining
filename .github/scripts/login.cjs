@@ -15,7 +15,10 @@
 // asks for just the full name, Batch ID and username (no grayed-out field), keeps the
 // typed Batch ID through approval, and scrolls on a small screen; an Admin changes a
 // trainee's Batch ID in the Registrations and Users tabs (never an Admin's), and the
-// trainee signs in with the new one; a browser tab still running the old Training
+// trainee signs in with the new one; Batch IDs are B + DDMMYY (a real date), typed in
+// any form, issued that way, and the old long forms saved before are shortened at the
+// first sign-in (an old one still signs in); the Users tab groups trainees by Batch ID,
+// the newest batch first; a browser tab still running the old Training
 // Calendar gets told to reload. The admin password here is a test value.
 // Usage: node .github/scripts/login.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
 const { chromium } = require('playwright');
@@ -62,11 +65,23 @@ const failures = []; const fail = (m) => failures.push(m);
         INSERT INTO batch_id_counter VALUES ('Admin', 0), ('Trainee', 0);`);
     sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Tia', 'Trainee', 't@x.io', 'Trainee', 'B1', 'tia', ?, 'Approved')`)
         .run(await utils.hashPassword('trainee123'));
+    // Batch IDs saved in the old long forms: the first sign-in shortens them to B + DDMMYY
+    sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Olga', 'Oldbatch', 'o@x.io', 'Trainee', 'B05022026-LSHTRAINEE-001', 'olga', ?, 'Approved')`).run(await utils.hashPassword('olga1234'));
+    sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Ty', 'Typed', 't2@x.io', 'Trainee', 'B30092026', 'typed_ty', 'disabled:x', 'Approved')`).run();
+    sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Lei', 'Abut', 'l@x.io', 'Admin', 'B30092026-LSHADMIN-003', 'trainer-lei-abut', 'disabled:x', 'Approved')`).run();
+    sql.prepare(`INSERT INTO heartbeats (username, full_name, batch_id, user_type, last_seen) VALUES ('olga', 'Olga Oldbatch', 'B05022026-LSHTRAINEE-001', 'Trainee', datetime('now', '-1 day'))`).run();
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret' };
     const post = async (body) => { const r = await loginApi.onRequestPost({ request: new Request('http://x/api/login', { method: 'POST', body: JSON.stringify(body) }), env }); return { status: r.status, cookie: r.headers.get('set-cookie') || '', data: await r.json() }; };
 
+    // Batch IDs: B + the date the batch started (DDMMYY); the older long forms read as the short one
+    const canon = { 'B300926': 'B300926', 'b 30-09-26': 'B300926', '300926': 'B300926', 'B30092026': 'B300926', 'B30092026-LSHADMIN-003': 'B300926',
+        'B05022026-LSHTRAINEE-001': 'B050226', 'B310226': null, 'B301326': null, 'B000126': null, 'B12345': null, 'B1': null, 'BATCH 12': null, '': null };
+    for (const [typed, want] of Object.entries(canon)) if (utils.canonicalBatch(typed) !== want) fail(`canonicalBatch(${JSON.stringify(typed)}) is ${utils.canonicalBatch(typed)} (expected ${want})`);
+    if ((await utils.nextBatchId(null, 'Trainee', '2026-09-30')) !== 'B300926') fail(`a Batch ID issued for 30 Sep 2026 is ${await utils.nextBatchId(null, 'Trainee', '2026-09-30')} (expected B300926)`);
     // the API
     let r = await post({ portalMode: 'Admin', password: 'anything' });
+    const shortened = sql.prepare("SELECT username, batch_id FROM users WHERE username IN ('olga', 'typed_ty', 'trainer-lei-abut', 'tia') ORDER BY username").all().map(u => `${u.username}=${u.batch_id}`).join(',');
+    if (shortened !== 'olga=B050226,tia=B1,trainer-lei-abut=B300926,typed_ty=B300926' || sql.prepare("SELECT batch_id FROM heartbeats WHERE username = 'olga'").get().batch_id !== 'B050226') fail(`the first sign-in didn't shorten the old Batch IDs: ${shortened}`);
     if (r.status !== 503 || !/MASTER_ADMIN_PASSWORD/.test(r.data.error)) fail(`without an admin password the admin sign-in should say to set MASTER_ADMIN_PASSWORD (got ${r.status} ${r.data.error})`);
     env.ADMIN_PORTAL_PASSWORD = 'ci-admin-pass';
     r = await post({ portalMode: 'Admin', password: 'wrong-pass' });
@@ -99,7 +114,7 @@ const failures = []; const fail = (m) => failures.push(m);
     r = await post({ portalMode: 'Admin', name: '  maria   Lopez ', password: 'ci-master-pass' });
     const maria = sql.prepare("SELECT * FROM users WHERE username = 'trainer-maria-lopez'").get();
     if (r.status !== 200 || r.data.user.username !== 'trainer-maria-lopez' || r.data.user.user_type !== 'Admin' || r.data.user.fullName !== 'maria Lopez' || !/lsh_session=/.test(r.cookie)) fail(`a trainer's name did not sign in as their own admin account: ${r.status} ${JSON.stringify(r.data)}`);
-    if (!maria || maria.status !== 'Approved' || maria.user_type !== 'Admin' || !/^disabled:/.test(maria.password) || !/^B\d{8}-LSHADMIN-001$/.test(maria.batch_id || '')) fail(`the trainer's account row is wrong: ${JSON.stringify(maria)}`);
+    if (!maria || maria.status !== 'Approved' || maria.user_type !== 'Admin' || !/^disabled:/.test(maria.password) || maria.batch_id !== await utils.nextBatchId(null, 'Admin')) fail(`the trainer's account row is wrong: ${JSON.stringify(maria)}`);
     const session = await utils.verifySessionToken(decodeURIComponent(r.cookie.match(/lsh_session=([^;]+)/)[1]), env.SESSION_SECRET);
     if (!session || session.userType !== 'Admin' || session.username !== 'trainer-maria-lopez') fail(`the trainer's session is wrong: ${JSON.stringify(session)}`);
     r = await post({ portalMode: 'Admin', name: 'Maria Lopez', password: 'ci-master-pass' });
@@ -125,6 +140,8 @@ const failures = []; const fail = (m) => failures.push(m);
         [{ fullName: '<b>Juan</b> Cruz', batchId: 'B050225', username: 'nobody1' }, 'markup in the name'],
         [{ fullName: 'Juan Cruz', username: 'nobody1' }, 'no Batch ID'],
         [{ fullName: 'Juan Cruz', batchId: '<B05>', username: 'nobody1' }, 'symbols in the Batch ID'],
+        [{ fullName: 'Juan Cruz', batchId: 'B310226', username: 'nobody1' }, 'a Batch ID that isn\'t a date (31 Feb)'],
+        [{ fullName: 'Juan Cruz', batchId: 'Batch 12', username: 'nobody1' }, 'a Batch ID that isn\'t B + DDMMYY'],
         [{ fullName: 'Juan Cruz', batchId: 'B050225' }, 'no username'],
         [{ fullName: 'Juan Cruz', batchId: 'B050225', username: 'jc' }, 'a 2-letter username'],
         [{ fullName: 'Juan Cruz', batchId: 'B050225', username: 'juan cruz' }, 'a space in the username'],
@@ -133,7 +150,7 @@ const failures = []; const fail = (m) => failures.push(m);
     g = await regApi({ fullName: '  Juan  P.  Dela Cruz ', batchId: ' b0502 2026 ', username: 'juan_dc', trainingStartDate: '2020-01-01' });
     const juan = sql.prepare("SELECT * FROM users WHERE username = 'juan_dc'").get();
     if (g.status !== 200 || !juan) fail(`a registration with a full name, Batch ID and username failed: ${g.status} ${JSON.stringify(g.data)}`);
-    else if (juan.first_name !== 'Juan' || juan.mi !== 'P' || juan.last_name !== 'Dela Cruz' || juan.suffix !== null || juan.batch_id !== 'B0502 2026' || juan.status !== 'Pending' || juan.user_type !== 'Trainee'
+    else if (juan.first_name !== 'Juan' || juan.mi !== 'P' || juan.last_name !== 'Dela Cruz' || juan.suffix !== null || juan.batch_id !== 'B050226' || juan.status !== 'Pending' || juan.user_type !== 'Trainee'
         || !/^disabled:/.test(juan.password) || juan.email !== 'juan_dc@trainee.invalid' || juan.training_start_date !== today) fail(`the registration was saved wrong: ${JSON.stringify(juan)}`);
     g = await regApi({ fullName: 'Ana Maria Reyes Jr.', batchId: 'B050225', username: 'ana_r', trainingStartDate: today });
     const ana = sql.prepare("SELECT first_name, mi, last_name, suffix, training_start_date FROM users WHERE username = 'ana_r'").get();
@@ -146,9 +163,9 @@ const failures = []; const fail = (m) => failures.push(m);
     const adminCookie = (await post({ portalMode: 'Admin', password: 'ci-master-pass' })).cookie.match(/lsh_session=[^;]+/)[0];
     const asAdmin = async (api, url, body, cookie = adminCookie) => { const x = await api.onRequestPost({ request: new Request('http://x' + url, { method: 'POST', headers: cookie ? { Cookie: cookie } : {}, body: JSON.stringify(body) }), env }); return { status: x.status, data: await x.json() }; };
     let a = await asAdmin(statusApi, '/api/update-status', { userId: juan.id, newStatus: 'Approved' });
-    if (a.status !== 200 || a.data.batchId !== 'B0502 2026' || sql.prepare("SELECT value FROM batch_id_counter WHERE user_type = 'Trainee'").get().value !== 0) fail(`approving kept no typed Batch ID: ${JSON.stringify(a.data)}`);
+    if (a.status !== 200 || a.data.batchId !== 'B050226' || sql.prepare("SELECT value FROM batch_id_counter WHERE user_type = 'Trainee'").get().value !== 0) fail(`approving kept no typed Batch ID: ${JSON.stringify(a.data)}`);
     r = await post({ username: 'juan_dc', batchId: 'b05022026', portalMode: 'Trainee' });
-    if (r.status !== 200 || r.data.user.batch_id !== 'B0502 2026' || !/lsh_session=/.test(r.cookie)) fail(`an approved trainee couldn't sign in with username and Batch ID (any capitals or spacing): ${r.status} ${JSON.stringify(r.data)}`);
+    if (r.status !== 200 || r.data.user.batch_id !== 'B050226' || !/lsh_session=/.test(r.cookie)) fail(`an approved trainee couldn't sign in with username and Batch ID (any capitals or spacing): ${r.status} ${JSON.stringify(r.data)}`);
     const juanCookie = r.cookie.match(/lsh_session=[^;]+/)[0];
     r = await post({ username: 'juan_dc', batchId: 'B05022027', portalMode: 'Trainee' });
     if (r.status !== 401 || !/Batch ID/.test(r.data.error || '')) fail(`a wrong Batch ID signed in, or the message doesn't say Batch ID (${r.status} ${r.data.error})`);
@@ -156,6 +173,9 @@ const failures = []; const fail = (m) => failures.push(m);
     if (r.status === 200) fail('a registered trainee could be reached with the placeholder password');
     r = await post({ username: 'tia', batchId: 'trainee123', portalMode: 'Trainee' });
     if (r.status !== 200) fail(`a trainee who registered with a password can't use it any more (${r.status})`);
+    r = await post({ username: 'olga', batchId: 'B05022026-LSHTRAINEE-001', portalMode: 'Trainee' });
+    const r3 = await post({ username: 'olga', batchId: 'b050226', portalMode: 'Trainee' });
+    if (r.status !== 200 || r3.status !== 200 || r3.data.user.batch_id !== 'B050226') fail(`a trainee with an old long Batch ID can't sign in with it, or with the short one (${r.status}, ${r3.status})`);
     r = await post({ username: 'tia', batchId: 'b1', portalMode: 'Trainee' });
     if (r.status !== 200) fail(`a trainee who registered with a password can't sign in with their Batch ID (${r.status})`);
     r = await post({ username: 'trainer-maria-lopez', batchId: maria.batch_id, portalMode: 'Trainee' });
@@ -168,11 +188,13 @@ const failures = []; const fail = (m) => failures.push(m);
     if (a.status !== 401) fail(`a Batch ID could be changed without signing in (${a.status})`);
     a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: 'B2;drop' });
     if (a.status !== 400) fail(`a Batch ID with symbols was accepted (${a.status})`);
-    a = await asAdmin(batchApi, '/api/update-batch', { userId: maria.id, batchId: 'X1' });
+    a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: 'B999999' });
+    if (a.status !== 400) fail(`a Batch ID that isn't a date was accepted (${a.status})`);
+    a = await asAdmin(batchApi, '/api/update-batch', { userId: maria.id, batchId: 'B010126' });
     if (a.status !== 403 || sql.prepare('SELECT batch_id FROM users WHERE id = ?').get(maria.id).batch_id !== maria.batch_id) fail(`an Admin's Batch ID could be changed (${a.status})`);
     a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: '  b12102026 ' });
     const moved = sql.prepare("SELECT u.batch_id AS u, h.batch_id AS h FROM users u JOIN heartbeats h ON h.username = u.username WHERE u.id = ?").get(juan.id);
-    if (a.status !== 200 || a.data.batchId !== 'B12102026' || moved.u !== 'B12102026' || moved.h !== 'B12102026') fail(`an Admin couldn't change a trainee's Batch ID: ${a.status} ${JSON.stringify(a.data)} ${JSON.stringify(moved)}`);
+    if (a.status !== 200 || a.data.batchId !== 'B121026' || moved.u !== 'B121026' || moved.h !== 'B121026') fail(`an Admin couldn't change a trainee's Batch ID: ${a.status} ${JSON.stringify(a.data)} ${JSON.stringify(moved)}`);
     if (!sql.prepare("SELECT 1 FROM activity_log WHERE action = 'update-batch'").get()) fail('changing a Batch ID was not logged');
     r = await post({ username: 'juan_dc', batchId: 'B0502 2026', portalMode: 'Trainee' });
     if (r.status !== 401) fail(`the old Batch ID still signs in after an Admin changed it (${r.status})`);
@@ -210,7 +232,7 @@ const failures = []; const fail = (m) => failures.push(m);
         const u = new URL(route.request().url());
         const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/login') { const b = JSON.parse(route.request().postData()); posted.push(b); return j({ success: false, error: 'CI stops here.' }, 401); }
-        if (u.pathname === '/api/register') { registered.push(JSON.parse(route.request().postData())); return j({ success: true, batchId: 'B0502-2026' }); }
+        if (u.pathname === '/api/register') { registered.push(JSON.parse(route.request().postData())); return j({ success: true, batchId: 'B050226' }); }
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
         return j({ success: true });
     });
@@ -262,9 +284,13 @@ const failures = []; const fail = (m) => failures.push(m);
     // typing the Batch ID gives capitals; Submit sends the three fields (and today's date), then sign-in opens with the username filled in
     await page.fill('#reg-fullname', 'Rosa  Newcomer'); await page.fill('#reg-batchid', 'b0502-2026!'); await page.fill('#reg-username', 'rosa_n');
     if ((await page.inputValue('#reg-batchid')) !== 'B0502-2026') fail(`the Batch ID box shows ${await page.inputValue('#reg-batchid')} (expected B0502-2026)`);
+    await page.fill('#reg-batchid', 'B310226'); await page.click('#auth-register-view .auth-submit'); await page.waitForTimeout(200);
+    if (registered.length || !/DDMMYY/.test(await page.textContent('#auth-register-msg'))) fail(`a Batch ID that isn't a date was sent, or the message doesn't say the format: ${await page.textContent('#auth-register-msg')}`);
+    await page.fill('#reg-batchid', 'b0502-2026!');
     await page.click('#auth-register-view .auth-submit'); await page.waitForTimeout(300);
+    if ((await page.inputValue('#reg-batchid')) !== 'B050226') fail(`the Batch ID box wasn't shortened to B050226 (${await page.inputValue('#reg-batchid')})`);
     const localToday = await page.evaluate(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; });
-    if (JSON.stringify(registered) !== JSON.stringify([{ fullName: 'Rosa Newcomer', batchId: 'B0502-2026', username: 'rosa_n', trainingStartDate: localToday }])) fail(`registration sent ${JSON.stringify(registered)}`);
+    if (JSON.stringify(registered) !== JSON.stringify([{ fullName: 'Rosa Newcomer', batchId: 'B050226', username: 'rosa_n', trainingStartDate: localToday }])) fail(`registration sent ${JSON.stringify(registered)}`);
     if (!/sign in with your username and Batch ID/.test(await page.textContent('#auth-register-msg'))) fail(`after registering, the message doesn't say how to sign in: ${await page.textContent('#auth-register-msg')}`);
     await page.waitForSelector('#auth-login-view', { state: 'visible', timeout: 5000 }).catch(() => fail('registering did not go back to the sign-in screen'));
     if ((await page.inputValue('#login-username')) !== 'rosa_n') fail('the sign-in screen did not fill in the username just registered');
@@ -299,17 +325,18 @@ const failures = []; const fail = (m) => failures.push(m);
         if ((await anaRow.locator('.batch-edit input').inputValue()) !== 'B050225') fail('the Batch ID box does not start with the current Batch ID');
         await anaRow.locator('.batch-edit input').fill('');
         await anaRow.locator('.batch-edit button:has-text("Save")').click(); await admin.waitForTimeout(200);
-        if (batchPosts.length || !/Letters, numbers/.test(await anaRow.locator('.batch-edit-msg').textContent())) fail('an empty Batch ID was sent, or no message said what to type');
+        if (batchPosts.length || !/DDMMYY/.test(await anaRow.locator('.batch-edit-msg').textContent())) fail('an empty Batch ID was sent, or no message said what to type');
         await anaRow.locator('.batch-edit input').fill('b0601 2026'); await anaRow.locator('.batch-edit input').press('Enter'); await admin.waitForTimeout(600);
         const saved = sql.prepare("SELECT batch_id FROM users WHERE username = 'ana_r'").get().batch_id;
-        if (saved !== 'B0601 2026' || !/Batch B0601 2026/.test(await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent())) fail(`changing a registration's Batch ID: saved ${saved}, the row shows ${await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent()}`);
-        if (!(await admin.isVisible('text=Batch ID changed to B0601 2026'))) fail('no message said the Batch ID was changed');
+        if (saved !== 'B060126' || !/Batch B060126/.test(await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent())) fail(`changing a registration's Batch ID: saved ${saved}, the row shows ${await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent()}`);
+        if (!(await admin.isVisible('text=Batch ID changed to B060126'))) fail('no message said the Batch ID was changed');
     }
     await admin.evaluate(() => showAdminDashTab('users')); await admin.waitForTimeout(500);
     const juanRow = rowOf('users-list', 'juan_dc');
     if (!(await juanRow.count()) || !(await juanRow.locator('button:has-text("Batch ID")').count())) fail('an approved trainee has no Batch ID button in the Users tab');
     else {
-        if (!(await admin.locator('#users-list .group-heading', { hasText: 'B12102026' }).count())) fail('trainees are not grouped under their typed Batch ID');
+        const groups = await admin.$$eval('#users-list .group-heading', els => els.map(e => e.textContent.split(' ')[0]).filter(t => /^B/.test(t)));
+        if (groups.join() !== 'B121026,B300926,B050226,B1') fail(`trainees aren't grouped by Batch ID, the newest batch first: ${groups.join()}`);
         await juanRow.locator('button:has-text("Batch ID")').click();
         await juanRow.locator('.batch-edit input').press('Escape');
         if (await juanRow.locator('.batch-edit').count()) fail('Escape did not close the Batch ID box');

@@ -2054,15 +2054,24 @@
         }
 
         /* =========================================================
-           BATCH ID PARSING — B<DDMMYYYY>-LSH<TYPE>-<XXX>
-           Used to group/sort the Users tab: Admin/Trainee segregation,
-           Trainees further grouped by batch date, both sorted by <XXX>.
+           BATCH IDs — B + the date the batch started (DDMMYY), e.g. B300926
+           canonicalBatchId() is canonicalBatch() in functions/_utils.js: what's typed (any capitals,
+           spaces or dashes, the B left off, or the older long forms B30092026 and
+           B30092026-LSHTRAINEE-001) in its one form, or null when it isn't a real date.
+           parseBatchId() sorts the Users tab's batches, the newest first.
            ========================================================= */
-        function parseBatchId(batchId) {
-            if (!batchId) return null;
-            const m = /^B(\d{8})-LSH(ADMIN|TRAINEE)-(\d{3,})$/.exec(batchId);
+        function canonicalBatchId(raw) {
+            const v = String(raw || '').toUpperCase().replace(/[\s\-]/g, '');
+            const m = /^B?(\d{2})(\d{2})(\d{4}|\d{2})(?:LSH[A-Z]*\d+)?$/.exec(v);
             if (!m) return null;
-            return { dateStr: m[1], type: m[2], seq: parseInt(m[3], 10) };
+            const dd = +m[1], mm = +m[2], yy = m[3].slice(-2);
+            const d = new Date(Date.UTC(2000 + +yy, mm - 1, dd));
+            if (mm < 1 || mm > 12 || dd < 1 || d.getUTCMonth() !== mm - 1) return null;
+            return 'B' + m[1] + m[2] + yy;
+        }
+        function parseBatchId(batchId) {
+            const b = canonicalBatchId(batchId);
+            return b ? { batch: b, sortKey: b.slice(5, 7) + b.slice(3, 5) + b.slice(1, 3) } : null;   // YYMMDD
         }
 
         /* =========================================================
@@ -2122,12 +2131,7 @@
             if (!container) return;
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No approved users yet.</p>'; return; }
 
-            function seqOf(u) {
-                const p = parseBatchId(u.batch_id || u.batchId);
-                return p ? p.seq : Number.MAX_SAFE_INTEGER; // unparseable batch ids sort last, never crash
-            }
-
-            const admins = list.filter(u => (u.user_type || u.userType) === 'Admin').sort((a, b) => seqOf(a) - seqOf(b));
+            const admins = list.filter(u => (u.user_type || u.userType) === 'Admin');   // in the order they were made
             const trainees = list.filter(u => (u.user_type || u.userType) === 'Trainee');
 
             let html = '<div class="group-heading">Admins &middot; ' + admins.length + '</div>';
@@ -2139,15 +2143,16 @@
             if (!trainees.length) {
                 html += '<p style="font-size:11px;color:#94a3b8;margin:4px 0 12px;">No approved trainees.</p>';
             } else {
-                const byBatchDate = {};
+                // One group per batch, the newest batch first; anything that isn't a Batch ID comes last
+                const byBatch = {};
                 trainees.forEach(u => {
-                    // Issued IDs group by their date; Batch IDs typed at registration group by themselves
                     const p = parseBatchId(u.batch_id || u.batchId);
-                    const key = p ? ('B' + p.dateStr) : (String(u.batch_id || u.batchId || '').trim() || 'Unassigned Batch');
-                    (byBatchDate[key] = byBatchDate[key] || []).push(u);
+                    const key = p ? p.batch : (String(u.batch_id || u.batchId || '').trim() || 'Unassigned Batch');
+                    (byBatch[key] = byBatch[key] || []).push(u);
                 });
-                Object.keys(byBatchDate).sort().forEach(batchKey => {
-                    const members = byBatchDate[batchKey].sort((a, b) => seqOf(a) - seqOf(b));
+                const order = (k) => { const p = parseBatchId(k); return p ? p.sortKey : ''; };
+                Object.keys(byBatch).sort((a, b) => order(b).localeCompare(order(a)) || a.localeCompare(b)).forEach(batchKey => {
+                    const members = byBatch[batchKey];   // in the order they registered
                     html += '<div class="group-heading" style="background:#f8fafc;border:1px solid #eef2f7;margin-left:12px;">' + escapeHtmlAttr(batchKey) + ' &middot; ' + members.length + ' trainee(s)</div>';
                     html += members.map(u => renderUserRow(u, false)).join('');
                 });
@@ -2231,7 +2236,7 @@
             if (open) { open.querySelector('input').focus(); return; }
             const box = document.createElement('div');
             box.className = 'batch-edit';
-            box.innerHTML = '<label>New Batch ID <input type="text" maxlength="40" autocomplete="off" data-allow="batch"></label>' +
+            box.innerHTML = '<label>New Batch ID <input type="text" maxlength="24" autocomplete="off" data-allow="batch" placeholder="B300926"></label>' +
                 '<button type="button" class="mini-btn approve">Save</button><button type="button" class="mini-btn revoke">Cancel</button><span class="batch-edit-msg" role="alert"></span>';
             const input = box.querySelector('input');
             input.value = row.getAttribute('data-batch') || '';
@@ -2244,8 +2249,8 @@
         }
         function saveUserBatch(userId, value, box) {
             const msg = box.querySelector('.batch-edit-msg');
-            const batchId = String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
-            if (!/^[A-Z0-9][A-Z0-9 \-]{0,39}$/.test(batchId)) { msg.textContent = 'Letters, numbers, spaces or dashes, up to 40 characters.'; return; }
+            const batchId = canonicalBatchId(value);
+            if (!batchId) { msg.textContent = 'B and the date the batch started (DDMMYY), e.g. B300926.'; return; }
             box.querySelectorAll('button').forEach(b => { b.disabled = true; });
             msg.textContent = '';
             fetch('/api/update-batch', {
