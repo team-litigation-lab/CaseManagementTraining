@@ -1,9 +1,10 @@
 import { json, logActivity, isUsernameTombstoned, cleanBatchId } from '../_utils.js';
 import { isGuestUsername, isTrainerUsername, cleanGuestName, parseFullName } from '../_guest.js';
-// Trainees register with three things: their full name, their Batch ID (the batch
-// code their trainer gave them) and a username. There's no password: once an Admin
-// approves the registration, they sign in with their username and Batch ID
-// (login.js), or with just their name from a training platform (guest-login.js).
+// Trainees register with three things: their full name, their Batch ID (B + the
+// date their batch started, DDMMYY, e.g. B300926: cleanBatchId in _utils.js) and a
+// username. There's no password: once an Admin approves the registration, they
+// sign in with their username and Batch ID (login.js), or with just their name
+// from a training platform (guest-login.js).
 // Accounts registered earlier with a password keep it.
 const USERNAME_RE = /^[A-Za-z0-9_]{3,30}$/;
 // Day 1 of training is the day they register: the trainee's own date (their time
@@ -30,7 +31,7 @@ export async function onRequestPost({ request, env }) {
     }
     const batchId = cleanBatchId(rawBatch);
     if (!batchId) {
-        return json({ success: false, error: 'Enter your Batch ID: letters, numbers, spaces or dashes, up to 40 characters.' }, 400);
+        return json({ success: false, error: 'Enter your Batch ID as B and the date your batch started (DDMMYY), e.g. B300926.' }, 400);
     }
     if (!USERNAME_RE.test(username)) {
         return json({ success: false, error: 'Usernames are 3 to 30 letters, numbers or underscores.' }, 400);
