@@ -348,6 +348,15 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - The form adds no dropdowns or typed boxes to the page that the case editor would save by position.
 - Code: `intake-form.js`. The fill helpers are shared with the Training Library (`window.caseFill`), and the save is `saveCase({ quiet: true })` in `app.js`.
 
+## 🕑 Latest updates (search the Case Notes)
+
+**🕑 Latest Updates** in the sidebar (or the Case Library window's **🕑 Latest updates** tab) lists the saved cases, the most recently updated first. A trainee sees their own cases, and an Admin sees everyone's.
+- Each case shows its **latest Case Note** (the latest by date), how many notes it has, and when it was last updated.
+- **The search box searches the Case Notes:** a note's text or date, for example "adjuster", "demand sent" or "10/01/2026". It shows the cases whose notes match, with the matching notes highlighted.
+- **Open** opens the case.
+- The server reads the notes only when this view asks (`/api/case-repository?updates=1&q=…`), never in the 15-second background refresh of the case list.
+- Code: "Latest updates" in `case-library.js` and in `functions/api/case-repository.js`.
+
 ## ✕ Close Case (sidebar)
 
 **✕ Close Case** closes the case in the editor and leaves it blank.
@@ -538,6 +547,12 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - ticked cases survive the list's refresh, and Delete selected deletes them all;
   - Select all shown ticks only what the search shows;
   - a refused delete leaves the case, with a message.
+
+- **Latest updates** (`.github/scripts/latest-updates.cjs`, in the same job): the real `/api/case-repository` on SQLite, and the view in a browser. It checks that:
+  - a trainee gets their own cases and an Admin gets everyone's, newest first, each with its latest Case Note (by date, not by row);
+  - the search finds notes by text (across `&nbsp;` and tags) or date, only in cases the user may see. SQL wildcards are searched as text, and a damaged saved case doesn't break the list;
+  - the regular case list still carries no notes;
+  - in the browser: the sidebar button opens the view, typing searches and highlights the match, and Open opens the case.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
   - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
