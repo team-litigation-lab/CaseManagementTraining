@@ -1,4 +1,5 @@
 import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS } from '../_utils.js';
+import { reportLiveView } from '../_liveview.js';
 
 export async function onRequestGet({ request, env }) {
     // Who's currently online, their real name, and which case they're
@@ -25,7 +26,7 @@ export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
-    const { fullName, currentCase } = body;
+    const { fullName, currentCase, where, snapshot } = body;
 
     // Identity comes from the verified session, not the request body —
     // otherwise anyone could POST a heartbeat claiming to be any username,
@@ -38,5 +39,11 @@ export async function onRequestPost({ request, env }) {
         currentCase: currentCase || null
     });
 
-    return json({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS });
+    // Live view (_liveview.js): where a trainee is, and while an Admin watches, a snapshot of their case.
+    // It's extra: a failure never stops the heartbeat. Admins (Trainee view too) aren't watched.
+    let watched = false;
+    if (session.userType !== 'Admin' && (where || snapshot)) {
+        try { watched = await reportLiveView(db, session.username, where, snapshot); } catch (e) { watched = false; }
+    }
+    return json({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS, watched });
 }
