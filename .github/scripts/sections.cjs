@@ -154,6 +154,22 @@ const failures = []; const fail = (m) => failures.push(m);
     if (inj.back.join('|') !== 'Left knee meniscus tear|Left knee|Joint / ligament / tendon tear|Recommended|MRI 02/02/2026 confirmed the tear.') fail(`the Primary Injury card didn't load back: ${inj.back.join(' | ')}`);
     await page.evaluate(() => blankCaseEditorContent());
 
+    // 2c. Passenger Records are retired (passengers go in Parties Involved): no Add Passenger button, and the
+    //     block shows only for an older case that has passenger rows (its container stays for the positional save)
+    const pass = await page.evaluate(() => {
+        blankCaseEditorContent(); showTab('profile');
+        const shown = () => getComputedStyle(document.getElementById('legacy-passengers')).display !== 'none';
+        const empty = shown(), button = !!document.querySelector('#pane-profile button[onclick="addPassenger()"]');
+        // an older case with a passenger row (no positional values here, so nothing is written over the row's own text)
+        const content = buildCaseContentPayload(); content.inputs = []; content.sels = [];
+        content.html.pass = '<div class="pdf-card"><div><label>Full Name</label><div contenteditable="true">Pat Passenger</div></div></div>';
+        applyCaseContentToDOM(content);
+        const withRows = shown() && /Pat Passenger/.test(document.getElementById('passenger-container').textContent);
+        blankCaseEditorContent();
+        return { empty, button, withRows, after: shown() };
+    });
+    if (pass.empty || pass.button || !pass.withRows || pass.after) fail(`Passenger Records: ${JSON.stringify(pass)} (expected hidden when empty, no Add Passenger button, shown for an older case's rows)`);
+
     // 2d. the Notes tab: "Case Notes", with "+ Add Case Note"
     const notesHead = await page.evaluate(() => [document.querySelector('#pane-notes .section-head').textContent.trim(), document.querySelector('#pane-notes .add-btn').textContent.trim()]);
     if (notesHead.join('|') !== 'Case Notes|+ Add Case Note') fail(`the Notes tab reads ${JSON.stringify(notesHead)}, expected "Case Notes" and "+ Add Case Note"`);
