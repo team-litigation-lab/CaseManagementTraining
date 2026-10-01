@@ -133,6 +133,15 @@
     .cl-row .dol{font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px}
     .cl-row .dol b{display:block;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#0f2148;letter-spacing:0}
     .cl-row .act{display:flex;gap:6px}
+    .cl-row.cl-upd{grid-template-columns:minmax(0,1fr) 175px auto}
+    .cl-upd .note{grid-column:1 / -1;font-size:12.5px;color:#334155;line-height:1.5;background:#f8fafc;border-left:3px solid #f97316;border-radius:6px;padding:7px 10px;margin-top:2px}
+    .cl-upd .note b{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c2410c;margin-right:6px}
+    .cl-upd .note.none{border-left-color:#cbd5e1;color:#94a3b8;font-style:italic}
+    .cl-upd .note.match{border-left-color:#2563eb}
+    .cl-upd .note.match b{color:#1d4ed8}
+    .cl-upd mark{background:#fef08a;color:inherit;border-radius:2px;padding:0 1px}
+    .cl-upd .when{font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px}
+    .cl-upd .when b{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0f2148;letter-spacing:0;text-transform:none}
     .cl-row .act button{font-size:10.5px;font-weight:800;text-transform:uppercase;background:#0f2148;color:#fff;border:none;border-radius:6px;padding:8px 11px;cursor:pointer}
     .cl-row .act button.del{background:#fff;color:#b91c1c;border:1px solid #fecaca}
     .cl-tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 6px;margin-right:6px;vertical-align:1px}
@@ -206,7 +215,7 @@
     window.openCaseLibrary = function (tab, query) {
         if (!signedIn()) return;
         buildUI();
-        state.tab = tab === 'desk' || tab === 'intake' ? tab : 'search';
+        state.tab = tab === 'desk' || tab === 'intake' || tab === 'updates' ? tab : 'search';
         if (typeof query === 'string') { state.q = query; state.scope = 'all'; }
         paintModal();
         $id('case-library-modal').classList.add('open');
@@ -225,12 +234,13 @@
 
     function paintModal() {
         const tabs = $id('cl-tabs'), filters = $id('cl-filters'), body = $id('cl-body'); if (!tabs) return;
-        tabs.innerHTML = [['search', '🔍 Search cases'], ['intake', '📥 Intake folder'], ['desk', '☎ Firm directory & rules']]
+        tabs.innerHTML = [['search', '🔍 Search cases'], ['updates', '🕑 Latest updates'], ['intake', '📥 Intake folder'], ['desk', '☎ Firm directory & rules']]
             .filter(([k]) => k !== 'intake' || window.paintIntakeFolder)
             .map(([k, l]) => `<button class="${state.tab === k ? 'on' : ''}" onclick="clSetTab('${k}')">${l}</button>`).join('');
         if (state.tab === 'desk') { filters.innerHTML = ''; body.innerHTML = window.mockDeskHTML ? window.mockDeskHTML() : ''; return; }
         // The Intake folder (intake-folder.js): intake files kept apart from the case files.
         if (state.tab === 'intake' && window.paintIntakeFolder) { window.paintIntakeFolder(filters, body); return; }
+        if (state.tab === 'updates') { paintUpdates(filters, body); return; }
         const sub = $id('cl-sub'); if (sub) sub.textContent = isAdmin() ? 'Saved cases and the Training Library in one place. Search it the way you would on a live call.' : 'Every case file in one place. Search it the way you would on a live call.';
         // Trainees never see the Training Library: its files are just case files to them.
         if (!isAdmin() && (state.scope === 'mock' || state.scope === 'saved')) state.scope = 'all';
@@ -275,6 +285,65 @@
         const shown = hits.slice(0, MODAL_MAX);
         body.innerHTML = sameNameWarning(hits) + shown.map(rowHTML).join('')
             + (hits.length > shown.length ? `<p class="cl-hint">Showing ${shown.length} of ${hits.length} matches. Add more to your search to narrow it down.</p>` : '');
+    }
+
+    /* ---------- 🕑 Latest updates: saved cases by their latest update, and a search of the Case Notes ----------
+       The cases (yours; an Admin sees everyone's), the most recently updated first, each with its latest
+       Case Note. Typing searches every case's Case Notes (a note's date or text) and shows the notes that
+       match. The server reads the notes only when this view asks (/api/case-repository?updates=1). */
+    const U = { q: '', items: null, error: '', seq: 0, timer: null };
+    async function loadUpdates() {
+        const seq = ++U.seq;
+        try {
+            const res = await fetch('/api/case-repository?updates=1' + (U.q.trim() ? '&q=' + encodeURIComponent(U.q.trim()) : ''), { credentials: 'include' });
+            const data = await res.json();
+            if (seq !== U.seq) return;   // a newer search is on its way
+            if (!data || !data.success) throw new Error((data && data.error) || 'Could not load the latest updates.');
+            U.items = data.updates || []; U.error = '';
+        } catch (e) { if (seq !== U.seq) return; U.items = U.items || []; U.error = e.message; }
+        paintUpdateList();
+    }
+    window.clUpdSearch = function (v) {
+        U.q = v; clearTimeout(U.timer);
+        U.timer = setTimeout(() => { U.items = null; paintUpdateList(); loadUpdates(); }, 300);
+    };
+    window.clUpdRefresh = function () { U.items = null; paintUpdateList(); loadUpdates(); };
+    function paintUpdates(filters, body) {
+        const sub = $id('cl-sub'); if (sub) sub.textContent = isAdmin() ? 'Every trainee\'s saved cases, the most recently updated first, with each case\'s latest Case Note.' : 'Your saved cases, the most recently updated first, with each case\'s latest Case Note.';
+        filters.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
+            <input type="search" id="cl-upd-q" class="cl-search" style="flex:1" placeholder="Search the Case Notes (e.g. adjuster, demand sent, records requested, 10/01/2026)…" value="${esc(U.q)}" oninput="clUpdSearch(this.value)" autocomplete="off" spellcheck="false" aria-label="Search the Case Notes">
+            <button class="cl-refresh" onclick="clUpdRefresh()" title="Load the latest updates again" style="border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:9px 12px;font-size:11px;font-weight:800;cursor:pointer;color:#0f2148">↻</button></div>`;
+        body.innerHTML = '<div id="cl-upd-list"></div>';
+        U.items = null; paintUpdateList(); loadUpdates();
+        const i = $id('cl-upd-q'); if (i) i.focus();
+    }
+    const mark = (text, q) => {
+        const t = esc(text); if (!q) return t;
+        const re = new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        return t.replace(re, m => `<mark>${m}</mark>`);
+    };
+    const updatedAt = (iso) => { const d = new Date(String(iso || '').replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(iso || '') ? '' : 'Z')); return isNaN(d) ? '' : d.toLocaleString([], { month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+    function paintUpdateList() {
+        const el = $id('cl-upd-list'); if (!el) return;
+        const q = U.q.trim();
+        if (U.items === null) { el.innerHTML = `<p class="cl-hint">${q ? 'Searching the Case Notes…' : 'Loading the latest updates…'}</p>`; return; }
+        const err = U.error ? `<p class="cl-hint" style="color:#b91c1c">${esc(U.error)}</p>` : '';
+        if (!U.items.length) { el.innerHTML = err + `<p class="cl-hint">${q ? `No Case Notes mention <b>${esc(q)}</b>.` : 'No saved cases yet.'}</p>`; return; }
+        el.innerHTML = err + (q ? `<p class="cl-hint">${U.items.length} case${U.items.length === 1 ? '' : 's'} with Case Notes that mention <b>${esc(q)}</b>.</p>` : '') + U.items.map(c => {
+            const tags = `<span class="cl-tag saved">${c.caseId ? esc(c.caseId) : 'NO CASE ID YET'}</span>${c.isDraft ? '<span class="cl-tag draft">DRAFT</span>' : ''}`;
+            const meta = [c.phase && esc(c.phase), c.dateOfLoss && `DOL ${esc(c.dateOfLoss)}`, isAdmin() && (c.submittedBy || c.ownerUsername) && `By ${esc(c.submittedBy || c.ownerUsername)}`, `${c.noteCount} case note${c.noteCount === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
+            const latest = c.latestNote
+                ? `<div class="note"><b>Latest note · ${esc(c.latestNote.date || 'no date')}</b>${mark(c.latestNote.text || '(empty note)', q)}</div>`
+                : '<div class="note none">No case notes yet.</div>';
+            const matches = (c.matches || []).filter(m => !c.latestNote || m.date !== c.latestNote.date || m.text !== c.latestNote.text)
+                .map(m => `<div class="note match"><b>${esc(m.date || 'no date')}</b>${mark(m.text, q)}</div>`).join('');
+            return `<div class="cl-row cl-upd" data-upd="${Number(c.id)}">
+                <div><div>${tags}</div><div class="nm">${esc(c.clientName || 'Unnamed Client')}</div><div class="sm">${meta}</div></div>
+                <div class="when">Last updated<b>${esc(updatedAt(c.updatedAt))}</b></div>
+                <div class="act"><button onclick="caseLibraryOpen('saved',${Number(c.id)})">Open</button></div>
+                ${latest}${matches}
+            </div>`;
+        }).join('');
     }
 
     window.caseLibraryOpen = function (kind, id) {

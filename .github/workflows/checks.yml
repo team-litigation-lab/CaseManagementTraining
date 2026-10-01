@@ -88,6 +88,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/case-logs.cjs
+      - name: Latest updates (cases by their latest Case Note; search the Case Notes)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/latest-updates.cjs
       - name: Front Desk Drill live voice calls (token endpoint, call in a browser)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

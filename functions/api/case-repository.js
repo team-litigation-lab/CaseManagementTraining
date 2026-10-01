@@ -57,6 +57,41 @@ function rowToFull(row, session) {
     return Object.assign(rowToListItem(row, session), { content });
 }
 
+/* ---------- Latest updates (Case Library → 🕑 Latest updates) ----------
+   The Case Notes are saved as the Notes table's HTML (content.html.notes): one <tr> per note, its
+   date in the first cell and the note in the third (the staff dropdown's choice isn't in the HTML).
+   The latest note is the one with the latest date; a tie or an unreadable date goes to the later row. */
+// A note's text from its HTML: line breaks and blocks become spaces, inline tags (<b>, <i>…) just go.
+const noteText = (html) => String(html || '')
+    .replace(/<(br|\/div|\/p|\/li)[^>]*>/gi, ' ').replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ').trim();
+const NOTE_DATE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$|^(\d{4})-(\d{2})-(\d{2})$/;
+function noteDay(s) {
+    const m = NOTE_DATE.exec(String(s || '').trim());
+    if (!m) return -1;
+    return m[1] ? +m[3] * 10000 + +m[1] * 100 + +m[2] : +m[4] * 10000 + +m[5] * 100 + +m[6];
+}
+export function parseCaseNotes(html) {
+    const notes = [];
+    const rows = String(html || '').match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
+    rows.forEach((tr, i) => {
+        const cells = tr.match(/<td\b[^>]*>[\s\S]*?<\/td>/gi) || [];
+        const date = noteText(cells[0]), text = noteText(cells[2]);
+        if (date || text) notes.push({ date, text, i, day: noteDay(date) });
+    });
+    return notes;
+}
+const latestOf = (notes) => notes.reduce((best, n) => (!best || n.day > best.day || (n.day === best.day && n.i > best.i) ? n : best), null);
+const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+// The part of a note around the first match, so a long note still shows why it matched.
+function around(text, q, n) {
+    const at = text.toLowerCase().indexOf(q);
+    if (at < 0 || text.length <= n) return clip(text, n);
+    const start = Math.max(0, at - Math.floor((n - q.length) / 2));
+    return (start ? '…' : '') + clip(text.slice(start), n - (start ? 1 : 0));
+}
+
 async function snapshotVersion(db, { caseRepositoryId, caseId, clientName, phase, isDraft, content, medTotal, savedBy, savedByBatch }) {
     try {
         await db.prepare(
@@ -158,6 +193,41 @@ export async function onRequestGet({ request, env }) {
             return json({ success: false, error: 'This case belongs to another trainee. You can only open the cases you saved.' }, 403);
         }
         return json({ success: true, case: rowToFull(row, session) });
+    }
+
+    // Latest updates: the cases (newest update first) with their latest Case Note; ?q= keeps the cases
+    // whose Case Notes (a note's date or text) mention it, with the matching notes. Asked for only when
+    // that view is open, never by the 15-second list refresh, since it reads every case's notes.
+    if (url.searchParams.get('updates')) {
+        const q = String(url.searchParams.get('q') || '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 100);
+        const limit = Math.min(300, Math.max(1, parseInt(url.searchParams.get('limit'), 10) || 150));
+        const { results } = await db.prepare(
+            `SELECT id, case_id, client_name, phase, is_draft, owner_username, owner_batch_id,
+                    submitted_by, submitted_by_batch, submitted_at, med_total, date_of_loss, created_at, updated_at,
+                    CASE WHEN json_valid(content) THEN json_extract(content, '$.html.notes') END AS notes_html
+             FROM case_repository
+             WHERE owner_username = ? OR ? = 'Admin'
+             ORDER BY updated_at DESC`
+        ).bind(session.username, session.userType).all();
+        const updates = [];
+        for (const r of results || []) {
+            const notes = parseCaseNotes(r.notes_html);
+            const latest = latestOf(notes);
+            let matches = [];
+            if (q) {
+                matches = notes.filter(n => `${n.date} ${n.text}`.toLowerCase().includes(q))
+                    .sort((a, b) => b.day - a.day || b.i - a.i).slice(0, 3)
+                    .map(n => ({ date: n.date, text: around(n.text, q, 240) }));
+                if (!matches.length) continue;
+            }
+            updates.push(Object.assign(rowToListItem(r, session), {
+                noteCount: notes.length,
+                latestNote: latest ? { date: latest.date, text: clip(latest.text, 300) } : null,
+                ...(q ? { matches } : {})
+            }));
+            if (updates.length >= limit) break;
+        }
+        return json({ success: true, q, updates });
     }
 
     // List mode: metadata only (no `content`, which can be large) — the
