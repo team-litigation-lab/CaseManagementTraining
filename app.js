@@ -2400,6 +2400,9 @@
         function refreshCaseLogs() {
             renderCaseLogs(); // reuses the already-fetched shared repo cache (_repoCache)
         }
+        // Cases ticked for deleting; kept across the list's redraws (the repo cache refreshes every 15 s).
+        const _caseLogsSelected = new Set();
+        let _caseLogsShown = [];
         function renderCaseLogs() {
             const container = document.getElementById('case-logs-list');
             if (!container) return;
@@ -2410,22 +2413,69 @@
             if (query) {
                 list = list.filter(c =>
                     (c.clientName || '').toLowerCase().includes(query) ||
-                    (c.caseId || '').toLowerCase().includes(query)
+                    (c.caseId || '').toLowerCase().includes(query) ||
+                    (c.submittedBy || '').toLowerCase().includes(query) ||
+                    (c.ownerUsername || '').toLowerCase().includes(query)
                 );
             }
             list.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+            // a ticked case that's gone (deleted elsewhere) is no longer ticked
+            _caseLogsSelected.forEach(id => { if (!_repoCache.some(c => c.id === id)) _caseLogsSelected.delete(id); });
+            _caseLogsShown = list.map(c => c.id);
+            renderCaseLogsBulk();
 
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No matching cases.</p>'; return; }
 
             container.innerHTML = list.map(function (c) {
-                return '<div class="reg-row"><div class="reg-info">' +
-                    '<b>' + (c.clientName || 'Untitled Case') + ' <span class="status-pill ' + (c.isDraft ? 'status-pending' : 'status-approved') + '">' + (c.isDraft ? 'DRAFT' : (c.phase || '')) + '</span></b>' +
-                    '<div class="reg-meta">By ' + (c.submittedBy || c.ownerUsername) + ' \u00B7 Case ID ' + (c.caseId || '\u2014') + ' \u00B7 Modified ' + new Date(c.updatedAt).toLocaleString() + '</div>' +
+                const name = escapeHtmlAttr(c.clientName || 'Untitled Case');
+                return '<div class="reg-row" data-case-row="' + c.id + '"><label class="case-logs-pick" title="Select to delete"><input type="checkbox" aria-label="Select ' + name + '"' + (_caseLogsSelected.has(c.id) ? ' checked' : '') + ' onchange="toggleCaseLogPick(' + c.id + ', this.checked)"></label><div class="reg-info" style="flex:1;">' +
+                    '<b>' + name + ' <span class="status-pill ' + (c.isDraft ? 'status-pending' : 'status-approved') + '">' + (c.isDraft ? 'DRAFT' : escapeHtmlAttr(c.phase || '')) + '</span></b>' +
+                    '<div class="reg-meta">By ' + escapeHtmlAttr(c.submittedBy || c.ownerUsername) + ' \u00B7 Case ID ' + escapeHtmlAttr(c.caseId || '\u2014') + ' \u00B7 Modified ' + new Date(c.updatedAt).toLocaleString() + '</div>' +
                     '</div><div style="display:flex;gap:8px;">' +
                     '<button class="mini-btn" style="background:var(--navy);color:white;" onclick="openCaseVersions(' + c.id + ', event)">See Previous Versions</button>' +
                     '<button class="mini-btn" style="background:#16a34a;color:white;" onclick="openCaseLogsFullView(' + c.id + ', event)">View Full Case</button>' +
+                    '<button class="mini-btn del" onclick="adminDeleteCases([' + c.id + '], event)">🗑 Delete</button>' +
                     '</div></div>';
             }).join('');
+        }
+        function renderCaseLogsBulk() {
+            const bar = document.getElementById('case-logs-bulk');
+            if (!bar) return;
+            const n = _caseLogsSelected.size, shown = _caseLogsShown.length;
+            const all = shown > 0 && _caseLogsShown.every(id => _caseLogsSelected.has(id));
+            bar.innerHTML = shown || n
+                ? '<label><input type="checkbox" id="case-logs-all"' + (all ? ' checked' : '') + ' onchange="toggleCaseLogsAll(this.checked)"> Select all shown (' + shown + ')</label>' +
+                  '<button class="mini-btn del" id="case-logs-delete-selected"' + (n ? '' : ' disabled') + ' onclick="adminDeleteCases(Array.from(_caseLogsSelected), event)">🗑 Delete selected (' + n + ')</button>' +
+                  (n ? '<button class="mini-btn" style="background:#f1f5f9;color:#334155;" onclick="_caseLogsSelected.clear(); renderCaseLogs();">Clear</button>' : '')
+                : '';
+        }
+        function toggleCaseLogPick(id, on) { if (on) _caseLogsSelected.add(id); else _caseLogsSelected.delete(id); renderCaseLogsBulk(); }
+        function toggleCaseLogsAll(on) { _caseLogsShown.forEach(id => { if (on) _caseLogsSelected.add(id); else _caseLogsSelected.delete(id); }); renderCaseLogs(); }
+        // Deletes cases from Master Control (Admins may delete any case: /api/case-repository DELETE checks it).
+        async function adminDeleteCases(ids, evt) {
+            if (evt) evt.stopPropagation();
+            ids = (ids || []).filter(id => _repoCache.some(c => c.id === id));
+            if (!ids.length) return;
+            const one = ids.length === 1 ? _repoCache.find(c => c.id === ids[0]) : null;
+            const msg = one
+                ? `Delete ${one.clientName || 'this case'} (${one.caseId || 'a draft, no Case ID'}), saved by ${one.submittedBy || one.ownerUsername}?\n\nThe case is removed for good. This can't be undone.`
+                : `Delete these ${ids.length} cases?\n\nThey are removed for good. This can't be undone.`;
+            if (!confirm(msg)) return;
+            let done = 0; const failed = [];
+            for (const id of ids) {
+                try {
+                    const res = await fetch('/api/case-repository?id=' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+                    const data = await res.json();
+                    if (data && data.success) {
+                        done++;
+                        _caseLogsSelected.delete(id);
+                        if (currentCaseId === id) { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }
+                    } else failed.push((data && data.error) || 'Could not delete a case.');
+                } catch (e) { failed.push('Network error deleting a case.'); }
+            }
+            await refreshRepoCache();
+            if (failed.length) showToast(`Deleted ${done} of ${ids.length}. ${failed[0]}`, 'error');
+            else showToast(`Deleted ${done} case${done === 1 ? '' : 's'}.`, 'success');
         }
 
         function openCaseVersions(caseRepositoryId, evt) {

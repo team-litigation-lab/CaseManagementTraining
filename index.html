@@ -756,10 +756,11 @@
             <!-- CASE LOGS (search, chronological list, versions, full view) -->
             <div class="mc-pane" id="admin-dash-case-logs">
                 <div class="mc-section-title">🔍 Search Case</div>
-                <input type="text" id="case-logs-search" oninput="renderCaseLogs()" placeholder="Search by client name or Case ID..." style="width:100%; padding:9px 12px; margin-bottom:16px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
+                <input type="text" id="case-logs-search" oninput="renderCaseLogs()" placeholder="Search by client name, Case ID or trainee..." style="width:100%; padding:9px 12px; margin-bottom:16px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
 
                 <div class="mc-section-title">📄 All Cases — Most Recently Modified First</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Every case in the shared repository, including drafts, sorted by most recent modification.</p>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Every case in the shared repository, including drafts, sorted by most recent modification. <b>Delete</b> removes a case for good (a trainee's practice case, for example); tick several, or search for a trainee and select all, to delete them together.</p>
+                <div id="case-logs-bulk" class="case-logs-bulk"></div>
                 <div id="case-logs-list"></div>
             </div>
 
