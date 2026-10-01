@@ -245,6 +245,8 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - The client's primary injury, the body parts involved, the injury type (soft tissue, fracture, head injury / concussion, spine / disc, joint / ligament / tendon tear, laceration / bite / scarring, burn, multiple injuries, wrongful death, other), and surgery (no, recommended, scheduled, completed).
 - Also any prior injury to the same area, and the diagnosis and details (imaging, restrictions, future care).
 
+**Passenger Records** (bottom of Profile) are retired: passengers go in **Parties Involved** (+ Passenger). The block shows only when an older case has passenger rows, with a note pointing to Parties Involved. Its container stays in the page because saved fields are restored by position.
+
 **Location of Incident**: in the case's top bar, next to Date of Loss and SOL.
 
 **Report Type** (Police Report tab)
