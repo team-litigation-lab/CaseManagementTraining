@@ -161,6 +161,7 @@
         }
 
         let currentCaseId = null; // server-side case_repository row id (null = never saved)
+        let _syncedSig = null; // fingerprint of the server's copy of the case in the editor (caseSig, autosave)
         let currentCaseIsDraft = false; // true = loaded/created case has NO permanent Case ID yet
         let currentCaseCanEdit = true; // false when viewing a foreign case read-only (not owner/admin)
         let _emptyCaptureAreaTemplate = null; // pristine clone of #capture-area, captured once at load, used to render read-only previews of OTHER users' cases without touching the live editor
@@ -777,7 +778,9 @@
 
            This is separate from both the server-side Case Repository
            and the autosave-to-draft mechanism (autoSaveProgress, which
-           only fires every 60s and only once a client name exists). This
+           sends the case to the server only when something interrupts the
+           work — see AUTOSAVE ON INTERRUPTIONS — and only once a client name
+           exists; it also remembers what the server has, syncedSig). This
            persists whatever is currently sitting in the editor — typed or
            not yet named, finalized or not — under its own key, so an
            accidental refresh/reload never loses in-progress work. It is
@@ -818,6 +821,7 @@
                     currentCaseCanEdit,
                     caseIdFieldText: document.getElementById('case-id-field') ? document.getElementById('case-id-field').innerText : '',
                     mock: window.mockSnapshot ? window.mockSnapshot() : null,
+                    syncedSig: _syncedSig,   // what the server has: differs from this case = unsaved work (sent on the next visit)
                     savedAt: new Date().toISOString()
                 };
                 localStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(snapshot));
@@ -907,6 +911,9 @@
                 if (typeof updateTotals === 'function') updateTotals();
                 toggleOwnerExtra();
                 toggleDriverInsuredExtra();
+                // Work the server never got (the page closed, crashed or lost power first): send it now.
+                _syncedSig = data.syncedSig || null;
+                setTimeout(() => saveOnInterruption('recovered'), 1500);
                 return true;
             } catch (e) {
                 console.warn('Could not restore in-progress case:', e);
@@ -1387,6 +1394,7 @@
                 currentCaseIsDraft = false;
                 currentCaseCanEdit = true;
                 document.getElementById('case-id-field').innerText = data.caseId;
+                noteServerCopy();
                 persistCurrentEditorState();
                 refreshRepoCache();
                 if (quiet) return { ok: true, caseId: data.caseId };
@@ -1427,6 +1435,7 @@
                 currentCaseIsDraft = true;
                 currentCaseCanEdit = true;
                 generateCaseId();
+                noteServerCopy();
                 persistCurrentEditorState();
                 refreshRepoCache();
                 alert('Case archived as a draft. No Case ID has been assigned yet — open this draft and use "Save Case" whenever you\'re ready to finalize it.');
@@ -1459,6 +1468,7 @@
                 });
                 const data = await res.json();
                 if (!data || !data.success) { alert('Could not update: ' + ((data && data.error) || 'Unknown error.')); return; }
+                noteServerCopy();
                 persistCurrentEditorState();
                 refreshRepoCache();
                 alert("Saved case updated.");
@@ -1468,52 +1478,74 @@
         }
 
         /* ---------- Autosave (background, silent) ----------
-           Runs on an interval and also right before an inactivity auto-archive.
+           Never on a timer and never while you work: every server request counts toward the account's
+           monthly requests. Your work is kept in this browser as you type (persistCurrentEditorState),
+           and autosave sends it to the server only when something interrupts it (AUTOSAVE ON
+           INTERRUPTIONS, below) or after 5 minutes idle (the inactivity prompt).
            Saves to the server repository: creates a new draft if this case has
            never been saved before, or updates the existing row in place
            otherwise — WITHOUT touching its current draft/final status (an
            already-finalized case stays finalized; autosave never downgrades
            it back to a draft). Silent by design — failures don't interrupt
-           the user, since this runs in the background. */
-        const AUTOSAVE_INTERVAL_MS = 60 * 1000; // every 60 seconds
-        async function autoSaveProgress(reason) {
+           the user, since this runs in the background.
+           opts.keepalive: the page is closing, so the request is sent to outlive it (when it's small
+           enough for the browser to allow; a bigger case waits in this browser for the next visit). */
+        async function autoSaveProgress(reason, opts) {
             if (!hasCaseContent()) return false; // nothing meaningful to save yet
             if (currentCaseId !== null && !currentCaseCanEdit) return false; // viewing a foreign case — never autosave over it
             const content = buildCaseContentPayload();
             const clientName = (document.getElementById('client-name-field').innerText.split('\n')[0] || 'Unnamed Client').trim();
             const phase = document.getElementById('display-phase').innerText;
             const medTotal = document.getElementById('med-total') ? document.getElementById('med-total').innerText : '';
+            const sig = caseSig();
             try {
+                const body = JSON.stringify(currentCaseId !== null
+                    ? { id: currentCaseId, content, clientName, phase, medTotal }
+                    : { content, clientName, phase, medTotal, isDraft: true });
                 const res = await fetch('/api/case-repository', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify(currentCaseId !== null
-                        ? { id: currentCaseId, content, clientName, phase, medTotal }
-                        : { content, clientName, phase, medTotal, isDraft: true })
+                    keepalive: !!(opts && opts.keepalive) && body.length < 60000,
+                    body
                 });
                 const data = await res.json();
                 if (!data || !data.success) return false;
                 currentCaseId = data.id;
                 if (typeof data.isDraft === 'boolean') currentCaseIsDraft = data.isDraft;
+                noteServerCopy(sig);
                 persistCurrentEditorState();
-                flashAutoSaveIndicator();
+                flashAutoSaveIndicator(reason);
                 refreshRepoCache();
                 return true;
             } catch (e) {
                 return false; // silent — autosave failures shouldn't interrupt the user
             }
         }
-        function flashAutoSaveIndicator() {
+        function flashAutoSaveIndicator(reason, text) {
             const el = document.getElementById('autosave-indicator');
             if (!el) return;
             const stamp = new Date().toLocaleTimeString();
-            el.innerText = `Autosaved as draft · ${stamp}`;
+            el.innerText = text || (/back-online/.test(reason || '') ? `Saved when the connection came back · ${stamp}`
+                : /recovered/.test(reason || '') ? `Unsaved work from your last visit saved · ${stamp}`
+                : `Autosaved as draft · ${stamp}`);
             el.style.opacity = '1';
             clearTimeout(flashAutoSaveIndicator._t);
-            flashAutoSaveIndicator._t = setTimeout(() => { el.style.opacity = '0.55'; }, 4000);
+            if (!text) flashAutoSaveIndicator._t = setTimeout(() => { el.style.opacity = '0.55'; }, 4000);
         }
-        setInterval(() => autoSaveProgress('interval'), AUTOSAVE_INTERVAL_MS);
+
+        // What the server has for the case in the editor: a fingerprint of it (_syncedSig, declared with
+        // currentCaseId), taken whenever the case is saved to or opened from the server. Autosave sends the
+        // case only when it differs (unsaved work).
+        function caseSig() {
+            try {
+                const t = JSON.stringify([buildCaseContentPayload(), (document.getElementById('client-name-field') || {}).innerText || '', (document.getElementById('display-phase') || {}).innerText || '']);
+                let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+                return (h >>> 0).toString(16) + '.' + t.length;
+            } catch (e) { return null; }
+        }
+        function noteServerCopy(sig) { _syncedSig = sig || caseSig(); }
+        function hasUnsyncedChanges() { return hasCaseContent() && caseSig() !== _syncedSig; }
 
         // In-memory cache of the case list (metadata only, no field content —
         // content is fetched separately per-case via loadCase()/openMonitorCase()
@@ -1577,6 +1609,7 @@
                 updateTotals(); toggleOwnerExtra(); toggleDriverInsuredExtra(); showTab('profile');
                 if (window.closeCaseLibrary) closeCaseLibrary();
                 if (!c.canEdit) showToast('Viewing ' + c.ownerUsername + '\u2019s case — read-only (not the owner or an Admin).', 'info');
+                noteServerCopy();
                 persistCurrentEditorState();
             } catch (e) {
                 showToast('Network error loading that case.', 'error');
@@ -3422,43 +3455,59 @@
         // No alert() here: the user isn't there to dismiss one.
         function autoArchiveOnNoResponse() {
             closeInactivityPrompt();
-            autoSaveProgress('inactivity-timeout');
+            if (hasUnsyncedChanges()) autoSaveProgress('inactivity-timeout');
             resetInactivityTimer();
         }
 
         /* =========================================================
-           TECHNICAL-INTERRUPTION AUTO-ARCHIVE — separate from the
-           inactivity prompt above. Covers cases where the user didn't
-           choose to leave: lost connectivity, the tab/browser closing,
-           the app going to the background, or an abrupt shutdown. All
-           of those are silently archived as a draft the instant any of
-           these signals fire — no modal, no countdown, since there's
-           no guarantee the user is present or that the page will stay
-           alive long enough to show one.
-
-           HONEST LIMITATION: none of these events can fire during a true
-           instantaneous power loss (a brownout that cuts power before the
-           browser gets to run any JS at all). The real safety net for
-           that scenario is persistCurrentEditorState()'s continuous,
-           synchronous localStorage writes (see IN-PROGRESS EDITOR
-           PERSISTENCE above) — since those happen the moment the DOM
-           changes rather than waiting for an unload-type event, the
-           in-progress work is already on disk before the crash and gets
-           restored automatically the next time the app loads.
+           AUTOSAVE ON INTERRUPTIONS — separate from the inactivity prompt
+           above. Nothing is saved to the server while you work (no timer, no
+           save on a tab switch): every request counts toward the account's
+           monthly requests. Your work is kept in this browser as you type, and
+           it's sent to the server, as a draft (a finalized case stays final),
+           when something interrupts it:
+           - network: the connection drops ('offline'): it's sent the moment the
+             connection is back ('online'); a save that failed is sent then too;
+           - accidental closing: the tab or browser closes ('beforeunload',
+             'pagehide'), sent so it outlives the page (keepalive);
+           - the device: the browser suspends the page ('freeze': sleep, low
+             memory), or the tab has been away for AUTOSAVE_AWAY_MS (2 minutes);
+           - a crash or power cut (no event at all): the work comes back from
+             this browser on the next visit (restoreCurrentEditorState) and is
+             sent then ('recovered').
+           Only work the server doesn't have yet is sent (hasUnsyncedChanges). A
+           case never saved before isn't sent while the page closes (its new id
+           would be lost with the page and the next visit would make a second
+           draft): it waits in this browser for the next visit instead.
            ========================================================= */
-        let _lastTechnicalArchiveAt = 0;
-        function silentTechnicalArchive(reason) {
-            if (!hasCaseContent()) return; // nothing identifiable to archive yet
+        const AUTOSAVE_AWAY_MS = (window.CMS_AUTOSAVE_TIMINGS && window.CMS_AUTOSAVE_TIMINGS.away) || 2 * 60 * 1000;
+        let _lastInterruptionSaveAt = 0, _saveWhenOnline = false, _awayTimer = null;
+        function saveOnInterruption(reason, opts) {
+            if (!hasAuthorizedAccess() || !hasUnsyncedChanges()) return;
+            if (navigator.onLine === false) { _saveWhenOnline = true; return; }
+            const closing = !!(opts && opts.keepalive);
+            if (closing && currentCaseId === null) return;   // a new case waits in this browser for the next visit
             const now = Date.now();
-            if (now - _lastTechnicalArchiveAt < 2000) return; // multiple signals often fire together (e.g. pagehide + beforeunload on tab close) — only archive once
-            _lastTechnicalArchiveAt = now;
-            autoSaveProgress('technical-interruption:' + reason);
+            if (now - _lastInterruptionSaveAt < 2000) return;   // several signals often fire together (pagehide + beforeunload)
+            _lastInterruptionSaveAt = now;
+            Promise.resolve(autoSaveProgress('interruption:' + reason, opts)).then(ok => { if (!ok && !closing) _saveWhenOnline = true; }).catch(() => { _saveWhenOnline = true; });
         }
-        window.addEventListener('beforeunload', () => silentTechnicalArchive('unload'));
-        window.addEventListener('pagehide', () => silentTechnicalArchive('pagehide'));
-        window.addEventListener('offline', () => silentTechnicalArchive('offline'));
+        window.addEventListener('beforeunload', () => saveOnInterruption('closing', { keepalive: true }));
+        window.addEventListener('pagehide', () => saveOnInterruption('closing', { keepalive: true }));
+        document.addEventListener('freeze', () => saveOnInterruption('device', { keepalive: true }));
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') silentTechnicalArchive('visibility-hidden');
+            clearTimeout(_awayTimer);
+            if (document.visibilityState === 'hidden') _awayTimer = setTimeout(() => saveOnInterruption('away'), AUTOSAVE_AWAY_MS);
+        });
+        window.addEventListener('offline', () => {
+            if (!hasUnsyncedChanges()) return;
+            _saveWhenOnline = true;
+            flashAutoSaveIndicator('', 'Offline: your work is kept on this computer and saved when the connection is back.');
+        });
+        window.addEventListener('online', () => {
+            if (!_saveWhenOnline) return;
+            _saveWhenOnline = false;
+            saveOnInterruption('back-online');
         });
 
         /* =========================================================
