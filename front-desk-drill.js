@@ -384,13 +384,13 @@
     window.fddPick = function (id) {
         if ((screen === 'practice' || screen === 'pcwrap') && P) {
             P.selected = id;
-            if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true });
+            if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true, viewOnly: true });
             pcPick(); return;
         }
         if (!D || !D.cur) return;
         const cur = D.cur; if (cur.submitted) return;
         cur.selected = id;
-        if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true });
+        if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true, viewOnly: true });
         paint();
     };
     // True while a call is on the line and not yet scored: the top-bar case search

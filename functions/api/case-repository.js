@@ -31,6 +31,23 @@ import { runAiReview } from '../_ai-review.js';
 //   );
 //   CREATE INDEX IF NOT EXISTS idx_case_versions_repo ON case_versions(case_repository_id, saved_at DESC);
 
+// A trainee's work on a Training Library case file (training-library.js) is their own case for that
+// file, marked content.trainingLibraryId: one per trainee per file. ?library=MC-04 finds it, and
+// saving a new case for a file they already have a case for updates that case instead, so a second
+// one (or a draft) is never made. Their finalized case wins over an old draft, then the newest.
+const LIBRARY_ID = /^MC-\d{2,3}$/;
+function libraryIdOf(value) {
+    const id = String(value || '').trim().toUpperCase();
+    return LIBRARY_ID.test(id) ? id : null;
+}
+async function ownLibraryCase(db, username, libraryId) {
+    return db.prepare(
+        `SELECT * FROM case_repository
+         WHERE owner_username = ? AND json_valid(content) AND json_extract(content, '$.trainingLibraryId') = ?
+         ORDER BY is_draft ASC, updated_at DESC, id DESC LIMIT 1`
+    ).bind(username, libraryId).first();
+}
+
 function rowToListItem(row, session) {
     return {
         id: row.id,
@@ -185,6 +202,14 @@ export async function onRequestGet({ request, env }) {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
+    // A trainee's own case for a Training Library case file (?library=MC-04): theirs only, even for an Admin.
+    if (url.searchParams.has('library')) {
+        const libraryId = libraryIdOf(url.searchParams.get('library'));
+        if (!libraryId) return json({ success: false, error: 'Unknown Training Library case.' }, 400);
+        const row = await ownLibraryCase(db, session.username, libraryId);
+        return json({ success: true, case: row ? rowToFull(row, session) : null });
+    }
+
     if (id) {
         const row = await db.prepare(`SELECT * FROM case_repository WHERE id = ?`).bind(id).first();
         if (!row) return json({ success: false, error: 'Case not found.' }, 404);
@@ -252,7 +277,14 @@ export async function onRequestPost({ request, env, waitUntil }) {
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
 
-    const { id, content, clientName, phase, medTotal, isDraft, finalize, typeCode } = body;
+    const { content, clientName, phase, medTotal, isDraft, finalize, typeCode } = body;
+    let id = body.id;
+    // A new case for a Training Library case file the user already has a case for: that case, updated.
+    const libraryId = !id && content && typeof content === 'object' ? libraryIdOf(content.trainingLibraryId) : null;
+    if (libraryId) {
+        const mine = await ownLibraryCase(db, session.username, libraryId);
+        if (mine) id = mine.id;
+    }
     const serializedContent = JSON.stringify(content || {});
     const contentBytes = new TextEncoder().encode(serializedContent).length;
 

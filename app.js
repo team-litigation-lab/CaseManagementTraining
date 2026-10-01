@@ -612,8 +612,8 @@
         function textOf(id) { const el = document.getElementById(id); return el ? el.innerText.trim() : ''; }
         function buildCaseContentPayload() {
             return {
-                // trainingLibraryId / program (training-library.js): which mock case a
-                // practice copy came from and which training program saved it.
+                // trainingLibraryId / program (training-library.js): which Training Library
+                // case file a trainee's case is their work on, and which program saved it.
                 ...(window.mockPayloadTags ? window.mockPayloadTags() : {}),
                 caseType: document.getElementById('main-case-type') ? document.getElementById('main-case-type').value : null,
                 caseTypeOther: document.getElementById('main-case-other') ? document.getElementById('main-case-other').innerHTML : '',
@@ -1412,6 +1412,7 @@
            finalized, archiving creates a separate NEW draft rather than
            downgrading the finalized case back into a draft. */
         async function archiveCaseAsDraft() {
+            if (window.mockIsMine && window.mockIsMine()) return saveCase(); // a trainee's work on a case file is saved as their own case, never as a draft
             if (window.mockBlocksSave && window.mockBlocksSave()) return; // view-only Training Library case
             if (currentCaseId !== null && !currentCaseCanEdit) {
                 showToast('You can only view this case — only its owner or an Admin can modify it.', 'error');
@@ -1445,6 +1446,7 @@
         }
         async function updateCase() {
             if (window.mockBlocksSave && window.mockBlocksSave()) return; // view-only Training Library case
+            if (currentCaseId === null && window.mockIsMine && window.mockIsMine()) return saveCase(); // the first save of a trainee's work on a case file
             if (currentCaseId === null) {
                 alert("No saved case is currently open to update. Load a case from the repository first, or use \"Archive Case (Save as Draft)\" / \"Save Case\" to save this as a new one.");
                 return;
@@ -1498,9 +1500,13 @@
             const phase = document.getElementById('display-phase').innerText;
             const medTotal = document.getElementById('med-total') ? document.getElementById('med-total').innerText : '';
             const sig = caseSig();
+            // A trainee's work on a Training Library case file is their own case for that file, never a draft
+            // (the server keeps one per trainee per file).
+            const mine = !!(window.mockIsMine && window.mockIsMine());
             try {
                 const body = JSON.stringify(currentCaseId !== null
                     ? { id: currentCaseId, content, clientName, phase, medTotal }
+                    : mine ? { content, clientName, phase, medTotal, isDraft: false, finalize: true, typeCode: currentTypeCode() }
                     : { content, clientName, phase, medTotal, isDraft: true });
                 const res = await fetch('/api/case-repository', {
                     method: 'POST',
@@ -1513,6 +1519,7 @@
                 if (!data || !data.success) return false;
                 currentCaseId = data.id;
                 if (typeof data.isDraft === 'boolean') currentCaseIsDraft = data.isDraft;
+                if (mine && data.caseId) document.getElementById('case-id-field').innerText = data.caseId;
                 noteServerCopy(sig);
                 persistCurrentEditorState();
                 flashAutoSaveIndicator(reason);
@@ -1528,6 +1535,7 @@
             const stamp = new Date().toLocaleTimeString();
             el.innerText = text || (/back-online/.test(reason || '') ? `Saved when the connection came back · ${stamp}`
                 : /recovered/.test(reason || '') ? `Unsaved work from your last visit saved · ${stamp}`
+                : (window.mockIsMine && window.mockIsMine()) ? `Autosaved · ${stamp}`
                 : `Autosaved as draft · ${stamp}`);
             el.style.opacity = '1';
             clearTimeout(flashAutoSaveIndicator._t);
@@ -3486,7 +3494,9 @@
             if (!hasAuthorizedAccess() || !hasUnsyncedChanges()) return;
             if (navigator.onLine === false) { _saveWhenOnline = true; return; }
             const closing = !!(opts && opts.keepalive);
-            if (closing && currentCaseId === null) return;   // a new case waits in this browser for the next visit
+            // A new case waits in this browser for the next visit (its new id would be lost with the page). A trainee's work
+            // on a case file goes now: the server keeps it to one case per trainee per file.
+            if (closing && currentCaseId === null && !(window.mockIsMine && window.mockIsMine())) return;
             const now = Date.now();
             if (now - _lastInterruptionSaveAt < 2000) return;   // several signals often fire together (pagehide + beforeunload)
             _lastInterruptionSaveAt = now;
