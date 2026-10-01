@@ -427,7 +427,8 @@
     #auth-gate.mode-admin .login-username-field, #auth-gate.mode-admin .auth-register-link { display: none; }
     .login-trainer-field { display: none; }
     #auth-gate.mode-admin .login-trainer-field { display: block; }
-    .login-trainer-field .auth-hint { font-size: 11px; color: #64748b; margin: 4px 0 0; line-height: 1.4; text-transform: none; letter-spacing: normal; }
+    .auth-field .auth-hint { font-size: 11px; color: #64748b; margin: 4px 0 0; line-height: 1.4; text-transform: none; letter-spacing: normal; }
+    #auth-gate.mode-admin .login-batch-hint { display: none; }
     #auth-gate.mode-admin {
         --auth-accent: #ef4444;
         --auth-accent-hover: #f87171;
@@ -464,8 +465,6 @@
     }
     .auth-field input:focus, .auth-field select:focus { border-color: var(--auth-accent); }
     /* the Batch ID on the registration form: issued on approval, so a note with a preview rather than a box to type in */
-    .reg-batch-preview { padding:9px 12px; border-radius:6px; border:1px dashed #334a7a; background:rgba(13,28,61,.55); color:#cbd5e1; font-size:11.5px; line-height:1.45; }
-    .reg-batch-preview b { display:block; font-family:'IBM Plex Mono','Courier New',monospace; color:#fdba74; font-size:13px; letter-spacing:.5px; margin-bottom:3px; }
     /* Keep browser autofill from flashing white over dark auth/repo inputs */
     .auth-field input:-webkit-autofill,
     .auth-field input:-webkit-autofill:hover,
@@ -595,6 +594,14 @@
     .mini-btn.restore { background:#f97316; color:white; }
     .mini-btn.suspend { background:#d97706; color:white; }
     .mini-btn.reinstate { background:#16a34a; color:white; }
+    .mini-btn.batch { background:#e0e7ff; color:#1e3a8a; }
+    .mini-btn.batch:hover { background:#1e3a8a; color:#fff; }
+    .reg-meta .reg-batch { font-family:'IBM Plex Mono','Courier New',monospace; font-weight:700; color:var(--navy); }
+    .batch-edit { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
+    .reg-row .reg-info:has(.batch-edit) { flex:1 1 auto; min-width:0; }
+    .batch-edit label { font-size:10px; font-weight:800; text-transform:uppercase; color:#475569; display:flex; align-items:center; gap:6px; flex:0 1 auto; min-width:0; }
+    .batch-edit input { font:600 12px 'IBM Plex Mono','Courier New',monospace; padding:5px 8px; border:1px solid #cbd5e1; border-radius:5px; width:220px; min-width:0; flex:1 1 120px; text-transform:uppercase; }
+    .batch-edit-msg { font-size:11px; color:#b91c1c; font-weight:600; }
     .group-heading {
         font-size:10.5px; font-weight:900; text-transform:uppercase; letter-spacing:0.06em; color:#475569;
         background:#eef2f7; padding:7px 12px; border-radius:6px; margin: 16px 0 8px;

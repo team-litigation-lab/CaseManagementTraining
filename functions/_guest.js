@@ -95,6 +95,22 @@ export function splitName(full) {
     return { first: parts.join(' '), last };
 }
 
+// Registration's one Full Name box, split into the users columns. A middle initial
+// ("P" or "P.") between the first and last names splits them there, so "Juan P. Dela
+// Cruz" keeps "Dela Cruz" whole; a suffix (Jr., Sr., II to V) at the end goes to suffix;
+// otherwise the last word is the last name, as splitName does. The full name reads the
+// same either way (buildFullName in _utils.js), and name sign-in still finds it.
+const SUFFIX_RE = /^(jr|sr|ii|iii|iv|v)\.?$/i;
+export function parseFullName(full) {
+    const words = String(full || '').split(' ');
+    let suffix = null;
+    if (words.length > 2 && SUFFIX_RE.test(words[words.length - 1])) suffix = words.pop();
+    const i = words.findIndex((w, k) => k > 0 && k < words.length - 1 && /^\p{L}\.?$/u.test(w));
+    if (i > 0) return { first: words.slice(0, i).join(' '), mi: words[i].replace('.', '').toUpperCase(), last: words.slice(i + 1).join(' '), suffix };
+    const last = words.pop();
+    return { first: words.join(' '), mi: null, last, suffix };
+}
+
 // The same name always gives the same trainer account.
 export function trainerUsername(name) {
     let s = slug(name).slice(0, 48);

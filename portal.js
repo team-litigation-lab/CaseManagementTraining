@@ -9,10 +9,16 @@ function switchPortalTab(mode) {
     const traineeTab = document.getElementById('portal-tab-trainee');
     const adminTab = document.getElementById('portal-tab-admin');
     const authGate = document.getElementById('auth-gate');
-    // Admin Portal: the trainer's name and the shared admin password (functions/api/login.js)
+    // Admin Portal: the trainer's name and the shared admin password. Trainee Portal: the
+    // username and Batch ID they registered with (functions/api/login.js).
     const pwLabel = document.getElementById('login-password-label'), pw = document.getElementById('login-password');
-    if (pwLabel) pwLabel.textContent = mode === 'Admin' ? 'Admin password' : 'Password';
-    if (pw) pw.placeholder = mode === 'Admin' ? 'Enter the admin password' : 'Enter your password';
+    if (pwLabel) pwLabel.textContent = mode === 'Admin' ? 'Admin password' : 'Batch ID';
+    if (pw) {
+        const type = mode === 'Admin' ? 'password' : 'text';
+        if (pw.type !== type) pw.value = '';   // an admin password typed on the Admin tab is never shown on the Trainee tab
+        pw.type = type;
+        pw.placeholder = mode === 'Admin' ? 'Enter the admin password' : 'Enter your Batch ID';
+    }
     if (mode === 'Admin') {
         if (adminTab) adminTab.classList.add('active');
         if (traineeTab) traineeTab.classList.remove('active');
@@ -24,51 +30,22 @@ function switchPortalTab(mode) {
     }
 }
 
+// Three fields: full name, Batch ID and username (functions/api/register.js).
 function submitRegistration() {
     const msgDiv = document.getElementById('auth-register-msg');
-    if (msgDiv) msgDiv.innerText = "";
-
-    const password = document.getElementById('reg-password').value;
-    const passwordRepeat = document.getElementById('reg-password2').value;
-
-    if (password !== passwordRepeat) {
-        if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = "Passwords do not match."; }
-        return;
-    }
-
-    const pwErr = typeof validateRegPassword === 'function' ? validateRegPassword(password) : null;
-    if (pwErr) {
-        if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = pwErr; }
-        return;
-    }
-
+    const say = (text, kind) => { if (msgDiv) { msgDiv.className = "auth-msg " + kind; msgDiv.innerText = text; } };
+    const val = (id) => ((document.getElementById(id) || {}).value || '').trim().replace(/\s+/g, ' ');
+    const d = new Date(), pad = (n) => String(n).padStart(2, '0');
     const payload = {
-        firstName: document.getElementById('reg-firstname').value,
-        mi: document.getElementById('reg-middlename').value,
-        lastName: document.getElementById('reg-lastname').value,
-        suffix: document.getElementById('reg-suffix').value,
-        email: document.getElementById('reg-email').value,
-        userType: document.getElementById('reg-usertype').value,
-        // batchId intentionally omitted — the server generates a guaranteed-unique one on approval
-        username: document.getElementById('reg-username').value,
-        password: password
+        fullName: val('reg-fullname'),
+        batchId: val('reg-batchid'),
+        username: val('reg-username'),
+        trainingStartDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`   // Day 1 of training: today, where the trainee is
     };
+    if (!payload.fullName || !payload.batchId || !payload.username) { say("Please fill in your full name, Batch ID and username.", "error"); return; }
+    if (!/\s/.test(payload.fullName)) { say("Please enter your first and last name.", "error"); return; }
 
-    if (payload.userType === 'Trainee') {
-        payload.trainingStartDate = document.getElementById('reg-training-date').value;
-        if (!payload.trainingStartDate) {
-            if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = "Please enter your start of training date."; }
-            return;
-        }
-    }
-
-    if (!payload.username || !payload.password || !payload.email) {
-        if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = "Please fill out all required fields."; }
-        return;
-    }
-
-    if (msgDiv) { msgDiv.className = "auth-msg info"; msgDiv.innerText = "Submitting registration..."; }
-
+    say("Submitting registration...", "info");
     fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,17 +55,21 @@ function submitRegistration() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            if (msgDiv) { msgDiv.className = "auth-msg success"; msgDiv.innerText = "Batch ID will be assigned upon the approval of registration."; }
+            say("Registration sent. Once your trainer approves it, sign in with your username and Batch ID.", "success");
             showToast("Registration submitted successfully!", 'success');
-            setTimeout(() => { showLoginView(); }, 2400);
+            setTimeout(() => {
+                showLoginView();
+                const u = document.getElementById('login-username');
+                if (u && !u.value) u.value = payload.username;
+            }, 2400);
         } else {
-            if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = data.error || "Registration failed."; }
+            say(data.error || "Registration failed.", "error");
             showToast(data.error || "Registration failed.", 'error');
         }
     })
     .catch(error => {
         console.error("Network error:", error);
-        if (msgDiv) { msgDiv.className = "auth-msg error"; msgDiv.innerText = "Network error. Failed to connect to server."; }
+        say("Network error. Failed to connect to server.", "error");
         showToast("Network error. Failed to connect to server.", 'error');
     });
 }
@@ -108,7 +89,7 @@ function attemptLogin() {
         return;
     }
     if (!passwordInput) {
-        if (loginMsgDiv) { loginMsgDiv.innerText = "Password is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
+        if (loginMsgDiv) { loginMsgDiv.innerText = adminMode ? "Password is required." : "Batch ID is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
         return;
     }
 
@@ -135,7 +116,9 @@ function attemptLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username: usernameInput, password: passwordInput, portalMode: currentPortalMode, name: trainerName })
+        // Trainees: the Batch ID (an older account's password works there too: login.js)
+        body: JSON.stringify(adminMode ? { username: usernameInput, password: passwordInput, portalMode: currentPortalMode, name: trainerName }
+            : { username: usernameInput, batchId: passwordInput, portalMode: currentPortalMode })
     })
     .then(response => response.json())
     .then(data => {

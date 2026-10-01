@@ -6,7 +6,7 @@
 // that registered account (with or without M.I., any capitalisation); two trainees
 // with the same name need the CMS Batch ID; pending accounts wait for approval;
 // admins are never reached by name; an older name-only (guest-) account still works;
-// an unknown name is asked to register (and the Register button fills the name in);
+// an unknown name is asked to register (and the Register button fills the name and batch in);
 // without a platform, name sign-in is refused; opened directly on a new browser, the
 // Register form comes first, and a browser that signed in before gets the sign-in screen.
 // Usage: node .github/scripts/guest.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
@@ -109,9 +109,10 @@ const failures = []; const fail = (m) => failures.push(m);
     const regBtn = page.locator('#auth-guest-msg button:has-text("Register now")');
     if (!(await regBtn.count())) fail('an unknown name got no "Register now" button');
     else {
+        await page.evaluate(() => { document.getElementById('guest-batch').value = 'b050225'; });
         await regBtn.click(); await page.waitForTimeout(200);
-        const f = await page.evaluate(() => [document.getElementById('reg-firstname').value, document.getElementById('reg-lastname').value].join('|'));
-        if (!(await page.isVisible('#auth-register-view')) || f !== 'Rosa|Newcomer') fail(`"Register now" didn't open Register with the name filled in (${f})`);
+        const f = await page.evaluate(() => [document.getElementById('reg-fullname').value, document.getElementById('reg-batchid').value, document.activeElement && document.activeElement.id].join('|'));
+        if (!(await page.isVisible('#auth-register-view')) || f !== 'Rosa Newcomer|B050225|reg-username') fail(`"Register now" didn't open Register with the name and batch filled in, ready for a username (${f})`);
     }
     await page.evaluate(() => showGuestView());
     await page.fill('#guest-name', 'Juan Dela Cruz'); await page.click('#guest-submit'); await page.waitForTimeout(800);

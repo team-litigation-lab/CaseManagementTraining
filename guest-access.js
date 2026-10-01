@@ -146,17 +146,14 @@
             btn.disabled = false;
         }
     };
-    // Not registered yet: the registration form, with the typed name filled in.
+    // Not registered yet: the registration form, with the typed name (and batch, if any) filled in.
     window.guestRegister = function () {
         const name = ($('guest-name') && $('guest-name').value || '').trim().replace(/\s+/g, ' ');
+        const batch = ($('guest-batch') && $('guest-batch').value || '').trim().toUpperCase();
         if (typeof window.showRegisterView === 'function') window.showRegisterView();
-        const parts = name.split(' ');
-        if (parts.length >= 2) {
-            const last = parts.pop();
-            if ($('reg-firstname') && !$('reg-firstname').value) $('reg-firstname').value = parts.join(' ');
-            if ($('reg-lastname') && !$('reg-lastname').value) $('reg-lastname').value = last;
-        }
-        setTimeout(() => { const el = $('reg-email'); if (el) el.focus(); }, 50);
+        if (name.includes(' ') && $('reg-fullname') && !$('reg-fullname').value) $('reg-fullname').value = name;
+        if (batch && $('reg-batchid') && !$('reg-batchid').value) $('reg-batchid').value = batch;
+        setTimeout(() => { const el = $('reg-batchid') && !$('reg-batchid').value ? $('reg-batchid') : $('reg-username'); if (el) el.focus(); }, 50);
     };
     ['guest-name', 'guest-batch'].forEach(id => {
         const el = $(id);

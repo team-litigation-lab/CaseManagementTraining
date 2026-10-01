@@ -171,13 +171,26 @@ A signed-in trainer clicks **👁 Trainee view** at the bottom of the sidebar. T
 
 A bar at the bottom of the screen (and a button in the sidebar) says **⇦ Back to trainer view**. The server still knows the trainer as an Admin, so Pause and Lock never stop them. Saving works as usual. The view lasts for the browser tab and ends at sign-out.
 
+## 📝 Registering and signing in (trainees)
+
+**Registering** asks for three things only (`functions/api/register.js`):
+- **Full Name**: first and last name, with the middle initial and suffix if they like (e.g. `Juan P. Dela Cruz`, `Ana Reyes Jr.`). The CMS splits it into its name columns itself.
+- **Batch ID**: the batch code their trainer gave them (e.g. `B05022026`), typed in capitals. Letters, numbers, spaces and dashes, up to 40 characters.
+- **Username**: 3 to 30 letters, numbers or underscores.
+
+There is no email, start date or password. The day they register counts as Day 1 of training. The registration waits for an Admin's approval; approving keeps the Batch ID the trainee typed.
+
+**Signing in** on the Trainee Portal tab: **username and Batch ID** (any capitals or spacing). Trainees who registered earlier with a password can still type their password in the Batch ID box, or use their Batch ID (the one shown in the sidebar). An Admin account is never signed in with a Batch ID.
+
+**Changing a Batch ID** (Admins): in Master Control's **Registrations** or **Users** tab, each trainee has **✎ Batch ID**. Type the new one and press **Save** (or Enter; Esc cancels). It fixes a typo before approving, or moves a trainee to another batch. The trainee signs in with the new Batch ID from then on (`functions/api/update-batch.js`). Admins' own Batch IDs can't be changed this way.
+
+In the **Users** tab, trainees are grouped by Batch ID. Batch IDs the CMS issued earlier (`B05022026-LSHTRAINEE-001`) group under their date, together with the same typed code (`B05022026`).
+
+**The trade-off:** a Batch ID is shared by a class, so anyone who knows a trainee's username and batch can sign in as them. That's the same convenience the name sign-in below already gives on the training platforms. Admin access still needs the admin password.
+
 ## 👤 Name sign-in from our other training platforms
 
 Trainees **register in the CMS once**, so their trainer can follow their work. After an Admin approves them, opening the CMS **from one of our training platforms** signs them in with **just their name** (`guest-access.js` → `/api/guest-login`).
-
-**The Batch ID isn't typed when registering.** The CMS issues it when an Admin approves the registration (`nextBatchId` in `functions/_utils.js`):
-- It is `B` + the start of training date (DDMMYYYY) + `-LSHTRAINEE-` + a number, e.g. `B05022026-LSHTRAINEE-001`.
-- The registration form shows it as a note, not a box to type in. Once the start date is picked, the note previews the ID with the number still to come (`B05022026-LSHTRAINEE-###`).
 
 **Which platforms:**
 
@@ -195,10 +208,10 @@ Trainees **register in the CMS once**, so their trainer can follow their work. A
 - The platform is remembered for the browser tab.
 
 **What typing a name does:**
-- **It matches the registered trainee's own account** (their first and last name, with or without the middle initial or suffix; capitalisation doesn't matter), and signs them in exactly as their username and password would.
+- **It matches the registered trainee's own account** (their first and last name, with or without the middle initial or suffix; capitalisation doesn't matter), and signs them in exactly as their username and Batch ID would.
 - **Two registered trainees with the same name:** the form asks for the **CMS Batch ID** to pick the right one.
 - **A registration still waiting for approval** is told to wait. Declined, suspended and revoked accounts get their usual message.
-- **Not registered yet:** they're told to register, and **Register now** opens the registration form with their name filled in.
+- **Not registered yet:** they're told to register, and **Register now** opens the registration form with their name (and batch, if the link sent one) filled in.
 - **Name-only accounts** made before registration was required (usernames starting `guest-`) keep working.
 - **Admin accounts are never reached by name.** Only Trainee accounts are.
 
@@ -580,7 +593,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - pending accounts wait for approval;
   - Admins are never reached by name;
   - older name-only accounts still work;
-  - an unknown name is sent to Register, with the name filled in;
+  - an unknown name is sent to Register, with the name and batch filled in;
   - name sign-in is refused without a platform;
   - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
 - **Sign-in** (`.github/scripts/login.cjs`, in the same job): the real login code on SQLite. It checks:
@@ -588,10 +601,11 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - with a name, each trainer gets their own Admin account on first sign-in (the same name, the same account; suspended and revoked trainers are refused, and a revoked one isn't made again), and `trainer-` usernames can't be registered;
   - `MASTER_ADMIN_PASSWORD` and the older `ADMIN_PORTAL_PASSWORD` both work;
   - a wrong or unset admin password, and a name without a last name, are refused;
-  - trainees still sign in with username and password;
+  - trainees sign in with their username and Batch ID (any capitals or spacing); a wrong or old Batch ID is refused; an older account's password still works; an Admin is never signed in by Batch ID;
   - a session stays alive with a heartbeat up to 2 minutes old (a background tab, e.g. while on a Google Meet tab) and ends after that;
   - `/api/state` lists the last minute's pings with their age measured on the server;
-  - registration is for trainees only and scrolls on a small screen;
+  - registration asks for just the Full Name, Batch ID and Username (nothing grayed out), refuses a bad name, Batch ID or username, saves the name split into its columns, keeps the typed Batch ID through approval, then opens sign-in with the username filled in; it scrolls on a small screen;
+  - an Admin changes a trainee's Batch ID with ✎ Batch ID in the Registrations and Users tabs (an empty one isn't sent; Esc cancels); trainees can't, an Admin's own can't be, and it's logged;
   - a tab still running the old Training Calendar is told to reload.
 - **Case editor sections** (`.github/scripts/sections.cjs`, in the same job). It checks that:
   - the page's positional fields are unchanged, and a case saved by the previous version loads field for field;
