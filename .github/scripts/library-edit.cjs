@@ -159,8 +159,12 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!asked.some(m => /Discard your unsaved changes/.test(m))) fail('opening another case with unsaved changes to a library case did not ask first');
     await openCase(admin, 'MC-01');
     await admin.click('#client-phone-field'); await admin.keyboard.press('Control+A'); await admin.keyboard.type('(555) 000-0000');
-    await admin.waitForTimeout(800);
-    await admin.reload({ waitUntil: 'load' }); await admin.waitForTimeout(1500);
+    // the editor keeps unsaved work in the browser a moment after typing (debounced): wait for that, then reload,
+    // then wait for the case to be back in edit mode (fixed waits raced on slow CI runners)
+    await admin.waitForFunction(() => { try { const d = JSON.parse(localStorage.getItem('LSH_CURRENT_EDITOR_DRAFT_V1') || '{}'); return !!(d.mock && d.mock.mockEditDirty) && JSON.stringify(d).includes('000-0000'); } catch (e) { return false; } }, null, { timeout: 10000 })
+        .catch(() => fail('the unsaved change to the library case was never kept in the browser'));
+    await admin.reload({ waitUntil: 'load' });
+    await admin.waitForFunction(() => /EDITABLE/.test((document.getElementById('mock-banner') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
     if (!/EDITABLE/.test(await admin.textContent('#mock-banner')) || (await field(admin, 'client-phone-field')) !== '(555) 000-0000') fail('a reload with unsaved changes did not keep them');
     await admin.click('#mock-banner button:has-text("Undo my changes")'); await admin.waitForTimeout(900);
     if ((await field(admin, 'client-phone-field')) !== '(555) 777-1234' || JSON.parse(row().facts).phone !== '(555) 777-1234') fail('Undo my changes did not drop the unsaved change');
