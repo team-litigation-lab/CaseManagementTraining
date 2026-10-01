@@ -464,6 +464,9 @@
         background:#0d1c3d; color:white; font-family:'IBM Plex Mono','Courier New',monospace; font-size:13px; outline:none;
     }
     .auth-field input:focus, .auth-field select:focus { border-color: var(--auth-accent); }
+    /* the Batch ID on the registration form: issued on approval, so a note with a preview rather than a box to type in */
+    .reg-batch-preview { padding:9px 12px; border-radius:6px; border:1px dashed #334a7a; background:rgba(13,28,61,.55); color:#cbd5e1; font-size:11.5px; line-height:1.45; }
+    .reg-batch-preview b { display:block; font-family:'IBM Plex Mono','Courier New',monospace; color:#fdba74; font-size:13px; letter-spacing:.5px; margin-bottom:3px; }
     /* Keep browser autofill from flashing white over dark auth/repo inputs */
     .auth-field input:-webkit-autofill,
     .auth-field input:-webkit-autofill:hover,

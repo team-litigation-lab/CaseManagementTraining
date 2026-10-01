@@ -175,6 +175,10 @@ A bar at the bottom of the screen (and a button in the sidebar) says **⇦ Back 
 
 Trainees **register in the CMS once**, so their trainer can follow their work. After an Admin approves them, opening the CMS **from one of our training platforms** signs them in with **just their name** (`guest-access.js` → `/api/guest-login`).
 
+**The Batch ID isn't typed when registering.** The CMS issues it when an Admin approves the registration (`nextBatchId` in `functions/_utils.js`):
+- It is `B` + the start of training date (DDMMYYYY) + `-LSHTRAINEE-` + a number, e.g. `B05022026-LSHTRAINEE-001`.
+- The registration form shows it as a note, not a box to type in. Once the start date is picked, the note previews the ID with the number still to come (`B05022026-LSHTRAINEE-###`).
+
 **Which platforms:**
 
 | Platform | Link sends |
