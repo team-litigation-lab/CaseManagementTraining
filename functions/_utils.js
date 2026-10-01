@@ -454,51 +454,55 @@ export async function upgradePasswordHash(db, userId, plainPassword) {
 /* =====================================================================
    BATCH ID / CREDENTIAL HELPERS
    ===================================================================== */
-// Batch ID format: B<DD><MM><YYYY>-LSH<TYPE>-<XXX>
-// For Admins, DD/MM/YYYY is their registration date (users.created_at).
-// For Trainees, DD/MM/YYYY is their start-of-training date, which they
-// supply at registration (users.training_start_date) — see register.js.
-// XXX is a three-digit sequence number, chronological per user type.
-//
-// XXX comes from an atomic, per-user-type D1 counter (same UPDATE ...
-// RETURNING pattern as nextCaseId() below), rather than a COUNT(*)
-// read-then-write — the old approach could let two admins approving two
-// different users of the same type at nearly the same moment both read
-// the same count before either write landed, producing a collision.
-//
-// Requires this table to exist (run once via wrangler d1 execute):
-//   CREATE TABLE IF NOT EXISTS batch_id_counter (
-//     user_type TEXT PRIMARY KEY,
-//     value INTEGER NOT NULL DEFAULT 0
-//   );
-//   INSERT OR IGNORE INTO batch_id_counter (user_type, value) VALUES ('Admin', 0);
-//   INSERT OR IGNORE INTO batch_id_counter (user_type, value) VALUES ('Trainee', 0);
-// A Batch ID as a trainee types it at registration, or an Admin edits it (update-batch.js):
-// letters, numbers, spaces and dashes, up to 40 characters, kept in capitals.
-// '' when blank, null when it isn't valid.
-export function cleanBatchId(raw) {
-    const v = String(raw || '').trim().replace(/\s+/g, ' ').toUpperCase();
-    if (!v) return '';
-    return /^[A-Z0-9][A-Z0-9 \-]{0,39}$/.test(v) ? v : null;
-}
-// The same Batch ID whatever the capitals, spaces or dashes (signing in, name sign-in).
-export const batchKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+// Batch ID format: B<DD><MM><YY>, e.g. B300926: B and the date the batch started, the
+// same as the course batch our training platforms send (_guest.js). Trainees type
+// theirs at registration (register.js); an Admin can change it (update-batch.js).
+// The CMS issues one itself only for a trainer's account (login.js, from the day it's
+// made) and for a registration that has none when it's approved (update-status.js).
+// Batch IDs are shared by a batch, so they aren't unique (the batch_id_counter table
+// that numbered the old long form, B<DDMMYYYY>-LSH<TYPE>-<XXX>, isn't used any more).
 
+// A Batch ID in its one form, B + DDMMYY, from what's typed or stored: capitals,
+// spaces and dashes don't matter, the B may be left off, and the longer forms the CMS
+// used before (B30092026, B30092026-LSHADMIN-003) read as the short one. The date
+// must be a real one. null when it isn't a Batch ID.
+export function canonicalBatch(raw) {
+    const v = String(raw || '').toUpperCase().replace(/[\s\-]/g, '');
+    const m = /^B?(\d{2})(\d{2})(\d{4}|\d{2})(?:LSH[A-Z]*\d+)?$/.exec(v);
+    if (!m) return null;
+    const dd = +m[1], mm = +m[2], yy = m[3].slice(-2);
+    const d = new Date(Date.UTC(2000 + +yy, mm - 1, dd));
+    if (mm < 1 || mm > 12 || dd < 1 || d.getUTCMonth() !== mm - 1) return null;
+    return `B${m[1]}${m[2]}${yy}`;
+}
+// A Batch ID as a trainee types it at registration, or an Admin edits it (update-batch.js):
+// '' when blank, null when it isn't valid, otherwise B + DDMMYY.
+export function cleanBatchId(raw) {
+    if (!String(raw || '').trim()) return '';
+    return canonicalBatch(raw);
+}
+// The same Batch ID whatever its form (signing in, name sign-in). Older values that
+// aren't dates (e.g. a guest account's) compare as typed, ignoring capitals and spacing.
+export const batchKey = (s) => (canonicalBatch(s) || String(s || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// B + DDMMYY for a date (today when none). db and userType are no longer needed, kept for the callers.
 export async function nextBatchId(db, userType, referenceDate) {
     const d = referenceDate ? new Date(referenceDate) : new Date();
-    const dd = String(d.getUTCDate()).padStart(2, '0');
-    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const yyyy = d.getUTCFullYear();
-    const prefix = userType === 'Admin' ? 'LSHADMIN' : 'LSHTRAINEE';
+    const p = (n) => String(n).padStart(2, '0');
+    return `B${p(d.getUTCDate())}${p(d.getUTCMonth() + 1)}${String(d.getUTCFullYear()).slice(-2)}`;
+}
 
-    const row = await db.prepare(
-        `UPDATE batch_id_counter SET value = value + 1 WHERE user_type = ? RETURNING value`
-    ).bind(userType).first();
-    if (!row || typeof row.value !== 'number') {
-        throw new Error(`batch_id_counter has no row for user_type=${userType} — run the migration in _utils.js (see nextBatchId comment) before issuing Batch IDs.`);
-    }
-    const xxx = String(row.value).padStart(3, '0');
-    return `B${dd}${mm}${yyyy}-${prefix}-${xxx}`;
+// Batch IDs saved in the old long forms, rewritten as B + DDMMYY: B30092026 and
+// B30092026-LSHADMIN-003 become B300926. Runs at sign-in (login.js, guest-login.js),
+// once per worker; after the first run there's nothing left to change.
+let batchIdsShortened = false;
+export async function shortenOldBatchIds(db) {
+    if (batchIdsShortened) return;
+    batchIdsShortened = true;
+    const set = `batch_id = 'B' || substr(batch_id, 2, 4) || substr(batch_id, 8, 2)`;
+    const where = `batch_id GLOB 'B[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' OR batch_id GLOB 'B[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-LSH*'`;
+    try { await db.prepare(`UPDATE users SET ${set} WHERE ${where}`).run(); } catch (e) { batchIdsShortened = false; }
+    try { await db.prepare(`UPDATE heartbeats SET ${set} WHERE ${where}`).run(); } catch (e) { /* no heartbeats table yet */ }
 }
 
 /* =====================================================================
@@ -596,13 +600,16 @@ export async function nextPrintSequence(db, caseId) {
 }
 
 export async function verifyAdminCredentials(db, batchId, password) {
-    const user = await db.prepare(
+    // Batch IDs are shared by everyone who started the same day, so check each Admin with it.
+    const { results } = await db.prepare(
         `SELECT * FROM users WHERE batch_id = ? AND user_type = 'Admin' AND status = 'Approved'`
-    ).bind(batchId).first();
-    if (!user) return null;
-    if (!(await verifyPassword(password, user.password))) return null;
-    if (isLegacyPlaintext(user.password)) await upgradePasswordHash(db, user.id, password);
-    return user;
+    ).bind(canonicalBatch(batchId) || String(batchId || '').trim()).all();
+    for (const user of (results || [])) {
+        if (!(await verifyPassword(password, user.password))) continue;
+        if (isLegacyPlaintext(user.password)) await upgradePasswordHash(db, user.id, password);
+        return user;
+    }
+    return null;
 }
 
 export async function verifyUsernamePassword(db, username, password, userType) {

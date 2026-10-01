@@ -10,7 +10,7 @@
 //   - a name-only account made before this (guest-…) keeps working;
 //   - no registered trainee with that name: they're asked to register first.
 // Admin accounts are never reached this way (Trainee accounts only).
-import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey } from '../_utils.js';
+import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds } from '../_utils.js';
 import { GUEST_SOURCES, ensureGuestTables, cleanGuestName, cleanGuestBatch, guestUsername } from '../_guest.js';
 
 const BLOCKED = {
@@ -69,6 +69,7 @@ export async function onRequestPost({ request, env }) {
     const program = String(body.program || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20) || null;
 
     await ensureGuestTables(db);
+    await shortenOldBatchIds(db);   // older long Batch IDs become B + DDMMYY (_utils.js)
     if (await tooManyFailures(db, request)) {
         return json({ success: false, error: 'Too many names tried from this connection. Please wait an hour, or ask your trainer.' }, 429);
     }

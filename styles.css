@@ -197,18 +197,19 @@
     }
     .tab-btn:hover { color: #0f172a; border-bottom-color: #cbd5e1; }
     .active-tab { border-bottom: 3px solid var(--orange) !important; color: var(--orange) !important; font-weight: 700; }
-    /* The case file's tab bar: a panel of equal "keys" in capitals, 9 on the top row and 8 centred under them
-       (each key is a ninth of the bar); the open tab is navy with an orange bar along its foot. */
+    /* The case file's tab bar: a panel of "keys" in capitals, each label on one line, 9 on the top row and 8
+       under them. A key is as wide as its label, and the keys on each row stretch to fill it, so both rows line
+       up edge to edge. The open tab is navy with an orange bar along its foot. */
     .case-tabs {
-        display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
-        margin-top: 18px; padding: 6px;
+        display: flex; flex-wrap: wrap; justify-content: center; column-gap: 6px; row-gap: 0;
+        margin-top: 18px; padding: 3px 6px;
         background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px;
     }
     .case-tabs .tab-btn {
-        flex: 0 0 calc((100% - 8 * 6px) / 9); min-width: 0; min-height: 40px;
+        flex: 1 1 auto; min-width: max-content; min-height: 40px; margin: 3px 0;
         display: flex; align-items: center; justify-content: center; text-align: center;
-        white-space: normal; line-height: 1.2;
-        padding: 8px 6px;
+        white-space: nowrap; line-height: 1.2;
+        padding: 8px 12px;
         background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
         box-shadow: 0 1px 1px rgba(15, 23, 42, .04);
         color: #1e293b; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -219,7 +220,11 @@
         background: var(--navy); border: 1px solid var(--navy) !important; color: #fff !important;
         box-shadow: inset 0 -3px 0 var(--orange);
     }
-    @media (max-width: 900px) { .case-tabs .tab-btn { flex: 1 1 130px; } }
+    .case-tabs .tab-break { flex-basis: 100%; height: 0; }   /* index.html: after Demand, so the rows are 9 and 8 */
+    /* a narrower case panel: tighter keys, so the 17 tabs still take two rows */
+    .case-tabs { container-type: inline-size; }
+    @container (max-width: 1000px) { .case-tabs .tab-btn { font-size: 10.5px; letter-spacing: .02em; padding: 8px 8px; } }
+    @container (max-width: 760px) { .case-tabs .tab-btn { font-size: 10px; letter-spacing: 0; padding: 7px 6px; } .case-tabs .tab-break { display: none; } }
     .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 220px; position: relative; z-index: 1; opacity: 0; transform: translateY(6px); transition: opacity .2s ease, transform .2s ease; }
     .tab-pane.active { opacity: 1; transform: translateY(0); }
 
@@ -306,6 +311,8 @@
         border-right: 1px solid #0d1c3d;
         position: relative;
     }
+    /* "Case Management System" under the logo: light letters on a gray plate */
+    #sidebar-system-name { display:inline-block; font-size:12.5px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#f1f5f9; background:#4b5563; border:1px solid #6b7280; border-radius:6px; padding:6px 12px; line-height:1.2; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
     #sidebar-header {
         padding: 24px 26px 22px;
         border-bottom: 1px solid #0d1c3d;

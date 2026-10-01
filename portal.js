@@ -17,7 +17,7 @@ function switchPortalTab(mode) {
         const type = mode === 'Admin' ? 'password' : 'text';
         if (pw.type !== type) pw.value = '';   // an admin password typed on the Admin tab is never shown on the Trainee tab
         pw.type = type;
-        pw.placeholder = mode === 'Admin' ? 'Enter the admin password' : 'Enter your Batch ID';
+        pw.placeholder = mode === 'Admin' ? 'Enter the admin password' : 'Your Batch ID, e.g. B300926';
     }
     if (mode === 'Admin') {
         if (adminTab) adminTab.classList.add('active');
@@ -44,6 +44,11 @@ function submitRegistration() {
     };
     if (!payload.fullName || !payload.batchId || !payload.username) { say("Please fill in your full name, Batch ID and username.", "error"); return; }
     if (!/\s/.test(payload.fullName)) { say("Please enter your first and last name.", "error"); return; }
+    // B + the date the batch started (DDMMYY): B30092026 or b 300926 are read as B300926 (canonicalBatchId in app.js)
+    const batch = typeof canonicalBatchId === 'function' ? canonicalBatchId(payload.batchId) : payload.batchId;
+    if (!batch) { say("Enter your Batch ID as B and the date your batch started (DDMMYY), e.g. B300926.", "error"); return; }
+    payload.batchId = batch;
+    const box = document.getElementById('reg-batchid'); if (box) box.value = batch;
 
     say("Submitting registration...", "info");
     fetch('/api/register', {
