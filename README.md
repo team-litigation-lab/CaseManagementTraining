@@ -316,7 +316,7 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
 ## 📝 New Intake (graded, and it creates the case)
 
-1. **📝 New Intake** (the top of the sidebar, or **📝 New intake** in the Intake folder).
+1. **📝 New Intake** (in the sidebar, under the cases, or **📝 New intake** in the Intake folder).
 2. **Pick the case type:** MVA, Slip and Fall, Premises Liability, Dog Bite or Medical Malpractice. That type's intake form opens. It follows the firm's intake sheet:
 
    | Case type | Follows | The case's type |
@@ -363,21 +363,39 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
 ## 🕑 Latest updates (search the Case Notes)
 
-**🕑 Latest Updates** in the sidebar (or the Case Library window's **🕑 Latest updates** tab) lists the saved cases, the most recently updated first. A trainee sees their own cases, and an Admin sees everyone's.
+**🕑 Latest Updates** in an Admin's sidebar (or the Case Library window's **🕑 Latest updates** tab) lists the saved cases, the most recently updated first. Admins see everyone's cases. Trainees don't get the sidebar button; in the Case Library window (Ctrl/Cmd+K) the tab shows them only their own cases.
 - Each case shows its **latest Case Note** (the latest by date), how many notes it has, and when it was last updated.
 - **The search box searches the Case Notes:** a note's text or date, for example "adjuster", "demand sent" or "10/01/2026". It shows the cases whose notes match, with the matching notes highlighted.
 - **Open** opens the case.
 - The server reads the notes only when this view asks (`/api/case-repository?updates=1&q=…`), never in the 15-second background refresh of the case list.
 - Code: "Latest updates" in `case-library.js` and in `functions/api/case-repository.js`.
 
-## ✕ Close Case (sidebar)
+## 🧭 The sidebar and the case's actions
 
-**✕ Close Case** closes the case in the editor and leaves it blank.
-- A saved case stays saved.
-- Anything not saved yet is lost, so it asks first when the case has a client name.
-- With nothing open, it says so.
-- It also leaves a Training Library case and Intake mode.
-- Code: `closeCase()` in `app.js`.
+**The sidebar**, top to bottom (`index.html`, `#sidebar-actions`):
+1. **Training program** (All programs, or one program).
+2. **The cases:** a trainee's **My cases**, or an Admin's **Case Library** with **🔍 Open Case Library** and **🕑 Latest Updates**.
+3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget and **📊 My Dashboard**.
+4. **Trainer tools** (Admins only): 📚 Training Library, 📞 Front Desk, 📥 Intake Folder, 📅 Firm Calendar, Export Case List.
+
+Trainees see only the first three groups, so their sidebar is the program, their cases and their work. They still reach the Firm Calendar through the case's **📅 Calendar** tab, and the Intake folder through a course link (`?intake=1`). **👁 Trainee view** shows a trainer the same.
+
+**The open case's actions** are in the bar at the bottom of the screen, under the case:
+- **✕ Close** closes the case and leaves the editor blank. **✕** at the top right of the case does the same.
+  - A saved case stays saved.
+  - Anything not saved yet is lost, so it asks first when the case has a client name.
+  - With nothing open, it says so.
+  - It also leaves a Training Library case and Intake mode.
+- **🗄 Archive** saves the case as a draft, with no Case ID yet.
+- **🗑 Discard Case** throws the case away, after asking:
+  - a case that was never saved is just cleared;
+  - a saved case or draft is deleted from the saved cases (the same as its 🗑 in My cases), and only its owner or an Admin can do that;
+  - a case file from the library can't be discarded (Close it instead).
+- **💾 Save Case** saves it (and gives it its Case ID).
+- **⟳ Update Case** saves the changes to a saved case that's open.
+- The autosave note sits between them.
+
+Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#capture-area`, so it's never part of a saved case.
 
 ## 🗑 Deleting trainees' cases (Master Control → Case Logs)
 
@@ -390,7 +408,7 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
 ## 📥 Intake folder (automatically checked and reviewed)
 
-A separate folder in the Case Repository for **intake files**, kept apart from the case files. Open it from the sidebar (**📥 Intake Folder**), from the Case Library window's **📥 Intake folder** tab, or with a course link ending `?intake=1`. Trainees see only their own intake files; Admins see every trainee's, with the trainee's name on each. Code: `intake-folder.js`, `functions/_intake.js` (checklist), `functions/_intake-review.js` (review), `/api/intake-files`.
+A separate folder in the Case Repository for **intake files**, kept apart from the case files. Admins open it from the sidebar's Trainer tools (**📥 Intake Folder**). Anyone can open it from the Case Library window's **📥 Intake folder** tab, or with a course link ending `?intake=1`. Trainees see only their own intake files; Admins see every trainee's, with the trainee's name on each. Code: `intake-folder.js`, `functions/_intake.js` (checklist), `functions/_intake-review.js` (review), `/api/intake-files`.
 
 **Two kinds of intake file:**
 - **Typed intakes.** **📝 New intake** opens the intake form (see **New Intake** above): saving it grades it and creates the case. Typed intakes saved in the folder earlier open in **Intake mode**, with the orange bar above the case.
@@ -428,7 +446,7 @@ Deleting an intake document also deletes its file from storage.
 
 ## 📅 Firm Calendar (attorney calendars)
 
-The CMS keeps the fictional firm's calendars, the way a firm's case management system does: one calendar for each attorney (**Atty. Marcus Reyes**, pre-litigation; **Atty. Elena Brooks**, litigation; **Atty. David Okafor**, intake) and a **Firm / Staff** calendar. It's a tab of the case, **📅 Calendar**, right after **Tasks**. The sidebar's **📅 Firm Calendar** button, and a course link with `?calendar=1`, open the same tab. All times are the firm's, Eastern; when the trainee's computer is on another time zone, events and the event form also show the trainee's own time (e.g. *9:00 PM – 10:00 PM GMT+8 your time*).
+The CMS keeps the fictional firm's calendars, the way a firm's case management system does: one calendar for each attorney (**Atty. Marcus Reyes**, pre-litigation; **Atty. Elena Brooks**, litigation; **Atty. David Okafor**, intake) and a **Firm / Staff** calendar. It's a tab of the case, **📅 Calendar**, right after **Tasks**. The **📅 Firm Calendar** button in an Admin's sidebar (Trainer tools), and a course link with `?calendar=1`, open the same tab. All times are the firm's, Eastern; when the trainee's computer is on another time zone, events and the event form also show the trainee's own time (e.g. *9:00 PM – 10:00 PM GMT+8 your time*).
 
 This is the CMS's only calendar. It replaced the separate Training Calendar (and its `.ics` downloads): the attorney's Google Calendar connection moved here, and events trainees had saved in the Training Calendar are copied onto the **Firm / Staff** calendar, at the same moments in firm time, the first time they open this one. The Training Calendar's dated training schedule was dropped; the attorneys' standing schedule below plays that part.
 
@@ -471,7 +489,7 @@ Until the setup below is done, the rail says so, and the subscribe links and **A
 
 A timer for billable and non-billable hours, the way a firm's case management system tracks time.
 
-- **Sidebar timer** (under **📅 Firm Calendar**): **▶ Start timer** starts on the open case, billable, as *Case review & strategy*. With no case open, it starts non-billable, as *Filing & administrative*. The running time shows on every screen, with **⏸ Pause** / **▶ Resume**, **■ Stop**, and a **$ Billable / Non-billable** switch.
+- **Sidebar timer** (under **📄 Download Case Summary**): **▶ Start timer** starts on the open case, billable, as *Case review & strategy*. With no case open, it starts non-billable, as *Filing & administrative*. The running time shows on every screen, with **⏸ Pause** / **▶ Resume**, **■ Stop**, and a **$ Billable / Non-billable** switch.
 - **⏱ Time tab** (right after **📅 Calendar**):
   - **The timer's details:** the case (**Link to the open case**, **Unlink**, or type a client name), **$ Billable / Non-billable**, the activity and **What you did**. They can be changed while it runs. **Stop & save** saves it, and **Discard** throws it away.
   - **Add time by hand:** date, hours (e.g. `0.5`), and the same details. Use it for work done away from the timer.
@@ -521,7 +539,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
     - a rate-limited or rejected key rests and the request moves to the next key at once; a busy key hands over; a missing model falls through; a refused region is explained;
     - `/api/call-ai`: sign-in required, bad and oversized bodies refused, the review's JSON mode, the per-user limit (and it doesn't limit anyone else), "busy" when every key is at its limit, the Admin-only status;
     - results are saved as `practice` or `drill`, including in a table made before the `mode` column.
-- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). On every call with a hard-to-say name it checks that the name is shown only the way it sounds until it's spelled, that the spelling and the NATO read-back appear, and that skipping them costs the identifier points. It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the debrief needs a file and an authentication decision, scores 97 from the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads. It checks that trainees never see the Training Library: search results carry case numbers, not Training Library tags; the Case Library window has no Training Library filter; nothing on screen says "Training Library" on a library case or a practice copy; and `openTrainingLibrary()` doesn't open it. It checks the **Trainee view**: a trainer's screen switches to a trainee's (no Training Library, Master Control or Caller scenarios buttons, nothing saying "Training Library"), and **Back to trainer view** restores it. It checks the **Intake folder**: a typed intake (from the intake form) saved from Intake mode (autosave and Save Case file it there, never as a case), reviewed, moved to the case files, and an uploaded intake document filed and reviewed. Finally, it checks that Caller scenarios are for trainers only: a trainee gets no Caller scenarios button and no panel, on a library case or a practice copy. For an Admin, the button opens the panel, which has one for every caller scenario on every file, and one for each of the file's simulator callers, with the caller's name, number and the right handling. Printing all of them renders every simulator caller.
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points only on same-name files). On every call with a hard-to-say name it checks that the name is shown only the way it sounds until it's spelled, that the spelling and the NATO read-back appear, and that skipping them costs the identifier points. It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the debrief needs a file and an authentication decision, scores 97 from the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads, and that a trainee's sidebar is the program, their cases, then New Intake, Download Case Summary, the timer and My Dashboard (no Latest Updates, Intake Folder, Firm Calendar or other trainer tools), with Close, Archive, Discard Case, Save Case and Update Case in the bar at the bottom of the case and ✕ at its top right. An Admin's sidebar has Latest Updates and the Trainer tools; Trainee view hides them. It checks that trainees never see the Training Library: search results carry case numbers, not Training Library tags; the Case Library window has no Training Library filter; nothing on screen says "Training Library" on a library case or a practice copy; and `openTrainingLibrary()` doesn't open it. It checks the **Trainee view**: a trainer's screen switches to a trainee's (no Training Library, Master Control or Caller scenarios buttons, nothing saying "Training Library"), and **Back to trainer view** restores it. It checks the **Intake folder**: a typed intake (from the intake form) saved from Intake mode (autosave and Save Case file it there, never as a case), reviewed, moved to the case files, and an uploaded intake document filed and reviewed. Finally, it checks that Caller scenarios are for trainers only: a trainee gets no Caller scenarios button and no panel, on a library case or a practice copy. For an Admin, the button opens the panel, which has one for every caller scenario on every file, and one for each of the file's simulator callers, with the caller's name, number and the right handling. Printing all of them renders every simulator caller.
 
 - **Training Library edits** (`.github/scripts/library-edit.cjs`, in the same job): the real `mock-case-edits.js` on SQLite, with a trainer and a trainee in the browser. It checks that:
   - a trainer's library case opens editable and they type straight into it; a trainee's, and a trainer's in Trainee view, is view only;
@@ -551,7 +569,8 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - Premises Liability, Dog Bite and Medical Malpractice set their case types and parties;
   - a failed save says so and leaves the case in the editor;
   - the Intake folder's New intake creates the case the same way;
-  - ✕ Close Case asks first and leaves the editor blank, and with nothing open it says so.
+  - ✕ (top right of the case) and Close (the bar at the bottom) ask first and leave the editor blank, and with nothing open they say so;
+  - 🗑 Discard Case: with nothing open it says so; a case never saved is cleared without deleting anything; a saved case is deleted after asking, and one the server refuses to delete stays open.
 
 - **Case Logs delete** (`.github/scripts/case-logs.cjs`, in the same job): Master Control as an Admin. It checks that:
   - every case has a Delete button;
@@ -565,7 +584,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - a trainee gets their own cases and an Admin gets everyone's, newest first, each with its latest Case Note (by date, not by row);
   - the search finds notes by text (across `&nbsp;` and tags) or date, only in cases the user may see. SQL wildcards are searched as text, and a damaged saved case doesn't break the list;
   - the regular case list still carries no notes;
-  - in the browser: the sidebar button opens the view, typing searches and highlights the match, and Open opens the case.
+  - in the browser: a trainee gets no sidebar button; the view lists their cases, typing searches and highlights the match, and Open opens the case.
 
 - **Live voice calls** (`.github/scripts/livecall.cjs`, in the same job): the real token endpoint, with Google answered by the test, and the drill in a browser with a fake microphone and a fake Gemini Live connection.
   - **Endpoint:** "not set up" without a key. The token is single-use and locks in the right caller: their answers, a matching voice, and transcripts on both sides. It also checks:
@@ -640,7 +659,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - the subscribe feed;
   - editing and deleting;
   - another trainee can't see or delete the event;
-  - the sidebar button opens the tab, and typing in it isn't saved as a case edit;
+  - trainees get no sidebar button (it's in the Admins' Trainer tools); `openFirmCalendar()` opens the tab, and typing in it isn't saved as a case edit;
   - no select or contenteditable was added to the page.
 
 To run them locally: `node .github/scripts/check-site.mjs`, `node .github/scripts/check-data.mjs`, `node .github/scripts/call-ai.mjs`, `node .github/scripts/smoke.cjs` and `node .github/scripts/calendar.cjs` (the last two need Playwright; `calendar.cjs` needs Node 22.13 or later for `node:sqlite`).

@@ -917,10 +917,10 @@
         }
 
         /* ---------- Close Case ----------
-           Sidebar → ✕ Close Case: closes the case in the editor and leaves it blank. A saved case
-           stays saved; anything not saved yet is lost, so it asks first when the case has a client
-           name. Goes through newCase() (and the modules that follow it: Intake mode, the calendar
-           tab, the timer). */
+           ✕ at the top right of the case, or Close in the bar at the bottom of the case: closes the
+           case in the editor and leaves it blank. A saved case stays saved; anything not saved yet is
+           lost, so it asks first when the case has a client name. Goes through newCase() (and the
+           modules that follow it: Intake mode, the calendar tab, the timer). */
         function closeCase() {
             const libCase = !!(window.mockSnapshot && window.mockSnapshot().mockId);
             const content = hasCaseContent();
@@ -930,6 +930,33 @@
             window.newCase();
             if (window.mockSnapshot && window.mockSnapshot().mockId) return; // an Admin kept unsaved changes to a Training Library case
             showToast('Case closed.', 'info');
+        }
+
+        /* ---------- Discard Case ----------
+           🗑 Discard Case in the bar at the bottom of the case: throws the open case away. A saved case
+           or draft is deleted from the Case Repository (the same as its 🗑 in My cases) and the editor
+           goes blank; a case that was never saved is just cleared. Asks first either way. */
+        async function discardCase() {
+            if (window.mockSnapshot && window.mockSnapshot().mockId) { showToast('A case file from the library can\'t be discarded. Use Close instead.', 'info'); return; }
+            if (document.body.classList.contains('intake-mode')) { showToast('This is an intake, not a case. Use the Intake bar above the case.', 'info'); return; }
+            const name = (document.getElementById('client-name-field').textContent || '').trim().slice(0, 80);   // as typed (the field shows it in capitals)
+            if (currentCaseId === null) {
+                if (!hasCaseContent()) { showToast('No case is open.', 'info'); return; }
+                if (!confirm('Discard this case? It was never saved, so everything typed in it is lost.')) return;
+            } else {
+                if (!currentCaseCanEdit) { showToast('Only the trainee who saved this case, or an Admin, can discard it.', 'error'); return; }
+                if (!confirm('Discard ' + (name || 'this case') + '? It is deleted from the saved cases and can\'t be undone.')) return;
+                try {
+                    const res = await fetch('/api/case-repository?id=' + encodeURIComponent(currentCaseId), { method: 'DELETE', credentials: 'include' });
+                    const data = await res.json();
+                    if (!data || !data.success) { showToast((data && data.error) || 'Could not discard that case.', 'error'); return; }
+                } catch (e) { showToast('Network error discarding that case.', 'error'); return; }
+                currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true;
+                refreshRepoCache();
+            }
+            document.getElementById('client-name-field').innerText = ''; // already asked: newCase() needn't ask again
+            window.newCase();
+            showToast('Case discarded.', 'info');
         }
 
         /* ---------- Export My Calendar (.ics) ----------

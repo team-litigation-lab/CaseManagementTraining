@@ -345,10 +345,21 @@ const SAVED = [
     // One calendar: the Firm Calendar (the Calendar tab); no separate Training Calendar, no .ics downloads
     if (await page.locator('#sidebar-actions button:has-text(".ics")').count()) fail('the sidebar still offers .ics downloads');
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
-    if (!(await page.locator('#sidebar-actions button:has-text("Firm Calendar")').count()) || !(await page.locator('#tab-calendar').count())) fail('the Firm Calendar button or the Calendar tab is missing');
+    if (!(await page.locator('#tab-calendar').count())) fail('the Calendar tab is missing');
+    // A trainee's sidebar: the program, their cases, then New Intake, Download Case Summary, the timer and My Dashboard.
+    // No Latest Updates, Intake Folder, Firm Calendar or other trainer tools; the case's own actions are at the bottom of the case.
+    const side = await page.evaluate(() => ({
+        groups: [...document.querySelectorAll('#sidebar-actions > .sb-group')].filter(g => g.offsetParent).map(g => g.id),
+        work: [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id),
+        hidden: ['cl-updates-btn', 'intake-open-btn', 'fc-open-btn', 'lib-open-btn', 'fdd-open-btn', 'export-repo-btn', 'cl-open-btn'].filter(id => (document.getElementById(id) || {}).offsetParent),
+        oldButtons: [...document.querySelectorAll('#sidebar-actions button')].filter(b => /save case|archive|update saved|close case/i.test(b.textContent)).length,
+        bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
+        x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
+    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,dash-open-btn' || side.hidden.length || side.oldButtons
+        || side.bar.join('|') !== '✕ Close|🗄 Archive|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
 
     // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files
-    await page.click('#intake-open-btn'); await page.waitForTimeout(400);
+    await page.evaluate(() => openIntakeFolder()); await page.waitForTimeout(400);   // trainees: from a course link (?intake=1); the sidebar button is for Admins
     if (!(await page.isVisible('#cl-tabs button.on:has-text("Intake folder")'))) fail('the Intake folder button did not open the Intake folder tab');
     // New intake opens the intake form (intake-form.js; new-matter.cjs tests it in full: saving it creates the case)
     await page.click('[data-if="new"]');
@@ -362,7 +373,7 @@ const SAVED = [
     await page.click('#date-of-loss-field'); await page.keyboard.type('01152026');
     const casesBefore = saved.length;
     await page.evaluate(() => autoSaveProgress('interval')); await page.waitForTimeout(400);
-    await page.click('#sidebar-actions button:has-text("Save Case")'); await page.waitForTimeout(800);
+    await page.click('#case-actions-bar button:has-text("Save Case")'); await page.waitForTimeout(800);
     if (saved.length !== casesBefore) fail('autosave or Save Case in Intake mode saved a case instead of the intake');
     const intakeSave = intakePosts.filter(b => b.action === 'save').pop();
     if (!intakeSave || intakeSave.clientName.toLowerCase() !== 'intake client' || intakeSave.content.dateOfLoss !== '01/15/2026' || intakeSave.content.intake.phone.replace(/\D/g, '') !== '5550100') fail(`the intake was not saved with its fields (${JSON.stringify(intakeSave && { n: intakeSave.clientName, dol: intakeSave.content.dateOfLoss, phone: intakeSave.content.intake && intakeSave.content.intake.phone })})`);
@@ -410,6 +421,9 @@ const SAVED = [
     await admin.addInitScript(() => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'trainer-ci', fullName: 'CI Trainer', batchId: 'B1', userType: 'Admin' })));
     await admin.goto(base, { waitUntil: 'load' }); await admin.waitForTimeout(1200);
     if (!(await admin.isVisible('#cl-open-btn'))) fail('an Admin lost the Open Case Library button');
+    const tools = await admin.evaluate(() => ({ updates: !!(document.getElementById('cl-updates-btn') || {}).offsetParent,
+        tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
+    if (!tools.updates || tools.tools.join() !== 'lib-open-btn,fdd-open-btn,intake-open-btn,fc-open-btn,export-repo-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');
@@ -426,8 +440,9 @@ const SAVED = [
     const tv = await admin.evaluate(() => ({ type: getSession().userType, real: getRealSession().userType, bar: !!document.querySelector('#trainee-view-bar'),
         lib: !!(document.getElementById('lib-open-btn') || {}).offsetParent, mc: !!document.querySelector('#session-footer button[onclick="openAdminDashboard()"]'),
         calls: !!document.querySelector('#mock-banner button[onclick="openCallsPanel()"]'), text: /training library/i.test(document.body.innerText),
-        openLib: !!(document.getElementById('cl-open-btn') || {}).offsetParent, viewOnly: mockIsViewOnly() }));
-    if (tv.type !== 'Trainee' || tv.real !== 'Admin' || !tv.bar || tv.lib || tv.mc || tv.calls || tv.text || tv.openLib || !tv.viewOnly) fail(`Trainee view doesn't look like a trainee's screen: ${JSON.stringify(tv)}`);
+        openLib: !!(document.getElementById('cl-open-btn') || {}).offsetParent, viewOnly: mockIsViewOnly(),
+        tools: !!(document.getElementById('sb-trainer') || {}).offsetParent, updates: !!(document.getElementById('cl-updates-btn') || {}).offsetParent }));
+    if (tv.type !== 'Trainee' || tv.real !== 'Admin' || !tv.bar || tv.lib || tv.mc || tv.calls || tv.text || tv.openLib || !tv.viewOnly || tv.tools || tv.updates) fail(`Trainee view doesn't look like a trainee's screen: ${JSON.stringify(tv)}`);
     await admin.click('#pane-notes .add-btn');
     await admin.click('#note-body tr:last-child td:nth-child(3) [contenteditable]');
     await admin.keyboard.type('Typed right before trainer view');
