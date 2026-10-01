@@ -203,8 +203,31 @@
             document.getElementById('tab-' + id).classList.add('active-tab');
         }
 
+        /* Case statuses (the #phase-selector options). Cases saved before the firm's
+           status list came in carry the old phase names; they open on the matching
+           status. The saved phase column is the display text (upper case), so the
+           lookup ignores case. functions/_utils.js groups the same statuses by stage. */
+        const LEGACY_PHASES = {
+            'investigation': 'Treating', 'treatment': 'Treating', 'demand review': 'Pending Demand', 'bi demand': 'BI Demanded',
+            'bi settlement nego': 'BI Settlement Negotiations', 'um demand': 'UM or UIM Demanded', 'um settlement': 'UM or UIM Settlement Negotiations',
+            'lien negotiations': 'BI Settled', 'settled': 'BI Settled', 'litigation': 'Litigation Initiated', 'discovery': 'Litigation Discovery',
+            'post trial': 'Trial', 'dropped case': 'Dropped', 'referred out': 'Referral'
+        };
+        function normalizePhase(val) {
+            const v = String(val || '').trim(); if (!v) return v;
+            const sel = document.getElementById('phase-selector');
+            const opts = sel ? Array.from(sel.options).map(o => o.value) : [];
+            return opts.find(o => o.toLowerCase() === v.toLowerCase()) || LEGACY_PHASES[v.toLowerCase()] || v;
+        }
+        window.normalizePhase = normalizePhase;
+        // A saved select value the status list no longer has (an old phase name): put the matching status in.
+        function fixPhaseSelect(selects, saved) {
+            const sel = selects.find(el => el.id === 'phase-selector'); if (!sel) return;
+            const v = saved[selects.indexOf(sel)];
+            if (v && sel.value !== v) sel.value = normalizePhase(v);
+        }
         function updatePhaseDisplay(val) {
-            document.getElementById('display-phase').innerText = val.toUpperCase();
+            document.getElementById('display-phase').innerText = normalizePhase(val).toUpperCase();
         }
 
         function handleOtherSystem(selectId, otherInputId, revertId) {
@@ -672,6 +695,7 @@
             (content.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
             const selects = posSels(root);
             (content.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
+            fixPhaseSelect(selects, content.sels || []);
             applyKeyed(content.keyed, root);
 
             const mainType = $('main-case-type'), mainOther = $('main-case-other'), mainRevert = $('main-revert');
@@ -840,6 +864,7 @@
                 (data.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
                 const selects = posSels();
                 (data.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
+                fixPhaseSelect(selects, data.sels || []);
                 applyKeyed(data.keyed);
 
                 if (data.caseTypeOtherVisible && document.getElementById('main-case-type') && document.getElementById('main-case-other')) {

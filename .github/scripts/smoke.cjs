@@ -363,7 +363,9 @@ const SAVED = [
     if (!intakeSave || intakeSave.clientName.toLowerCase() !== 'intake client' || intakeSave.content.dateOfLoss !== '01/15/2026' || intakeSave.content.intake.phone.replace(/\D/g, '') !== '5550100') fail(`the intake was not saved with its fields (${JSON.stringify(intakeSave && { n: intakeSave.clientName, dol: intakeSave.content.dateOfLoss, phone: intakeSave.content.intake && intakeSave.content.intake.phone })})`);
     if (!intakePosts.some(b => b.action === 'review')) fail('saving the intake did not start the automatic review');
     if (!/checklist \d+%/.test(await page.textContent('#ib-state'))) fail('the Intake bar does not show the checklist score');
-    await page.click('#intake-bar [data-ib="move"]'); await page.waitForTimeout(800);
+    await page.click('#intake-bar [data-ib="move"]');
+    // the move is three saves in a row (the intake, the case, then marking the intake as moved): wait for them, not a fixed time
+    for (let t = 0; t < 100 && !(saved.length > casesBefore && intakePosts.some(b => b.action === 'moved')); t++) await page.waitForTimeout(100);
     const moved = saved[saved.length - 1];
     if (saved.length !== casesBefore + 1 || !moved.finalize || !intakePosts.some(b => b.action === 'moved' && b.caseRepositoryId === 1)) fail('Move to case files did not save the case and mark the intake as moved');
     if (await page.evaluate(() => document.body.classList.contains('intake-mode'))) fail('the editor stayed in Intake mode after Move to case files');

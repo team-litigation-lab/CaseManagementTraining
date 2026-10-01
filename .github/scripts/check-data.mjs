@@ -31,7 +31,8 @@ const { MOCK_CASES = [], DRILL_CALLS = [], MOCK_PROGRAMS = [], MOCK_FIRM = {}, M
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const app = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
-const optionsIn = (src, id) => { const m = src.match(new RegExp(`id="${id}"[^>]*>([\\s\\S]*?)</select>`)); return m ? [...m[1].matchAll(/<option[^>]*?(?:value="([^"]*)")?[^>]*>([^<]*)</g)].map(o => o[1] || o[2].trim()) : []; };
+// an option's value, or its text when it has none (the status list indents its labels, so the value is what counts)
+const optionsIn = (src, id) => { const m = src.match(new RegExp(`id="${id}"[^>]*>([\\s\\S]*?)</select>`)); return m ? [...m[1].matchAll(/<option([^>]*)>([^<]*)</g)].map(o => { const v = o[1].match(/value="([^"]*)"/); return v ? v[1] : o[2].trim(); }) : []; };
 const PHASES = optionsIn(html, 'phase-selector');
 const TYPES = optionsIn(html, 'main-case-type');
 const LIEN_TYPES = ['Prior Atty Lien', 'Medical Lien', 'HI Subro', 'Funding', 'Other'];

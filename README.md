@@ -226,6 +226,21 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 - The people the client authorized to discuss the case.
 - For each: their relationship, a phone number, whether the authorization is on file, and what they may discuss.
 
+**Case status** (the dropdown under Case ID, shown large in the case header)
+- The firm's statuses, with sub-statuses indented under their stage:
+  - Intake · Treating · Pending Demand (Demand Writing; BI Demanded, with Settlement Negotiations and Settled; UM or UIM Demanded, with Settlement Negotiations and Settled)
+  - Disbursement · Closed · Storage
+  - Pending Litigation/ Lit (Litigation Initiated, Service, Pending Response, Litigation Discovery, Deposition, Mediation, Arbitration, Trial Prep, Trial)
+  - Litigation review (Litigation Initiated, Service, Pending Response, Litigation Discovery, Deposition, Pre-trial, Trial, Litigation Settled)
+  - Drop Review (Pending Drop, Dropped, Dropped Lien, Referral)
+- A name that appears under two stages is saved with its stage, so the header says which one: BI Settlement Negotiations / UM or UIM Settled, and Litigation review – Service.
+- **Older cases:** a case saved with an older phase name opens on the matching status: Investigation and Treatment → Treating, Demand Review → Pending Demand, Bi Demand → BI Demanded, BI Settlement Nego → BI Settlement Negotiations, UM Demand → UM or UIM Demanded, UM settlement → UM or UIM Settlement Negotiations, Lien Negotiations and Settled → BI Settled, Litigation → Litigation Initiated, Discovery → Litigation Discovery, Post Trial → Trial, Dropped Case → Dropped, Referred Out → Referral.
+- **Automated review:** the case review's stage checks group the statuses by stage (`PHASE_STAGES` in `functions/_utils.js`):
+  - Treating on: the date of loss is expected.
+  - Any demand status on: the attorney, case manager and documents are expected.
+  - Litigation statuses: the litigation dates are expected.
+  - The saved phase is matched regardless of case (it's stored in capitals), which the earlier list's check didn't do.
+
 **Primary Injury** (Profile, beside the Case Narrative)
 - The client's primary injury, the body parts involved, the injury type (soft tissue, fracture, head injury / concussion, spine / disc, joint / ligament / tendon tear, laceration / bite / scarring, burn, multiple injuries, wrongful death, other), and surgery (no, recommended, scheduled, completed).
 - Also any prior injury to the same area, and the diagnosis and details (imaging, restrictions, future care).

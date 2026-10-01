@@ -83,7 +83,7 @@ const failures = []; const fail = (m) => failures.push(m);
         };
     }, OLD);
     const want = { name: 'Olive Oldcase', dol: '01/15/2026', agency: 'Riverton PD', number: 'RPD-2026-0042', narrative: 'Rear-ended at a red light.', employment: 'Retired',
-        story: 'Client was driving home from work.', notes: 'Gap in care in March.', facility: 'Riverside Ortho', specialty: 'Ortho', chrono: '02/01/2026', phase: 'Treatment',
+        story: 'Client was driving home from work.', notes: 'Gap in care in March.', facility: 'Riverside Ortho', specialty: 'Ortho', chrono: '02/01/2026', phase: 'Treating', // saved as "Treatment" before the firm's statuses: opens on Treating
         location: '', parties: 0, kind: 'Police Report', tab: 'Police Report' };
     Object.keys(want).forEach(k => { if (old[k] !== want[k]) fail(`old saved case: ${k} is "${old[k]}", expected "${want[k]}"`); });
 
@@ -96,10 +96,30 @@ const failures = []; const fail = (m) => failures.push(m);
             heads: [...document.querySelectorAll('#pane-medical .section-head')].map(h => h.textContent) };
     });
     ['MRI / Imaging', 'Physical Therapy (PT)'].forEach(o => { if (!opts.spec.includes(o)) fail(`treatment specialty "${o}" missing`); });
+    // the firm's case statuses, in order (sub-statuses under their stage)
+    const STATUSES = ['Intake', 'Treating', 'Pending Demand', 'Demand Writing', 'BI Demanded', 'BI Settlement Negotiations', 'BI Settled', 'UM or UIM Demanded',
+        'UM or UIM Settlement Negotiations', 'UM or UIM Settled', 'Disbursement', 'Closed', 'Storage', 'Pending Litigation/ Lit', 'Litigation Initiated', 'Service',
+        'Pending Response', 'Litigation Discovery', 'Deposition', 'Mediation', 'Arbitration', 'Trial Prep', 'Trial', 'Litigation review',
+        'Litigation review – Litigation Initiated', 'Litigation review – Service', 'Litigation review – Pending Response', 'Litigation review – Litigation Discovery', 'Litigation review – Deposition',
+        'Pre-trial', 'Litigation review – Trial', 'Litigation Settled', 'Drop Review', 'Pending Drop', 'Dropped', 'Dropped Lien', 'Referral'];
+    if (opts.phases.join('|') !== STATUSES.join('|')) fail(`the case statuses aren't the firm's list: ${opts.phases.join(', ')}`);
+    // a case saved with an old phase name opens on the matching status (select and header)
+    const legacy = await page.evaluate(() => {
+        const sels = [...document.querySelectorAll('select')].filter(el => !el.closest('[data-keyed]'));
+        const i = sels.indexOf(document.getElementById('phase-selector'));
+        const out = {};
+        for (const [old, stored] of [['Bi Demand', 'BI DEMAND'], ['Treatment', 'TREATMENT'], ['Referred Out', 'REFERRED OUT'], ['Discovery', 'DISCOVERY']]) {
+            const content = buildCaseContentPayload(); content.sels = content.sels.slice(); content.sels[i] = old;
+            applyCaseContentToDOM(content, document); updatePhaseDisplay(stored);
+            out[old] = [document.getElementById('phase-selector').value, document.getElementById('display-phase').innerText];
+        }
+        return out;
+    });
+    const legacyWant = { 'Bi Demand': 'BI Demanded', 'Treatment': 'Treating', 'Referred Out': 'Referral', 'Discovery': 'Litigation Discovery' };
+    for (const [old, now] of Object.entries(legacyWant)) if (legacy[old][0] !== now || legacy[old][1] !== now.toUpperCase()) fail(`a case saved as "${old}" opens as ${JSON.stringify(legacy[old])}, expected ${now}`);
     // staff roles on Notes and Tasks rows
     const staff = await page.evaluate(() => { addRow('note-body'); const tr = document.getElementById('note-body').lastElementChild; const o = [...tr.querySelector('select').options].map(x => x.value); tr.remove(); return o; });
     ['PD Specialist', 'Claims Specialist', 'Lien Negotiator', 'Closer'].forEach(o => { if (!staff.includes(o)) fail(`staff role "${o}" missing from Notes and Tasks (${staff.join(', ')})`); });
-    ['Discovery', 'Mediation', 'Trial Prep', 'Trial', 'Post Trial', 'Dropped Case', 'Referred Out'].forEach(o => { if (!opts.phases.includes(o)) fail(`phase "${o}" missing`); });
     if (!opts.intake) fail('the Doc Hub has no Intake category');
     if (!opts.heads.includes('Other Treatment Notes') || opts.heads.includes('Treatment Notes')) fail(`the Treatment tab's notes aren't "Other Treatment Notes" (${opts.heads.join(' | ')})`);
     await page.evaluate(() => { blankCaseEditorContent(); });
