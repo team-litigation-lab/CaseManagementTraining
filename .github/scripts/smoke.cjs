@@ -350,11 +350,15 @@ const SAVED = [
     // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files
     await page.click('#intake-open-btn'); await page.waitForTimeout(400);
     if (!(await page.isVisible('#cl-tabs button.on:has-text("Intake folder")'))) fail('the Intake folder button did not open the Intake folder tab');
-    await page.click('[data-if="new"]'); await page.waitForTimeout(300);
-    if (!(await page.evaluate(() => document.body.classList.contains('intake-mode'))) || !(await page.isVisible('#intake-bar'))) fail('New intake did not switch the editor to Intake mode');
-    await page.click('#client-name-field'); await page.keyboard.type('Intake Client');
-    await page.click('#client-phone-field'); await page.keyboard.type('5550100');
-    await page.click('#date-of-loss-field'); await page.keyboard.type('01152026');
+    // New intake opens the client intake form (intake-form.js; new-matter.cjs tests it in full); completed, the case opens in Intake mode
+    await page.click('[data-if="new"]');
+    await page.waitForSelector('#nm-modal.open .nm-card', { timeout: 5000 }).catch(() => fail('New intake did not open the client intake form'));
+    await page.click('#nm-modal [data-form="slipfall"]');
+    await page.fill('#nm-first', 'Intake'); await page.fill('#nm-last', 'Client');
+    await page.type('#nm-cellPhone', '5550100'); await page.type('#nm-dol', '01152026');
+    await page.fill('#nm-description', 'Slipped on a wet floor at the store.');
+    await page.click('#nm-modal [data-nm="complete"]'); await page.waitForTimeout(300);
+    if (!(await page.evaluate(() => document.body.classList.contains('intake-mode'))) || !(await page.isVisible('#intake-bar'))) fail('the completed intake form did not open the editor in Intake mode');
     const casesBefore = saved.length;
     await page.evaluate(() => autoSaveProgress('interval')); await page.waitForTimeout(400);
     await page.click('#sidebar-actions button:has-text("Save Case")'); await page.waitForTimeout(800);
@@ -366,8 +370,9 @@ const SAVED = [
     await page.click('#intake-bar [data-ib="move"]');
     // the move is three saves in a row (the intake, the case, then marking the intake as moved): wait for them, not a fixed time
     for (let t = 0; t < 100 && !(saved.length > casesBefore && intakePosts.some(b => b.action === 'moved')); t++) await page.waitForTimeout(100);
-    const moved = saved[saved.length - 1];
-    if (saved.length !== casesBefore + 1 || !moved.finalize || !intakePosts.some(b => b.action === 'moved' && b.caseRepositoryId === 1)) fail('Move to case files did not save the case and mark the intake as moved');
+    // the move's own save is the first one, and final; the one-minute autosave may then update that same case (id 1), never add another
+    const afterMove = saved.slice(casesBefore), moved = afterMove[0];
+    if (!moved || !moved.finalize || afterMove.slice(1).some(b => b.id !== 1) || !intakePosts.some(b => b.action === 'moved' && b.caseRepositoryId === 1)) fail(`Move to case files did not save the case and mark the intake as moved (${JSON.stringify(afterMove.map(b => ({ id: b.id, finalize: !!b.finalize, isDraft: !!b.isDraft })))})`);
     if (await page.evaluate(() => document.body.classList.contains('intake-mode'))) fail('the editor stayed in Intake mode after Move to case files');
     // an uploaded intake document is filed and reviewed
     await page.evaluate(() => openIntakeFolder()); await page.waitForTimeout(300);

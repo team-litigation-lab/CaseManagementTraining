@@ -80,6 +80,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/library-pdf.cjs
+      - name: New Matter intake form (the five intake sheets fill a new case)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/new-matter.cjs
       - name: Front Desk Drill live voice calls (token endpoint, call in a browser)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

@@ -52,6 +52,8 @@
             </div>
         </div>
         <div class="p-6 flex-1 overflow-y-auto custom-scrollbar" id="sidebar-actions" style="flex:1;">
+            <!-- New Matter: the client intake form (intake-form.js); a new case opens filled in from it -->
+            <button id="nm-open-btn" onclick="openNewMatter()" class="w-full bg-white hover:bg-orange-50 text-[#0f2148] py-3 rounded-lg font-black text-xs uppercase shadow-lg mb-4 border-2 border-orange-500">＋ New Matter</button>
             <button onclick="requestDownload()" class="w-full bg-[#f97316] hover:bg-orange-700 text-white py-3 rounded-lg font-bold text-xs uppercase shadow-lg mb-4">Download Case Summary (PDF)</button>
             <button onclick="openFirmCalendar()" class="w-full border border-orange-500 text-orange-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-2">📅 Firm Calendar</button>
             <!-- the billable / non-billable timer (time-tracker.js fills it) -->
@@ -158,6 +160,9 @@
             </div>
 
             <div id="pane-profile" class="tab-pane active">
+                <!-- The client intake form this case was opened from (＋ New Matter, intake-form.js). Saved by id (data-keyed);
+                     shows only when the case has one. The form's answers are kept as JSON in the hidden field. -->
+                <div id="kx-intake" data-keyed class="no-print"><div contenteditable="true" data-k="data" style="display:none" aria-hidden="true"></div><div class="io-bar" style="display:contents"></div></div>
                 <div id="profile-grid" class="grid grid-cols-3 gap-8">
                     <div class="space-y-6">
                         <div class="pdf-card shadow-sm"><div class="section-head">Identity</div>
@@ -1023,6 +1028,7 @@
     <script src="case-library.js"></script>
     <script src="intake-folder.js"></script>
     <script src="case-sections.js"></script>
+    <script src="intake-form.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>
     <script src="guest-access.js"></script>

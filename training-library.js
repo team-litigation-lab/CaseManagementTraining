@@ -414,6 +414,8 @@
     function cells(tr) { return [...tr.children]; }
     function editIn(td) { return td && td.querySelector('[contenteditable]'); }
     function selIn(td) { return td && td.querySelector('select'); }
+    // The New Matter intake form (intake-form.js) fills a new case with the same helpers.
+    window.caseFill = { setVal, set, fieldFor, cardByHead, setOther, added, cells, editIn, selIn };
 
     function fillCase(c) {
         const header = document.querySelector('#capture-area .header-card');

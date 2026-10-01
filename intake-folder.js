@@ -4,11 +4,13 @@
    A separate folder in the Case Repository for intake files
    (Case Library → 📥 Intake folder, or the sidebar button, or
    ?intake=1). Two kinds of file:
-     - Typed intakes: 📝 New intake opens the case editor in
-       Intake mode (the orange bar above the case). Saving files
-       it in the Intake folder, not the case files: Save Case,
-       Archive and autosave all save the intake while the bar is
-       showing. 📂 Move to case files turns it into a case.
+     - Typed intakes: 📝 New intake opens the client intake form
+       (intake-form.js); when it's complete, the case editor opens
+       in Intake mode (the orange bar above the case), filled in
+       from it. Saving files it in the Intake folder, not the case
+       files: Save Case, Archive and autosave all save the intake
+       while the bar is showing. 📂 Move to case files turns it
+       into a case.
      - Intake documents: ⬆ Upload a PDF or image of an intake.
    Each save or upload is checked against the intake checklist
    (functions/_intake.js) and then reviewed automatically by
@@ -241,7 +243,7 @@
         if (!list.length) {
             el.innerHTML = err + `<p class="cl-hint">${(F.files || []).length
                 ? 'No intake files match.'
-                : (isAdmin() ? 'No trainee has saved an intake file yet.' : 'Nothing here yet. Use <b>📝 New intake</b> to type one in the case editor, or <b>⬆ Upload intake document</b> to add a PDF or image of an intake sheet.')}</p>`;
+                : (isAdmin() ? 'No trainee has saved an intake file yet.' : 'Nothing here yet. Use <b>📝 New intake</b> to fill in a client intake form (the case editor then opens filled in from it), or <b>⬆ Upload intake document</b> to add a PDF or image of an intake sheet.')}</p>`;
             return;
         }
         el.innerHTML = err + list.map(rowHTML).join('');
@@ -304,7 +306,7 @@
         if (!t) return;
         const a = t.dataset.if, id = +t.dataset.id;
         if (a === 'filter') { F.filter = t.dataset.v; repaint(); }
-        else if (a === 'new') startIntake();
+        else if (a === 'new') { if (typeof window.openNewMatter === 'function') { if (window.closeCaseLibrary) closeCaseLibrary(); window.openNewMatter({ intake: true }); } else startIntake(); }
         else if (a === 'upload') { const input = $id('if-file'); if (input) { input.value = ''; input.click(); } }
         else if (a === 'toggle') { if (e.target.closest('.act')) return; F.open = F.open === id ? null : id; paintList(); }
         else if (a === 'edit') { e.stopPropagation(); openIntake(id); }
@@ -426,6 +428,16 @@
         saveMode(); paintBar();
         persistCurrentEditorState();
     }
+    // The intake form (intake-form.js) completed from 📝 New intake: a blank editor in Intake mode, without
+    // asking again (the form already asked). False when an Admin keeps unsaved changes to a library case.
+    window.intakeFolderBegin = function () {
+        if (window.mockConfirmLeave && !window.mockConfirmLeave()) return false;
+        leaveLibraryCase();
+        blankEditor();
+        enter(null, null);
+        if (window.closeCaseLibrary) closeCaseLibrary();
+        return true;
+    };
     function startIntake() {
         if (hasCaseContent() && !confirm('Start a new intake? What\'s in the case editor now will be cleared. Save it first if you need it.')) return;
         leaveLibraryCase();
