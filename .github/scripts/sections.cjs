@@ -170,6 +170,10 @@ const failures = []; const fail = (m) => failures.push(m);
     });
     if (pass.empty || pass.button || !pass.withRows || pass.after) fail(`Passenger Records: ${JSON.stringify(pass)} (expected hidden when empty, no Add Passenger button, shown for an older case's rows)`);
 
+    // 2d. the Notes tab: "Case Notes", with "+ Add Case Note"
+    const notesHead = await page.evaluate(() => [document.querySelector('#pane-notes .section-head').textContent.trim(), document.querySelector('#pane-notes .add-btn').textContent.trim()]);
+    if (notesHead.join('|') !== 'Case Notes|+ Add Case Note') fail(`the Notes tab reads ${JSON.stringify(notesHead)}, expected "Case Notes" and "+ Add Case Note"`);
+
     // 3. the new sections: fill, save, clear, load back
     await page.evaluate(() => { document.getElementById('client-name-field').innerText = 'Nina Newcase'; });
     await page.click('#tab-parties');
