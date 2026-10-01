@@ -7,7 +7,7 @@
 // ?q= keeps the cases whose Case Notes mention it (a note's text, even across &nbsp; or tags, or its
 // date) with the matching notes; nothing matches → none; SQL wildcards are just text; a case whose
 // saved content isn't JSON doesn't break the list.
-// Checks (browser): 🕑 Latest Updates in the sidebar opens the view; it shows the cases and their latest
+// Checks (browser): a trainee gets no 🕑 Latest Updates sidebar button (Admins only); the view shows their cases and their latest
 // notes; typing searches the Case Notes and marks the match; Open opens the case.
 // Usage: node .github/scripts/latest-updates.cjs   (from the repository root; needs `npm i playwright`, Node 22+)
 const { chromium } = require('playwright');
@@ -113,8 +113,10 @@ const noteRow = (date, text) => `<tr><td><div contenteditable="true" class="text
     await page.goto(base, { waitUntil: 'load' });
     await page.waitForTimeout(1000);
     const rows = () => page.$$eval('#cl-upd-list [data-upd]', els => els.map(e => +e.dataset.upd));
-    if (!(await page.isVisible('#cl-updates-btn'))) fail('a trainee has no 🕑 Latest Updates button');
-    await page.click('#cl-updates-btn');
+    // the sidebar's 🕑 Latest Updates button is for Admins; the view itself shows a trainee only their own cases
+    await page.waitForSelector('#cl-updates-btn', { state: 'attached' });
+    if (await page.isVisible('#cl-updates-btn')) fail('a trainee sees the 🕑 Latest Updates button (Admins only)');
+    await page.evaluate(() => openCaseLibrary('updates'));
     await page.waitForSelector('#cl-upd-list [data-upd]', { timeout: 5000 }).catch(() => fail('🕑 Latest Updates didn\'t list the cases'));
     if (!/Latest updates/.test(await page.textContent('#cl-tabs button.on'))) fail('the Latest updates tab isn\'t the one shown');
     if ((await rows()).join() !== '2,1') fail(`the view lists ${(await rows()).join()} (expected 2,1)`);

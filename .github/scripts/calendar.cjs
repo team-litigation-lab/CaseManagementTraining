@@ -248,8 +248,10 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     // the sidebar button opens the same tab; another tab closes it
     await page.evaluate(() => showTab('profile'));
     if (await page.isVisible('#pane-calendar')) fail('the Calendar tab stayed open after switching to Profile');
-    await page.click('#sidebar-actions button:has-text("Firm Calendar")'); await page.waitForTimeout(300);
-    if (!(await page.isVisible('#pane-calendar #fc-root')) || !(await page.evaluate(() => document.getElementById('tab-calendar').classList.contains('active-tab')))) fail('the sidebar Firm Calendar button did not open the Calendar tab');
+    // trainees open it from the case's Calendar tab (the sidebar's Firm Calendar button is in the Admins' Trainer tools)
+    if (await page.isVisible('#fc-open-btn')) fail('a trainee sees the sidebar Firm Calendar button (Admins only)');
+    await page.evaluate(() => openFirmCalendar()); await page.waitForTimeout(300);
+    if (!(await page.isVisible('#pane-calendar #fc-root')) || !(await page.evaluate(() => document.getElementById('tab-calendar').classList.contains('active-tab')))) fail('openFirmCalendar() (the Admins\' sidebar button) did not open the Calendar tab');
     // typing in the calendar isn't a case edit: the in-progress case snapshot doesn't change
     await page.waitForTimeout(900); // let the tab switch's own snapshot (it changes the tab buttons) land first
     const snapBefore = await page.evaluate(() => localStorage.getItem('LSH_CURRENT_EDITOR_DRAFT_V1'));

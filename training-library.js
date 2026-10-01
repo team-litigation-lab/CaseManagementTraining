@@ -224,11 +224,14 @@
 
     /* ---------- DOM: sidebar block, banner, modal, side panel ---------- */
     function buildUI() {
-        const dash = document.querySelector('#sidebar-actions button[onclick="openTraineeDashboard()"]');
-        if (dash && !$id('lib-open-btn')) {
-            dash.classList.remove('mb-8'); dash.classList.add('mb-4');
-            dash.insertAdjacentHTML('afterend', `
-                <button id="lib-open-btn" class="lib-btn" onclick="openTrainingLibrary()">📚 Training Library · ${(window.MOCK_CASES || []).length} mock cases</button>
+        // The sidebar's slots (index.html): the program at the top (#sb-program), the Training Library
+        // button first in Trainer tools (#sb-trainer). The select is the sidebar's only <select>, so moving it
+        // within the sidebar keeps every saved case's selects in the same order (posSels in app.js).
+        const prog = $id('sb-program'), tools = $id('sb-trainer');
+        if (prog && tools && !$id('lib-open-btn')) {
+            tools.querySelector('.sb-head').insertAdjacentHTML('afterend',
+                `<button id="lib-open-btn" class="lib-btn" onclick="openTrainingLibrary()">📚 Training Library · ${(window.MOCK_CASES || []).length} mock cases</button>`);
+            prog.insertAdjacentHTML('beforeend', `
                 <p class="lib-prog-label">Training program</p>
                 <select id="lib-program-select" class="lib-prog" onchange="lshSetProgram(this.value)">
                     <option value="">All programs</option>

@@ -584,8 +584,33 @@
     .side-card-orange:hover { background:#f97316; color:#fff; }
     .side-card-blue { border-color:#3b82f6; color:#93c5fd; background:rgba(59,130,246,.08); }
     .side-card-blue:hover { background:#3b82f6; color:#fff; }
-    .side-card-slate { border-color:#64748b; color:#cbd5e1; background:rgba(100,116,139,.10); }
-    .side-card-slate:hover { background:#64748b; color:#fff; }
+    /* The sidebar's groups (index.html): program, cases, work, trainer tools */
+    .sb-group + .sb-group { border-top:1px solid #1e2c4d; margin-top:16px; padding-top:16px; }
+    #sb-program:empty { display:none; }
+    #sb-program:empty + .sb-group { border-top:0; margin-top:0; padding-top:0; }
+    #sb-program .lib-prog { margin-bottom:0; }
+    #sb-cases #repo-list { max-height:min(38vh, 320px); overflow-y:auto; }   /* a long list never pushes the actions out of reach */
+    .sb-head { font-size:9px; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px; font-family:'IBM Plex Mono','Courier New',monospace; }
+    #sb-trainer .lib-btn, #sb-trainer .fdd-btn, #sb-trainer .if-open-btn { margin-bottom:8px; }
+
+    /* ✕ at the top right of the case, and the case's actions at the bottom of the screen */
+    .header-card { position:relative; }
+    .case-close-x { position:absolute; top:-13px; right:-13px; width:28px; height:28px; border-radius:50%; border:2px solid #f97316; background:#fff; color:#0f2148; font-size:13px; font-weight:900; line-height:1; cursor:pointer; box-shadow:0 2px 6px rgba(15,33,72,.25); z-index:2; }
+    .case-close-x:hover { background:#f97316; color:#fff; }
+    #capture-area.mock-ro .pdf-card > .case-close-x { display:block !important; }   /* a view-only library case hides the card's buttons, not this one */
+    #case-actions-bar { flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 32px; background:#fff; border-top:2px solid #e2e8f0; box-shadow:0 -4px 12px rgba(15,33,72,.06); }
+    .cab-btn { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; border-radius:7px; padding:8px 14px; cursor:pointer; border:1px solid #cbd5e1; background:#fff; color:#0f2148; white-space:nowrap; }
+    .cab-btn:hover { border-color:#0f2148; }
+    .cab-archive { border-color:#fdba74; color:#c2410c; background:#fff7ed; }
+    .cab-archive:hover { background:#f97316; border-color:#f97316; color:#fff; }
+    .cab-discard { border-color:#fecaca; color:#b91c1c; background:#fef2f2; }
+    .cab-discard:hover { background:#b91c1c; border-color:#b91c1c; color:#fff; }
+    .cab-save { background:#10b981; border-color:#10b981; color:#fff; }
+    .cab-save:hover { background:#047857; border-color:#047857; }
+    .cab-update { background:#2563eb; border-color:#2563eb; color:#fff; }
+    .cab-update:hover { background:#1d4ed8; border-color:#1d4ed8; }
+    .cab-note { flex:1 1 60px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; font-size:9.5px; color:#64748b; opacity:.55; transition:opacity .3s; }
+    @media (max-width: 700px) { #case-actions-bar { padding:8px 12px; gap:6px; } .cab-btn { padding:7px 10px; } .cab-note { order:10; flex-basis:100%; } }
     .mini-btn { font-size:10px; font-weight:800; text-transform:uppercase; padding:6px 12px; border-radius:5px; cursor:pointer; border:none; }
     .mini-btn[disabled] { opacity:.45; cursor:not-allowed; }
     /* Master Control > Case Logs: pick cases to delete */
