@@ -412,7 +412,7 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 **The sidebar**, top to bottom (`index.html`, `#sidebar-actions`):
 1. **Training program** (All programs, or one program).
 2. **The cases:** a trainee's **My cases**, or an Admin's **Case Library** with **🔍 Open Case Library** and **🕑 Latest Updates**.
-3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget, **📞 Reception Simulator** (the Front Desk practice calls and drill) and **📊 My Dashboard**.
+3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget, **📞 Reception Simulator** (the Front Desk practice calls and drill), **📊 My Dashboard** and **🧭 Blueprint**.
 4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar, Export Case List.
 
 The **👁 Trainee view** bar floats just above the case's action bar, so it never covers its buttons.
@@ -435,6 +435,19 @@ Trainees see only the first three groups, so their sidebar is the program, their
 - The autosave note sits between them.
 
 Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#capture-area`, so it's never part of a saved case.
+
+## 🧭 Blueprint (how the CMS works, for trainees and for trainers)
+
+Sidebar → **🧭 Blueprint** (after 📊 My Dashboard) opens a slide deck that explains the CMS, full screen (`blueprint.js`, styles under `bp-` in `styles.css`). There are two versions:
+- **Trainee blueprint** (11 slides and a cover): what the CMS is, signing in and the sidebar, finding a case, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Reception Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
+- **Trainer blueprint** (Admins only; 11 slides and a cover): signing in as a trainer and Master Control, registrations and users, Monitoring and 👁 Watch live, Case Logs, Broadcast & Ping, Pause and Lock, the Training Library, the Case Library and Latest Updates, the Intake folder, the Firm Calendar, time and drill results, and Trainee view.
+
+Trainees, and Admins in 👁 Trainee view, get the Trainee blueprint only. Admins get both as tabs, so they can share the Trainee blueprint in Google Meet on day one.
+
+- **Moving around:** ◀ ▶, the ← → keys, or the numbered contents strip under the slide. **Esc** or **✕ Close** closes it.
+- **Fits the screen:** the slide is laid out at 1280×720 (620×1000 in portrait on a phone) and scaled to the window.
+- **⬇ Download PDF:** the deck that's showing, as a landscape PDF with one page per slide (`LSH_CMS_Blueprint_Trainee.pdf` or `LSH_CMS_Blueprint_Trainer.pdf`). It's made in the browser with jsPDF, loaded from cdnjs the first time, the same way as the Training Library PDF. It's real text, not a picture.
+- **Changing it:** the slides are the `TRAINEE` and `TRAINER` lists at the top of `blueprint.js` (`icon`, `title`, `points`, `where`, `tip`). The page and the PDF are both built from them.
 
 ## 👁 Live view (watch a trainee's screen as they work)
 
@@ -728,6 +741,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - the trainee is told while they're watched, and not after;
   - the trainee's page sends a heartbeat every 30 s (not every 2 s), every 3 s while watched, and every 30 s again once the watch ends.
 - **Autosave** (`.github/scripts/autosave.cjs`): nothing is sent while the trainee types or glances at another tab; the tab away for a while sends the case once, and nothing again when nothing changed; offline sends nothing and says the work is kept here, and the connection back sends it; a suspended page (`freeze`) and a closing page send it; a case never saved isn't sent while the page closes; a save that never got through is sent on the next visit (and a visit with nothing unsaved sends nothing); the idle archive sends only unsaved work.
+- **CMS Blueprint** (`.github/scripts/blueprint.cjs`): a trainee's 🧭 Blueprint (after 📊 My Dashboard) opens the Trainee blueprint only, which never names the Training Library or the trainer tools; ◀ ▶, ← → and the contents strip go through every slide and Esc closes it; its PDF has a page for every slide. An Admin gets both decks as tabs and a PDF of each; in 👁 Trainee view, the trainee deck only. Every slide fits on a laptop and on a phone.
 - **New versions** (`.github/scripts/cms-update.cjs`, in the same job): a test server that answers like Cloudflare Pages (scripts and stylesheets with an ETag, the page without one), with "deploying" a new file. It checks that:
   - the page watches its own scripts, stylesheets and page, and nothing from a CDN; with nothing new deployed, nothing happens;
   - a new `app.js`, `styles.css` or `index.html` is noticed, and the note says a new version is ready;

@@ -804,3 +804,59 @@
    an older case that has passenger rows (they load into #passenger-container, which must stay for the
    positional save). */
 #legacy-passengers:has(#passenger-container:empty) { display: none; }
+
+/* ===== 🧭 CMS BLUEPRINT (blueprint.js): a full page like Master Control, with a slide deck =====
+   The slide is laid out at 1280×720 (620×1000 on a narrow screen) and scaled to fit the stage. */
+#blueprint-page { position: fixed; inset: 0; z-index: 1500; display: none; background: #e9eef5; flex-direction: column; }
+#blueprint-page.open { display: flex; }
+#bp-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 18px 22px 12px; gap: 12px; }
+#bp-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+#bp-slide { position: absolute; left: 50%; top: 50%; transform-origin: center center; background: #fff; border-radius: 14px; box-shadow: 0 10px 30px rgba(15,33,72,.16); overflow: hidden; color: #1e293b; }
+#bp-nav { display: flex; align-items: center; justify-content: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+#bp-nav > button { width: 40px; height: 34px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: var(--navy); font-size: 13px; font-weight: 800; cursor: pointer; }
+#bp-nav > button:disabled { opacity: .35; cursor: default; }
+#bp-count { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; color: #475569; min-width: 52px; text-align: center; }
+#bp-toc { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+#bp-toc button { min-width: 26px; height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #475569; font-size: 11px; font-weight: 800; cursor: pointer; }
+#bp-toc button.on { background: var(--navy); border-color: var(--navy); color: #fff; box-shadow: inset 0 -2px 0 var(--orange); }
+.bp-kicker { color: var(--orange); font-size: 15px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.bp-label { color: var(--navy); font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+/* the cover */
+.bp-cover { height: 100%; display: flex; flex-direction: column; }
+.bp-cover-top { display: flex; align-items: center; gap: 48px; background: var(--navy); border-bottom: 6px solid var(--orange); padding: 46px 70px 42px; }
+.bp-cover-logo { height: 128px; width: auto; display: block; flex-shrink: 0; }
+.bp-cover h1 { margin: 8px 0 0; color: #fff; font-size: 50px; font-weight: 800; letter-spacing: .01em; line-height: 1.1; }
+.bp-cover-body { flex: 1; min-height: 0; padding: 36px 70px 30px; }
+.bp-cover-sub { margin: 0 0 28px; font-size: 26px; color: #334155; font-weight: 600; }
+.bp-contents { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 50px; }
+.bp-contents li { break-inside: avoid; display: flex; align-items: center; gap: 14px; font-size: 22px; color: #1e293b; margin-bottom: 16px; }
+.bp-contents li span { flex: 0 0 auto; width: 32px; height: 28px; border-radius: 6px; background: var(--orange); color: #fff; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+/* a slide */
+.bp-card { height: 100%; display: flex; flex-direction: column; }
+.bp-head { display: flex; align-items: center; gap: 24px; background: var(--navy); padding: 30px 52px 28px; border-bottom: 6px solid var(--orange); }
+.bp-head h1 { margin: 6px 0 0; color: #fff; font-size: 40px; font-weight: 800; line-height: 1.15; }
+.bp-icon { flex: 0 0 auto; width: 78px; height: 78px; border-radius: 18px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22); display: flex; align-items: center; justify-content: center; font-size: 42px; }
+.bp-main { flex: 1; min-height: 0; display: flex; gap: 44px; padding: 40px 52px 22px; }
+.bp-points { flex: 1; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 22px; }
+.bp-points li { position: relative; padding-left: 32px; font-size: 26px; line-height: 1.38; color: #1e293b; }
+.bp-points li::before { content: ''; position: absolute; left: 0; top: .5em; width: 11px; height: 11px; border-radius: 2px; background: var(--orange); }
+.bp-side { flex: 0 0 360px; display: flex; flex-direction: column; gap: 20px; }
+.bp-where, .bp-tip { border-radius: 12px; padding: 22px 24px; font-size: 21px; line-height: 1.42; color: #1e293b; }
+.bp-where { background: #f1f5f9; border: 1px solid #e2e8f0; }
+.bp-tip { background: #fff7ed; border: 1px solid #fed7aa; border-left: 6px solid var(--orange); }
+.bp-tip .bp-label { color: #c2410c; }
+.bp-foot { display: flex; justify-content: space-between; padding: 14px 52px 18px; border-top: 1px solid #e2e8f0; font-size: 14px; font-weight: 700; color: #94a3b8; letter-spacing: .04em; }
+/* portrait (narrow screens): the same slide, stacked */
+#bp-slide.portrait .bp-head { padding: 28px 34px; gap: 18px; }
+#bp-slide.portrait .bp-head h1 { font-size: 36px; }
+#bp-slide.portrait .bp-main { flex-direction: column; padding: 28px 34px 16px; gap: 22px; }
+#bp-slide.portrait .bp-points li { font-size: 23px; }
+#bp-slide.portrait .bp-side { flex: 0 0 auto; }
+#bp-slide.portrait .bp-foot { padding: 12px 34px 16px; }
+#bp-slide.portrait .bp-cover-top { flex-direction: column; align-items: flex-start; gap: 24px; padding: 40px 36px 34px; }
+#bp-slide.portrait .bp-cover h1 { font-size: 40px; }
+#bp-slide.portrait .bp-cover-body { padding: 30px 36px; }
+#bp-slide.portrait .bp-cover-sub { font-size: 23px; }
+#bp-slide.portrait .bp-contents { columns: 1; }
+#bp-slide.portrait .bp-contents li { font-size: 21px; margin-bottom: 12px; }
+@media (max-width: 760px) { #blueprint-page .mc-header { padding: 12px 14px; } #blueprint-page .mc-header h2 { font-size: 16px; } #bp-body { padding: 10px 10px 8px; } #bp-toc { display: none; } }
