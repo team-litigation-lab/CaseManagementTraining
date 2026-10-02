@@ -7,7 +7,7 @@
 //     yet gets one, already approved, so nobody registers twice.
 import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds } from '../_utils.js';
 import { ensureGuestTables, cleanGuestBatch, guestUsername } from '../_guest.js';
-import { readPortalTicket, portalOnly } from '../_portal.js';
+import { readPortalTicket, portalOnly, portalSecret, adminPasswordsSet } from '../_portal.js';
 import { adminPortalUser } from './login.js';
 
 const normName = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -25,7 +25,8 @@ const BLOCKED = {
 };
 
 export async function onRequestGet({ env }) {
-    return json({ success: true, portalOnly: portalOnly(env) }, 200, { 'Cache-Control': 'no-store' });
+    // hasSecret / hasAdminPassword say which of the two settings is missing when portalOnly is false (true/false only, never the values)
+    return json({ success: true, portalOnly: portalOnly(env), hasSecret: !!portalSecret(env), hasAdminPassword: adminPasswordsSet(env) }, 200, { 'Cache-Control': 'no-store' });
 }
 
 export async function onRequestPost({ request, env }) {
