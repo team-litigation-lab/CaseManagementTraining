@@ -1,34 +1,49 @@
 /* =========================================================
    LSH CMS — LIVE VIEW (an Admin watches a trainee's screen as they work)
    ---------------------------------------------------------
-   Trainee's page: every heartbeat (app.js: every 30 s, every 3 s while
-   watched) says where it is: the screen, the open case, the tab and any
-   open panel (lshLiveReport). While an Admin is watching, the heartbeat's
-   answer says so (lshLiveWatched), the trainee sees "👁 Your trainer is
-   viewing your screen", and each heartbeat also carries:
+   Close to real time, for facilitated mock calls (a trainer plays the
+   caller over Google Meet and watches the trainee work the call here):
+   about a second from a change on the trainee's screen to the Admin's.
+
+   Trainee's page: every heartbeat (app.js: every 30 s) says where it is:
+   the screen, the open case, the tab and any open panel (lshLiveReport).
+   While nobody watches it, its heartbeat waits at the server (up to 29 s,
+   lshLiveCanWait) and answers as soon as a trainer opens 👁 Watch live,
+   so the watch starts within a second or two at no extra request. Then
+   (lshLiveWatched) the trainee sees "👁 Your trainer is viewing your
+   screen", and the page sends to /api/live-screen, one request at a time:
+     - right after each change (a MutationObserver, typing, scrolling, the
+       mouse, the field they're in: SETTLE_MS for it to settle), changes
+       at most once a second, and a short "still here" after STILL_MS
+       without one. The copy is made in an idle moment between keystrokes
+       (requestIdleCallback). Nothing at all while the tab is hidden.
      - their screen: a copy of the page exactly as it is (captureScreen):
        what's typed in each field, ticked boxes, chosen options, open
        panels and windows, with every script, on… handler and javascript:
-       link taken out and passwords blanked. Zipped (gzip, base64) and sent
+       link taken out and passwords blanked. Zipped (gzip, base64) and
        only when it changed; at most 700 KB (a bigger one isn't sent, and
-       the Admin is told). Nothing is copied while the CMS tab is hidden.
+       the Admin is told).
      - the view, which is tiny: the window's size, where the page and each
        scrolled box are scrolled, the mouse pointer, the field they're in
-       and the clocks. So scrolling or moving the mouse isn't a new screen.
-     - a snapshot of the case as it stands (at most every 3 s, only when it
-       changed), for the summary.
-   Nothing extra is sent while nobody watches.
+       and the clocks. So scrolling or moving the mouse isn't a new copy.
+     - where they are, and a snapshot of the case for the summary (at most
+       every 3 s, only when it changed).
+   The answer says when the watch has ended: the page stops sending, and
+   its heartbeat waits for the next watch again. Nothing extra is sent
+   while nobody watches.
 
    Admin: Master Control → Monitoring → 👁 Watch live on an online trainee
-   (openLiveView). The window reads /api/live-view every 3 s (the screen
-   itself only when it changed). 🖥 Screen, the default, shows their screen
-   at their window's size, scaled to fit, in a sandboxed frame: its own
-   origin, which can't reach the Admin's page or cookies. The copy is
-   cleaned again here (a trainee could send one by hand), and a Content
-   Security Policy lets only this file's own small script run in it (it
-   scrolls the copy and draws the pointer). 📋 Summary shows where they
-   are, the trail of where they've been and their case as text. Server
-   side: functions/_liveview.js.
+   (openLiveView). The window reads /api/live-view about once a second
+   while it's open and in view (the screen itself only when it changed;
+   nothing while the tab is hidden, and the watch then ends by itself).
+   🖥 Screen, the default, shows their screen at their window's size,
+   scaled to fit, in a sandboxed frame: its own origin, which can't reach
+   the Admin's page or cookies. The copy is cleaned again here (a trainee
+   could send one by hand), and a Content Security Policy lets only this
+   file's own small script run in it (it scrolls the copy and draws the
+   pointer). "● Live" shows while the screen is under 2 s behind, with
+   "updated … s ago". 📋 Summary shows where they are, the trail of where
+   they've been and their case as text. Server side: functions/_liveview.js.
 
    Nothing here is a <select> or contenteditable in the case editor (the
    case editor saves those by position; the mirrored screen is in its own
@@ -42,7 +57,7 @@
     const $id = (id) => document.getElementById(id);
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const txt = (el) => el ? String(el.textContent || '').replace(/\s+/g, ' ').trim() : '';
-    const SNAP_EVERY_MS = 3000, POLL_MS = 3000;
+    const SNAP_EVERY_MS = 3000;   // the case for the summary: at most this often
     const SCREEN_MAX = 700000;   // characters of a zipped screen (base64); functions/_liveview.js keeps the same limit
     const HTML_MAX = 15e6;       // a page bigger than this (unzipped) isn't copied or shown
 
@@ -63,6 +78,8 @@
     #live-view-modal .lv-tabs button{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer}
     #live-view-modal .lv-tabs button.on{background:#0f2148;color:#fff;border-color:#0f2148}
     #live-view-modal .lv-tabs .lv-info{margin-left:auto;font-size:11px;color:#64748b;font-family:'IBM Plex Mono',monospace}
+    #live-view-modal .lv-live{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:3px 10px;background:#e2e8f0;color:#64748b}
+    #live-view-modal .lv-live.on{background:#dc2626;color:#fff;box-shadow:0 0 0 3px rgba(220,38,38,.2)}
     #live-view-modal .lv-pane{display:none;min-height:0;flex:1}
     #live-view-modal .lv-pane.on{display:flex;flex-direction:column}
     #live-view-modal .lv-stage{position:relative;flex:1;min-height:0;overflow:hidden;background:#0b1220;border-radius:10px}
@@ -232,54 +249,146 @@
         }
         return { enc: 'raw', data: html };
     }
+    // While watched: right after each change (SETTLE_MS for it to settle; changes go at most once a second), one
+    // request at a time, and a short "still here" after STILL_MS without one. Nothing while the tab is hidden.
+    const SETTLE_MS = 250, SEND_GAP_MS = 1000, STILL_MS = 1500;
     let watched = false, lastSnap = '', lastSnapAt = 0;
-    // The screen: the last copy and its id, the server's (from the heartbeat's answer), and the last one sent.
-    let lastHtml = '', lastId = '', zipped = null, serverId = '', sentId = '', sentAt = 0;
-    async function screenReport() {
-        if (document.visibilityState !== 'hidden') {   // a hidden tab isn't copied: the Admin keeps the last screen
+    // the screen: the last copy and its id, and the one the server has (from its answers)
+    let lastHtml = '', lastId = '', zipped = null, serverId = '';
+    // dirty: the page changed (a new copy); moved: only the view (scroll, pointer, focus); sentAt / changedAt: the last send, the last with a change
+    const S = { timer: null, timerAt: 0, busy: false, again: false, sentAt: 0, changedAt: 0, dirty: true, moved: false, snapDirty: true, fails: 0, observer: null };
+    const stats = { since: 0, sends: 0, screens: 0, bytes: 0, captures: 0, captureMs: 0, zipMs: 0 };   // lshLiveStats(): for the checks
+    const visible = () => document.visibilityState !== 'hidden';
+    const idle = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 200 }) : setTimeout(fn, 0));   // capture between keystrokes, not during
+    // when the next send may go: a change not sooner than SEND_GAP_MS after the last change sent (a "still here" doesn't hold it up)
+    const dueAt = (delay) => Math.max(Date.now() + delay, S.sentAt + 200, S.dirty || S.moved ? S.changedAt + SEND_GAP_MS : 0);
+    function soon(delay) {   // the next send, in `delay` ms (or when it may go)
+        if (!watched || !visible()) return;
+        const at = dueAt(delay);
+        if (S.timer && S.timerAt <= at) return;   // one is due sooner already
+        clearTimeout(S.timer);
+        S.timerAt = at;
+        S.timer = setTimeout(() => { S.timer = null; send(); }, at - Date.now());
+    }
+    function changed() { S.dirty = true; S.snapDirty = true; soon(SETTLE_MS); }   // the page changed: a new copy
+    function moved() { S.moved = true; soon(SETTLE_MS); }                         // only the view: scroll, pointer, focus
+    // A real change? Not a clock ticking, nor text or an attribute set to what it already was (the page does that every few seconds).
+    function real(r) {
+        const el = r.target.nodeType === 1 ? r.target : r.target.parentElement;
+        if (el && el.closest && el.closest(TICKING)) return false;
+        if (r.type === 'attributes') return r.oldValue !== r.target.getAttribute(r.attributeName);
+        if (r.type === 'characterData') return r.oldValue !== r.target.data;
+        if (r.addedNodes.length === 1 && r.removedNodes.length === 1 && r.addedNodes[0].nodeType === 3 && r.removedNodes[0].nodeType === 3) return r.addedNodes[0].data !== r.removedNodes[0].data;
+        return true;
+    }
+    function observe(on) {
+        if (on && !S.observer && typeof MutationObserver === 'function') {
+            S.observer = new MutationObserver((records) => { if (watched && records.some(real)) changed(); });
+            S.observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true, attributeOldValue: true, characterDataOldValue: true });
+        } else if (!on && S.observer) { S.observer.disconnect(); S.observer = null; }
+    }
+    ['input', 'change'].forEach(t => document.addEventListener(t, () => { if (watched) changed(); }, true));
+    document.addEventListener('scroll', (e) => { if (watched) { if (e.target && e.target.nodeType === 1 && !keys.has(e.target)) changed(); else moved(); } }, { passive: true, capture: true });   // a box scrolled for the first time gets its number in the copy
+    document.addEventListener('focusin', (e) => { if (watched) { if (keys.has(e.target)) moved(); else changed(); } }, true);
+    addEventListener('mousemove', () => { if (watched) moved(); }, { passive: true });
+    addEventListener('resize', () => { if (watched) moved(); });
+    document.addEventListener('visibilitychange', () => {
+        if (!watched) return;
+        if (visible()) { S.dirty = true; soon(0); }
+        else { clearTimeout(S.timer); S.timer = null; send(true); }   // once more, so the Admin knows the tab is in the background; then nothing
+    });
+
+    // What a send carries: where they are, their screen (the copy only when the server doesn't have it), and now and then the case.
+    async function liveReport() {
+        const out = { where: where() };
+        if (visible() && (S.dirty || !lastHtml)) {
+            S.dirty = false;
+            const t0 = performance.now();
             const html = captureScreen();
             if (html !== lastHtml) { lastHtml = html; lastId = idOf(html); zipped = null; }
+            stats.captures++; stats.captureMs += performance.now() - t0;
         }
-        const out = { id: lastId, view: viewState() };
-        // the copy itself only when the server doesn't have it yet (and not again while the one just sent is on its way)
-        if (lastId && lastId !== serverId && !(sentId === lastId && Date.now() - sentAt < 10000)) {
-            if (lastHtml.length > HTML_MAX) out.tooBig = lastHtml.length;
-            else {
-                if (!zipped) zipped = await zip(lastHtml);
-                if (zipped.data.length > SCREEN_MAX) out.tooBig = zipped.data.length;
-                else { out.enc = zipped.enc; out.data = zipped.data; sentId = lastId; sentAt = Date.now(); }
-            }
-        }
-        return out;
-    }
-    // app.js adds this to every heartbeat (while watched it's a promise, and app.js waits for it).
-    // Trainees only (an Admin, Trainee view too, isn't watched).
-    window.lshLiveReport = function () {
-        const s = realSession();
-        if (!s || s.userType === 'Admin') return {};
-        const out = { where: where(), mirror: 1 };   // mirror: this page can send its screen
-        if (watched && Date.now() - lastSnapAt >= SNAP_EVERY_MS) {
+        if (S.snapDirty && Date.now() - lastSnapAt >= SNAP_EVERY_MS) {
+            S.snapDirty = false; lastSnapAt = Date.now();
             const snap = snapshot(), key = JSON.stringify(snap);
             if (key !== lastSnap) { out.snapshot = snap; lastSnap = key; }
-            lastSnapAt = Date.now();
         }
-        if (!watched) return out;
-        const late = new Promise(res => setTimeout(() => res(out), 2500));   // the heartbeat never waits long for the screen
-        return Promise.race([screenReport().then(screen => Object.assign(out, { screen }), () => out), late]);
-    };
-    // The heartbeat's answer: is a trainer watching? The trainee is told so. It also says which screen the server has.
-    window.lshLiveWatched = function (on, answer) {
-        if (answer && 'screenId' in answer) serverId = answer.screenId || '';
+        const screen = { id: lastId, view: viewState() };
+        if (lastId && lastId !== serverId) {
+            if (lastHtml.length > HTML_MAX) screen.tooBig = lastHtml.length;
+            else {
+                if (!zipped) { const t1 = performance.now(); zipped = await zip(lastHtml); stats.zipMs += performance.now() - t1; }
+                if (zipped.data.length > SCREEN_MAX) screen.tooBig = zipped.data.length;
+                else { screen.enc = zipped.enc; screen.data = zipped.data; }
+            }
+        }
+        out.screen = screen;
+        return out;
+    }
+    function send(now) {   // now: straight away (to say the tab went into the background)
+        if (!watched) return;
+        if (S.busy) { S.again = true; return; }
+        if (!now && Date.now() < dueAt(0) - 5) return soon(0);   // a change seen while the last one was being sent
+        S.busy = true; S.again = false; S.sentAt = Date.now();
+        if (S.dirty || S.moved) S.changedAt = S.sentAt;
+        S.moved = false;
+        idle(async () => {
+            let ok = false, body = null;
+            try {
+                body = await liveReport();
+                if (!watched) return;
+                const text = JSON.stringify(body);
+                stats.sends++; stats.bytes += text.length; if (body.screen.data) stats.screens++;
+                const r = await fetch('/api/live-screen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: text });
+                const d = await r.json().catch(() => null);
+                if (r.ok && d && d.success) {
+                    ok = true;
+                    if (!d.watched) setWatched(false);   // the trainer stopped watching
+                    else serverId = d.screenId || '';
+                }
+            } catch (e) { ok = false; }
+            finally {
+                S.busy = false;
+                S.fails = ok ? 0 : S.fails + 1;
+                if (watched && visible()) soon(S.again || S.dirty || S.moved ? SETTLE_MS : ok ? STILL_MS : Math.min(15000, 2000 * S.fails));
+            }
+        });
+    }
+    function setWatched(on) {
         if (on === watched) return;
         watched = on;
-        if (!on) { lastSnap = ''; lastHtml = ''; lastId = ''; zipped = null; serverId = ''; sentId = ''; }   // the next watch starts afresh
         let chip = $id('lv-watched-chip');
         if (!chip) {
             document.body.insertAdjacentHTML('beforeend', '<div id="lv-watched-chip" class="no-print" role="status">👁 Your trainer is viewing your screen</div>');
             chip = $id('lv-watched-chip');
         }
         chip.classList.toggle('on', on);
+        if (on) {
+            Object.assign(stats, { since: Date.now(), sends: 0, screens: 0, bytes: 0, captures: 0, captureMs: 0, zipMs: 0 });
+            S.dirty = true; S.snapDirty = true; S.fails = 0;
+            observe(true);
+            soon(0);
+        } else {
+            clearTimeout(S.timer); S.timer = null;
+            observe(false);
+            lastSnap = ''; lastHtml = ''; lastId = ''; zipped = null; serverId = '';   // the next watch starts afresh
+            if (window.lshHeartbeatSoon) window.lshHeartbeatSoon();   // app.js: wait for the next watch straight away
+        }
+    }
+    // app.js adds this to every heartbeat. Trainees only (an Admin, Trainee view too, isn't watched).
+    window.lshLiveReport = function () {
+        const s = realSession();
+        if (!s || s.userType === 'Admin') return {};
+        return { where: where(), mirror: 1 };   // mirror: this page can send its screen
     };
+    // app.js: may this heartbeat wait at the server for a watch to start? (a trainee nobody watches)
+    window.lshLiveCanWait = function () { const s = realSession(); return !!s && s.userType !== 'Admin' && !watched; };
+    // The heartbeat's answer: is a trainer watching? The trainee is told so, and the page starts (or stops) sending.
+    window.lshLiveWatched = function (on, answer) {
+        if (on && !watched && answer && 'screenId' in answer) serverId = answer.screenId || '';
+        setWatched(on);
+    };
+    window.lshLiveStats = () => Object.assign({ watched, seconds: stats.since ? (Date.now() - stats.since) / 1000 : 0 }, stats);
 
     /* ---------- the Admin's live view ---------- */
     let W = null;   // the open live view (see openLiveView); gotId: the screen last received, pending/loading: one on its way, shownId: the one on show
@@ -295,7 +404,7 @@
                     <div class="lv-tabs" role="tablist">
                         <button type="button" id="lv-tab-screen" role="tab" onclick="lvShowPane('screen', true)">🖥 Screen</button>
                         <button type="button" id="lv-tab-summary" role="tab" onclick="lvShowPane('summary', true)">📋 Summary, trail and case</button>
-                        <span class="lv-info" id="lv-screen-info"></span>
+                        <span class="lv-info" id="lv-screen-info"></span><span class="lv-live" id="lv-live" role="status"></span>
                     </div>
                     <div class="lv-pane" id="lv-pane-screen">
                         <div class="lv-stage" id="lv-stage">
@@ -462,7 +571,7 @@
     }
     let renders = 0;
     async function render(s) {
-        const my = W, n = ++renders;
+        const my = W, n = ++renders, t0 = Date.now();
         my.gotId = s.id; my.pending = s.id;
         let doc;
         try { doc = frameDoc(await unzip(s.enc, s.data), s.view); }
@@ -482,7 +591,7 @@
             done = true; clearTimeout(late); next.onload = null; my.loading = null;
             next.classList.add('lv-on');
             if (cur) { cur.classList.remove('lv-on'); cur.onload = null; cur.removeAttribute('srcdoc'); }
-            my.shownId = s.id; my.failId = null;
+            my.shownId = s.id; my.shownAt = Date.now(); my.renderMs = my.shownAt - t0; my.failId = null;
             my.viewKey = JSON.stringify(s.view);
             if (my.view) sendView(my.view);   // a newer view than the copy's own
             if (my.data) paintScreen(my.data);
@@ -511,10 +620,9 @@
         }
         const msg = $id('lv-screen-msg');
         msg.style.display = showing ? 'none' : 'flex';
-        msg.textContent = problem || (s && s.id ? 'Loading their screen…' : d.online ? 'Waiting for their screen… it shows within 30 seconds while they\'re online.' : 'Offline. Their screen shows here while they\'re online.');
+        msg.textContent = problem || (s && s.id ? 'Loading their screen…' : d.online ? 'Waiting for their screen… it shows in a second or two while they\'re online.' : 'Offline. Their screen shows here while they\'re online.');
         const note = !showing ? '' : !d.online ? 'Offline: this is their last screen.' : v && v.hidden ? 'In the background: they\'re in another tab or window. This is the last thing on their CMS tab.' : '';
         const badge = $id('lv-badge'); badge.textContent = note; badge.style.display = note ? 'block' : 'none';
-        $id('lv-screen-info').textContent = v && s.id ? `${v.vw} × ${v.vh} window${W.scale ? ' · shown at ' + Math.round(W.scale * 100) + '%' : ''}${s.seenAt ? ' · updated ' + ago(s.seenAt, d.serverNow) : ''}` : '';
         if (!W.chosen) lvShowPane(fallback ? 'summary' : 'screen');   // unless the Admin picked a tab
     }
     window.lvShowPane = function (which, byHand) {
@@ -533,24 +641,64 @@
         if (!W) return;
         W.data = d;
         $id('lv-title').textContent = `👁 ${d.fullName || d.username}`;
-        $id('lv-sub').textContent = `@${d.username} · their screen, as they work · updates every 3 seconds`;
+        $id('lv-sub').textContent = `@${d.username} · their screen, as they work · live, about a second behind`;
         paintNow(d); paintTrail(d);
         if (d.snapshot && d.snapshotAt !== W.snapAt) { W.snapAt = d.snapshotAt; $id('lv-case').innerHTML = caseHTML(d.snapshot); }
         $id('lv-snap-age').textContent = d.snapshotAt ? `· updated ${ago(d.snapshotAt, d.serverNow)}` : '';
         paintScreen(d);
+        paintLag();
     }
+    // How far behind the screen is: since their page last said what's on it (a change, or "still here"), counted
+    // on from the last read. "● Live" while that was under LIVE_MS when last read, and the last read is recent.
+    const LIVE_MS = 2000;
+    function lag() {
+        const d = W && W.data, s = d && d.screen;
+        if (!s || !s.id || !s.seenAt || !W.fetchedAt) return null;
+        const at = Date.parse(s.seenAt), now = Date.parse(d.serverNow);
+        if (!isFinite(at) || !isFinite(now)) return null;
+        const atRead = Math.max(0, now - at), sinceRead = Date.now() - W.fetchedAt;
+        return { atRead, sinceRead, ms: atRead + sinceRead };
+    }
+    const lagMs = () => { const l = lag(); return l ? l.ms : null; };
+    function paintLag() {
+        if (!W) return;
+        const d = W.data, s = d && d.screen, v = s && s.view, l = lag(), pill = $id('lv-live');
+        const live = !!l && l.atRead < LIVE_MS && l.sinceRead < LIVE_MS && d.online && !(v && v.hidden) && (W.shownId === s.id || !!W.pending || !!W.loading);
+        pill.className = 'lv-live' + (live ? ' on' : '');
+        pill.textContent = live ? '● Live' : '○ Not live';
+        pill.style.display = l ? '' : 'none';
+        const age = !l ? '' : l.ms < 10000 ? `${(l.ms / 1000).toFixed(1)} s ago` : ago(new Date(Date.now() - l.ms).toISOString());
+        $id('lv-screen-info').textContent = v && s.id ? `${v.vw} × ${v.vh} window${W.scale ? ' · shown at ' + Math.round(W.scale * 100) + '%' : ''}${age ? ' · updated ' + age : ''}` : '';
+    }
+    // About once a second while the live view is open and this tab is in view (nothing while it's hidden: the
+    // watch then ends by itself after a few seconds, and starts again within a second or two on coming back).
+    // Every 300 ms for the first few seconds, until their first screen arrives.
     async function poll() {
-        const my = W; if (!my) return;
+        const my = W; if (!my || my.polling) return;
+        my.polling = true;
+        const started = Date.now();
         try {
             // with the screen we already have: it's sent again only when it changed
             const res = await fetch('/api/live-view?username=' + encodeURIComponent(my.username) + (my.gotId ? '&screen=' + encodeURIComponent(my.gotId) : ''), { credentials: 'include', cache: 'no-store' });
             const d = await res.json();
             if (W !== my) return;
-            if (!res.ok || !d.success) { $id('lv-now').innerHTML = `<span class="lv-wait" style="color:#fecaca">${esc(d.error || 'Couldn\'t load the live view.')}</span>`; if (res.status === 401 || res.status === 403) return closeTimer(); }
-            else paint(d);
+            my.polls++;
+            if (!res.ok || !d.success) { $id('lv-now').innerHTML = `<span class="lv-wait" style="color:#fecaca">${esc(d.error || 'Couldn\'t load the live view.')}</span>`; if (res.status === 401 || res.status === 403) { my.stopped = true; return; } }
+            else { my.fetchedAt = Date.now(); paint(d); }
         } catch (e) { if (W === my) $id('lv-now').innerHTML = '<span class="lv-wait" style="color:#fecaca">Network error. Trying again…</span>'; }
+        finally { my.polling = false; if (W === my) nextPoll(Math.max(0, (startingUp(my) ? FIRST_POLL_MS : POLL_MS) - (Date.now() - started))); }
     }
-    function closeTimer() { if (W && W.timer) { clearInterval(W.timer); W.timer = null; } }
+    const POLL_MS = 1000, FIRST_POLL_MS = 300;
+    // the first few seconds, until their first screen arrives: read a little more often, so it shows sooner
+    const startingUp = (my) => !my.gotId && Date.now() - my.openedAt < 6000;
+    function nextPoll(wait) {
+        if (!W || W.stopped) return;
+        clearTimeout(W.timer); W.timer = null;
+        if (document.visibilityState === 'hidden') return;   // picked up again when the tab is in view
+        W.timer = setTimeout(poll, wait);
+    }
+    document.addEventListener('visibilitychange', () => { if (W && document.visibilityState !== 'hidden' && !W.timer && !W.polling) poll(); });
+    function closeTimer() { if (W) { clearTimeout(W.timer); W.timer = null; clearInterval(W.ticker); W.stopped = true; } }
     window.openLiveView = function (username) {
         if (!username) return;
         window.closeLiveView();
@@ -558,23 +706,25 @@
         $id('lv-title').textContent = 'Live view';
         $id('lv-now').innerHTML = '<span class="lv-wait" style="color:#cbd5e1">Connecting…</span>';
         $id('lv-trail').innerHTML = '';
-        $id('lv-case').innerHTML = '<p class="lv-wait">Waiting for their screen… it shows within 30 seconds while they\'re online.</p>';
+        $id('lv-case').innerHTML = '<p class="lv-wait">Waiting for their screen… it shows in a second or two while they\'re online.</p>';
         $id('lv-snap-age').textContent = '';
         $id('lv-screen-info').textContent = '';
+        $id('lv-live').style.display = 'none';
         $id('lv-badge').style.display = 'none';
         const msg = $id('lv-screen-msg'); msg.style.display = 'flex'; msg.textContent = 'Connecting…';
         blankFrames();
         m.classList.add('open');
-        W = { username: String(username), timer: null, snapAt: null, data: null, pane: '', chosen: false, gotId: null, pending: null, shownId: null, view: null, viewKey: '', failId: null, failMsg: '', loading: null, scale: 0 };
+        W = { username: String(username), timer: null, ticker: null, polling: false, stopped: false, polls: 0, fetchedAt: 0, openedAt: Date.now(), snapAt: null, data: null, pane: '', chosen: false, gotId: null, pending: null, shownId: null, shownAt: 0, view: null, viewKey: '', failId: null, failMsg: '', loading: null, scale: 0 };
         lvShowPane('screen');
+        W.ticker = setInterval(paintLag, 500);   // "updated … ago" keeps counting between reads
         poll();
-        W.timer = setInterval(poll, POLL_MS);
     };
     window.closeLiveView = function () {
         closeTimer(); W = null;
         blankFrames();
         const m = $id('live-view-modal'); if (m) m.classList.remove('open');
     };
+    window.lshLiveViewStats = () => (W ? { polls: W.polls, seconds: (Date.now() - W.openedAt) / 1000, shownId: W.shownId, shownAt: W.shownAt, renderMs: W.renderMs, lag: lagMs() } : null);   // for the checks
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && W) closeLiveView(); });
     window.lshLiveWhere = where;   // for the checks
     window.lshLiveFrameDoc = frameDoc;   // for the checks: what the Admin's frame is given for a copy

@@ -168,12 +168,14 @@
         const LOCK_KEY = 'LSH_PAGE_LOCKED';
         const SESSION_KEY = 'LSH_SESSION_V1';
         // Heartbeats keep the session alive (the server allows 120 s between them) and show who's
-        // online. Every 30 s, every 45 s in a background tab, and every 3 s while a trainer watches
-        // this trainee live (live-view.js). Sparing on purpose: every /api/ request counts toward
-        // Cloudflare's daily Functions requests, and the site stops answering when they run out.
+        // online. Every 30 s, every 45 s in a background tab. Sparing on purpose: every /api/ request
+        // counts toward Cloudflare's daily Functions requests, and the site stops answering when they
+        // run out. A trainee's heartbeat waits at the server (up to HEARTBEAT_HOLD_S) for a trainer to
+        // open 👁 Watch live, so the live view starts within a second or two at no extra request; while
+        // watched, live-view.js sends the screen itself.
         const HEARTBEAT_INTERVAL_MS = 30000;
         const HEARTBEAT_HIDDEN_MS = 45000;
-        const HEARTBEAT_WATCHED_MS = 3000;
+        const HEARTBEAT_HOLD_S = 29;
         const HEARTBEAT_GRACE_MS = 45000;   // "online" = a heartbeat in the last 90 s (twice this)
         const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes — adjust if needed
         const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
@@ -2737,17 +2739,20 @@
         }
         function closeMonitorCase() { document.getElementById('monitor-case-modal').classList.remove('open'); }
         let heartbeatTimer = null;
-        let heartbeatWatched = false;   // the last heartbeat's answer: a trainer is watching (live-view.js)
+        let heartbeatRunning = false, heartbeatBusy = false, heartbeatAgain = false;
         let idleTimer = null;
 
-        function sendHeartbeat() {
+        // opts.hold: wait at the server for a trainer to start watching (only the scheduled heartbeats of a
+        // trainee nobody watches; never the one sent to revive a lapsed session)
+        function sendHeartbeat(opts) {
             const session = getSession();
             if (!session) return Promise.resolve(false);
             const beat = {
                 fullName: session.fullName,
                 currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
             };
-            // live view (live-view.js): where the trainee is, and while a trainer watches, their screen (then it's a promise)
+            if (opts && opts.hold) beat.hold = HEARTBEAT_HOLD_S;
+            // live view (live-view.js): where the trainee is
             let live = {};
             try { live = window.lshLiveReport ? window.lshLiveReport() : {}; } catch (e) { live = {}; }
             return Promise.resolve(live).catch(() => ({})).then(extra => fetch('/api/heartbeat', {
@@ -2756,16 +2761,16 @@
                 credentials: 'include',
                 body: JSON.stringify(Object.assign(beat, extra))
             }))
-            .then(r => {
+            .then(async r => {
                 if (r.status === 401) {
                     handleSessionExpired('Your session has expired. Please log in again.');
                     return false;
                 }
-                if (r.ok) r.clone().json().then(d => {
-                    const on = !!(d && d.watched);
-                    if (window.lshLiveWatched) window.lshLiveWatched(on, d);   // d.screenId: the trainee's screen the server has
-                    if (on !== heartbeatWatched) { heartbeatWatched = on; if (heartbeatTimer) scheduleHeartbeat(); }   // a trainer started or stopped watching
-                }).catch(() => {});
+                if (r.ok) {
+                    const d = await r.clone().json().catch(() => null);
+                    // is a trainer watching? d.screenId: the trainee's screen the server has
+                    if (d && window.lshLiveWatched) window.lshLiveWatched(!!d.watched, d);
+                }
                 return r.ok;
             })
             .catch(() => false);
@@ -2793,19 +2798,41 @@
                 clearTimeout(heartbeatTimer);
                 heartbeatTimer = null;
             }
-            heartbeatWatched = false;
+            heartbeatRunning = false;
+            heartbeatAgain = false;
         }
 
-        function scheduleHeartbeat() {
+        // One heartbeat at a time: the next goes 30 s (45 s in a background tab) after the last was sent,
+        // or straight after it when the last one waited at the server.
+        function scheduleHeartbeat(wait) {
             clearTimeout(heartbeatTimer);
-            const wait = heartbeatWatched ? HEARTBEAT_WATCHED_MS : document.hidden ? HEARTBEAT_HIDDEN_MS : HEARTBEAT_INTERVAL_MS;
-            heartbeatTimer = setTimeout(() => { sendHeartbeat(); scheduleHeartbeat(); }, wait);
+            heartbeatTimer = setTimeout(heartbeatLoop, Math.max(0, wait || 0));
         }
+        function heartbeatLoop() {
+            heartbeatTimer = null;
+            if (!heartbeatRunning) return;
+            if (heartbeatBusy) { heartbeatAgain = true; return; }
+            heartbeatBusy = true;
+            const sentAt = Date.now();
+            const hold = !!(window.lshLiveCanWait && window.lshLiveCanWait());   // a trainee nobody watches (live-view.js)
+            sendHeartbeat({ hold }).then(() => {
+                heartbeatBusy = false;
+                if (!heartbeatRunning) return;
+                const wait = heartbeatAgain ? 0 : sentAt + (document.hidden ? HEARTBEAT_HIDDEN_MS : HEARTBEAT_INTERVAL_MS) - Date.now();
+                heartbeatAgain = false;
+                scheduleHeartbeat(wait);
+            });
+        }
+        // live-view.js: a watch just ended, so the next heartbeat (waiting for the next watch) goes now
+        window.lshHeartbeatSoon = function () {
+            if (!heartbeatRunning) return;
+            if (heartbeatBusy) heartbeatAgain = true; else scheduleHeartbeat(0);
+        };
 
         function startHeartbeat() {
             stopHeartbeat();
-            sendHeartbeat();
-            scheduleHeartbeat();
+            heartbeatRunning = true;
+            heartbeatLoop();
         }
 
         function onUserActivity() {

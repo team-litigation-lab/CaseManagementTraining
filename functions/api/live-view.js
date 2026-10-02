@@ -2,9 +2,10 @@ import { json, requireSession } from '../_utils.js';
 import { ensureLiveViewTable, WATCH_MS } from '../_liveview.js';
 // GET /api/live-view?username=…[&screen=<id>]  (Admins only)
 // Where a trainee is right now, the trail of where they've been, and (while watched) their screen and a
-// snapshot of the case on it. Reading it marks the trainee as watched for the next WATCH_MS, so their page
-// starts sending them (see _liveview.js); the Admin's live view reads it every 3 s. screen=<id> is the
-// screen the live view already has: the copy itself is sent only when the trainee's screen changed.
+// snapshot of the case on it. Reading it marks the trainee as watched for the next WATCH_MS: their waiting
+// heartbeat hears of it within about a second, and their page starts sending (see _liveview.js). The Admin's
+// live view reads it about once a second while it's open and in view. screen=<id> is the screen the live view
+// already has: the copy itself is sent only when the trainee's screen changed.
 const parse = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (e) { return d; } };
 
 export async function onRequestGet({ request, env }) {

@@ -1,5 +1,5 @@
 import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS } from '../_utils.js';
-import { reportLiveView } from '../_liveview.js';
+import { reportLiveView, waitForWatch, HOLD_MAX_MS } from '../_liveview.js';
 
 export async function onRequestGet({ request, env }) {
     // Who's currently online, their real name, and which case they're
@@ -26,7 +26,7 @@ export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
-    const { fullName, currentCase, where, snapshot, screen, mirror } = body;
+    const { fullName, currentCase, where, snapshot, screen, mirror, hold } = body;
 
     // Identity comes from the verified session, not the request body —
     // otherwise anyone could POST a heartbeat claiming to be any username,
@@ -45,6 +45,11 @@ export async function onRequestPost({ request, env }) {
     let live = { watched: false };
     if (session.userType !== 'Admin' && (where || snapshot || screen)) {
         try { live = await reportLiveView(db, session.username, { where, snapshot, screen, mirror }); } catch (e) { live = { watched: false }; }
+        // hold: a trainee nobody watches waits here (up to HOLD_MAX_MS) for a trainer to open 👁 Watch live, and
+        // hears of it within about a second. It's this same heartbeat, held: no extra request.
+        if (!live.watched && Number(hold) > 0) {
+            try { if (await waitForWatch(db, session.username, Math.min(Number(hold) * 1000, HOLD_MAX_MS), request.signal)) live = { watched: true, screenId: null }; } catch (e) {}
+        }
     }
     // screenId (while watched): the screen the server has, so the page sends it again only if it didn't arrive
     return json(Object.assign({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS, watched: !!live.watched }, live.watched ? { screenId: live.screenId || null } : {}));

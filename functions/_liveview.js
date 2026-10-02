@@ -1,15 +1,19 @@
 // Live view: an Admin watches a trainee's screen as they work (Master Control → Monitoring → 👁 Watch live).
+// Close to real time, for facilitated mock calls: about a second from the trainee's change to the Admin.
 //
 // The trainee's page says where it is with every heartbeat (heartbeat.js → reportLiveView): the screen,
 // the case, the tab and any open panel. Each change goes on the trainee's trail (the last 40 steps).
-// While an Admin is watching (they read /api/live-view in the last WATCH_MS), the heartbeat's answer says
-// so, and the page shows the trainee that their trainer is viewing their screen (live-view.js). Then each
-// heartbeat (every 3 s) also carries:
+// An Admin watching reads /api/live-view about once a second, which marks the trainee as watched for the
+// next WATCH_MS. A trainee's heartbeat nobody watches waits at the server (waitForWatch, up to HOLD_MAX_MS)
+// and answers as soon as a watch starts: so the page hears of it within a second or two, at no extra
+// request. Then, while watched, the page shows the trainee that their trainer is viewing their screen and
+// sends (POST /api/live-screen → reportLiveView) about a second after each change, at most once a second,
+// and a short "still here" every couple of seconds otherwise:
 //   - their screen: a copy of the page as it looks (zipped HTML, nothing in it runs), only when it changed.
 //     At most SCREEN_MAX characters; a bigger one isn't kept and the Admin is told (too_big). The answer
 //     says which screen is kept (screenId), so the page sends it again only if it didn't arrive;
 //   - the view (tiny, every time): the window's size, where it's scrolled, the mouse pointer, the clocks;
-//   - a snapshot of the case as it stands (at most every 3 s, only when it changed), for the summary.
+//   - where they are, and a snapshot of the case (at most every 3 s, only when it changed), for the summary.
 // Only the trainee's own heartbeat writes their screen (the username comes from their session), and only
 // Admins read it (/api/live-view). A page that can mirror its screen says so (mirror: 1); a watched page
 // that doesn't is an older version still open (old_page_at), and the Admin is told. The copy of a screen
@@ -19,7 +23,9 @@
 //   live_view    username, where_json, trail_json, snapshot_json, snapshot_at, watched_until (ms), watched_by, updated_at
 //   live_screen  username, screen_id, enc ('gzip' or 'raw'), data, view_json, too_big, screen_at, seen_at, old_page_at
 //                (a table of its own: a screen and a case snapshot in one row could pass D1's limit for a row)
-export const WATCH_MS = 15000;
+export const WATCH_MS = 6000;   // the live view reads every second; a watch ends this long after the last read
+export const HOLD_MAX_MS = 29500;   // the longest a heartbeat waits for a watch to start
+const HOLD_STEP_MS = 500;   // how often a waiting heartbeat looks
 const TRAIL_MAX = 40;
 const SNAPSHOT_MAX = 400000;   // characters of JSON; a bigger case isn't mirrored (the trail still is)
 export const SCREEN_MAX = 700000;   // characters of a zipped screen (base64): well under D1's limit for a row
@@ -30,6 +36,7 @@ export async function ensureLiveViewTable(db) {
     await db.prepare(`CREATE TABLE IF NOT EXISTS live_view (
         username TEXT PRIMARY KEY, where_json TEXT, trail_json TEXT, snapshot_json TEXT, snapshot_at TEXT,
         watched_until INTEGER DEFAULT 0, watched_by TEXT, updated_at TEXT)`).run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS live_view_watched ON live_view (watched_until)`).run();
     await db.prepare(`CREATE TABLE IF NOT EXISTS live_screen (
         username TEXT PRIMARY KEY, screen_id TEXT, enc TEXT, data TEXT, view_json TEXT, too_big INTEGER DEFAULT 0,
         screen_at TEXT, seen_at TEXT, old_page_at TEXT)`).run();
@@ -137,4 +144,29 @@ export async function reportLiveView(db, username, { where, snapshot, screen, mi
         await db.prepare(`INSERT INTO live_screen (username, old_page_at) VALUES (?, ?) ON CONFLICT(username) DO UPDATE SET old_page_at = excluded.old_page_at`).bind(username, now).run();
     }
     return { watched: true, screenId };
+}
+
+// Who is watched right now? Asked at most about once per HOLD_STEP_MS by each server instance, whatever the
+// number of heartbeats waiting there (the index on watched_until makes it a look at the watched rows only:
+// none while nobody watches).
+let whoAt = 0, whoAsk = null;
+function watchedNow(db) {
+    const now = Date.now();
+    if (!whoAsk || now - whoAt >= HOLD_STEP_MS - 50) {
+        whoAt = now;
+        whoAsk = db.prepare(`SELECT username FROM live_view WHERE watched_until > ? LIMIT 200`).bind(now).all()
+            .then(r => new Set(((r && r.results) || []).map(x => x.username)), () => new Set());
+    }
+    return whoAsk;
+}
+// A heartbeat waiting for a watch to start: true as soon as this trainee is watched, false after ms (or when the
+// page goes away).
+export async function waitForWatch(db, username, ms, signal) {
+    await ensureLiveViewTable(db);
+    const end = Date.now() + ms;
+    while (Date.now() < end && !(signal && signal.aborted)) {
+        await new Promise(r => setTimeout(r, Math.max(0, Math.min(HOLD_STEP_MS, end - Date.now()))));
+        if ((await watchedNow(db)).has(username)) return true;
+    }
+    return false;
 }
