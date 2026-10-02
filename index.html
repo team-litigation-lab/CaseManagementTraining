@@ -1050,17 +1050,5 @@
     <script src="live-view.js"></script>
     <!-- a new version of the site: open pages load it at a quiet moment -->
     <script src="cms-update.js"></script>
-    <!-- 📊 server request meter, for Admins: how much of the monthly request allowance every LSH site
-         shares is used (README → Server request meter). Hidden in Trainee view: getSession() answers as a trainee there.
-         Top left, just under the top bar, over the sidebar's logo: the other corners hold Log Out, the case's ✕ and its
-         Close/Save/Update bar, the toasts and the Front Desk's "Back to the call". -->
-    <script src="request-budget.js"></script>
-    <script>
-        RequestBudget.start({
-            load: () => fetch('/api/request-budget', { credentials: 'include' }).then(r => r.json()),
-            isAdmin: () => { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); },
-            corner: 'top-left', offset: { x: 16, y: 44 }, site: 'trainingcrm'
-        });
-    </script>
 </body>
 </html>
