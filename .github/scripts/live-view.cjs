@@ -15,7 +15,7 @@
 // Admin's never waits); /api/live-screen keeps a screen only while watched, and only the sender's own.
 // Checks (browser): Monitoring has 👁 Watch live on an online trainee; the live view shows where they are
 // (the case and the tab), what they typed (as text, never run as HTML), what they open (New Intake), and the
-// trail; the trainee sees "Your trainer is viewing your screen" while watched, and not after.
+// trail; nothing on the trainee's page says they're being watched (no notice), and their page sends only while watched.
 // Checks (browser, real time): the watch starts within a couple of seconds of 👁 Watch live, with no
 // heartbeat sent by hand (the trainee's heartbeat was waiting at the server); a change on the trainee's
 // screen reaches the Admin's in about a second; while watched the trainee's page sends about once a second
@@ -270,10 +270,13 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     await admin.waitForSelector('#live-view-modal.open', { timeout: 4000 }).catch(() => fail('👁 Watch live didn\'t open the live view'));
     if (!(await admin.isVisible('#lv-pane-screen.on')) || await admin.isVisible('#lv-pane-summary')) fail('🖥 Screen isn\'t what the live view shows first');
     if (!/CMS tab only/.test(await admin.textContent('#lv-pane-screen .lv-note'))) fail('the live view doesn\'t say it mirrors their CMS tab only');
-    const chipAt = trainee.waitForSelector('#lv-watched-chip.on', { timeout: 8000 }).then(() => Date.now(), () => null);
+    const sendingAt = trainee.waitForFunction(() => lshLiveStats().watched, null, { timeout: 8000, polling: 50 }).then(() => Date.now(), () => null);
     await admin.waitForFunction(() => !!document.querySelector('#lv-stage iframe.lv-frame.lv-on'), null, { timeout: 8000, polling: 50 }).catch(() => {});
-    M.startMs = Date.now() - watchAt; M.toldMs = (await chipAt) ? (await chipAt) - watchAt : null;
-    if (M.toldMs === null) fail('the trainee isn\'t told their trainer is viewing their screen');
+    M.startMs = Date.now() - watchAt; M.toldMs = (await sendingAt) ? (await sendingAt) - watchAt : null;
+    if (M.toldMs === null) fail('the trainee\'s page didn\'t hear it was being watched (it never started sending)');
+    // nothing on the trainee's page says they're watched
+    const notice = await trainee.evaluate(() => ({ chip: !!document.getElementById('lv-watched-chip'), text: /viewing your screen|watching your screen/i.test(document.body.innerText) }));
+    if (notice.chip || notice.text) fail(`the trainee's page shows a notice that they're being watched: ${JSON.stringify(notice)}`);
     if (M.startMs > 4000) fail(`their screen took ${M.startMs} ms to show after 👁 Watch live (expected a second or two)`);
     await admin.waitForFunction(() => /Maria Live/.test((document.getElementById('lv-now') || {}).textContent || '') && /Treatment/.test(document.getElementById('lv-now').textContent), null, { timeout: 8000 })
         .catch(async () => fail(`the live view doesn't show where the trainee is: ${await admin.textContent('#lv-now').catch(() => '')}`));
@@ -544,12 +547,12 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     await setHidden(admin, false);
     await admin.waitForFunction(() => document.getElementById('lv-live').classList.contains('on'), null, { timeout: 5000 }).catch(() => fail('the live view didn\'t go live again when the Admin came back to it'));
 
-    // closing the live view: the watch lapses, the trainee is no longer told, and their page stops sending
+    // closing the live view: the watch lapses and their page stops sending
     await admin.click('#live-view-modal button:has-text("Close")');
     if (await admin.isVisible('#live-view-modal.open')) fail('Close didn\'t close the live view');
     if (await admin.evaluate(() => [...document.querySelectorAll('#lv-stage iframe')].some(f => f.hasAttribute('srcdoc')))) fail('the trainee\'s screen stays in the closed live view');
     const closedAt = Date.now();
-    await trainee.waitForSelector('#lv-watched-chip.on', { state: 'hidden', timeout: lv.WATCH_MS + 4000 }).catch(() => fail('the trainee is still told they\'re watched after the trainer stopped'));
+    await trainee.waitForFunction(() => !lshLiveStats().watched, null, { timeout: lv.WATCH_MS + 4000, polling: 100 }).catch(() => fail('the trainee\'s page still sends after the trainer stopped watching'));
     M.endMs = Date.now() - closedAt;
     if (sql.prepare("SELECT COUNT(*) AS n FROM live_screen WHERE username = 'tia'").get().n) fail('the copy of the trainee\'s screen was kept after the watch ended');
     // nobody watching: nothing but the usual heartbeat (which waits at the server for the next watch)
@@ -571,11 +574,11 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     await browser.close(); server.close();
     const perMin = (n, sec) => Math.round(n * 60 / sec);
     const avg = (a) => Math.round(a.reduce((x, y) => x + y, 0) / a.length);
-    console.log(`Measured: their screen showed ${M.startMs} ms after 👁 Watch live (trainee told after ${M.toldMs} ms); a change reached the Admin in ${M.lag.join(', ')} ms (${avg(M.lag)} on average); "● Live" ${Math.round(M.liveShare * 100)}% of the idle time;`
+    console.log(`Measured: their screen showed ${M.startMs} ms after 👁 Watch live (the trainee's page sending after ${M.toldMs} ms); a change reached the Admin in ${M.lag.join(', ')} ms (${avg(M.lag)} on average); "● Live" ${Math.round(M.liveShare * 100)}% of the idle time;`
         + ` while watched and idle the trainee sent ${perMin(M.idle.trainee, M.idle.seconds)}/min (copying the page ${M.idleCaptures} times) and the Admin read ${perMin(M.idle.admin, M.idle.seconds)}/min;`
         + ` typing steadily the trainee sent ${perMin(M.typing.trainee, M.typing.seconds)}/min (${M.typing.screens} new screens, ${M.typing.kbSent} KB in ${M.typing.seconds} s) , copying the page ${M.typing.captures} times (${M.typing.msPerCapture.toFixed(0)} ms each: ${M.typing.captureMsPerSecond.toFixed(1)} ms a second, plus ${M.typing.zipMsPerSecond.toFixed(1)} ms a second zipping);`
         + ` the watch ended ${M.endMs} ms after Close; with nobody watching, ${M.unwatched.heartbeats} heartbeats (one waited ${M.unwatched.waitedMs} ms), ${M.unwatched.liveScreen} live updates and ${M.unwatched.all} requests in all in ${M.unwatched.seconds} s.`);
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log('Live view test passed (where they are, the trail, the case as they type it, New Intake, the trainee told while watched; their screen mirrored as it is, in about a second, only while watched, with nothing in it running on the Admin\'s page).');
+    console.log('Live view test passed (where they are, the trail, the case as they type it, New Intake, no notice on the trainee\'s page; their screen mirrored as it is, in about a second, only while watched, with nothing in it running on the Admin\'s page).');
     process.exit(0);
 })().catch(e => { console.error(e); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); });
