@@ -2,22 +2,40 @@
    LSH CMS — LIVE VIEW (an Admin watches a trainee's screen as they work)
    ---------------------------------------------------------
    Trainee's page: every heartbeat (app.js: every 30 s, every 3 s while
-   watched) says where it is:
-   the screen, the open case, the tab and any open panel (lshLiveReport).
-   While an Admin is watching, the heartbeat's answer says so
-   (lshLiveWatched): the page then also sends a snapshot of the case as it
-   stands (at most every 3 s, and only when it changed), and the trainee
-   sees "👁 Your trainer is viewing your screen".
+   watched) says where it is: the screen, the open case, the tab and any
+   open panel (lshLiveReport). While an Admin is watching, the heartbeat's
+   answer says so (lshLiveWatched), the trainee sees "👁 Your trainer is
+   viewing your screen", and each heartbeat also carries:
+     - their screen: a copy of the page exactly as it is (captureScreen):
+       what's typed in each field, ticked boxes, chosen options, open
+       panels and windows, with every script, on… handler and javascript:
+       link taken out and passwords blanked. Zipped (gzip, base64) and sent
+       only when it changed; at most 700 KB (a bigger one isn't sent, and
+       the Admin is told). Nothing is copied while the CMS tab is hidden.
+     - the view, which is tiny: the window's size, where the page and each
+       scrolled box are scrolled, the mouse pointer, the field they're in
+       and the clocks. So scrolling or moving the mouse isn't a new screen.
+     - a snapshot of the case as it stands (at most every 3 s, only when it
+       changed), for the summary.
+   Nothing extra is sent while nobody watches.
 
    Admin: Master Control → Monitoring → 👁 Watch live on an online trainee
-   (openLiveView). The window reads /api/live-view every 3 s and shows
-   where they are now, the trail of where they've been, and their case as
-   it is on their screen. Server side: functions/_liveview.js.
+   (openLiveView). The window reads /api/live-view every 3 s (the screen
+   itself only when it changed). 🖥 Screen, the default, shows their screen
+   at their window's size, scaled to fit, in a sandboxed frame: its own
+   origin, which can't reach the Admin's page or cookies. The copy is
+   cleaned again here (a trainee could send one by hand), and a Content
+   Security Policy lets only this file's own small script run in it (it
+   scrolls the copy and draws the pointer). 📋 Summary shows where they
+   are, the trail of where they've been and their case as text. Server
+   side: functions/_liveview.js.
 
    Nothing here is a <select> or contenteditable in the case editor (the
-   case editor saves those by position). What trainees type is shown as
-   text, never as HTML: the snapshot is laid out in an inert document and
-   read back with extractReadableSections() (app.js), which escapes it.
+   case editor saves those by position; the mirrored screen is in its own
+   frame, outside the editor's document). In the summary, what trainees
+   type is shown as text, never as HTML: the snapshot is laid out in an
+   inert document and read back with extractReadableSections() (app.js),
+   which escapes it.
    ========================================================= */
 (function () {
     'use strict';
@@ -25,20 +43,37 @@
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const txt = (el) => el ? String(el.textContent || '').replace(/\s+/g, ' ').trim() : '';
     const SNAP_EVERY_MS = 3000, POLL_MS = 3000;
+    const SCREEN_MAX = 700000;   // characters of a zipped screen (base64); functions/_liveview.js keeps the same limit
+    const HTML_MAX = 15e6;       // a page bigger than this (unzipped) isn't copied or shown
 
     const css = document.createElement('style');
     css.textContent = `
     #lv-watched-chip{position:fixed;top:46px;right:16px;z-index:5200;display:none;align-items:center;gap:6px;background:#0c4a6e;color:#fff;border:2px solid #38bdf8;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.25)}
     #lv-watched-chip.on{display:flex}
-    #live-view-modal .lv-box{max-height:88vh;display:flex;flex-direction:column;width:min(1180px,96vw);max-width:none}
+    #live-view-modal .lv-box{height:calc(100vh - 96px);max-height:none;margin:76px 0 20px;display:flex;flex-direction:column;width:min(1500px,97vw);max-width:none;padding:18px 20px}   /* clear of the request meter at the top left */
     #live-view-modal .lv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-    #live-view-modal .lv-now{margin:10px 0 12px;padding:10px 14px;border-radius:10px;background:#0f2148;color:#fff;font-size:13px;line-height:1.5}
+    #live-view-modal .lv-head .sub{margin-bottom:0}
+    #live-view-modal .lv-now{margin:8px 0 10px;padding:8px 14px;border-radius:10px;background:#0f2148;color:#fff;font-size:13px;line-height:1.5}
     #live-view-modal .lv-now .crumbs{font-weight:800}
     #live-view-modal .lv-now .panel{display:inline-block;margin-top:4px;background:#f97316;color:#fff;border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:800}
     #live-view-modal .lv-now .meta{font-size:11px;color:#cbd5e1;margin-top:4px}
     #live-view-modal .lv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:6px;vertical-align:middle}
     #live-view-modal .lv-dot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.3)}
+    #live-view-modal .lv-tabs{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+    #live-view-modal .lv-tabs button{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer}
+    #live-view-modal .lv-tabs button.on{background:#0f2148;color:#fff;border-color:#0f2148}
+    #live-view-modal .lv-tabs .lv-info{margin-left:auto;font-size:11px;color:#64748b;font-family:'IBM Plex Mono',monospace}
+    #live-view-modal .lv-pane{display:none;min-height:0;flex:1}
+    #live-view-modal .lv-pane.on{display:flex;flex-direction:column}
+    #live-view-modal .lv-stage{position:relative;flex:1;min-height:0;overflow:hidden;background:#0b1220;border-radius:10px}
+    #live-view-modal .lv-frame{position:absolute;top:0;left:0;border:0;background:#fff;transform-origin:0 0;pointer-events:none;visibility:hidden;box-shadow:0 0 0 1px #334155}
+    #live-view-modal .lv-frame.lv-on{visibility:visible}
+    #live-view-modal .lv-msg{position:absolute;inset:0;background:#0b1220;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px 15%;color:#cbd5e1;font-size:13px;line-height:1.6}
+    #live-view-modal .lv-badge{position:absolute;left:10px;bottom:10px;max-width:70%;background:rgba(15,33,72,.94);color:#fff;border:1px solid #38bdf8;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;display:none}
+    #live-view-modal .lv-note{font-size:11px;color:#64748b;margin-top:6px}
     #live-view-modal .lv-grid{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:14px;min-height:0;flex:1}
+    #live-view-modal .lv-grid.lv-pane{display:none}
+    #live-view-modal .lv-grid.lv-pane.on{display:grid}
     #live-view-modal .lv-grid > div{min-height:0;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff}
     #live-view-modal h4{margin:0 0 8px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#0f2148}
     #live-view-modal h4 span{font-weight:600;text-transform:none;letter-spacing:0;color:#64748b}
@@ -55,6 +90,34 @@
     @media (max-width:760px){#live-view-modal .lv-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(css);
+
+    /* ---------- cleaning a copy of a page (on the trainee's page, then again on the Admin's) ---------- */
+    // Elements that run, load or embed something, or change how the copy is read: taken out.
+    // A <link rel=stylesheet> stays (that's how the copy looks the same); every other <link>, and every <meta>, goes.
+    const DROP = 'script, noscript, template, iframe, frame, frameset, object, embed, applet, portal, noembed, noframes, base, meta, link, animate, set, animateMotion, animateTransform, discard';
+    const URL_ATTRS = new Set(['href', 'src', 'srcset', 'action', 'formaction', 'poster', 'background', 'data', 'codebase', 'cite', 'longdesc', 'lowsrc', 'dynsrc', 'usemap', 'manifest', 'icon', 'archive', 'classid', 'profile']);
+    const NO_ATTRS = new Set(['srcdoc', 'nonce', 'http-equiv', 'formaction', 'action', 'ping', 'target', 'autofocus', 'autoplay', 'integrity', 'crossorigin']);
+    // fix(el, name, value): the value a kept href/src gets (made absolute on the trainee's page, moved to this site on the Admin's)
+    function cleanTree(root, fix) {
+        root.querySelectorAll(DROP).forEach(el => {
+            if (el.localName === 'link' && /(^|\s)stylesheet(\s|$)/i.test(el.getAttribute('rel') || '') && /^https?:\/\//i.test(fix(el, 'href', el.getAttribute('href') || ''))) return;
+            el.remove();
+        });
+        const all = [root, ...root.querySelectorAll('*')];
+        for (let i = 0; i < all.length; i++) {
+            const el = all[i];
+            for (let j = el.attributes.length - 1; j >= 0; j--) {
+                const a = el.attributes[j], n = a.name.toLowerCase();
+                if (n.startsWith('on') || NO_ATTRS.has(n)) { el.removeAttribute(a.name); continue; }
+                if (URL_ATTRS.has(n) || n.endsWith(':href')) {
+                    // as a browser reads a URL: spaces and control characters don't count
+                    const v = a.value.replace(/[\u0000-\u0020\u007f-\u00a0\u1680\u2000-\u200f\u2028\u2029\u202f\u205f\u3000\ufeff]+/g, '');
+                    if (/^[a-z][a-z0-9+.\-]*:/i.test(v) && !/^(https?:|data:image\/|mailto:|tel:)/i.test(v)) { el.removeAttribute(a.name); continue; }
+                    if (n === 'href' || n === 'src') { const f = fix(el, n, a.value); if (f !== a.value) el.setAttribute(a.name, f); }
+                } else if (n === 'style' && /expression\s*\(|javascript:|behavior\s*:|-moz-binding/i.test(a.value)) el.removeAttribute(a.name);
+            }
+        }
+    }
 
     /* ---------- the trainee's page ---------- */
     const realSession = () => (typeof getRealSession === 'function' ? getRealSession() : (typeof getSession === 'function' ? getSession() : null));
@@ -89,24 +152,127 @@
         try { content = typeof buildCaseContentPayload === 'function' ? buildCaseContentPayload() : null; } catch (e) { content = null; }
         return { content, client: txt($id('client-name-field')), caseId: txt($id('case-id-field')), phase: txt($id('display-phase')), tab: activeTab() };
     }
+
+    // The screen. Text that changes every second (the clocks) goes with the view, so a ticking clock isn't a new screen.
+    const TICKING = '#live-clock, #fdd-timer, .tt-clock, .tt-billed';
+    let pointer = null;                   // where the mouse is in the window: kept here, read at each watched heartbeat
+    const scrolled = new Set();           // the boxes the trainee has scrolled (the page's own scroll is scrollX/scrollY)
+    addEventListener('mousemove', (e) => { pointer = [e.clientX, e.clientY]; }, { passive: true, capture: true });
+    document.documentElement.addEventListener('mouseleave', () => { pointer = null; });
+    document.addEventListener('scroll', (e) => { if (e.target && e.target.nodeType === 1) scrolled.add(e.target); }, { passive: true, capture: true });
+    // Elements the view talks about (a scrolled box, the field they're in, a clock) get a number in the copy: data-lv-k, data-lv-tick.
+    const keys = new WeakMap(); let lastKey = 0;
+    const keyOf = (el) => { let k = keys.get(el); if (!k) keys.set(el, k = String(++lastKey)); return k; };
+    function pathOf(el) {   // child positions from <html> down, to find the same element in the copy
+        const p = [];
+        for (let n = el; n !== document.documentElement; n = n.parentElement) {
+            if (!n || !n.parentElement) return null;
+            p.push(Array.prototype.indexOf.call(n.parentElement.children, n));
+        }
+        return p.reverse();
+    }
+    const follow = (root, p) => p.reduce((n, i) => n && n.children[i], root);
+    const absolute = (v) => { try { return new URL(v, document.baseURI).href; } catch (e) { return v; } };
+
+    // A copy of the page as the trainee sees it, as HTML. Nothing in it runs.
+    function captureScreen() {
+        const de = document.documentElement;
+        scrolled.forEach(el => { if (!el.isConnected) scrolled.delete(el); });
+        const marked = [...scrolled];
+        const focused = document.activeElement;
+        if (focused && focused !== document.body && focused !== de && !scrolled.has(focused)) marked.push(focused);
+        const paths = marked.map(pathOf);
+        const fields = de.querySelectorAll('input, textarea, select'), sheets = de.querySelectorAll('style'), ticking = de.querySelectorAll(TICKING);
+        const copy = de.cloneNode(true);
+        const cFields = copy.querySelectorAll('input, textarea, select'), cSheets = copy.querySelectorAll('style'), cTicking = copy.querySelectorAll(TICKING);
+        // what's typed, ticked and chosen lives in the fields, not in the page's HTML: written into the copy
+        fields.forEach((f, i) => {
+            const c = cFields[i]; if (!c) return;
+            if (f.localName === 'textarea') c.textContent = f.value;
+            else if (f.localName === 'select') { for (let j = 0; j < f.options.length; j++) { const o = c.options[j]; if (o) { if (f.options[j].selected) o.setAttribute('selected', ''); else o.removeAttribute('selected'); } } }
+            else {
+                const t = String(f.type || '').toLowerCase();
+                if (t === 'password' || t === 'hidden' || t === 'file') c.removeAttribute('value');   // passwords are never copied
+                else if (t === 'checkbox' || t === 'radio') { if (f.checked) c.setAttribute('checked', ''); else c.removeAttribute('checked'); }
+                else c.setAttribute('value', f.value);
+            }
+        });
+        // styles a script added rule by rule (not as text) are written out
+        sheets.forEach((s, i) => { try { if (!s.textContent.trim() && s.sheet && s.sheet.cssRules.length && cSheets[i]) cSheets[i].textContent = Array.from(s.sheet.cssRules, r => r.cssText).join('\n'); } catch (e) {} });
+        try { (document.adoptedStyleSheets || []).forEach(sh => { const st = document.createElement('style'); st.textContent = Array.from(sh.cssRules, r => r.cssText).join('\n'); (copy.querySelector('head') || copy).appendChild(st); }); } catch (e) {}
+        marked.forEach((el, i) => { const c = paths[i] && follow(copy, paths[i]); if (c) c.setAttribute('data-lv-k', keyOf(el)); });
+        ticking.forEach((el, i) => { const c = cTicking[i]; if (c) { c.setAttribute('data-lv-tick', keyOf(el)); c.textContent = ''; } });
+        cleanTree(copy, (el, n, v) => ((el.localName === 'link' && n === 'href') || (el.localName === 'img' && n === 'src')) && v && !/^data:/i.test(v) ? absolute(v) : v);
+        return '<!DOCTYPE html>' + copy.outerHTML;
+    }
+    // The view: tiny, sent with every watched heartbeat.
+    function viewState() {
+        const v = { vw: innerWidth, vh: innerHeight, sx: Math.round(scrollX), sy: Math.round(scrollY), hidden: document.visibilityState === 'hidden', origin: location.origin };
+        if (pointer) { v.px = Math.round(pointer[0]); v.py = Math.round(pointer[1]); }
+        v.scroll = {};
+        scrolled.forEach(el => { const k = keys.get(el); if (k && el.isConnected && (el.scrollTop || el.scrollLeft)) v.scroll[k] = [Math.round(el.scrollTop), Math.round(el.scrollLeft)]; });
+        const f = document.activeElement; if (f && keys.has(f)) v.focus = keys.get(f);
+        v.tick = {};
+        document.querySelectorAll(TICKING).forEach(el => { const k = keys.get(el); if (k) v.tick[k] = String(el.textContent || '').slice(0, 80); });
+        return v;
+    }
+    function idOf(s) {   // which screen this is: two 32-bit FNV-1a hashes and the length
+        let a = 0x811c9dc5, b = 0x01000193 ^ s.length;
+        for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); a = Math.imul(a ^ c, 16777619); b = Math.imul(b ^ c, 2246822519); }
+        return (a >>> 0).toString(36) + '-' + (b >>> 0).toString(36) + '-' + s.length.toString(36);
+    }
+    async function zip(html) {
+        if (typeof CompressionStream === 'function') {
+            try {
+                const buf = new Uint8Array(await new Response(new Blob([html]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+                let s = '';
+                for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+                return { enc: 'gzip', data: btoa(s) };
+            } catch (e) {}
+        }
+        return { enc: 'raw', data: html };
+    }
     let watched = false, lastSnap = '', lastSnapAt = 0;
-    // app.js adds this to every heartbeat. Trainees only (an Admin, Trainee view too, isn't watched).
+    // The screen: the last copy and its id, the server's (from the heartbeat's answer), and the last one sent.
+    let lastHtml = '', lastId = '', zipped = null, serverId = '', sentId = '', sentAt = 0;
+    async function screenReport() {
+        if (document.visibilityState !== 'hidden') {   // a hidden tab isn't copied: the Admin keeps the last screen
+            const html = captureScreen();
+            if (html !== lastHtml) { lastHtml = html; lastId = idOf(html); zipped = null; }
+        }
+        const out = { id: lastId, view: viewState() };
+        // the copy itself only when the server doesn't have it yet (and not again while the one just sent is on its way)
+        if (lastId && lastId !== serverId && !(sentId === lastId && Date.now() - sentAt < 10000)) {
+            if (lastHtml.length > HTML_MAX) out.tooBig = lastHtml.length;
+            else {
+                if (!zipped) zipped = await zip(lastHtml);
+                if (zipped.data.length > SCREEN_MAX) out.tooBig = zipped.data.length;
+                else { out.enc = zipped.enc; out.data = zipped.data; sentId = lastId; sentAt = Date.now(); }
+            }
+        }
+        return out;
+    }
+    // app.js adds this to every heartbeat (while watched it's a promise, and app.js waits for it).
+    // Trainees only (an Admin, Trainee view too, isn't watched).
     window.lshLiveReport = function () {
         const s = realSession();
         if (!s || s.userType === 'Admin') return {};
-        const out = { where: where() };
+        const out = { where: where(), mirror: 1 };   // mirror: this page can send its screen
         if (watched && Date.now() - lastSnapAt >= SNAP_EVERY_MS) {
             const snap = snapshot(), key = JSON.stringify(snap);
             if (key !== lastSnap) { out.snapshot = snap; lastSnap = key; }
             lastSnapAt = Date.now();
         }
-        return out;
+        if (!watched) return out;
+        const late = new Promise(res => setTimeout(() => res(out), 2500));   // the heartbeat never waits long for the screen
+        return Promise.race([screenReport().then(screen => Object.assign(out, { screen }), () => out), late]);
     };
-    // The heartbeat's answer: is a trainer watching? The trainee is told so.
-    window.lshLiveWatched = function (on) {
+    // The heartbeat's answer: is a trainer watching? The trainee is told so. It also says which screen the server has.
+    window.lshLiveWatched = function (on, answer) {
+        if (answer && 'screenId' in answer) serverId = answer.screenId || '';
         if (on === watched) return;
         watched = on;
-        if (!on) lastSnap = '';   // the next watch gets a fresh snapshot
+        if (!on) { lastSnap = ''; lastHtml = ''; lastId = ''; zipped = null; serverId = ''; sentId = ''; }   // the next watch starts afresh
         let chip = $id('lv-watched-chip');
         if (!chip) {
             document.body.insertAdjacentHTML('beforeend', '<div id="lv-watched-chip" class="no-print" role="status">👁 Your trainer is viewing your screen</div>');
@@ -116,7 +282,7 @@
     };
 
     /* ---------- the Admin's live view ---------- */
-    let W = null;   // { username, timer, snapAt, data }
+    let W = null;   // the open live view (see openLiveView); gotId: the screen last received, pending/loading: one on its way, shownId: the one on show
     function modal() {
         let m = $id('live-view-modal');
         if (m) return m;
@@ -126,7 +292,21 @@
                     <div class="lv-head"><div><h2 class="serif" id="lv-title">Live view</h2><div class="sub mono" id="lv-sub">Their screen, as they work · updates every 3 seconds</div></div>
                         <button class="btn-ghost" onclick="closeLiveView()">Close</button></div>
                     <div class="lv-now" id="lv-now"><span class="lv-wait">Connecting…</span></div>
-                    <div class="lv-grid">
+                    <div class="lv-tabs" role="tablist">
+                        <button type="button" id="lv-tab-screen" role="tab" onclick="lvShowPane('screen', true)">🖥 Screen</button>
+                        <button type="button" id="lv-tab-summary" role="tab" onclick="lvShowPane('summary', true)">📋 Summary, trail and case</button>
+                        <span class="lv-info" id="lv-screen-info"></span>
+                    </div>
+                    <div class="lv-pane" id="lv-pane-screen">
+                        <div class="lv-stage" id="lv-stage">
+                            <iframe class="lv-frame" sandbox="allow-scripts" referrerpolicy="no-referrer" tabindex="-1" title="The trainee's screen"></iframe>
+                            <iframe class="lv-frame" sandbox="allow-scripts" referrerpolicy="no-referrer" tabindex="-1" title="The trainee's screen"></iframe>
+                            <div class="lv-msg" id="lv-screen-msg"></div>
+                            <div class="lv-badge" id="lv-badge"></div>
+                        </div>
+                        <div class="lv-note">This mirrors their CMS tab only, not other tabs, windows or programs on their computer.</div>
+                    </div>
+                    <div class="lv-grid lv-pane" id="lv-pane-summary">
                         <div class="lv-trail"><h4>Where they've been</h4><ol id="lv-trail"></ol></div>
                         <div class="lv-case"><h4>Their case, as on their screen <span id="lv-snap-age"></span></h4><div id="lv-case"><p class="lv-wait">Waiting for their screen… it shows within 30 seconds while they're online.</p></div></div>
                     </div>
@@ -134,6 +314,7 @@
             </div>`);
         m = $id('live-view-modal');
         m.addEventListener('click', (e) => { if (e.target === m) closeLiveView(); });
+        addEventListener('resize', fit);
         return m;
     }
     const crumbs = (w) => [w.screen, w.caseName ? (w.caseName + (w.caseId ? ` (${w.caseId})` : '')) : '', w.screen === 'Case workspace' ? w.tab : ''].filter(Boolean).join(' › ');
@@ -145,7 +326,7 @@
         const dot = `<span class="lv-dot ${d.online ? 'on' : ''}"></span>`;
         if (!w) { $id('lv-now').innerHTML = `${dot}<span class="lv-wait" style="color:#cbd5e1">${d.online ? 'Online. Waiting for their screen…' : 'Offline.'}${d.lastSeen ? ' Last seen ' + esc(clock(String(d.lastSeen).replace(' ', 'T') + 'Z')) + '.' : ''}</span>`; return; }
         $id('lv-now').innerHTML = `${dot}<span class="crumbs">Now: ${esc(crumbs(w))}</span>`
-            + (w.panel ? `<br><span class="panel">${esc(w.panel)}</span>` : '')
+            + (w.panel ? ` <span class="panel">${esc(w.panel)}</span>` : '')
             + (w.detail ? `<div class="meta">${esc(w.detail)}</div>` : '')
             + (d.online ? '' : `<div class="meta">Offline now${d.lastSeen ? ' · last seen ' + esc(clock(String(d.lastSeen).replace(' ', 'T') + 'Z')) : ''}: this is where they were.</div>`);
     }
@@ -168,6 +349,186 @@
         } catch (e) { html += '<p class="lv-wait">The rest of this case couldn\'t be shown.</p>'; }
         return html;
     }
+
+    /* ---------- their screen, in a sandboxed frame ---------- */
+    // The only script that runs in the frame. It scrolls the copy as the trainee's page is scrolled, puts the
+    // clocks' text in, outlines the field they're in and draws the mouse pointer; the Admin's page sends it each
+    // new view (postMessage). It can't reach the Admin's page: the frame is its own origin.
+    function frameScript(V) {
+        var dot = null;
+        function apply(v) {
+            if (!v) return;
+            V = v;
+            try { window.scrollTo(v.sx || 0, v.sy || 0); } catch (e) {}
+            var els = document.querySelectorAll('[data-lv-k]'), i;
+            for (i = 0; i < els.length; i++) {
+                var k = els[i].getAttribute('data-lv-k'), s = (v.scroll || {})[k] || [0, 0];
+                els[i].scrollTop = s[0]; els[i].scrollLeft = s[1];
+                if (String(v.focus) === k) els[i].setAttribute('data-lv-focus', ''); else els[i].removeAttribute('data-lv-focus');
+            }
+            var t = document.querySelectorAll('[data-lv-tick]');
+            for (i = 0; i < t.length; i++) { var x = (v.tick || {})[t[i].getAttribute('data-lv-tick')]; if (typeof x === 'string') t[i].textContent = x; }
+            if (!document.body) return;
+            if (!dot) {
+                dot = document.createElement('div');
+                dot.id = 'lv-pointer';
+                dot.setAttribute('aria-hidden', 'true');
+                dot.style.cssText = 'position:fixed;z-index:2147483647;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:rgba(239,68,68,.85);box-shadow:0 0 0 3px rgba(255,255,255,.95),0 0 0 6px rgba(239,68,68,.35);pointer-events:none;display:none;transition:left .3s ease,top .3s ease';
+            }
+            if (dot.parentNode !== document.body) document.body.appendChild(dot);
+            if (typeof v.px === 'number' && typeof v.py === 'number') { dot.style.left = v.px + 'px'; dot.style.top = v.py + 'px'; dot.style.display = 'block'; }
+            else dot.style.display = 'none';
+        }
+        addEventListener('message', function (e) { if (e.source === parent && e.data && e.data.lv === 'view') apply(e.data.view); });
+        document.addEventListener('DOMContentLoaded', function () { apply(V); });
+        addEventListener('load', function () {
+            // windows that slide or fade in are shown as they end up, not replayed with each update
+            try { document.getAnimations().forEach(function (a) { var t = a.effect && a.effect.getComputedTiming(); if (t && isFinite(t.endTime)) a.finish(); }); } catch (e) {}
+            apply(V);
+            try { document.fonts.ready.then(function () { apply(V); }); } catch (e) {}
+        });
+    }
+    const FRAME_CSS = '[data-lv-focus]{outline:2px solid #f97316!important;outline-offset:2px!important}*{scroll-behavior:auto!important;caret-color:transparent!important}';
+    const policy = (nonce) => `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline' ${location.origin} https://fonts.googleapis.com; font-src ${location.origin} https://fonts.gstatic.com data:; img-src ${location.origin} data:; base-uri 'none'; form-action 'none'`;
+    async function unzip(enc, data) {
+        if (enc === 'raw') return String(data);
+        if (enc !== 'gzip') throw new Error('it came in a form this page doesn\'t know');
+        if (typeof DecompressionStream !== 'function') throw new Error('this browser can\'t unzip it (Chrome, Edge, Firefox and Safari 16.4+ can)');
+        const bin = atob(data), bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+        const parts = []; let size = 0;
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            size += value.length;
+            if (size > HTML_MAX) { reader.cancel().catch(() => {}); throw new Error('it is too big'); }
+            parts.push(value);
+        }
+        return new Blob(parts).text();
+    }
+    // The frame's document: the trainee's copy cleaned again (a trainee could send one by hand), our Content
+    // Security Policy first (only our script, with its nonce, can run; nothing loads from anywhere else), then
+    // the page, then our script.
+    function frameDoc(html, view) {
+        const P = new DOMParser(), here = location.origin, from = view && view.origin;
+        const fix = (el, n, v) => {   // the trainee's site is this site; nothing in the copy asks the server for anything (but an uploaded file)
+            const u = from && from !== here && v.indexOf(from + '/') === 0 ? here + v.slice(from.length) : v;
+            try { const p = new URL(u, here + '/'); if (p.origin === here && /^\/api\//i.test(p.pathname) && p.pathname !== '/api/file') return ''; } catch (e) {}
+            return u;
+        };
+        let out = '<!DOCTYPE html>' + String(html).replace(/^\s*<!doctype[^>]*>/i, ''), doc = null;
+        for (let i = 0; i < 4 && !doc; i++) {   // read back and cleaned until it reads back the same: nothing in it turns into something else
+            const d = P.parseFromString(out, 'text/html');
+            cleanTree(d.documentElement, fix);
+            const again = '<!DOCTYPE html>' + d.documentElement.outerHTML;
+            if (again === out) doc = d; else out = again;
+        }
+        if (!doc) throw new Error('it didn\'t clean up');
+        const a = new Uint8Array(16); crypto.getRandomValues(a);
+        const nonce = btoa(String.fromCharCode.apply(null, a)), csp = policy(nonce);
+        const code = `(${frameScript})(${JSON.stringify(view || null).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')});`;
+        const head = doc.head;
+        const meta = doc.createElement('meta'); meta.setAttribute('http-equiv', 'Content-Security-Policy'); meta.setAttribute('content', csp);
+        head.insertBefore(meta, head.firstChild);
+        const st = doc.createElement('style'); st.textContent = FRAME_CSS; head.appendChild(st);
+        const sc = doc.createElement('script'); sc.setAttribute('nonce', nonce); sc.textContent = code; head.appendChild(sc);
+        const final = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+        // read once more as the frame will read it: our policy first, and our script the only one
+        const chk = P.parseFromString(final, 'text/html'), scripts = chk.querySelectorAll('script'), first = chk.head && chk.head.firstElementChild;
+        if (!first || first.localName !== 'meta' || first.getAttribute('content') !== csp || scripts.length !== 1 || scripts[0].textContent !== code) throw new Error('it didn\'t clean up');
+        return final;
+    }
+    const frames = () => [...document.querySelectorAll('#lv-stage iframe.lv-frame')];
+    const shownFrame = () => frames().find(f => f.classList.contains('lv-on')) || null;
+    function blankFrames() { frames().forEach(f => { f.classList.remove('lv-on'); f.onload = null; if (f.hasAttribute('srcdoc')) f.removeAttribute('srcdoc'); }); }
+    // their window's size, scaled down to fit (never up)
+    function fit() {
+        const st = $id('lv-stage'), v = W && W.view;
+        if (!st || !v || !st.clientWidth) return;
+        const s = Math.min(1, (st.clientWidth - 2) / v.vw, (st.clientHeight - 2) / v.vh);
+        W.scale = s;
+        frames().forEach(f => {
+            f.style.width = v.vw + 'px'; f.style.height = v.vh + 'px';
+            f.style.transform = `scale(${s})`;
+            f.style.left = Math.max(0, Math.round((st.clientWidth - v.vw * s) / 2)) + 'px';
+        });
+    }
+    function sendView(v) {
+        const f = shownFrame(), key = JSON.stringify(v);
+        if (!f || !f.contentWindow || key === W.viewKey) return;
+        W.viewKey = key;
+        f.contentWindow.postMessage({ lv: 'view', view: v }, '*');   // the frame is its own (opaque) origin
+    }
+    let renders = 0;
+    async function render(s) {
+        const my = W, n = ++renders;
+        my.gotId = s.id; my.pending = s.id;
+        let doc;
+        try { doc = frameDoc(await unzip(s.enc, s.data), s.view); }
+        catch (e) {
+            if (W !== my || n !== renders) return;
+            my.pending = null; my.failId = s.id; my.failMsg = 'This screen couldn\'t be shown: ' + (e && e.message ? e.message : 'it didn\'t open') + '. The summary shows where they are.';
+            if (my.data) paintScreen(my.data);
+            return;
+        }
+        if (W !== my || n !== renders) return;
+        const cur = shownFrame(), next = frames().find(f => f !== cur);
+        my.pending = null; my.loading = next;
+        fit();
+        let done = false;
+        const swap = () => {   // the new copy takes the old one's place once it has loaded: no flicker
+            if (done || W !== my || my.loading !== next) return;
+            done = true; clearTimeout(late); next.onload = null; my.loading = null;
+            next.classList.add('lv-on');
+            if (cur) { cur.classList.remove('lv-on'); cur.onload = null; cur.removeAttribute('srcdoc'); }
+            my.shownId = s.id; my.failId = null;
+            my.viewKey = JSON.stringify(s.view);
+            if (my.view) sendView(my.view);   // a newer view than the copy's own
+            if (my.data) paintScreen(my.data);
+        };
+        const late = setTimeout(swap, 8000);
+        next.onload = swap;
+        next.srcdoc = doc;
+    }
+    function paintScreen(d) {
+        if (!W) return;
+        const s = d.screen || null, v = (s && s.view) || null;
+        if (v) { W.view = v; fit(); }
+        let problem = '', fallback = false;   // fallback: nothing to show for now, so the summary instead
+        if (s && s.oldPage) { problem = 'Their CMS page is an older version that can\'t mirror the screen. It loads the new version by itself between tasks (or ask them to reload the page). Meanwhile, the summary shows where they are.'; fallback = true; }
+        else if (s && s.id) {
+            if (s.data && s.id !== W.gotId) render(s);                    // a new screen
+            else if (v && s.id === W.shownId && !W.loading) sendView(v);   // the same screen: only the scroll, the pointer, the clocks
+            if (W.failId === s.id) { problem = W.failMsg; fallback = true; }
+        } else if (s && s.tooBig) { problem = `Their screen is too big to mirror right now (${Math.round(s.tooBig / 1024)} KB; the limit is ${Math.round(SCREEN_MAX / 1024)} KB zipped). The summary shows where they are.`; fallback = true; }
+        else if (v && v.hidden) problem = 'Their CMS tab is in the background (they\'re in another tab or window). Their screen shows here when they come back to it.';
+        // the last screen stays up while the next one is on its way
+        const busy = !!(W.pending || W.loading), showing = !problem && !!(s && s.id) && (!!W.shownId || busy);
+        if (!showing && !busy) {
+            blankFrames(); W.shownId = null;
+            if (!(s && s.id && W.failId === s.id)) W.gotId = null;   // nothing on show: the next read gets the screen again (not one that can't be shown)
+        }
+        const msg = $id('lv-screen-msg');
+        msg.style.display = showing ? 'none' : 'flex';
+        msg.textContent = problem || (s && s.id ? 'Loading their screen…' : d.online ? 'Waiting for their screen… it shows within 30 seconds while they\'re online.' : 'Offline. Their screen shows here while they\'re online.');
+        const note = !showing ? '' : !d.online ? 'Offline: this is their last screen.' : v && v.hidden ? 'In the background: they\'re in another tab or window. This is the last thing on their CMS tab.' : '';
+        const badge = $id('lv-badge'); badge.textContent = note; badge.style.display = note ? 'block' : 'none';
+        $id('lv-screen-info').textContent = v && s.id ? `${v.vw} × ${v.vh} window${W.scale ? ' · shown at ' + Math.round(W.scale * 100) + '%' : ''}${s.seenAt ? ' · updated ' + ago(s.seenAt, d.serverNow) : ''}` : '';
+        if (!W.chosen) lvShowPane(fallback ? 'summary' : 'screen');   // unless the Admin picked a tab
+    }
+    window.lvShowPane = function (which, byHand) {
+        if (!W) return;
+        if (byHand) W.chosen = true;
+        if (W.pane === which) return;
+        W.pane = which;
+        ['screen', 'summary'].forEach(p => {
+            $id('lv-pane-' + p).classList.toggle('on', p === which);
+            $id('lv-tab-' + p).classList.toggle('on', p === which);
+            $id('lv-tab-' + p).setAttribute('aria-selected', String(p === which));
+        });
+        if (which === 'screen') fit();
+    };
     function paint(d) {
         if (!W) return;
         W.data = d;
@@ -176,11 +537,13 @@
         paintNow(d); paintTrail(d);
         if (d.snapshot && d.snapshotAt !== W.snapAt) { W.snapAt = d.snapshotAt; $id('lv-case').innerHTML = caseHTML(d.snapshot); }
         $id('lv-snap-age').textContent = d.snapshotAt ? `· updated ${ago(d.snapshotAt, d.serverNow)}` : '';
+        paintScreen(d);
     }
     async function poll() {
         const my = W; if (!my) return;
         try {
-            const res = await fetch('/api/live-view?username=' + encodeURIComponent(my.username), { credentials: 'include', cache: 'no-store' });
+            // with the screen we already have: it's sent again only when it changed
+            const res = await fetch('/api/live-view?username=' + encodeURIComponent(my.username) + (my.gotId ? '&screen=' + encodeURIComponent(my.gotId) : ''), { credentials: 'include', cache: 'no-store' });
             const d = await res.json();
             if (W !== my) return;
             if (!res.ok || !d.success) { $id('lv-now').innerHTML = `<span class="lv-wait" style="color:#fecaca">${esc(d.error || 'Couldn\'t load the live view.')}</span>`; if (res.status === 401 || res.status === 403) return closeTimer(); }
@@ -197,15 +560,22 @@
         $id('lv-trail').innerHTML = '';
         $id('lv-case').innerHTML = '<p class="lv-wait">Waiting for their screen… it shows within 30 seconds while they\'re online.</p>';
         $id('lv-snap-age').textContent = '';
+        $id('lv-screen-info').textContent = '';
+        $id('lv-badge').style.display = 'none';
+        const msg = $id('lv-screen-msg'); msg.style.display = 'flex'; msg.textContent = 'Connecting…';
+        blankFrames();
         m.classList.add('open');
-        W = { username: String(username), timer: null, snapAt: null, data: null };
+        W = { username: String(username), timer: null, snapAt: null, data: null, pane: '', chosen: false, gotId: null, pending: null, shownId: null, view: null, viewKey: '', failId: null, failMsg: '', loading: null, scale: 0 };
+        lvShowPane('screen');
         poll();
         W.timer = setInterval(poll, POLL_MS);
     };
     window.closeLiveView = function () {
         closeTimer(); W = null;
+        blankFrames();
         const m = $id('live-view-modal'); if (m) m.classList.remove('open');
     };
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && W) closeLiveView(); });
     window.lshLiveWhere = where;   // for the checks
+    window.lshLiveFrameDoc = frameDoc;   // for the checks: what the Admin's frame is given for a copy
 })();

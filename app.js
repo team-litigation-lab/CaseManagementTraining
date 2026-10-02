@@ -2743,15 +2743,19 @@
         function sendHeartbeat() {
             const session = getSession();
             if (!session) return Promise.resolve(false);
-            return fetch('/api/heartbeat', {
+            const beat = {
+                fullName: session.fullName,
+                currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
+            };
+            // live view (live-view.js): where the trainee is, and while a trainer watches, their screen (then it's a promise)
+            let live = {};
+            try { live = window.lshLiveReport ? window.lshLiveReport() : {}; } catch (e) { live = {}; }
+            return Promise.resolve(live).catch(() => ({})).then(extra => fetch('/api/heartbeat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify(Object.assign({
-                    fullName: session.fullName,
-                    currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
-                }, window.lshLiveReport ? window.lshLiveReport() : {}))   // live view (live-view.js): where the trainee is
-            })
+                body: JSON.stringify(Object.assign(beat, extra))
+            }))
             .then(r => {
                 if (r.status === 401) {
                     handleSessionExpired('Your session has expired. Please log in again.');
@@ -2759,7 +2763,7 @@
                 }
                 if (r.ok) r.clone().json().then(d => {
                     const on = !!(d && d.watched);
-                    if (window.lshLiveWatched) window.lshLiveWatched(on);
+                    if (window.lshLiveWatched) window.lshLiveWatched(on, d);   // d.screenId: the trainee's screen the server has
                     if (on !== heartbeatWatched) { heartbeatWatched = on; if (heartbeatTimer) scheduleHeartbeat(); }   // a trainer started or stopped watching
                 }).catch(() => {});
                 return r.ok;

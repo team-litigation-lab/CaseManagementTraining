@@ -26,7 +26,7 @@ export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
-    const { fullName, currentCase, where, snapshot } = body;
+    const { fullName, currentCase, where, snapshot, screen, mirror } = body;
 
     // Identity comes from the verified session, not the request body —
     // otherwise anyone could POST a heartbeat claiming to be any username,
@@ -39,11 +39,13 @@ export async function onRequestPost({ request, env }) {
         currentCase: currentCase || null
     });
 
-    // Live view (_liveview.js): where a trainee is, and while an Admin watches, a snapshot of their case.
+    // Live view (_liveview.js): where a trainee is, and while an Admin watches, their screen and a snapshot
+    // of their case. Always the session's own user: nobody can write another trainee's screen.
     // It's extra: a failure never stops the heartbeat. Admins (Trainee view too) aren't watched.
-    let watched = false;
-    if (session.userType !== 'Admin' && (where || snapshot)) {
-        try { watched = await reportLiveView(db, session.username, where, snapshot); } catch (e) { watched = false; }
+    let live = { watched: false };
+    if (session.userType !== 'Admin' && (where || snapshot || screen)) {
+        try { live = await reportLiveView(db, session.username, { where, snapshot, screen, mirror }); } catch (e) { live = { watched: false }; }
     }
-    return json({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS, watched });
+    // screenId (while watched): the screen the server has, so the page sends it again only if it didn't arrive
+    return json(Object.assign({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS, watched: !!live.watched }, live.watched ? { screenId: live.screenId || null } : {}));
 }
