@@ -1958,14 +1958,8 @@
             if (window.mockFlushUpdates) window.mockFlushUpdates({ keepalive: true });   // Notes/Tasks typed on a library case survive the reload
             location.reload();
         }
-        function paintTraineeViewBar() {
-            let bar = document.getElementById('trainee-view-bar');
-            if (!isTraineeView()) { if (bar) bar.remove(); document.body.classList.remove('trainee-view'); return; }
-            document.body.classList.add('trainee-view');
-            if (!bar) {
-                document.body.insertAdjacentHTML('beforeend', `<div id="trainee-view-bar" class="no-print" role="status"><span>👁 <b>Trainee view</b> · you're seeing the site the way trainees do</span><button onclick="setTraineeView(false)">⇦ Back to trainer view</button></div>`);
-            }
-        }
+        // Trainee view has no bar of its own: the sidebar's ⇦ Back to trainer view is the way back.
+        function markTraineeView() { document.body.classList.toggle('trainee-view', isTraineeView()); }
         function setSession(user) {
             sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                 fullName: user.fullName,
@@ -1997,7 +1991,7 @@
             const footer = document.getElementById('session-footer');
             const portalTitle = document.getElementById('portal-title');
 
-            paintTraineeViewBar();
+            markTraineeView();
             if (!session) {
                 gate.classList.add('open');
                 gate.style.setProperty('display', 'flex', 'important');
