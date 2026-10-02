@@ -269,6 +269,23 @@ Trainees **register in the CMS once**, so their trainer can follow their work. A
 
 Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
+## 🪪 The case header: Client's Name, SSN and the Client's ID
+
+The top of the case is the client's demographics. Each box has its label above it and a border you can see, empty or filled:
+- **Client's Name**;
+- **Contact**, **SSN** and **Target Settlement**;
+- **Attorney** and **Case Manager**.
+
+The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in either changes both. Only the Profile tab's is saved, so cases saved before keep every field where it was (`data-mirror` in `app.js`).
+
+**Client's ID** is the small card in the middle of the header (`client-id.js`):
+- **A Training Library client** has a **mock ID** made from their file: name, date of birth, address, and an ID number of its own. It's marked *SPECIMEN · for training only · not a government ID*, follows no real state's design, and has a drawn silhouette, not a photo. A trainee's saved work on a library file shows that client's mock ID too.
+- **Any other client:** **⬆ Upload ID** takes a photo or scan of their ID (JPG, PNG or WebP).
+  - The photo is redrawn at most 1,600 px on its long side as a JPG before it's sent. That keeps it under the 2 MB upload limit and leaves the photo's location data behind.
+  - It's kept in the site's file storage (R2, through `/api/upload`, like Doc Hub files) and saved with the case by its key.
+  - Save the case to keep it.
+- **Click the card** to see it larger. For an uploaded ID, the larger view has **Replace** and **Remove**.
+
 ## 🗂 Case editor: newer sections
 
 **Parties Involved** (tab after Profile)
@@ -758,6 +775,15 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - resizing the browser fits the case to the window again: smaller in a narrow window (not below 70%), full size in a wide one;
   - a good call (spiel, name + DOB + DOL + SSN last 4, a hold the caller was told about, the closing): the wrap-up says **Fully authenticated** with no choice to make; the debrief has the 14 items, the five checked from the call at 5/5, transfer, clarity and tone N/A on a typed call, 100/100; the review request carries the SOP and the items already scored and fits `/api/call-ai`; saved with the scorecard;
   - a poor call (answered after 8 s, "Hello?", 14 s of silence, fillers, nothing verified, no file): the wrap-up says what's missing; the review fails once and the debrief still shows the five items (0, 0, 2, 3, 2) with their notes and Try again; nothing is saved until the review comes through, then it's saved once.
+- **Case header** (`.github/scripts/client-id.cjs`, in the same job). It checks that:
+  - the header's boxes can be seen on an empty case, with Client's Name labelled;
+  - the SSN beside Contact and the Profile tab's stay the same, typed in either, and a case saved before shows its SSN in both;
+  - it isn't saved twice, so the saved fields keep their positions;
+  - every Training Library client has a well-formed mock ID with their name and date of birth, each with its own number, and it opens larger and closes with Escape;
+  - a saved case on a library file shows that client's mock ID;
+  - Upload ID refuses a file that isn't a picture and sends a large photo as a JPG under 2 MB;
+  - the card shows the uploaded ID, it's saved with the case, comes back when the case is opened again, and Remove takes it off;
+  - with the site's styles, at 1440 px the header fits its card with the ID card in the middle. Without them, run it with `TAILWIND_JS` set to a copy of Tailwind.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
   - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;

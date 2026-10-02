@@ -581,7 +581,8 @@
              data-keyed="rows"  a list people add rows to: saved as its HTML plus its selects' values;
              data-keyed         fixed fields: each saved under its data-k name.
            A case saved before a section existed simply shows it empty. */
-        const posEdits = (root) => Array.from((root || document).querySelectorAll('[contenteditable="true"]')).filter(el => !el.closest('[data-keyed]'));
+        // (data-mirror: a second view of another field, e.g. the header's SSN; not saved itself)
+        const posEdits = (root) => Array.from((root || document).querySelectorAll('[contenteditable="true"]')).filter(el => !el.closest('[data-keyed]') && !el.hasAttribute('data-mirror'));
         const posSels = (root) => Array.from((root || document).querySelectorAll('select')).filter(el => !el.closest('[data-keyed]'));
         const _keyedTemplates = {};
         document.querySelectorAll('[data-keyed="rows"][id]').forEach(el => { _keyedTemplates[el.id] = el.innerHTML; });
@@ -714,6 +715,8 @@
             (content.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
             fixPhaseSelect(selects, content.sels || []);
             applyKeyed(content.keyed, root);
+            // the header's SSN shows the Profile tab's (client-id.js keeps them the same as you type)
+            if ($('head-ssn-field') && $('client-ssn-field')) $('head-ssn-field').innerHTML = $('client-ssn-field').innerHTML;
 
             const mainType = $('main-case-type'), mainOther = $('main-case-other'), mainRevert = $('main-revert');
             if (content.caseTypeOtherVisible && mainType && mainOther) {
