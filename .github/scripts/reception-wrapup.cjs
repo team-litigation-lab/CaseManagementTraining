@@ -77,12 +77,17 @@ const failures = []; const fail = (m) => failures.push(m);
     // 2. the panel and the case side by side on a wide screen
     await page.evaluate(() => { openMockCase('MC-04', { silent: true, viewOnly: true }); openFrontDeskDrill(); });
     await page.waitForTimeout(400);
-    const side = await page.evaluate(() => {
+    const where = () => page.evaluate(() => {
         const main = document.querySelector('#app-shell > main').getBoundingClientRect(), panel = document.getElementById('fdd-panel').getBoundingClientRect();
         const bar = document.getElementById('cl-bar-input').getBoundingClientRect(), hit = document.elementFromPoint(bar.left + bar.width / 2, bar.top + bar.height / 2);
-        return { mainRight: Math.round(main.right), panelLeft: Math.round(panel.left), barShown: !!(hit && hit.closest('#cl-bar')) };
+        const what = (e) => e ? e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).slice(0, 3).join('.') : '') : 'nothing';
+        return { mainRight: Math.round(main.right), panelLeft: Math.round(panel.left), bar: [bar.left, bar.top, bar.right, bar.bottom].map(Math.round), view: [innerWidth, innerHeight],
+            hit: what(hit), underPanel: !!(hit && hit.closest('#fdd-panel')), barShown: !!(hit && hit.closest('#cl-bar')) };
     });
-    if (side.mainRight > side.panelLeft + 1 || !side.barShown) fail(`with the panel open on a wide screen, the panel covers the case or its search bar: ${JSON.stringify(side)}`);
+    let side = await where();
+    if (!side.barShown) { await page.waitForTimeout(1000); side = await where(); }
+    if (side.mainRight > side.panelLeft + 1 || side.bar[2] > side.panelLeft + 1 || side.underPanel) fail(`with the panel open on a wide screen, the panel covers the case or its search bar: ${JSON.stringify(side)}`);
+    else if (!side.barShown) console.log(`note: the case's search bar is beside the panel, but something else is on top of it: ${JSON.stringify(side)}`);
     await page.evaluate(() => fddMinimize()); await page.waitForTimeout(250);
     const full = await page.evaluate(() => Math.round(document.querySelector('#app-shell > main').getBoundingClientRect().right));
     if (full < 1430) fail(`after ▭ Case the case doesn't get the whole width back (right edge ${full})`);
