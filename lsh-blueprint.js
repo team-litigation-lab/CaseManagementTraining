@@ -40,7 +40,7 @@
     #lbp-page.open{display:flex}
     #lbp-page *{box-sizing:border-box}
     .lbp-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;background:#0f2148;color:#fff;padding:14px 24px;border-bottom:4px solid #f97316}
-    .lbp-top h2{margin:0;font-size:19px;font-weight:800;color:#fff}
+    .lbp-top h2{margin:0;font-size:19px;font-weight:800;color:#fff;font-family:inherit;letter-spacing:.01em;line-height:1.2}
     .lbp-top .lbp-sub{font-size:11.5px;color:#f97316;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
     .lbp-top button{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.25);padding:9px 14px;border-radius:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;font-family:inherit}
     .lbp-top button:hover{background:rgba(255,255,255,.16)}
@@ -60,7 +60,9 @@
     #lbp-toc button.on{background:#0f2148;border-color:#0f2148;color:#fff;box-shadow:inset 0 -2px 0 #f97316}
     #lbp-slide .lbp-kicker{color:#f97316;font-size:15px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
     #lbp-slide .lbp-label{color:#0f2148;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
-    #lbp-slide h1{font-family:inherit}
+    #lbp-slide h1{font-family:inherit;letter-spacing:normal;text-transform:none}
+    #lbp-slide li,#lbp-slide p,#lbp-slide div{font-weight:inherit}
+    #lbp-slide{font-weight:500}
     .lbp-cover{height:100%;display:flex;flex-direction:column}
     .lbp-cover-top{display:flex;align-items:center;gap:48px;background:#0f2148;border-bottom:6px solid #f97316;padding:46px 70px 42px}
     .lbp-cover-logo{height:128px;width:auto;display:block;flex-shrink:0}
@@ -76,11 +78,11 @@
     .lbp-head h1{margin:6px 0 0;color:#fff;font-size:40px;font-weight:800;line-height:1.15}
     .lbp-icon{flex:0 0 auto;width:78px;height:78px;border-radius:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:42px}
     .lbp-main{flex:1;min-height:0;display:flex;gap:44px;padding:40px 52px 22px}
-    .lbp-points{flex:1;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:22px}
-    .lbp-points li{position:relative;padding-left:32px;font-size:26px;line-height:1.38;color:#1e293b}
+    .lbp-points{flex:1;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:calc(22px * var(--lbp-k,1))}
+    .lbp-points li{position:relative;padding-left:32px;font-size:calc(26px * var(--lbp-k,1));line-height:1.38;color:#1e293b}
     .lbp-points li::before{content:'';position:absolute;left:0;top:.5em;width:11px;height:11px;border-radius:2px;background:#f97316}
     .lbp-side{flex:0 0 360px;display:flex;flex-direction:column;gap:20px}
-    .lbp-where,.lbp-tip{border-radius:12px;padding:22px 24px;font-size:21px;line-height:1.42;color:#1e293b}
+    .lbp-where,.lbp-tip{border-radius:12px;padding:calc(22px * var(--lbp-k,1)) 24px;font-size:calc(21px * var(--lbp-k,1));line-height:1.42;color:#1e293b}
     .lbp-where{background:#f1f5f9;border:1px solid #e2e8f0}
     .lbp-tip{background:#fff7ed;border:1px solid #fed7aa;border-left:6px solid #f97316}
     #lbp-slide .lbp-tip .lbp-label{color:#c2410c}
@@ -88,7 +90,7 @@
     #lbp-slide.portrait .lbp-head{padding:28px 34px;gap:18px}
     #lbp-slide.portrait .lbp-head h1{font-size:36px}
     #lbp-slide.portrait .lbp-main{flex-direction:column;padding:28px 34px 16px;gap:22px}
-    #lbp-slide.portrait .lbp-points li{font-size:23px}
+    #lbp-slide.portrait .lbp-points li{font-size:calc(23px * var(--lbp-k,1))}
     #lbp-slide.portrait .lbp-side{flex:0 0 auto}
     #lbp-slide.portrait .lbp-foot{padding:12px 34px 16px}
     #lbp-slide.portrait .lbp-cover-top{flex-direction:column;align-items:flex-start;gap:24px;padding:40px 36px 34px}
@@ -178,6 +180,12 @@
         slide.classList.toggle('portrait', portrait);
         slide.style.width = BW + 'px'; slide.style.height = BH + 'px';
         slide.style.transform = `translate(-50%, -50%) scale(${Math.max(0.1, Math.min(W / BW, H / BH))})`;
+        // a slide with a lot to say: its text gets a little smaller until it all fits (down to 70%)
+        const main = slide.querySelector('.lbp-main');
+        let k = 1; slide.style.setProperty('--lbp-k', '1');
+        while (main && k > 0.7 && (main.scrollHeight > main.clientHeight + 1 || [...main.children].some(e => e.scrollHeight > e.clientHeight + 1))) {
+            k = Math.round((k - 0.05) * 100) / 100; slide.style.setProperty('--lbp-k', String(k));
+        }
     }
 
     // which decks this person may see
