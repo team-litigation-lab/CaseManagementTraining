@@ -257,9 +257,13 @@
     }
 
     /* ---------- Tasks sent by an Admin (a ping sent "as a task") ---------- */
-    const PENDING_KEY = 'LSH_PENDING_TASKS_V1';
-    const pending = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; } };
-    const savePending = (list) => { try { localStorage.setItem(PENDING_KEY, JSON.stringify(list.slice(-20))); } catch (e) { /* private mode */ } };
+    // Kept per person on this computer (a shared one): the next person to sign in never sees them, and nobody
+    // signed out does. (The old shared list, LSH_PENDING_TASKS_V1 with no name, isn't anyone's: it's dropped.)
+    const me = () => { const s = typeof getRealSession === 'function' ? getRealSession() : (typeof getSession === 'function' ? getSession() : null); return s && s.username; };
+    const PENDING_KEY = () => 'LSH_PENDING_TASKS_V2:' + me();
+    try { localStorage.removeItem('LSH_PENDING_TASKS_V1'); } catch (e) { /* private mode */ }
+    const pending = () => { if (!me()) return []; try { return JSON.parse(localStorage.getItem(PENDING_KEY()) || '[]'); } catch (e) { return []; } };
+    const savePending = (list) => { if (!me()) return; try { localStorage.setItem(PENDING_KEY(), JSON.stringify(list.slice(-20))); } catch (e) { /* private mode */ } };
     function caseOpen() {
         const name = $id('client-name-field');
         return !!((window.mockCurrentId && window.mockCurrentId()) || (name && name.innerText.trim()));
@@ -276,6 +280,7 @@
             <div class="task-card-actions"><button class="accept" onclick="acceptTask(this.closest('.task-card').dataset.id)">✓ Accept</button><button onclick="dismissTask(this.closest('.task-card').dataset.id)">Dismiss</button></div></div>`).join('');
     }
     window.showTaskAssignment = function (t) {
+        if (!me()) return;
         const list = pending();
         if (!list.some(x => String(x.id) === String(t.id))) list.push({ id: String(t.id), text: t.text, by: t.by, at: Date.now() });
         savePending(list);
@@ -307,6 +312,12 @@
             const text = (e.clipboardData ? e.clipboardData.getData('text/plain') : '').replace(/\s*[\r\n]+\s*/g, ', ');
             document.execCommand('insertText', false, text);
         });
+    }
+
+    // Signing in shows that person's waiting tasks; signing out takes them off the screen.
+    const baseApply = window.applySessionUI;
+    if (typeof baseApply === 'function') {
+        window.applySessionUI = function () { const r = baseApply.apply(this, arguments); renderTaskCards(); return r; };
     }
 
     /* ---------- start ---------- */

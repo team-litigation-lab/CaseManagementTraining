@@ -212,18 +212,22 @@
     window.ttSaveManual = async function () {
         const m = T.manual; if (!m) return;
         ['desc', 'date', 'hours'].forEach(k => { const el = $id('tt-' + k); if (el) m[k === 'desc' ? 'description' : k] = el.value; });
+        // Editing an entry without touching its hours keeps its time to the second (the box shows it rounded to 0.1 h).
+        const keep = !!(m.id && m.seconds && String(m.hours) === m.shownHours);
         const h = parseFloat(String(m.hours).replace(',', '.'));
-        if (!(h >= 0.1) || h > 24) { toast('Enter the time spent in hours: 0.1 (6 minutes) to 24.', 'error'); return; }
+        if (!keep && (!(h >= 0.1) || h > 24)) { toast('Enter the time spent in hours: 0.1 (6 minutes) to 24.', 'error'); return; }
+        const seconds = keep ? m.seconds : Math.round(h * 3600);
         try {
-            await api('POST', API, { action: 'save', id: m.id || undefined, entry: Object.assign(payload(m), { date: m.date, seconds: Math.round(h * 3600) }) });
-            toast(`${m.id ? 'Updated' : 'Added'} ${hrs(billed(h * 3600))} ${m.billable ? 'billable' : 'non-billable'}${m.caseLabel ? ' on ' + m.caseLabel : ''}.`, 'success');
+            await api('POST', API, { action: 'save', id: m.id || undefined, entry: Object.assign(payload(m), { date: m.date, seconds }) });
+            toast(`${m.id ? 'Updated' : 'Added'} ${hrs(billed(seconds))} ${m.billable ? 'billable' : 'non-billable'}${m.caseLabel ? ' on ' + m.caseLabel : ''}.`, 'success');
             T.manual = null; T.mode = 'timer'; announce(); refresh();
         } catch (e) { toast(e.message, 'error', 6000); }
     };
     window.ttCancelManual = function () { T.manual = null; T.mode = 'timer'; renderTab(); };
     window.ttEdit = function (id) {
         const e = T.entries.find(x => x.id === id); if (!e) return;
-        T.manual = { id: e.id, caseRef: e.caseRef, caseLabel: e.caseLabel, billable: e.billable, activity: e.activity, description: e.description, date: e.date, hours: String(Math.round(e.seconds / 360) / 10), auto: false };
+        const shownHours = String(Math.round(e.seconds / 360) / 10);
+        T.manual = { id: e.id, caseRef: e.caseRef, caseLabel: e.caseLabel, billable: e.billable, activity: e.activity, description: e.description, date: e.date, hours: shownHours, shownHours, seconds: e.seconds, auto: false };
         T.mode = 'manual'; renderTab();
         const box = $id('tt-root'); if (box) box.scrollIntoView({ block: 'nearest' });
     };

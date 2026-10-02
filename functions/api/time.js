@@ -141,16 +141,21 @@ export async function onRequestPost({ request, env }) {
             if (error) return json({ success: false, code: 'INCOMPLETE', error }, 400);
             if (!isDate(e.date)) return json({ success: false, error: 'Pick the date the work was done.' }, 400);
             const seconds = Math.round(Number(e.seconds));
-            if (!(seconds >= 60) || seconds > MAX_SECONDS) return json({ success: false, error: 'Enter the time spent: at least 0.1 hour (6 minutes) and at most 24 hours.' }, 400);
+            const tooShortOrLong = !(seconds >= 60) || seconds > MAX_SECONDS;
+            const timeError = () => json({ success: false, error: 'Enter the time spent: at least 0.1 hour (6 minutes) and at most 24 hours.' }, 400);
             const id = body.id ? String(body.id).slice(0, 64) : '';
             if (id) {
-                const row = await db.prepare(`SELECT owner_username FROM time_entries WHERE id = ?`).bind(id).first();
+                const row = await db.prepare(`SELECT owner_username, seconds FROM time_entries WHERE id = ?`).bind(id).first();
                 if (!row) return json({ success: false, error: 'That entry no longer exists.' }, 404);
                 if (row.owner_username !== session.username && session.userType !== 'Admin') return json({ success: false, error: 'You can only change your own time.' }, 403);
+                // An edit that keeps the time as it was (only the description, the case… changed) keeps it exactly,
+                // even a timer entry under 6 minutes.
+                if (tooShortOrLong && !(seconds >= 1 && seconds === row.seconds)) return timeError();
                 await db.prepare(`UPDATE time_entries SET case_ref = ?, case_label = ?, billable = ?, activity = ?, description = ?, work_date = ?, seconds = ?, updated_at = datetime('now') WHERE id = ?`)
                     .bind(d.caseRef, d.caseLabel, d.billable ? 1 : 0, d.activity, d.description, e.date, seconds, id).run();
                 return reply({ saved: rowToEntry(await db.prepare(`SELECT * FROM time_entries WHERE id = ?`).bind(id).first(), session) });
             }
+            if (tooShortOrLong) return timeError();
             const n = await db.prepare(`SELECT COUNT(*) AS n FROM time_entries WHERE owner_username = ?`).bind(session.username).first();
             if (n && n.n >= MAX_ENTRIES_PER_USER) return json({ success: false, error: 'You have reached the timesheet limit. Delete some old entries first.' }, 413);
             return reply({ saved: rowToEntry(await insertEntry(db, session, d, e.date, seconds, 'manual'), session) });
