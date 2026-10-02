@@ -104,6 +104,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/reception-mic.cjs
+      - name: Reception wrap-up and debrief (sounds-like search, authentication from the call, the 14-item scorecard)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/reception-wrapup.cjs
       - name: Live view (an Admin watches a trainee's screen live, mirrored as it is)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

@@ -11,6 +11,7 @@
 // call, `gives` is what they answer when asked for each identifier (some answers are
 // wrong on purpose, and null means "I don't know / I'd rather not say").
 import mock from '../mock-cases.js';
+import { geminiFetch } from './_ai.js';
 
 // First choice first. LIVE_MODEL (a Pages variable) goes in front when it's set.
 export const LIVE_MODELS = ['gemini-3.8-live', 'gemini-3.1-flash-live-preview', 'gemini-2.5-flash-native-audio-preview-12-2025'];
@@ -118,8 +119,9 @@ export const LIVE_WS = 'wss://generativelanguage.googleapis.com/ws/google.ai.gen
 
 // A single-use token: the call must start within 2 minutes, and the token stops
 // working a little after the call's time limit (the page hangs up at the limit).
-export async function createLiveToken(apiKey, call, model, now = Date.now(), maxMinutes = 6) {
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+// A region Gemini refuses is tried again from the US (geminiFetch in _ai.js), when env has the relay.
+export async function createLiveToken(apiKey, call, model, now = Date.now(), maxMinutes = 6, env = {}) {
+    const res = await geminiFetch(env, 'https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({

@@ -61,7 +61,7 @@ export async function onRequestPost({ request, env }) {
     const r = await callAI(env, {
         system, messages, feature: purpose,
         json: purpose === 'review' && !!body.json,
-        maxTokens: purpose === 'review' ? 1200 : 260
+        maxTokens: purpose === 'review' ? 2000 : 260
     });
     if (r.ok) return json({ success: true, text: r.text });
     const status = r.status === 429 ? 429 : r.status === 500 ? 500 : 502;
