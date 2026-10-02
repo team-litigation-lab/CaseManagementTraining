@@ -288,7 +288,13 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     // while watched and idle: a short "still here" from the trainee's page, a read a second from the Admin's, the heartbeat as before
     await trainee.waitForTimeout(1500);
     await admin.evaluate(() => { window.__liveSeen = []; window.__liveTimer = setInterval(() => window.__liveSeen.push(document.getElementById('lv-live').classList.contains('on')), 250); });
+    // (an attribute changed and put back straight away, as case-fit.js does when it measures, isn't a change)
+    await trainee.evaluate(() => { const el = document.getElementById('client-name-field'), fidget = () => { el.style.setProperty('display', 'none', 'important'); el.style.removeProperty('display'); }; fidget(); window.__fidget = setInterval(fidget, 300); });
+    await trainee.waitForTimeout(1500);   // (the first one leaves an empty style="": a real change, once)
+    const idleStats = await trainee.evaluate(() => lshLiveStats());
     let w0 = Date.now(); await trainee.waitForTimeout(10000); let w1 = Date.now();
+    M.idleCaptures = (await trainee.evaluate(() => { clearInterval(window.__fidget); return lshLiveStats(); })).captures - idleStats.captures;
+    if (M.idleCaptures > 1) fail(`while nothing changed, the trainee's page copied itself ${M.idleCaptures} times in 10 s`);
     const liveSeen = await admin.evaluate(() => { clearInterval(window.__liveTimer); return window.__liveSeen; });
     M.liveShare = liveSeen.filter(Boolean).length / Math.max(1, liveSeen.length);
     if (M.liveShare < 0.95) fail(`while watched and idle, the live view said "● Live" only ${Math.round(M.liveShare * 100)}% of the time`);
@@ -566,7 +572,7 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     const perMin = (n, sec) => Math.round(n * 60 / sec);
     const avg = (a) => Math.round(a.reduce((x, y) => x + y, 0) / a.length);
     console.log(`Measured: their screen showed ${M.startMs} ms after 👁 Watch live (trainee told after ${M.toldMs} ms); a change reached the Admin in ${M.lag.join(', ')} ms (${avg(M.lag)} on average); "● Live" ${Math.round(M.liveShare * 100)}% of the idle time;`
-        + ` while watched and idle the trainee sent ${perMin(M.idle.trainee, M.idle.seconds)}/min and the Admin read ${perMin(M.idle.admin, M.idle.seconds)}/min;`
+        + ` while watched and idle the trainee sent ${perMin(M.idle.trainee, M.idle.seconds)}/min (copying the page ${M.idleCaptures} times) and the Admin read ${perMin(M.idle.admin, M.idle.seconds)}/min;`
         + ` typing steadily the trainee sent ${perMin(M.typing.trainee, M.typing.seconds)}/min (${M.typing.screens} new screens, ${M.typing.kbSent} KB in ${M.typing.seconds} s) , copying the page ${M.typing.captures} times (${M.typing.msPerCapture.toFixed(0)} ms each: ${M.typing.captureMsPerSecond.toFixed(1)} ms a second, plus ${M.typing.zipMsPerSecond.toFixed(1)} ms a second zipping);`
         + ` the watch ended ${M.endMs} ms after Close; with nobody watching, ${M.unwatched.heartbeats} heartbeats (one waited ${M.unwatched.waitedMs} ms), ${M.unwatched.liveScreen} live updates and ${M.unwatched.all} requests in all in ${M.unwatched.seconds} s.`);
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }

@@ -281,9 +281,25 @@
         if (r.addedNodes.length === 1 && r.removedNodes.length === 1 && r.addedNodes[0].nodeType === 3 && r.removedNodes[0].nodeType === 3) return r.addedNodes[0].data !== r.removedNodes[0].data;
         return true;
     }
+    // Over a batch: an attribute or text changed and put back (case-fit.js measures that way) is no change. The first
+    // record for each attribute or text holds its value from before the batch.
+    function realBatch(records) {
+        const seen = new Map();
+        for (const r of records) {
+            if (r.type !== 'childList') {
+                const k = r.type === 'attributes' ? r.attributeName : '#text';
+                let done = seen.get(r.target);
+                if (!done) seen.set(r.target, done = new Set());
+                if (done.has(k)) continue;
+                done.add(k);
+            }
+            if (real(r)) return true;
+        }
+        return false;
+    }
     function observe(on) {
         if (on && !S.observer && typeof MutationObserver === 'function') {
-            S.observer = new MutationObserver((records) => { if (watched && records.some(real)) changed(); });
+            S.observer = new MutationObserver((records) => { if (watched && realBatch(records)) changed(); });
             S.observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true, attributeOldValue: true, characterDataOldValue: true });
         } else if (!on && S.observer) { S.observer.disconnect(); S.observer = null; }
     }
