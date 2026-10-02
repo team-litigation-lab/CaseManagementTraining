@@ -911,14 +911,18 @@
                 Locking will immediately log out every user and block access until unlocked. Enter your admin Batch ID and password to confirm.
             </p>
             <div id="lock-confirm-error" style="display:none;color:var(--classified-red);font-size:11px;font-weight:700;margin-bottom:8px;">Batch ID / password did not match an administrator record.</div>
+            <!-- a form of its own (never submitted), like every box on the page with a password: so the browser never
+                 pairs a password with another box on the page, such as the case search bar -->
+            <form onsubmit="return false" autocomplete="off">
             <label>Batch ID</label>
             <input type="text" id="lock-confirm-batchid" autocomplete="off" placeholder="Your admin Batch ID, e.g. B300926" class="mono">
             <label>Password</label>
             <input type="password" id="lock-confirm-password" autocomplete="off" placeholder="Your password">
             <div class="modal-btn-row">
-                <button class="btn-ghost" onclick="closeLockConfirm()">Cancel</button>
-                <button class="btn-primary" style="background:var(--classified-red);color:white;" onclick="confirmLock()">Confirm &amp; Lock</button>
+                <button type="button" class="btn-ghost" onclick="closeLockConfirm()">Cancel</button>
+                <button type="button" class="btn-primary" style="background:var(--classified-red);color:white;" onclick="confirmLock()">Confirm &amp; Lock</button>
             </div>
+            </form>
         </div>
     </div>
 
@@ -945,12 +949,12 @@
         <h2 class="serif" style="margin:14px 0 4px;">Page Locked by Administrator</h2>
         <div id="lock-locked-by">Locked By: Batch ID —</div>
         <p class="mono" style="font-size:11px; color:#94a3b8; margin-bottom:20px;">Enter administrator credentials to resume access.</p>
-        <div style="width:300px;">
+        <form style="width:300px;" onsubmit="return false" autocomplete="off">
             <input type="text" id="unlock-user" placeholder="Username" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;background:#ffffff;color:#0f172a;">
             <input type="password" id="unlock-pass" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;background:#ffffff;color:#0f172a;">
             <div id="unlock-error" style="display:none;color:#f87171;font-size:11px;margin-bottom:8px;">Invalid credentials.</div>
-            <button class="btn-primary" style="width:100%;padding:10px;border-radius:6px;" onclick="attemptUnlock()">Unlock Page</button>
-        </div>
+            <button type="button" class="btn-primary" style="width:100%;padding:10px;border-radius:6px;" onclick="attemptUnlock()">Unlock Page</button>
+        </form>
     </div>
 
     <!-- ===== INACTIVITY REMINDER / AUTO-ARCHIVE MODAL ===== -->

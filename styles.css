@@ -117,6 +117,9 @@
     .header-card > .flex.justify-between { gap: 20px; }
     .hdr-client { display: grid; grid-template-columns: repeat(3, minmax(110px, 150px)); gap: 8px 12px; align-items: end; flex: 0 0.4 auto; }
     .hdr-client .hdr-name { grid-column: 1 / -1; }
+    .hdr-client .hdr-name > label { font-size: 12.5px !important; color: var(--navy-deep) !important; letter-spacing: .06em; }
+    body.bg-photo-active .hdr-client .hdr-name > label, body.bg-photo-active .hdr-id > label { color: #60a5fa !important; }
+    .hdr-id > label { color: var(--navy-deep) !important; }
     .hdr-client .hdr-people { display: contents; }
     .hdr-f > label { margin-bottom: 4px; line-height: 1.2; }
     .hdr-f > [contenteditable="true"], .hdr-input { min-height: 36px; }

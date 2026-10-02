@@ -284,6 +284,15 @@ const failures = []; const fail = (m) => failures.push(m);
         const css = [...document.styleSheets].some(sh => { try { return [...sh.cssRules].some(r => r.name === 'lshAutofill'); } catch (e) { return false; } });
         return Object.assign(out, { css });
     });
+    // every box with a password is in a form of its own, and the case search bar is too (with no password in it):
+    // the browser's password manager has nothing to pair the search bar with
+    const pw = await page.evaluate(() => {
+        const bar = document.getElementById('cl-bar');
+        return { loose: [...document.querySelectorAll('input[type="password"]')].filter(i => !i.closest('form')).map(i => i.id),
+                 bar: bar ? `${bar.tagName}:${bar.querySelectorAll('input[type="password"]').length}:${!!document.getElementById('cl-bar-input').closest('#cl-bar')}` : 'none',
+                 hint: (document.getElementById('cl-bar-input') || {}).placeholder || '' };
+    });
+    if (pw.loose.length || pw.bar !== 'FORM:0:true' || /\bname\b/i.test(pw.hint)) fail(`a password box is loose on the page, or the search bar isn't a form of its own: ${JSON.stringify(pw)}`);
     if (filled.searchBox !== '' || filled.nameBox !== 'Lei Abut' || filled.typedIn !== 'Lei Abut' || !filled.css) fail(`an autofilled search box isn't emptied (or a name box or a box being typed in is): ${JSON.stringify(filled)}`);
     const navs = []; page.on('framenavigated', f => { if (f === page.mainFrame()) navs.push(f.url()); });
     await page.click('#portal-tab-admin');
