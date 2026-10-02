@@ -63,8 +63,6 @@
 
     const css = document.createElement('style');
     css.textContent = `
-    #lv-watched-chip{position:fixed;top:46px;right:16px;z-index:5200;display:none;align-items:center;gap:6px;background:#0c4a6e;color:#fff;border:2px solid #38bdf8;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.25)}
-    #lv-watched-chip.on{display:flex}
     #live-view-modal .lv-box{height:calc(100vh - 96px);max-height:none;margin:76px 0 20px;display:flex;flex-direction:column;width:min(1500px,97vw);max-width:none;padding:18px 20px}   /* clear of the request meter at the top left */
     #live-view-modal .lv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
     #live-view-modal .lv-head .sub{margin-bottom:0}
@@ -372,13 +370,7 @@
     }
     function setWatched(on) {
         if (on === watched) return;
-        watched = on;
-        let chip = $id('lv-watched-chip');
-        if (!chip) {
-            document.body.insertAdjacentHTML('beforeend', '<div id="lv-watched-chip" class="no-print" role="status">👁 Your trainer is viewing your screen</div>');
-            chip = $id('lv-watched-chip');
-        }
-        chip.classList.toggle('on', on);
+        watched = on;   // (nothing on the trainee's page says so: no notice while they're watched)
         if (on) {
             Object.assign(stats, { since: Date.now(), sends: 0, screens: 0, bytes: 0, captures: 0, captureMs: 0, zipMs: 0 });
             S.dirty = true; S.snapDirty = true; S.fails = 0;
@@ -399,7 +391,7 @@
     };
     // app.js: may this heartbeat wait at the server for a watch to start? (a trainee nobody watches)
     window.lshLiveCanWait = function () { const s = realSession(); return !!s && s.userType !== 'Admin' && !watched; };
-    // The heartbeat's answer: is a trainer watching? The trainee is told so, and the page starts (or stops) sending.
+    // The heartbeat's answer: is a trainer watching? The page starts (or stops) sending.
     window.lshLiveWatched = function (on, answer) {
         if (on && !watched && answer && 'screenId' in answer) serverId = answer.screenId || '';
         setWatched(on);
