@@ -591,19 +591,21 @@
                 </div>
             </div>
 
+            <!-- The three sign-in views are forms of their own (never submitted: their buttons and Enter do the work), so a
+                 name the browser fills in here stays here, not in the case search bar or the other boxes on the page. -->
             <!-- NAME-ONLY VIEW: opened from another LSH training platform (guest-access.js) -->
-            <div id="auth-guest-view" class="hidden">
+            <form id="auth-guest-view" class="hidden" onsubmit="return false" novalidate>
                 <div class="auth-guest-from" id="auth-guest-from">Opened from your training platform</div>
                 <p class="auth-guest-lead">Type your name the way you registered it in the CMS, and you're in. Your cases, reviews and drill scores are saved for your trainer.</p>
                 <div id="auth-guest-msg" class="auth-msg"></div>
                 <div class="auth-field"><label>Full name</label><input type="text" id="guest-name" autocomplete="name" maxlength="60" placeholder="First and last name"></div>
                 <div class="auth-field"><label>CMS Batch ID <span style="text-transform:none;">(only if asked)</span></label><input type="text" id="guest-batch" autocomplete="off" maxlength="24" placeholder="e.g., B050225"></div>
-                <button class="auth-submit" id="guest-submit" onclick="guestContinue()">Continue</button>
+                <button type="button" class="auth-submit" id="guest-submit" onclick="guestContinue()">Continue</button>
                 <div class="auth-switch">Not registered yet? <a onclick="guestRegister()">Register here</a> · <a onclick="showLoginView()">Sign in with username</a> · <a onclick="showLoginView(); switchPortalTab('Admin')">Trainer sign-in</a></div>
-            </div>
+            </form>
 
             <!-- LOGIN VIEW -->
-            <div id="auth-login-view">
+            <form id="auth-login-view" onsubmit="return false" novalidate>
                 <div class="portal-tabs">
                     <div class="portal-tab active" id="portal-tab-trainee" onclick="switchPortalTab('Trainee')">Trainee Portal</div>
                     <div class="portal-tab" id="portal-tab-admin" onclick="switchPortalTab('Admin')">Admin Portal</div>
@@ -612,12 +614,12 @@
                 <div class="auth-field login-username-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter your username"></div>
                 <div class="auth-field login-trainer-field"><label>Your name</label><input type="text" id="login-trainer-name" autocomplete="name" maxlength="60" placeholder="First and last name"><p class="auth-hint">Trainers: your name and the admin password sign you in as yourself. No registration needed. Leave it blank for the Master Account.</p></div>
                 <div class="auth-field login-password-field"><label id="login-password-label" for="login-password">Admin password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter the admin password"></div>
-                <button class="auth-submit" onclick="attemptLogin()">Log In</button>
+                <button type="button" class="auth-submit" onclick="attemptLogin()">Log In</button>
                 <div class="auth-switch auth-register-link">No account yet? <a onclick="showRegisterView()">Register here</a></div>
-            </div>
+            </form>
 
             <!-- REGISTER VIEW -->
-            <div id="auth-register-view" class="hidden">
+            <form id="auth-register-view" class="hidden" onsubmit="return false" novalidate>
                 <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, sign in with just your username, or open the CMS from your training platform and just type your name.</p>
                 <div id="auth-register-msg" class="auth-msg"></div>
                 <!-- Three fields only (functions/api/register.js): no email, start date or password. Trainees sign in with
@@ -628,9 +630,9 @@
                 <!-- Not a field any more (only trainees register), but it stays: cases are saved with every <select> on the
                      page by position (posSels in app.js), this one included, so removing it would shift every saved case. -->
                 <select id="reg-usertype" hidden aria-hidden="true" tabindex="-1"><option value="Trainee">Trainee</option></select>
-                <button class="auth-submit" onclick="submitRegistration()">Submit Registration</button>
+                <button type="button" class="auth-submit" onclick="submitRegistration()">Submit Registration</button>
                 <div class="auth-switch">Already have an account? <a onclick="showLoginView()">Back to log in</a></div>
-            </div>
+            </form>
         </div>
     </div>
 

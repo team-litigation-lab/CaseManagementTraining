@@ -483,6 +483,10 @@
         caret-color: #fff;
         transition: background-color 99999s ease-out 0s;
     }
+    /* any box the browser autofills starts this (it changes nothing): case-library.js empties a search box filled that way */
+    input:-webkit-autofill { animation: lshAutofill 1ms; }
+    input:autofill { animation: lshAutofill 1ms; }   /* (a rule of its own: a browser that doesn't know one of the two names keeps the other) */
+    @keyframes lshAutofill { from { outline-color: currentColor; } to { outline-color: currentColor; } }
     .auth-submit {
         width:100%; padding:11px; border-radius:6px; border:none; background: var(--auth-accent); color:#0f2148;
         font-weight:900; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; margin-top:6px;

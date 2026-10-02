@@ -460,4 +460,16 @@
         };
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildUI); else buildUI();
+
+    // A search box the browser filled in by itself (Chrome's autofill putting the name just picked on the
+    // sign-in screen, or in another box, into every box it takes for a name) is emptied again at once.
+    // One being typed in (focused) is left alone. styles.css starts the lshAutofill animation on
+    // any autofilled box, which is how the page hears of it.
+    const SEARCHES = 'input[type="search"], .fdd-search, #case-logs-search, #ping-user-search';
+    document.addEventListener('animationstart', (e) => {
+        const el = e.target;
+        if (e.animationName !== 'lshAutofill' || !el.matches || !el.matches(SEARCHES) || el === document.activeElement || !el.value) return;
+        el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, true);
 })();
