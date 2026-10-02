@@ -17,3 +17,10 @@ bucket_name = "lshtraining"
 [[kv_namespaces]]
 binding = "COURSE_KV"
 id = "b121aa911590471bbad351d03274d7f4"
+
+# Gemini calls refused for the trainee's region (the Front Desk practice calls' caller and debrief,
+# functions/_ai.js) are sent again from GeminiRelay, the EA-PA Worker's Durable Object pinned to the US.
+[[durable_objects.bindings]]
+name = "GEMINI_RELAY"
+class_name = "GeminiRelay"
+script_name = "ea-pa-training"

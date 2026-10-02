@@ -3,6 +3,7 @@
 //   - keys take turns (any numbered GEMINI_API_KEY); a rate-limited key rests and the
 //     request moves to the next key;
 //   - a rejected key rests; a busy (503) key hands over; a missing model falls through;
+//   - a refused region: explained, or (with the EA-PA relay bound) sent again from the US;
 //   - the endpoint: sign-in required, the per-user rate limit, bad bodies, the review's
 //     JSON mode, and the Admin status check;
 //   - results are saved as 'practice' or 'drill', including in a table made before the
@@ -74,6 +75,21 @@ behavior = () => ({ status: 400, json: { error: { message: 'User location is not
 const region = await ai.callAI(keysEnv, req());
 check(!region.ok && /region/.test(region.error) && calls.length === 1, `a refused region should stop at once with an explanation: ${JSON.stringify(region)} after ${calls.length} calls`);
 check(!(await ai.callAI({}, req())).ok, 'no keys should fail');
+
+// 5b. with the EA-PA Worker's relay bound (GEMINI_RELAY): a refused region is sent again from the US, and
+// this instance then goes straight to the relay
+ai._resetAi(); ai._resetRelay(); calls = [];
+const relayed = [];
+const relayEnv = Object.assign({ GEMINI_RELAY: { idFromName: (n) => n, get: (id, opts) => ({ fetch: async (u, init) => {
+    const b = JSON.parse(init.body); relayed.push({ id, hint: opts && opts.locationHint, url: b.url, key: b.headers['x-goog-api-key'] });
+    return new Response(JSON.stringify(ok('via the relay')), { status: 200, headers: { 'Content-Type': 'application/json' } });
+} }) } }, keysEnv);
+const viaUs = await ai.callAI(relayEnv, req('review'));
+check(viaUs.ok && viaUs.text === 'via the relay' && calls.length === 1 && relayed.length === 1 && relayed[0].hint === 'wnam' && /gemini-relay-\d/.test(relayed[0].id)
+    && /^https:\/\/generativelanguage\.googleapis\.com\//.test(relayed[0].url) && relayed[0].key, `a refused region wasn't sent again through the relay: ${JSON.stringify({ viaUs, calls, relayed })}`);
+await ai.callAI(relayEnv, req());
+check(calls.length === 1 && relayed.length === 2, `after a refused region, the next call didn't go straight to the relay (${calls.length} direct, ${relayed.length} relayed)`);
+ai._resetRelay();
 
 // 6. the endpoint (D1 on node:sqlite)
 function d1(db) {

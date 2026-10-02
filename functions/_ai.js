@@ -13,6 +13,12 @@
 // to the next key. Same rules as the EA/PA Worker's pool (worker.js callGemini).
 // The rests live in this Worker instance's memory, which is enough: an instance that
 // doesn't know a key is resting finds out with one 429.
+//
+// Gemini refuses some regions ("User location is not supported for the API use"), and a Pages
+// Function runs near the trainee. A refused request is sent again from GeminiRelay, the EA-PA
+// Worker's Durable Object pinned to western North America (the GEMINI_RELAY binding in
+// wrangler.toml), and this instance keeps using the relay from then on. Same as the courses.
+// Live voice's tokens (functions/_live.js) go the same way.
 
 // High-volume caller turns start on Flash-Lite (the biggest free quota); the call review starts on Flash.
 const LITE = 'gemini-3.5-flash-lite', FLASH = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'];
@@ -43,6 +49,26 @@ export function aiStatus(env) {
 // For tests: forget which keys are resting.
 export function _resetAi() { rest.clear(); }
 
+let viaRelay = false;
+// For tests: forget that the region was refused.
+export function _resetRelay() { viaRelay = false; }
+export async function geminiFetch(env, url, init) {
+    const relay = () => {
+        const ns = env.GEMINI_RELAY, id = ns.idFromName('gemini-relay-' + Math.floor(Math.random() * 4));
+        return ns.get(id, { locationHint: 'wnam' }).fetch('https://relay/', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, headers: init.headers, body: init.body })
+        });
+    };
+    if (viaRelay && env.GEMINI_RELAY) return relay();
+    const r = await fetch(url, init);
+    if (r.status !== 400 || !env.GEMINI_RELAY) return r;
+    const text = await r.text();
+    if (!/location is not supported/i.test(text)) return new Response(text, { status: r.status, headers: { 'Content-Type': 'application/json' } });
+    viaRelay = true;
+    return relay();
+}
+
 // req: { system, messages: [{ role: 'user'|'model', text }], json, maxTokens, feature: 'caller'|'review' }
 // → { ok, status, text, model, error }
 export async function callAI(env, req) {
@@ -62,7 +88,7 @@ export async function callAI(env, req) {
         for (const name of names.filter(n => !keyResting(n, model))) {
             const p = JSON.parse(JSON.stringify(payload));
             p.generationConfig.thinkingConfig = { thinkingLevel: 'low' };   // answer in about a second
-            const send = (body) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+            const send = (body) => geminiFetch(env, `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': String(env[name]).trim() }, body: JSON.stringify(body)
             });
             let res, data;
