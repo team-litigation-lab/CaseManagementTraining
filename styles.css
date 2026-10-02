@@ -433,7 +433,9 @@
     .login-trainer-field { display: none; }
     #auth-gate.mode-admin .login-trainer-field { display: block; }
     .auth-field .auth-hint { font-size: 11px; color: #64748b; margin: 4px 0 0; line-height: 1.4; text-transform: none; letter-spacing: normal; }
-    #auth-gate.mode-admin .login-batch-hint { display: none; }
+    /* Trainee Portal: the username only (functions/api/login.js); the password box is the Admin Portal's */
+    .login-password-field { display: none; }
+    #auth-gate.mode-admin .login-password-field { display: block; }
     #auth-gate.mode-admin {
         --auth-accent: #ef4444;
         --auth-accent-hover: #f87171;

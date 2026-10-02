@@ -9,16 +9,10 @@ function switchPortalTab(mode) {
     const traineeTab = document.getElementById('portal-tab-trainee');
     const adminTab = document.getElementById('portal-tab-admin');
     const authGate = document.getElementById('auth-gate');
-    // Admin Portal: the trainer's name and the shared admin password. Trainee Portal: the
-    // username and Batch ID they registered with (functions/api/login.js).
-    const pwLabel = document.getElementById('login-password-label'), pw = document.getElementById('login-password');
-    if (pwLabel) pwLabel.textContent = mode === 'Admin' ? 'Admin password' : 'Batch ID';
-    if (pw) {
-        const type = mode === 'Admin' ? 'password' : 'text';
-        if (pw.type !== type) pw.value = '';   // an admin password typed on the Admin tab is never shown on the Trainee tab
-        pw.type = type;
-        pw.placeholder = mode === 'Admin' ? 'Enter the admin password' : 'Your Batch ID, e.g. B300926';
-    }
+    // Admin Portal: the trainer's name and the shared admin password. Trainee Portal: just the
+    // username they registered with (functions/api/login.js); the password box is hidden there.
+    const pw = document.getElementById('login-password');
+    if (pw && mode !== 'Admin') pw.value = '';   // an admin password typed on the Admin tab never goes with a trainee's sign-in
     if (mode === 'Admin') {
         if (adminTab) adminTab.classList.add('active');
         if (traineeTab) traineeTab.classList.remove('active');
@@ -60,7 +54,7 @@ function submitRegistration() {
     .then(readServerReply)
     .then(data => {
         if (data.success) {
-            say("Registration sent. Once your trainer approves it, sign in with your username and Batch ID.", "success");
+            say("Registration sent. Once your trainer approves it, sign in with your username.", "success");
             showToast("Registration submitted successfully!", 'success');
             setTimeout(() => {
                 showLoginView();
@@ -103,8 +97,8 @@ function attemptLogin() {
         if (loginMsgDiv) { loginMsgDiv.innerText = "Username is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
         return;
     }
-    if (!passwordInput) {
-        if (loginMsgDiv) { loginMsgDiv.innerText = adminMode ? "Password is required." : "Batch ID is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
+    if (adminMode && !passwordInput) {
+        if (loginMsgDiv) { loginMsgDiv.innerText = "Password is required."; loginMsgDiv.className = "auth-msg error"; loginMsgDiv.style.display = ""; }
         return;
     }
 
@@ -131,9 +125,9 @@ function attemptLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        // Trainees: the Batch ID (an older account's password works there too: login.js)
+        // Trainees: the username alone (their Batch ID is on the account from registration: login.js)
         body: JSON.stringify(adminMode ? { username: usernameInput, password: passwordInput, portalMode: currentPortalMode, name: trainerName }
-            : { username: usernameInput, batchId: passwordInput, portalMode: currentPortalMode })
+            : { username: usernameInput, portalMode: currentPortalMode })
     })
     .then(readServerReply)
     .then(data => {

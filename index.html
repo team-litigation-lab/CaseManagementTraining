@@ -609,21 +609,21 @@
                     <div class="portal-tab" id="portal-tab-admin" onclick="switchPortalTab('Admin')">Admin Portal</div>
                 </div>
                 <div id="auth-login-msg" class="auth-msg"></div>
-                <div class="auth-field login-username-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" placeholder="Enter your username"></div>
+                <div class="auth-field login-username-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter your username"></div>
                 <div class="auth-field login-trainer-field"><label>Your name</label><input type="text" id="login-trainer-name" autocomplete="name" maxlength="60" placeholder="First and last name"><p class="auth-hint">Trainers: your name and the admin password sign you in as yourself. No registration needed. Leave it blank for the Master Account.</p></div>
-                <div class="auth-field"><label id="login-password-label" for="login-password">Batch ID</label><input type="text" id="login-password" autocomplete="off" placeholder="Your Batch ID, e.g. B300926"><p class="auth-hint login-batch-hint">Registered before with a password? It still works here.</p></div>
+                <div class="auth-field login-password-field"><label id="login-password-label" for="login-password">Admin password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter the admin password"></div>
                 <button class="auth-submit" onclick="attemptLogin()">Log In</button>
                 <div class="auth-switch auth-register-link">No account yet? <a onclick="showRegisterView()">Register here</a></div>
             </div>
 
             <!-- REGISTER VIEW -->
             <div id="auth-register-view" class="hidden">
-                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, sign in with your username and Batch ID, or open the CMS from your training platform and just type your name.</p>
+                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, sign in with just your username, or open the CMS from your training platform and just type your name.</p>
                 <div id="auth-register-msg" class="auth-msg"></div>
                 <!-- Three fields only (functions/api/register.js): no email, start date or password. Trainees sign in with
-                     their username and Batch ID; an Admin can change a trainee's Batch ID later (Registrations / Users tabs). -->
+                     just their username (the Batch ID stays on the account); an Admin can change a trainee's Batch ID later (Registrations / Users tabs). -->
                 <div class="auth-field"><label for="reg-fullname">Full Name</label><input type="text" id="reg-fullname" autocomplete="off" maxlength="60" data-allow="name" placeholder="e.g., Juan P. Dela Cruz"></div>
-                <div class="auth-field"><label for="reg-batchid">Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" maxlength="24" data-allow="batch" placeholder="e.g., B300926"><p class="auth-hint">B and the date your batch started (DDMMYY), e.g. B300926. Your trainer gives it to you, and you sign in with it.</p></div>
+                <div class="auth-field"><label for="reg-batchid">Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" maxlength="24" data-allow="batch" placeholder="e.g., B300926"><p class="auth-hint">B and the date your batch started (DDMMYY), e.g. B300926. Your trainer gives it to you. You only type it here: after that you sign in with your username.</p></div>
                 <div class="auth-field"><label for="reg-username">Username</label><input type="text" id="reg-username" autocomplete="off" maxlength="30" data-allow="alnum-underscore" placeholder="Choose a username"></div>
                 <!-- Not a field any more (only trainees register), but it stays: cases are saved with every <select> on the
                      page by position (posSels in app.js), this one included, so removing it would shift every saved case. -->
