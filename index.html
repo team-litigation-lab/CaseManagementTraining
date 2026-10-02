@@ -56,7 +56,7 @@
                  2. #sb-cases: My cases (trainees) / Case Library (Admins), from case-library.js; Admins also get
                     Open Case Library and Latest Updates
                  3. #sb-work: New Intake, Download Case Summary, the timer, My Dashboard
-                 4. #sb-trainer (Admins only): Training Library, Front Desk, Intake Folder, Firm Calendar, Export Case List
+                 4. #sb-trainer (Admins only): Training Library, Intake Folder, Firm Calendar
                  The open case's own actions (Close, Archive, Discard, Save, Update) are in the bar at the bottom of
                  the case (#case-actions-bar), with ✕ at its top right. -->
             <div id="sb-program" class="sb-group"></div>
@@ -79,9 +79,8 @@
             </div>
             <div id="sb-trainer" class="sb-group">
                 <p class="sb-head">Trainer tools</p>
-                <!-- training-library.js, front-desk-drill.js and intake-folder.js add their buttons above the Firm Calendar's -->
+                <!-- training-library.js and intake-folder.js add their buttons above the Firm Calendar's -->
                 <button id="fc-open-btn" onclick="openFirmCalendar()" class="w-full border border-orange-500 text-orange-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-2">📅 Firm Calendar</button>
-                <button id="export-repo-btn" onclick="exportRepo()" class="w-full h-9 flex items-center justify-center bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-black rounded uppercase leading-none" style="box-sizing:border-box;">Export Case List</button>
             </div>
         </div>
         <div id="session-footer" style="margin:16px;"></div>
@@ -709,7 +708,7 @@
                     <div class="admin-tile">
                         <h4>Trainees Online Now</h4>
                         <div class="admin-stat" id="admin-stat-online">0</div>
-                        <div class="admin-stat-label">Active in the last 60 seconds</div>
+                        <div class="admin-stat-label">Active in the last 90 seconds</div>
                     </div>
                     <div class="admin-tile">
                         <h4>Pending Registrations</h4>
@@ -1050,17 +1049,5 @@
     <script src="live-view.js"></script>
     <!-- a new version of the site: open pages load it at a quiet moment -->
     <script src="cms-update.js"></script>
-    <!-- 📊 server request meter, for Admins: how much of the monthly request allowance every LSH site
-         shares is used (README → Server request meter). Hidden in Trainee view: getSession() answers as a trainee there.
-         Top left, just under the top bar, over the sidebar's logo: the other corners hold Log Out, the case's ✕ and its
-         Close/Save/Update bar, the toasts and the Front Desk's "Back to the call". -->
-    <script src="request-budget.js"></script>
-    <script>
-        RequestBudget.start({
-            load: () => fetch('/api/request-budget', { credentials: 'include' }).then(r => r.json()),
-            isAdmin: () => { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); },
-            corner: 'top-left', offset: { x: 16, y: 44 }, site: 'trainingcrm'
-        });
-    </script>
 </body>
 </html>

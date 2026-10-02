@@ -12,7 +12,7 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
 - **Case Library window (Admins):** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**) and the ☎ firm directory. Trainees don't get the button. If the search bar is off screen, Ctrl/Cmd+K opens the window for them, with **All files** and **My cases** only. They find the firm directory and front-desk rules in the Front Desk practice panel.
 - **Same name, different file:** when several results share a client name, the Case Library (and the drill's search) says so and asks for the DOL and DOB before you open one.
 - **During a Front Desk Drill call**, a mock case opened from the search bar counts as the call's pick, so receptionists never need the Training Library.
-- A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). **Export Case List** is for Admins only, since it lists every trainee's cases. Admins still browse all cases in Master Control → Case Logs.
+- A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). Admins browse all cases in Master Control → Case Logs.
 
 ## Training Library (mock cases)
 
@@ -162,7 +162,7 @@ Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. Th
 
 ## The case fits the window
 
-The case editor is laid out for a wide window (the case itself needs about 1,030 px). `case-fit.js` fits it to the browser window whenever the window is resized, a case is opened or closed, or the case grows as it fills in: in a narrower window the case is shown smaller so all of it is in view (never below 70%; past that it scrolls sideways), and in a wide one it's full size. In a window under 1,100 px (a browser beside a Google Meet, say) the sidebar is narrower, to leave the case more room. Only the case is scaled; the sidebar, the top bars, the windows and the case's action bar keep their size. With the Reception Simulator panel open, the case sits beside it (above).
+The case editor is laid out for a wide window (the case itself needs about 1,030 px). `case-fit.js` fits it to the browser window whenever the window is resized, the Reception Simulator panel opens or closes, or a case is opened or closed, and for a few seconds after, if the case grows as it fills in (never while a mouse button is down or something is being dragged, so the case doesn't change size under the mouse): in a narrower window the case is shown smaller so all of it is in view (never below 70%; past that it scrolls sideways), and in a wide one it's full size. In a window under 1,100 px (a browser beside a Google Meet, say) the sidebar is narrower, to leave the case more room. Only the case is scaled; the sidebar, the top bars, the windows and the case's action bar keep their size. With the Reception Simulator panel open, the case sits beside it (above).
 
 ## Using the CMS from any training program
 
@@ -413,7 +413,7 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 1. **Training program** (All programs, or one program).
 2. **The cases:** a trainee's **My cases**, or an Admin's **Case Library** with **🔍 Open Case Library** and **🕑 Latest Updates**.
 3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget, **📞 Reception Simulator** (the Front Desk practice calls and drill) and **📊 My Dashboard**.
-4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar, Export Case List.
+4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar.
 
 The **👁 Trainee view** bar floats just above the case's action bar, so it never covers its buttons.
 
@@ -496,27 +496,6 @@ To keep well under it:
 
   These used to be every 2 s (heartbeat), 4 s (site state) and 15 s (case list), about 50 requests a minute for each open page. Now it's about 8.
 - Monitoring's **Online now** counts anyone with a heartbeat in the last 90 seconds.
-
-## 📊 Server request meter
-
-Every LSH site shares one Cloudflare account and one monthly request allowance. Admins see how much of it is used: a small chip at the top left of the page, just under the top bar (over the sidebar's logo, so it never covers Log Out, the case's ✕ or the Close/Save/Update bar). Trainees never see it, and neither does an Admin in 👁 Trainee view.
-
-| Chip | When |
-|---|---|
-| 🟢 **Requests 23%** | on track |
-| 🟠 **Getting close** / **On pace to run out Oct 24** | from 75%, or (after the month's first 3 days) when this month's pace reaches the limit before the allowance resets |
-| 🔴 **Nearly used up** | from 90% |
-| 🟥 **Paused until …** | the limit was reached: the sites' server parts are paused until the next billing month |
-| ⚪ **Not set up** / **Last checked 5 h ago** | no numbers yet, or the workflow hasn't saved any for over 3 hours |
-
-When it's amber or red, a note appears under the chip (Dismiss hides it until it gets closer, or until next month). Click the chip for the details: the total and the limit, the projection for the month, each day (with a day's share of the limit as a dashed line), each site (the CMS in bold), and what happens at the limit.
-
-How it works:
-- The numbers come from EA-PA-TRAINING's **Request budget** workflow (its Actions tab). It saves the month's numbers to the courses' KV namespace (`_request-usage`) about once an hour, and every 10 minutes from 75% on. Setting it up and what happens at the limit: EA-PA-TRAINING's README → Monthly request budget.
-- This site's server answers its Admins with them: `GET /api/request-budget` (`functions/api/request-budget.js`, Admins only). It reads that KV namespace through the `COURSE_KV` binding in `wrangler.toml` and never writes to it. Every LSH platform has the same endpoint for its own admins.
-- The meter is `request-budget.js`: **the same file in every LSH platform** (change it in one, copy it to all). It asks once when an Admin opens the page, then every 15 minutes while the tab is in view, so it costs next to nothing.
-
-Tests: `.github/scripts/request-meter-widget.cjs` (the meter itself; the same test in every platform) and `.github/scripts/request-meter.cjs` (this site).
 
 ## 💾 Autosave (only when something interrupts the work)
 
@@ -775,10 +754,6 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - after the reload the trainee's case and tab are still there, the note is gone, and they're told the page was updated;
   - **Update now** reloads right away, even over an open window;
   - an Admin comes back to Master Control → Monitoring.
-- **Server request meter** (`.github/scripts/request-meter-widget.cjs` and `request-meter.cjs`, in the same job):
-  - the meter (the same test in every LSH platform): nothing for a non-admin; each level (not set up, OK, getting close, nearly used up, on pace to run out, paused, old numbers, no answer) shows as it should; the note under the chip, dismissed, stays away until it gets closer; the details list each day and site; it asks again only every so often, never in a background tab;
-  - this site: the real `/api/request-budget` on SQLite answers Admins only (no session, a revoked account and a trainee are refused without reading KV); before the Request budget workflow has run, without the KV binding or with a damaged entry it answers no numbers; after, the month's numbers without the workflow's own working data, and it never writes to KV;
-  - in a browser: a trainee's page and an Admin's in Trainee view have no meter and never ask for it; an Admin's page shows it after one request, with the numbers, at the top left clear of the top bar, Log Out, the case's ✕ and its action bar; clicking it shows the total.
 - **Reception wrap-up and debrief** (`.github/scripts/reception-wrapup.cjs`, in the same job; the clock is moved on by the test for the silences and the slow answer; the case is held at least 1100 px wide, as the site's styles lay it out). It checks that:
   - the search finds names spelled the way they sound ("Brittani", "Britney Kirkoobree", "Garsia", "Shivon"), exact matches first, nothing extra for "Maria", and a number one digit off doesn't match; the wrap-up's results tag them **Sounds like**;
   - on a wide screen the case moves over while the panel is open, with the sidebar stepping aside and the case a little smaller when there isn't room, so nothing on it (the search bar in its header included) runs under the panel; ▭ Case gives the whole width, the sidebar and the size back; on a narrow screen the panel goes over the case;

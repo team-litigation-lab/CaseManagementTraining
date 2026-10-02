@@ -540,7 +540,7 @@
               <li><b>Answer</b> and greet the caller, and find out what they need.</li>
               <li><b>Ask</b> for what you need to identify them, <b>find</b> their file (search by name, case number, phone, DOL…) and <b>verify</b> them against it. Some callers aren't clients, some aren't allowed to get information, and some names are on more than one file.</li>
               <li><b>Help</b> them from the file, or take a complete message and route it. Then hang up.</li></ol>
-            <p style="margin:0 0 4px;font-size:12px;color:#475569">After the call you pick the file and who the caller was, and you get a debrief: find 30 · authenticate 30 · asked the right identifiers 10 · handled the call 30.</p>
+            <p style="margin:0 0 4px;font-size:12px;color:#475569">After the call you match the file (the authentication is checked from the call), and you get a debrief on the RECEPTION MOCK CALL scorecard: 14 items, from the opening spiel to the closing spiel.</p>
             <div class="fdd-seg">${lv.map(([n, l]) => `<button class="${pcLevel === n ? 'on' : ''}" onclick="fddPracticeLevel(${n}, this)">${l}</button>`).join('')}</div>
             <button class="fdd-go alt" onclick="fddPracticeStart()">📞 Take a practice call</button></div>
             <div class="fdd-sec"><h4>📋 Scored drill · step by step</h4>

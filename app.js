@@ -49,6 +49,9 @@
             document.querySelectorAll('[contenteditable="true"]').forEach(el => { el.innerHTML = ''; });
             // dropdowns back to their defaults too (e.g. Employment Status: N/A), so a new case doesn't inherit the last one's
             document.querySelectorAll('#capture-area select').forEach(sel => { const d = Array.from(sel.options).findIndex(o => o.defaultSelected); sel.selectedIndex = d < 0 ? 0 : d; });
+            // ...and the big status words with them (a closed case's MEDIATION over a new case's Intake)
+            const phaseSel = document.getElementById('phase-selector');
+            if (phaseSel && document.getElementById('display-phase')) updatePhaseDisplay(phaseSel.value);
             applyKeyed(null);
             const nameField = document.getElementById('client-name-field');
             if (nameField) nameField.innerText = '';
@@ -237,8 +240,11 @@
             const v = saved[selects.indexOf(sel)];
             if (v && sel.value !== v) sel.value = normalizePhase(v);
         }
+        // The big status words and the status dropdown always say the same thing: setting one sets the other.
         function updatePhaseDisplay(val) {
-            document.getElementById('display-phase').innerText = normalizePhase(val).toUpperCase();
+            const v = normalizePhase(val), sel = document.getElementById('phase-selector');
+            if (sel && v && sel.value !== v && Array.from(sel.options).some(o => o.value === v)) sel.value = v;
+            document.getElementById('display-phase').innerText = String(v || (sel && sel.value) || 'Intake').toUpperCase();
         }
 
         function handleOtherSystem(selectId, otherInputId, revertId) {
@@ -1637,21 +1643,6 @@
             } catch (e2) {
                 showToast('Network error deleting that case.', 'error');
             }
-        }
-
-        // Export now downloads the currently visible case METADATA (name,
-        // Case ID, phase, owner, timestamps) as a JSON reference list — full
-        // field content lives server-side per case and is fetched on demand
-        // via loadCase(), so a bulk local export/import of full content no
-        // longer applies now that the repository itself is the shared source
-        // of truth. Import has been removed for the same reason: re-importing
-        // raw JSON directly into a shared, permission-checked server
-        // repository isn't a meaningful operation anymore.
-        function exportRepo() {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(_repoCache, null, 2)], { type: 'application/json' }));
-            a.download = 'LSH_Case_List.json';
-            a.click();
         }
 
         /* ---------- PDF export ---------- */
