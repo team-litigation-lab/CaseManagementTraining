@@ -62,7 +62,9 @@
         const t = norm(text);
         if (q.split(' ').every(w => t.includes(w))) return true;
         const digits = q.replace(/\D/g, '');
-        return digits.length >= 4 && text.replace(/\D/g, '').includes(digits);
+        if (digits.length >= 4 && text.replace(/\D/g, '').includes(digits)) return true;
+        // a client name spelled the way it sounds ("Brittani", "Lei Abot"), as for the library's files
+        return !!(window.lshNameSoundsLike && window.lshNameSoundsLike(f.name, q));
     }
     // scope: all | mock | saved | mine. An empty query only lists "mine".
     function search(query, scope) {

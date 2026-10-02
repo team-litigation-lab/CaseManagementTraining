@@ -49,6 +49,9 @@
             document.querySelectorAll('[contenteditable="true"]').forEach(el => { el.innerHTML = ''; });
             // dropdowns back to their defaults too (e.g. Employment Status: N/A), so a new case doesn't inherit the last one's
             document.querySelectorAll('#capture-area select').forEach(sel => { const d = Array.from(sel.options).findIndex(o => o.defaultSelected); sel.selectedIndex = d < 0 ? 0 : d; });
+            // ...and the big status words with them (a closed case's MEDIATION over a new case's Intake)
+            const phaseSel = document.getElementById('phase-selector');
+            if (phaseSel && document.getElementById('display-phase')) updatePhaseDisplay(phaseSel.value);
             applyKeyed(null);
             const nameField = document.getElementById('client-name-field');
             if (nameField) nameField.innerText = '';
@@ -235,8 +238,11 @@
             const v = saved[selects.indexOf(sel)];
             if (v && sel.value !== v) sel.value = normalizePhase(v);
         }
+        // The big status words and the status dropdown always say the same thing: setting one sets the other.
         function updatePhaseDisplay(val) {
-            document.getElementById('display-phase').innerText = normalizePhase(val).toUpperCase();
+            const v = normalizePhase(val), sel = document.getElementById('phase-selector');
+            if (sel && v && sel.value !== v && Array.from(sel.options).some(o => o.value === v)) sel.value = v;
+            document.getElementById('display-phase').innerText = String(v || (sel && sel.value) || 'Intake').toUpperCase();
         }
 
         function handleOtherSystem(selectId, otherInputId, revertId) {

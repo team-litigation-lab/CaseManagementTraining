@@ -175,6 +175,17 @@ const SAVED = [
         const got = await page.evaluate(() => ({ id: mockCurrentId(), field: document.getElementById('case-id-field').innerText.trim() }));
         if (got.id !== 'MC-26' || got.field !== cn) fail(`searching the case number as "${typed}" opened ${got.id} (Case ID field "${got.field}") instead of MC-26 (${cn})`);
     }
+    // a saved case's client name spelled the way it sounds is found too ("Zed Practise" → the trainee's Zed Practice)
+    await page.click('#cl-bar-input'); await page.fill('#cl-bar-input', 'zed practise');
+    const close = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .clb-row .nm')].map(t => t.textContent));
+    if (!close.some(t => /Zed Practice/.test(t))) fail(`searching "zed practise" didn't find the saved case Zed Practice (${close.join(', ') || 'nothing'})`);
+    await page.fill('#cl-bar-input', ''); await page.keyboard.press('Escape');
+    // the big status words follow the status dropdown: a case in Mediation closed, the next case is Intake in both
+    await page.evaluate(() => { const s = document.getElementById('phase-selector'); s.value = 'Mediation'; s.dispatchEvent(new Event('change')); });
+    const med = await page.evaluate(() => document.getElementById('display-phase').innerText.trim());
+    await page.evaluate(() => { document.getElementById('client-name-field').innerText = ''; window.newCase(); });
+    const after = await page.evaluate(() => ({ sel: document.getElementById('phase-selector').value, big: document.getElementById('display-phase').innerText.trim() }));
+    if (med !== 'MEDIATION' || after.big !== after.sel.toUpperCase()) fail(`the case status words don't follow the dropdown (after Mediation: ${med}; next case: dropdown ${after.sel}, words ${after.big})`);
     // the sidebar: no Case Library window button for trainees, just the cases they saved themselves
     if (await page.isVisible('#cl-open-btn')) fail('a trainee has the Open Case Library button');
     const mineRows = await page.evaluate(() => [...document.querySelectorAll('#repo-list .cl-mine-row')].map(r => r.innerText));
