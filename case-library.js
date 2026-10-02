@@ -174,16 +174,16 @@
         const main = $id('capture-area') && $id('capture-area').parentElement;
         if ((statusCol || main) && !$id('cl-bar')) {
             (statusCol || main).insertAdjacentHTML(statusCol ? 'beforeend' : 'afterbegin', `
-            <div id="cl-bar" class="no-print ${statusCol ? 'in-header' : ''}" role="search" data-free-edit>
+            <form id="cl-bar" class="no-print ${statusCol ? 'in-header' : ''}" role="search" data-free-edit onsubmit="return false" autocomplete="off">
                 <div class="clb-wrap">
                     <div class="clb-field" onclick="document.getElementById('cl-bar-input').focus()">
                         <span class="clb-icon" aria-hidden="true">🔍</span>
-                        <input type="search" id="cl-bar-input" name="cl-bar-q" placeholder="Search cases: name, case #, DOL, DOB, phone, claim #, plate" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search cases" aria-controls="cl-bar-results" aria-expanded="false" aria-autocomplete="list">
+                        <input type="search" id="cl-bar-input" name="cl-bar-q" placeholder="Search cases: client, case #, DOL, DOB, phone, claim #, plate" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search cases" aria-controls="cl-bar-results" aria-expanded="false" aria-autocomplete="list">
                         <span class="clb-kbd" aria-hidden="true">Ctrl K</span>
                     </div>
                     <div id="cl-bar-results" class="clb-results" role="listbox" aria-label="Matching cases"></div>
                 </div>
-            </div>`);
+            </form>`);
             wireBar();
         }
         if (!$id('case-library-modal')) {
@@ -462,13 +462,16 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildUI); else buildUI();
 
     // A search box the browser filled in by itself (Chrome's autofill putting the name just picked on the
-    // sign-in screen, or in another box, into every box it takes for a name) is emptied again at once.
+    // sign-in screen, or in another box, into every box it takes for a name, or its password manager taking the
+    // box for a username) is emptied again at once. The search bar is a form of its own, as is every box with a
+    // password, so the password manager shouldn't pair the two any more.
     // One being typed in (focused) is left alone. styles.css starts the lshAutofill animation on
     // any autofilled box, which is how the page hears of it.
     const SEARCHES = 'input[type="search"], .fdd-search, #case-logs-search, #ping-user-search';
     document.addEventListener('animationstart', (e) => {
         const el = e.target;
-        if (e.animationName !== 'lshAutofill' || !el.matches || !el.matches(SEARCHES) || el === document.activeElement || !el.value) return;
+        // (Chrome can keep what it filled in hidden from the page until you click or type: it's emptied either way)
+        if (e.animationName !== 'lshAutofill' || !el.matches || !el.matches(SEARCHES) || el === document.activeElement) return;
         el.value = '';
         el.dispatchEvent(new Event('input', { bubbles: true }));
     }, true);
