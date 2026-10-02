@@ -12,37 +12,38 @@
    Google Meet, say) the sidebar is narrower, to leave the case more room.
 
    The fit is done again when the browser window is resized, when the
-   panel opens, hides or closes (lshFitCase()), and, every second, if
-   the case has grown since (a case that is still filling in). Only
-   #capture-area is scaled: the sidebar, the top bars, the windows and
-   the case's action bar keep their size.
+   panel opens, hides or closes (lshFitCase()), when a case is opened or
+   closed, and for a few seconds after each of those if the case grows
+   (a case that is still filling in), never while a mouse button is
+   down or something is being dragged. Only #capture-area is scaled:
+   the sidebar, the top bars, the windows and the case's action bar keep
+   their size.
    ========================================================= */
 (function () {
     'use strict';
     const MIN = 0.7;
     const css = document.createElement('style');
     css.textContent = `
+    #capture-area{padding-right:2rem}
     body.case-fit #capture-area{zoom:var(--case-zoom,1)}
     @media (max-width:1100px){#sidebar{width:220px}#sidebar-system-name{letter-spacing:.5px;font-size:11px}}
     @media (min-width:1100px){body.fdd-open #app-shell > main{margin-right:min(500px,100vw)}body.fdd-open.fdd-nosb #sidebar{display:none}}
     `;
     document.head.appendChild(css);
 
-    // Wider than its box? The case's ✕ sits just outside the card's corner on purpose, so it isn't counted.
-    function over(ca) {
-        if (ca.scrollWidth <= ca.clientWidth + 1) return false;
-        const x = document.getElementById('case-close-x'); if (!x) return true;
-        const was = x.style.getPropertyValue('display'), prio = x.style.getPropertyPriority('display');
-        x.style.setProperty('display', 'none', 'important');
-        const o = ca.scrollWidth > ca.clientWidth + 1;
-        if (was) x.style.setProperty('display', was, prio); else x.style.removeProperty('display');
-        return o;
-    }
-    let watch = null;
+    // Wider than its box? (The case's ✕ sits just outside the card's corner, inside the case's padding, so it
+    // doesn't count: the padding is set below as well as by the page's styles.)
+    const over = (ca) => ca.scrollWidth > ca.clientWidth + 1;
+    let watch = null, watchUntil = 0, pressed = false;
+    // Never change the case's size under someone's mouse: not while a button is down or a drag is on.
+    ['pointerdown', 'dragstart'].forEach(t => document.addEventListener(t, () => { pressed = true; }, true));
+    ['pointerup', 'pointercancel', 'dragend', 'drop'].forEach(t => document.addEventListener(t, () => { pressed = false; }, true));
+    window.addEventListener('blur', () => { pressed = false; });
     // more: the case grew; shrink it a little more from where it is, without starting over.
     function fit(more) {
         const b = document.body, ca = document.getElementById('capture-area');
         clearInterval(watch); watch = null;
+        if (!more) watchUntil = Date.now() + 5000;
         if (!b || !ca) return;
         if (!more) { b.classList.remove('fdd-nosb', 'case-fit'); b.style.removeProperty('--case-zoom'); }
         if (!ca.offsetParent) return;   // no case on screen (signed out, a full-screen view)
@@ -59,7 +60,11 @@
                 z -= 0.02;
             }
         }
-        watch = setInterval(() => { if (!document.hidden && Number(b.style.getPropertyValue('--case-zoom') || 1) > MIN && over(ca)) fit(true); }, 1000);
+        // the case may still be filling in: look again every second for a few seconds
+        watch = setInterval(() => {
+            if (Date.now() > watchUntil) { clearInterval(watch); watch = null; return; }
+            if (!pressed && !document.hidden && Number(b.style.getPropertyValue('--case-zoom') || 1) > MIN && over(ca)) fit(true);
+        }, 1000);
     }
     window.lshFitCase = () => fit(false);
 

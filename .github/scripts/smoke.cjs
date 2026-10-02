@@ -97,7 +97,6 @@ const SAVED = [
     if (await page.isVisible('#lib-open-btn')) fail('trainees can see the Training Library button');
     if (!(await page.isVisible('#fdd-open-btn'))) fail('trainees don\'t see the 📞 Reception Simulator button');
     if (!(await page.isVisible('#cl-bar-input'))) fail('the search bar above the case is missing');
-    if (await page.isVisible('#export-repo-btn')) fail('trainees can export the list of every case');
     if (await page.locator('#repo-list .repo-card').count()) fail('the sidebar lists saved cases');
     await page.evaluate(() => openTrainingLibrary());
     if (await page.isVisible('#library-modal') || await page.isVisible('#case-library-modal')) fail('openTrainingLibrary() opened a library window for a trainee');
@@ -175,6 +174,11 @@ const SAVED = [
         const got = await page.evaluate(() => ({ id: mockCurrentId(), field: document.getElementById('case-id-field').innerText.trim() }));
         if (got.id !== 'MC-26' || got.field !== cn) fail(`searching the case number as "${typed}" opened ${got.id} (Case ID field "${got.field}") instead of MC-26 (${cn})`);
     }
+    // the case's fields start blank: no grey hint text in them (the search bar keeps its own)
+    const hints = await page.evaluate(() => ({ name: (() => { const f = document.createElement('div'); f.contentEditable = 'true'; f.dataset.ph = 'Enter carrier'; document.getElementById('capture-area').appendChild(f); const c = getComputedStyle(f, '::before').color; f.remove(); return c; })(),
+        attorney: getComputedStyle(document.getElementById('attorney-field'), '::placeholder').color,
+        search: getComputedStyle(document.getElementById('cl-bar-input'), '::placeholder').color }));
+    if (hints.name !== 'rgba(0, 0, 0, 0)' || hints.attorney !== 'rgba(0, 0, 0, 0)' || hints.search === 'rgba(0, 0, 0, 0)') fail(`the case fields still show hint text, or the search bar lost its own: ${JSON.stringify(hints)}`);
     // a saved case's client name spelled the way it sounds is found too ("Zed Practise" → the trainee's Zed Practice)
     await page.click('#cl-bar-input'); await page.fill('#cl-bar-input', 'zed practise');
     const close = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .clb-row .nm')].map(t => t.textContent));
@@ -375,7 +379,7 @@ const SAVED = [
     const side = await page.evaluate(() => ({
         groups: [...document.querySelectorAll('#sidebar-actions > .sb-group')].filter(g => g.offsetParent).map(g => g.id),
         work: [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id),
-        hidden: ['cl-updates-btn', 'intake-open-btn', 'fc-open-btn', 'lib-open-btn', 'export-repo-btn', 'cl-open-btn'].filter(id => (document.getElementById(id) || {}).offsetParent),
+        hidden: ['cl-updates-btn', 'intake-open-btn', 'fc-open-btn', 'lib-open-btn', 'cl-open-btn'].filter(id => (document.getElementById(id) || {}).offsetParent),
         oldButtons: [...document.querySelectorAll('#sidebar-actions button')].filter(b => /save case|archive|update saved|close case/i.test(b.textContent)).length,
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
@@ -450,7 +454,7 @@ const SAVED = [
     const tools = await admin.evaluate(() => ({ updates: !!(document.getElementById('cl-updates-btn') || {}).offsetParent,
         tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
     const work = await admin.evaluate(() => [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id));
-    if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn,export-repo-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
+    if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
     if (work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's 📞 Reception Simulator isn't right before My Dashboard: ${work.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');

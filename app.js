@@ -1643,21 +1643,6 @@
             }
         }
 
-        // Export now downloads the currently visible case METADATA (name,
-        // Case ID, phase, owner, timestamps) as a JSON reference list — full
-        // field content lives server-side per case and is fetched on demand
-        // via loadCase(), so a bulk local export/import of full content no
-        // longer applies now that the repository itself is the shared source
-        // of truth. Import has been removed for the same reason: re-importing
-        // raw JSON directly into a shared, permission-checked server
-        // repository isn't a meaningful operation anymore.
-        function exportRepo() {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(_repoCache, null, 2)], { type: 'application/json' }));
-            a.download = 'LSH_Case_List.json';
-            a.click();
-        }
-
         /* ---------- PDF export ---------- */
         // Pulls a same-origin R2 file back down and re-encodes it as a data
         // URI so html2canvas can rasterize it. Returns null (never throws) on

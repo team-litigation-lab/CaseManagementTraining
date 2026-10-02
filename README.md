@@ -12,7 +12,7 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
 - **Case Library window (Admins):** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**) and the ☎ firm directory. Trainees don't get the button. If the search bar is off screen, Ctrl/Cmd+K opens the window for them, with **All files** and **My cases** only. They find the firm directory and front-desk rules in the Front Desk practice panel.
 - **Same name, different file:** when several results share a client name, the Case Library (and the drill's search) says so and asks for the DOL and DOB before you open one.
 - **During a Front Desk Drill call**, a mock case opened from the search bar counts as the call's pick, so receptionists never need the Training Library.
-- A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). **Export Case List** is for Admins only, since it lists every trainee's cases. Admins still browse all cases in Master Control → Case Logs.
+- A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). Admins browse all cases in Master Control → Case Logs.
 
 ## Training Library (mock cases)
 
@@ -162,7 +162,7 @@ Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. Th
 
 ## The case fits the window
 
-The case editor is laid out for a wide window (the case itself needs about 1,030 px). `case-fit.js` fits it to the browser window whenever the window is resized, a case is opened or closed, or the case grows as it fills in: in a narrower window the case is shown smaller so all of it is in view (never below 70%; past that it scrolls sideways), and in a wide one it's full size. In a window under 1,100 px (a browser beside a Google Meet, say) the sidebar is narrower, to leave the case more room. Only the case is scaled; the sidebar, the top bars, the windows and the case's action bar keep their size. With the Reception Simulator panel open, the case sits beside it (above).
+The case editor is laid out for a wide window (the case itself needs about 1,030 px). `case-fit.js` fits it to the browser window whenever the window is resized, the Reception Simulator panel opens or closes, or a case is opened or closed, and for a few seconds after, if the case grows as it fills in (never while a mouse button is down or something is being dragged, so the case doesn't change size under the mouse): in a narrower window the case is shown smaller so all of it is in view (never below 70%; past that it scrolls sideways), and in a wide one it's full size. In a window under 1,100 px (a browser beside a Google Meet, say) the sidebar is narrower, to leave the case more room. Only the case is scaled; the sidebar, the top bars, the windows and the case's action bar keep their size. With the Reception Simulator panel open, the case sits beside it (above).
 
 ## Using the CMS from any training program
 
@@ -413,7 +413,7 @@ Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 1. **Training program** (All programs, or one program).
 2. **The cases:** a trainee's **My cases**, or an Admin's **Case Library** with **🔍 Open Case Library** and **🕑 Latest Updates**.
 3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget, **📞 Reception Simulator** (the Front Desk practice calls and drill) and **📊 My Dashboard**.
-4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar, Export Case List.
+4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar.
 
 The **👁 Trainee view** bar floats just above the case's action bar, so it never covers its buttons.
 

@@ -134,6 +134,11 @@
         font-style: italic;
         font-weight: 400;
     }
+    /* The case's own fields start blank: no grey hint text (their labels say what goes in them). The hint
+       stays in the page but can't be seen, so an empty field keeps its height. Search boxes and the Time and
+       Calendar forms keep theirs. */
+    #capture-area [contenteditable="true"]:empty:before { color: transparent; }
+    #attorney-field::placeholder, #case-manager-field::placeholder { color: transparent; }
 
     /* 2. INTEGRATED CASE BAR */
     #lsh-integrated-bar {
