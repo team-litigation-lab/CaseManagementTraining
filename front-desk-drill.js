@@ -32,11 +32,18 @@
    PRACTICE CALLS (no script), like the Training Portal's Call
    Simulator: a random caller from DRILL_CALLS phones in, and the
    trainee takes the whole call in their own words. No answer choices,
-   no identifier buttons. After hanging up they pick the file and the
-   authentication decision, can write a call note, and get a debrief:
-   find 30 and authenticate 30 against the key, plus identifiers 10 and
-   handling 30 from a review of the transcript against the key and the
-   firm's rules (/api/call-ai). The call runs on live voice when it's on
+   no identifier buttons. After hanging up they match the file (the
+   search finds names that sound like what they typed), see whether the
+   caller was fully authenticated (checked from the transcript: name,
+   DOB, DOL and one more identifier on file), can write a call note,
+   and get a debrief on the firm's RECEPTION MOCK CALL scorecard: 14
+   items rated 0-5. Five are checked from the call itself (the opening
+   spiel, authentication, the closing spiel, time management, dead air
+   and fillers); the rest come from a review of the transcript against
+   the key, the firm's rules and the reception SOP (/api/call-ai).
+   Clarity of speech and tone of voice are rated only on spoken calls.
+   If the review can't be had, the debrief still shows the five checked
+   items and offers to try again. The call runs on live voice when it's on
    and working; otherwise, or when it's busy or drops, it goes on with
    the standard voice: the caller's lines come from /api/call-ai and are
    read out by the browser (call-voice.js), and the trainee types or
@@ -212,6 +219,20 @@
     .fdd-script ul{margin:2px 0 0 16px;padding:0}
     .fdd-scripts-bar{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
     .fdd-scripts-bar button{font-size:10px;font-weight:800;text-transform:uppercase;background:#fff;border:1px solid #0f2148;color:#0f2148;border-radius:6px;padding:6px 9px;cursor:pointer}
+    .fdd-row .close{font-size:9.5px;font-weight:800;text-transform:uppercase;border-radius:4px;padding:1px 5px;background:#fef3c7;color:#92400e;white-space:nowrap}
+    .fdd-ids{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 6px}
+    .fdd-id{font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px;border:1px solid #cbd5e1;background:#fff;color:#334155}
+    .fdd-id.ok{background:#ecfdf5;border-color:#10b981;color:#047857}.fdd-id.miss{background:#fef2f2;border-color:#ef4444;color:#b91c1c}
+    .fdd-authv{font-size:12.3px;line-height:1.45;border-radius:7px;padding:7px 9px}
+    .fdd-authv.ok{background:#ecfdf5;color:#065f46}.fdd-authv.bad{background:#fef2f2;color:#991b1b}.fdd-authv.mid{background:#fffbeb;color:#92400e}
+    .fdd-rub{width:100%;border-collapse:collapse;font-size:12px}
+    .fdd-rub td{border-bottom:1px solid #e2e8f0;padding:6px 4px;vertical-align:top;line-height:1.4}
+    .fdd-rub td.n{width:18px;color:#94a3b8;font-weight:800}
+    .fdd-rub td.s{white-space:nowrap;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:800;color:#0f2148}
+    .fdd-rub td.s.lo{color:#b91c1c}.fdd-rub td.s.na{color:#94a3b8;font-weight:600}
+    .fdd-rub b{color:#0f2148}.fdd-rub .nt{display:block;font-size:11.3px;color:#475569;margin-top:2px}
+    .fdd-rub .how{font-size:9px;font-weight:800;text-transform:uppercase;border-radius:4px;padding:0 4px;margin-left:5px;background:#e0f2fe;color:#0369a1;vertical-align:1px}
+    .fdd-rub .how.ai{background:#f3e8ff;color:#7e22ce}
     `;
     document.head.appendChild(css);
 
@@ -259,6 +280,11 @@
         dol: /date of (the |your )?(accident|loss|incident|injury|crash|fall)|\bd\.? ?o\.? ?l\b|when did (it|this|that|the accident|the crash|the incident|the fall|you get hurt|you get injured) (happen|occur)|when (was|did) (the|your) (accident|crash|incident|fall|injury)|what (date|day) (was|did) (the|your) (accident|crash|incident|fall)/i
     };
     const heardAsks = (text) => Object.keys(HEARD).filter(k => HEARD[k].test(text));
+    // Practice calls also listen for the claim number and the firm's case number (the rubric's identifiers).
+    const HEARD_MORE = {
+        claim: /\bclaim ?(number|no\b|#)|\b(your|the|her|his) claim\b[^.?!]{0,20}\bnumber|number (for|on) (your|the|her|his) claim|reference number|policy number/i,
+        caseno: /\bcase ?(number|no\b|#|id\b)|\b(your|the|her|his) case\b[^.?!]{0,20}\bnumber|number (for|on) (your|the|her|his) case|file number/i
+    };
 
     /* ---------- open / close ---------- */
     window.openFrontDeskDrill = function () {
@@ -266,22 +292,27 @@
         buildUI();
         if (typeof closeCallsPanel === 'function') closeCallsPanel();
         if (typeof closeTrainingLibrary === 'function') closeTrainingLibrary();
-        $id('fdd-panel').classList.add('open'); $id('fdd-panel').setAttribute('aria-hidden', 'false');
+        $id('fdd-panel').classList.add('open'); $id('fdd-panel').setAttribute('aria-hidden', 'false'); document.body.classList.add('fdd-open');
         $id('fdd-mini').style.display = 'none';
         if (!D && !P) { screen = 'home'; loadHistory(); }
-        paint();
+        paint(); fitCase();
     };
     window.fddClose = function () {
         if (D && screen === 'call' && !confirm('Leave the drill? This run won\'t be scored.')) return;
         if (P && (screen === 'practice' || screen === 'pcwrap') && !confirm('Leave this call? It won\'t be scored.')) return;
         hangUp(); stopTimer(); D = null; endPractice(); screen = 'home';
-        document.body.classList.remove('fdd-on');
+        document.body.classList.remove('fdd-on', 'fdd-open'); fitCase();
         $id('fdd-panel').classList.remove('open'); $id('fdd-panel').setAttribute('aria-hidden', 'true');
         $id('fdd-mini').style.display = 'none';
     };
-    // Hide the panel to read the case behind it; the floating button brings it back.
-    window.fddMinimize = function () { $id('fdd-panel').classList.remove('open'); $id('fdd-mini').style.display = 'block'; };
-    window.fddRestore = function () { $id('fdd-panel').classList.add('open'); $id('fdd-mini').style.display = 'none'; };
+    // Hide the panel to read the case behind it; the floating button brings it back. (On a wide screen the
+    // case moves over while the panel is open, so both are in view: body.fdd-open, fitCase.)
+    window.fddMinimize = function () { $id('fdd-panel').classList.remove('open'); document.body.classList.remove('fdd-open'); fitCase(); $id('fdd-mini').style.display = 'block'; };
+    window.fddRestore = function () { $id('fdd-panel').classList.add('open'); document.body.classList.add('fdd-open'); fitCase(); $id('fdd-mini').style.display = 'none'; };
+    // While the panel is open (body.fdd-open) the case moves over beside it on a wide screen, the sidebar stepping
+    // aside and the case shown a little smaller when there isn't room (case-fit.js); hiding or closing the panel
+    // puts it all back.
+    const fitCase = () => { if (window.lshFitCase) window.lshFitCase(); };
 
     /* ---------- drill flow ---------- */
     window.fddStart = function () {
@@ -385,13 +416,13 @@
         if ((screen === 'practice' || screen === 'pcwrap') && P) {
             P.selected = id;
             if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true, viewOnly: true });
-            pcPick(); return;
+            pcPick(); setTimeout(fitCase, 50); return;
         }
         if (!D || !D.cur) return;
         const cur = D.cur; if (cur.submitted) return;
         cur.selected = id;
         if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true, viewOnly: true });
-        paint();
+        paint(); setTimeout(fitCase, 50);
     };
     // True while a call is on the line and not yet scored: the top-bar case search
     // (case-library.js) then records the case it opens as this call's pick.
@@ -404,7 +435,7 @@
         const find = cur.selected === (c.mock || 'none');
         const authOk = cur.auth === c.auth;
         let idsOk;
-        if (PERSONAL.includes(c.auth)) idsOk = cur.asked.includes('name') && cur.asked.includes('dob') && (cur.asked.includes('address') || cur.asked.includes('ssn4'));
+        if (PERSONAL.includes(c.auth)) idsOk = cur.asked.includes('name') && cur.asked.includes('dob') && cur.asked.includes('dol') && (cur.asked.includes('address') || cur.asked.includes('ssn4'));
         else if (c.auth === 'unauthorized') idsOk = cur.asked.includes('name') && cur.asked.includes('relationship');
         else idsOk = cur.asked.includes('name') && cur.asked.includes('callback');
         if (c.mock && sameNameCount(c.mock) > 1) idsOk = idsOk && cur.asked.includes('dol');
@@ -624,8 +655,9 @@
         const hits = (window.mockSearch ? window.mockSearch(q) : []).slice(0, 12);
         const dup = [...new Set(hits.map(nameKey))].filter(k => hits.filter(c => nameKey(c) === k).length > 1);
         const warn = dup.length ? `<p class="fdd-dup">⚠ More than one file is named ${dup.map(k => `<b>${esc(hits.find(c => nameKey(c) === k).client.name)}</b>`).join(' and ')}. Match the date of the accident (DOL) and the date of birth before you open one.</p>` : '';
-        box.innerHTML = hits.length ? warn + hits.map(c => `<div class="fdd-row ${cur.selected === c.id ? 'sel' : ''}" onclick="fddPick('${c.id}')"><span class="id">${c.id}</span><span class="nm">${esc(c.client.name)}<br><span class="mt">DOL <b>${esc(c.dateOfLoss)}</b> · DOB ${esc(c.client.dob)} · ${esc(c.caseNumber || '')} · ${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}</span></span></div>`).join('')
-            : '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">No cases match.</p>';
+        const close = (c) => window.mockSoundsLike && window.mockSoundsLike(c, q) ? ' <span class="close" title="Not spelled the same: a name on this file sounds like what you typed">Sounds like</span>' : '';
+        box.innerHTML = hits.length ? warn + hits.map(c => `<div class="fdd-row ${cur.selected === c.id ? 'sel' : ''}" onclick="fddPick('${c.id}')"><span class="id">${c.id}</span><span class="nm">${esc(c.client.name)}${close(c)}<br><span class="mt">DOL <b>${esc(c.dateOfLoss)}</b> · DOB ${esc(c.client.dob)} · ${esc(c.caseNumber || '')} · ${esc(c.caseType === 'Others' ? c.caseTypeOther : c.caseType)} · ${esc(c.phase)}</span></span></div>`).join('')
+            : '<p style="margin:4px 0 0;font-size:11.5px;color:#94a3b8">No cases match. Try part of the name, the last name, the date of birth (MM/DD/YYYY) or the callback number.</p>';
     }
 
     /* ---------- reception call scripts (Admins: the Caller scenarios panel) ----------
@@ -642,12 +674,11 @@
     };
     const SCRIPT_ASKS = [['name', 'Full name'], ['dob', 'Date of birth'], ['address', 'Address'], ['ssn4', 'Last 4 of SSN'], ['callback', 'Callback number'], ['relationship', 'Relationship to the client'], ['dol', 'Date of the accident']];
     function verifyLine(c) {
-        const same = c.mock && sameNameCount(c.mock) > 1 ? ' And what was the date of the accident?' : '';
         if (c.auth === 'unauthorized') return 'May I have your full name, and your relationship to the person you\'re calling about?';
         if (c.auth === 'business') return 'May I have your name, your company, the claim or reference number, and a good callback number?';
         if (c.auth === 'newcaller') return 'May I have your full name and a good callback number? And can you tell me briefly what happened, and when?';
-        if (c.auth === 'authorized') return 'May I have your full name and your relationship to the client? And to verify the file, the client\'s date of birth and their address or the last 4 of their Social Security number?' + same;
-        return 'Before I look into that, may I have your full name, your date of birth, and your address or the last 4 of your Social Security number?' + same;
+        if (c.auth === 'authorized') return 'May I have your full name and your relationship to the client? And to verify the file, the client\'s date of birth, the date of the accident, and their address or the last 4 of their Social Security number?';
+        return 'Before I look into that, may I have your full name, your date of birth, the date of the accident, and your address or the last 4 of your Social Security number?';
     }
     function scriptHTML(c) {
         const k = caseOf(c.mock), g = c.gives || {};
@@ -696,13 +727,13 @@
         const twins = (window.MOCK_CASES || []).filter(x => x.id !== k.id && nameKey(x) === nameKey(k)), same = twins.length > 0;
         const sameAsk = !same ? '' : twins.some(x => x.dateOfLoss === k.dateOfLoss)
             ? ' The same name, address and accident are on another file: the date of birth or the case number decides which file.'
-            : ' Same name on more than one file: “And what was the date of the accident?”';
+            : ' Same name on more than one file: the date of the accident tells them apart.';
         const names = hardWords(`${cl.name} ${s.from} ${s.ask}`);
         const caller = isClient
             ? `You're the client. When they ask, verify with the file's details:<table>
                 <tr><td>Full name</td><td>${esc(cl.name)}</td></tr><tr><td>Date of birth</td><td>${esc(cl.dob || '')}</td></tr>
                 <tr><td>Address</td><td>${esc(cl.address || '')}</td></tr>${ssn4 ? `<tr><td>Last 4 of SSN</td><td>${esc(ssn4)}</td></tr>` : ''}
-                ${same ? `<tr><td>Date of the accident</td><td>${esc(k.dateOfLoss || '')}</td></tr>` : ''}</table>
+                <tr><td>Date of the accident</td><td>${esc(k.dateOfLoss || '')}</td></tr></table>
                 Friendly and cooperative; you want a real answer. Don't volunteer details; answer what you're asked.`
             : 'Give your name, who you are to the client (or your company) and a callback number when asked. You don\'t have the client\'s date of birth or Social Security number, unless the file authorizes you (see On file below: then answer from it). If they won\'t help, push back once, then accept a message. Never get abusive.';
         return `<div class="fdd-script" data-scenario="${esc(k.id)}-${i + 1}">
@@ -716,7 +747,7 @@
             <div class="rsay">1. “Thank you for calling ${esc(firmName())}, this is [name]. How may I help you?”</div>
             <div class="rsay">2. “May I have your full name and a good callback number, in case we get disconnected? And who are you calling about?”</div>
             ${spellStepHTML(names)}
-            <div class="rsay">3. Before sharing anything. The client, or someone the file authorizes: “May I have ${isClient ? 'your' : 'the client\'s'} date of birth, and the address on file or the last 4 of the Social Security number?”${sameAsk} Anyone else: share nothing about the case, not even that it's a client.</div>
+            <div class="rsay">3. Before sharing anything. The client, or someone the file authorizes: “May I have ${isClient ? 'your' : 'the client\'s'} date of birth, the date of the accident, and the address on file or the last 4 of the Social Security number?”${sameAsk} Anyone else: share nothing about the case, not even that it's a client.</div>
             <div class="rsay">4. ${esc(s.handle)}</div>
             <div class="rsay">5. Reads back the callback number and any message, then: “Is there anything else I can help you with? Thank you for calling.”</div>
             <h5>Key</h5>
@@ -751,9 +782,10 @@
     // The identifiers the front desk has to ask this caller for (the 10 identifier points).
     function needFor(c) {
         const k = c.mock && caseOf(c.mock), same = c.mock ? sameNameCount(c.mock) : 0;
-        return (PERSONAL.includes(c.auth) ? 'name, date of birth, and address or SSN last 4'
+        const personal = PERSONAL.includes(c.auth);
+        return (personal ? 'name, date of birth, the date of the accident (DOL), and address or SSN last 4'
             : c.auth === 'unauthorized' ? 'their name and their relationship to the client' : 'their name and a callback number')
-            + (same > 1 ? `, plus the date of the accident (${same} files are named ${k.client.name})` : '')
+            + (same > 1 ? (personal ? ` (${same} files are named ${k.client.name}: the DOL tells them apart)` : `, plus the date of the accident (${same} files are named ${k.client.name})`) : '')
             + (callNames(c).length ? `, and the spelling of ${callNames(c).join(' ')}, read back with the NATO alphabet` : '');
     }
     function feedbackHTML(entry, r) {
@@ -899,9 +931,9 @@ The call has just been answered. When the receptionist greets you, say why you'r
         pcRecent = [call.id, ...pcRecent].slice(0, Math.max(0, Math.min(8, pool.length - 1)));
         const V = voice();
         hangUp(); stopTimer(); D = null; endPractice();
-        P = { call, transport: liveOK() && livePref() && Date.now() > pcLiveOff ? 'live' : 'standard', answered: false, t0: null, t1: null, msgs: [],
+        P = { call, transport: liveOK() && livePref() && Date.now() > pcLiveOff ? 'live' : 'standard', answered: false, ringAt: Date.now(), t0: null, t1: null, msgs: [],
             speak: !!(V && V.canSpeak && pcPref('SPEAK', true)), hands: !!(V && V.canListen && pcPref('HANDS', true)),
-            selected: null, q: '', auth: null, note: '', draft: '', busy: false, closing: false, ended: false, req: 0, muted: false,
+            selected: null, q: '', note: '', draft: '', busy: false, closing: false, ended: false, req: 0, muted: false, replyStart: null, micUsed: false,
             status: 'Incoming call… press 📞 Answer.', warn: false, voiceNote: '', program: (window.lshProgram && window.lshProgram()) || '' };
         document.body.classList.add('fdd-on');
         if (typeof closeCallsPanel === 'function') closeCallsPanel();
@@ -941,8 +973,8 @@ The call has just been answered. When the receptionist greets you, say why you'r
             },
             onLine: (role, text, id) => {
                 if (P !== my || my.ended || my.transport !== 'live') return;
-                const m = my.msgs.find(x => x.id === id);
-                if (m) m.text = text; else my.msgs.push({ who: role === 'you' ? 'you' : 'caller', text, id });
+                const m = my.msgs.find(x => x.id === id), now = Date.now();
+                if (m) { m.text = text; m.upd = now; } else my.msgs.push({ who: role === 'you' ? 'you' : 'caller', text, id, at: now, upd: now, spoken: true });
                 pcTr();
             },
             onNotice: (msg) => { if (P === my && !my.ended && my.transport === 'live') pcStatus(msg, true); },
@@ -990,10 +1022,11 @@ The call has just been answered. When the receptionist greets you, say why you'r
             onNoVoice: () => { if (P === my && !my.noVoice) { my.noVoice = true; my.speak = false; pcControls(); } } });
     }
     function callerSays(text, end) {
-        const my = P;
-        my.msgs.push({ who: 'caller', text }); pcTr();
+        const my = P, line = { who: 'caller', text, at: Date.now() };
+        my.msgs.push(line); pcTr();
         if (end) my.closing = true;
-        sayAloud(text, () => { if (P !== my || my.ended) return; if (end) return pcEnd('caller'); yourTurn(); });
+        my.replyStart = null;
+        sayAloud(text, () => { line.end = Date.now(); if (P !== my || my.ended) return; if (end) return pcEnd('caller'); yourTurn(); });
     }
 
     window.fddPracticeSend = async function () {
@@ -1009,7 +1042,9 @@ The call has just been answered. When the receptionist greets you, say why you'r
         clearTimeout(my.kick);
         const V = voice(); if (V) { V.stopSpeaking(); V.stopListening(); }
         my.afterSpeak = null;
-        my.msgs.push({ who: 'you', text });
+        const now = Date.now();
+        my.msgs.push({ who: 'you', text, at: now, start: Math.min(now, my.replyStart || now), spoken: my.micUsed });
+        my.replyStart = null; my.micUsed = false;
         my.busy = true; pcTr(); pcStatus(''); pcControls();
         const reqNo = ++my.req;
         const r = await askWithRetry('caller', callerPrompt(my.call), apiMessages(my), false,
@@ -1031,7 +1066,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); fddPracticeSend(); }
     };
     window.fddPracticeInput = function (el) {
-        if (P) P.draft = el.value;
+        if (P) { P.draft = el.value; if (!P.replyStart && el.value.trim()) P.replyStart = Date.now(); }
         const V = voice(); if (V && V.isListening()) { V.stopListening(); pcControls(); }   // typing takes over from the microphone
     };
 
@@ -1044,7 +1079,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const box = $id('fdd-pc-in'); const before = box ? box.value.trim() : '';
         let blocked = false;
         const ok = V.listen({
-            onText: (t) => { const b = $id('fdd-pc-in'); if (b && P === my) { b.value = (before ? before + ' ' : '') + t; my.draft = b.value; } },
+            onText: (t) => { const b = $id('fdd-pc-in'); if (b && P === my) { b.value = (before ? before + ' ' : '') + t; my.draft = b.value; if (!my.replyStart) my.replyStart = Date.now(); my.micUsed = true; } },
             onEnd: (t) => {
                 if (P !== my || my.ended) return;
                 pcControls();
@@ -1172,7 +1207,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         paintResults(); pcWrapButton();
     }
     function pickLine(sel) {
-        if (!sel) return 'No file opened yet.';
+        if (!sel) return 'No file opened yet. Search above: names are found even when they\'re spelled the way they sound.';
         if (sel === 'none') return '✓ You marked this caller as <b>not in the system</b>.';
         const k = caseOf(sel);
         return `✓ Opened <b>${esc(sel)}</b>${k ? ` · ${esc(k.client.name)} · ${esc(k.caseNumber || '')} · DOL ${esc(k.dateOfLoss)}` : ''} (view only). Use <b>▭ Case</b> to read it.`;
@@ -1188,7 +1223,8 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const F = window.MOCK_FIRM || {};
         return `<details class="fdd-sec fdd-dir"><summary>☎ Firm directory and front-desk rules</summary>
             <ul>${(F.directory || []).map(d => `<li><b>${esc(d.name)}</b>, ${esc(d.role)} · ext ${esc(d.ext)}</li>`).join('')}</ul>
-            <ul>${(F.rules || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul></details>`;
+            <ul>${(F.rules || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+            ${(F.sop || []).length ? `<p style="margin:8px 0 0;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b">Reception SOP</p><ul>${F.sop.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}</details>`;
     }
 
     function practiceHTML() {
@@ -1204,102 +1240,278 @@ The call has just been answered. When the receptionist greets you, say why you'r
             ${directoryHTML()}`;
     }
 
+    /* ---------- practice: what's checked from the call itself ---------- */
+    // Authentication, as on the firm's RECEPTION MOCK CALL scorecard (Name, DOL, DOB, Claim No, Case No):
+    // a caller asking about a case gives their full name, date of birth, the date of the accident and one
+    // more identifier on file (claim #, case #, address or SSN last 4); an authorized caller also says who
+    // they are to the client. An identifier counts when the receptionist asked for it in their own words,
+    // or when the caller gave it without being asked.
+    const ID_LABEL = { name: 'Full name', dob: 'Date of birth', dol: 'Date of the accident (DOL)', claim: 'Claim number', caseno: 'Case number',
+        address: 'Address', ssn4: 'SSN last 4', relationship: 'Relationship to the client', callback: 'Callback number' };
+    const EXTRA = ['claim', 'caseno', 'address', 'ssn4'];
+    function authGroups(c) {
+        if (PERSONAL.includes(c.auth)) return [['name']].concat(c.auth === 'authorized' ? [['relationship']] : [], [['dob'], ['dol'], EXTRA]);
+        return c.auth === 'unauthorized' ? [['name'], ['relationship']] : [['name'], ['callback']];
+    }
+    const groupLabel = (keys) => keys.length > 1 ? 'one more identifier on file (claim #, case #, address or SSN last 4)' : ID_LABEL[keys[0]].replace(/^\w/, ch => ch.toLowerCase());
+    const digitsOf = (v) => String(v == null ? '' : v).replace(/\D/g, '');
+    const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    // A date the caller said ("03/22/1988", "March 22nd, 1988"): its month and day are both there.
+    function saidDate(text, date) {
+        const m = String(date || '').match(/^(\d{1,2})\/(\d{1,2})\/\d{2,4}$/); if (!m) return false;
+        const t = String(text || '').toLowerCase(), mo = Number(m[1]), d = Number(m[2]);
+        return new RegExp(`\\b0?${mo}[/.-]0?${d}\\b`).test(t) || (new RegExp(`\\b${MONTHS[mo - 1]}`).test(t) && new RegExp(`\\b0?${d}(st|nd|rd|th)?\\b`).test(t));
+    }
+    function idsGot(l) {
+        const c = l.call, g = c.gives || {}, k = caseOf(c.mock);
+        const you = l.msgs.filter(m => m.who === 'you').map(m => m.text).join('\n');
+        const said = l.msgs.filter(m => m.who === 'caller').map(m => m.text).join('\n'), low = said.toLowerCase(), sd = digitsOf(said);
+        const asked = new Set(heardAsks(you).concat(Object.keys(HEARD_MORE).filter(key => HEARD_MORE[key].test(you))));
+        const given = new Set();
+        const name = heardAs(g.name || '').toLowerCase().split(/[^a-z]+/).filter(w => w.length >= 3);
+        if (name.length && name.every(w => low.includes(w))) given.add('name');
+        const cb = digitsOf(g.callback); if (cb.length >= 7 && sd.includes(cb.slice(-7))) given.add('callback');
+        if (saidDate(said, g.dob)) given.add('dob');
+        if (k) {
+            const cn = digitsOf(k.caseNumber); if (cn.length >= 6 && sd.includes(cn.slice(-6))) given.add('caseno');
+            if ((k.bi || []).concat(k.pipum || []).some(x => digitsOf(x.claim).length >= 5 && sd.includes(digitsOf(x.claim)))) given.add('claim');
+            if (saidDate(said, k.dateOfLoss)) given.add('dol');
+        }
+        if (/\b(i'?m (his|her|their|the client'?s?)|my (son|daughter|child|mother|father|mom|dad|wife|husband|brother|sister|grand\w+|client|patient|insured)|on behalf of|power of attorney)\b/i.test(said)) given.add('relationship');
+        return { asked, given };
+    }
+    function authCheck(l) {
+        const c = l.call, { asked, given } = idsGot(l);
+        const groups = authGroups(c).map(keys => {
+            const hit = keys.find(key => asked.has(key)) || keys.find(key => given.has(key));
+            return { keys, ok: !!hit, hit: hit || '', by: !hit ? '' : asked.has(hit) ? 'asked' : 'given' };
+        });
+        const got = groups.filter(x => x.ok).length, personal = PERSONAL.includes(c.auth), full = got === groups.length;
+        const missing = groups.filter(x => !x.ok).map(x => groupLabel(x.keys));
+        return { groups, got, full, personal, missing, score: Math.round(5 * got / groups.length),
+            note: full ? (personal ? 'You got the name, date of birth, date of the accident and one more identifier on file.' : 'You got what this caller needed.')
+                : `Missing: ${missing.join(', ')}.` };
+    }
+
+    const FILLER = /\b(u+m+|u+h+m*|e+rm|a+h+|h+m{2,}|you know|i mean)\b/gi;
+    const HOLD = /\b(one moment|a moment|one second|a second|a minute|on hold|hold on|please hold|bear with me|let me (check|look|pull|see|find|get|verify|confirm)|give me a (sec|second|moment|minute))\b/i;
+    const wordCount = (t) => (String(t || '').match(/[A-Za-z0-9']+/g) || []).length;
+    const firstWords = (t, n) => { const w = String(t || '').split(/\s+/).filter(Boolean); return w.slice(0, n).join(' ') + (w.length > n ? '…' : ''); };
+    // When the receptionist started a reply: the first keystroke or word heard (standard voice); on live
+    // voice, when the line first showed, or its last update less the time it takes to say it.
+    const replyStart = (m) => m.start || (m.at ? Math.min(m.at, (m.upd || m.at) - wordCount(m.text) * 400) : null);
+    function autoChecks(l) {
+        const c = l.call, you = l.msgs.filter(m => m.who === 'you');
+        // the opening spiel: thanks, the firm's name, your name
+        const first = you.length ? you[0].text : '';
+        const firm = /legal support help|\blsh\b|training law group/i.test(first) || first.toLowerCase().includes(firmName().toLowerCase());
+        const thanks = /thank(s| you) for calling|good (morning|afternoon|evening|day)/i.test(first);
+        const self = /\b(this is|my name is|you'?re (speaking|talking) (with|to)|i'?m|i am)\s+(?!(the|a|an|front|reception|legal|lsh|training|calling|here|glad|happy|sorry|so|just|going|not|regarding|about|your|our|my|with|from)\b)[a-z]+/i.test(first)
+            || /\b(?!(desk|help|reception|group|lsh|office)\b)[a-z]+ speaking\b/i.test(first);
+        const intro = { score: (thanks ? 1 : 0) + (firm ? 2 : 0) + (self ? 2 : 0) };
+        intro.note = !you.length ? 'You didn\'t say anything.' : intro.score === 5 ? 'You thanked the caller, named the firm and gave your name.'
+            : `Missing: ${[!thanks && 'thanking the caller', !firm && 'the firm\'s name', !self && 'your name'].filter(Boolean).join(', ')}. Open with “Thank you for calling Legal Support Help. This is (your name).”`;
+        // the closing spiel: more help, thanks, goodbye
+        const tail = you.slice(-2).map(m => m.text).join(' ');
+        const more = /anything else|something else|any other (question|concern)|else (i|we) can (help|assist|do)/i.test(tail);
+        const thank = /thank(s| you)/i.test(tail);
+        const bye = /\b(good)?-? ?bye\b|have a (good|great|nice|wonderful|blessed|lovely|safe)|take care|enjoy (the|your)/i.test(tail);
+        const closing = { score: (more ? 2 : 0) + (thank ? 1 : 0) + (bye ? 2 : 0) };
+        closing.note = closing.score === 5 ? 'You offered more help, thanked the caller and said goodbye.'
+            : `Missing: ${[!more && 'offering more help (“Is there anything else I can help you with?”)', !thank && 'thanking the caller', !bye && 'a goodbye'].filter(Boolean).join(', ')}.`;
+        // silences: from the end of the caller's line to the start of the reply (not after "one moment, please")
+        const gaps = []; let callerEnd = null, callerText = '', prevYou = '';
+        l.msgs.forEach(m => {
+            if (m.who === 'caller') { callerEnd = m.end || m.upd || m.at || null; callerText = m.text; return; }
+            if (m.who !== 'you') return;
+            const st = replyStart(m);
+            if (callerEnd && st) gaps.push({ secs: Math.round((st - callerEnd) / 1000), hold: HOLD.test(prevYou), after: callerText });
+            callerEnd = null; prevYou = m.text;
+        });
+        const limit = l.usedLive ? 8 : 10;
+        const greet = you.length && l.t0 && replyStart(you[0]) ? Math.max(0, Math.round((replyStart(you[0]) - l.t0) / 1000)) : 0;
+        const dead = gaps.filter(g => !g.hold && g.secs > limit), longHold = gaps.filter(g => g.hold && g.secs > 60);
+        const words = you.reduce((n, m) => n + wordCount(m.text), 0);
+        const fillers = you.map(m => m.text.match(FILLER) || []).reduce((a, b) => a.concat(b), []);
+        const rate = words ? fillers.length / words * 100 : 0, silences = dead.length + (greet > 6 ? 1 : 0);
+        const deadair = { score: Math.max(0, 5 - Math.min(3, silences) - (rate > 5 ? 2 : rate > 2 ? 1 : 0)) };
+        deadair.note = [
+            silences ? [greet > 6 ? `${greet} s before your greeting` : ''].concat(dead.slice(0, 2).map(g => `${g.secs} s of silence after “${firstWords(g.after, 8)}”`)).filter(Boolean).join('; ')
+                + '. Keep the caller with you (“One moment while I pull up your file.”).' : 'No long silences.',
+            fillers.length ? `${fillers.length} filler${fillers.length === 1 ? '' : 's'} (${[...new Set(fillers.map(f => f.toLowerCase()))].slice(0, 4).join(', ')}).` : 'No fillers.'
+        ].join(' ');
+        // time management: answered on the first ring, a focused call, no long holds
+        const answer = l.ringAt && l.t0 ? Math.max(0, Math.round((l.t0 - l.ringAt) / 1000)) : 0;
+        const secs = Math.max(0, Math.round(((l.t1 || Date.now()) - (l.t0 || Date.now())) / 1000));
+        const time = { score: Math.max(0, 5 - (answer > 7 ? 2 : answer > 3 ? 1 : 0) - (secs > 720 ? 2 : secs > 480 ? 1 : 0) - (longHold.length ? 1 : 0)) };
+        time.note = `Answered in ${answer} s${answer > 3 ? ' (the firm\'s policy is one ring, about 3 s)' : ', on the first ring'}; the call took ${fmtSec(secs)}${secs > 480 ? ' (keep it focused: verify, answer or take the message, close)' : ''}${longHold.length ? `; the caller waited ${longHold[0].secs} s on hold without hearing from you` : ''}.`;
+        const auth = authCheck(l);
+        return { intro, auth, closing, time, deadair, answer, secs, file: { ok: l.selected === (c.mock || 'none') },
+            spoken: !!(l.usedLive || you.some(m => m.spoken)) };
+    }
+    function authHTML(l) {
+        const a = l.auto.auth, c = l.call;
+        const chips = a.groups.map(x => `<span class="fdd-id ${x.ok ? 'ok' : 'miss'}">${x.ok ? '✓' : '✗'} ${esc(x.keys.length > 1 ? (x.ok ? 'One more: ' + ID_LABEL[x.hit] : 'One more identifier on file') : ID_LABEL[x.keys[0]])}${x.by === 'given' ? ' (they gave it)' : ''}</span>`).join('');
+        const needs = a.personal ? 'A caller asking about a case: full name, date of birth, the date of the accident, and one more identifier on file (claim #, case #, address or SSN last 4)' + (c.auth === 'authorized' ? ', and who they are to the client.' : '.')
+            : c.auth === 'unauthorized' ? 'What this caller needed: their name and their relationship to the client.' : 'What this caller needed: their name and a callback number.';
+        return `<div class="fdd-ids">${chips}</div>
+            <div class="fdd-authv ${a.full ? 'ok' : a.got ? 'mid' : 'bad'}">${a.full ? `✓ <b>${a.personal ? 'Fully authenticated.' : 'Complete.'}</b> You got every identifier this call needed.` : `✗ <b>Not fully authenticated.</b> Missing: ${esc(a.missing.join(', '))}.`}</div>
+            <p style="margin:6px 0 0;font-size:11.3px;color:#64748b;line-height:1.45">${esc(needs)} Checked from what was said on the call.</p>`;
+    }
+
     function pcWrapHTML() {
         const l = P, secs = Math.round(((l.t1 || Date.now()) - (l.t0 || Date.now())) / 1000);
+        l.auto = autoChecks(l);
         return `<div class="fdd-fb mid" style="margin-bottom:10px"><b>${l.ended === 'caller' ? 'The caller hung up.' : l.ended === 'time' ? 'The call reached its time limit.' : 'Call ended.'}</b> ⏱ ${fmtSec(secs)}. Wrap it up the way you would at the desk, then get your debrief.</div>
             ${findHTML(l, '1 · Which file was this call about?')}
-            <div class="fdd-sec"><h4>2 · Authentication: who was the caller?</h4>${AUTH.map(([k, lab]) => `<label class="fdd-opt"><input type="radio" name="fdd-auth" value="${k}" ${l.auth === k ? 'checked' : ''} onchange="fddPracticeAuth(this.value)"><span>${esc(lab)}</span></label>`).join('')}</div>
+            <div class="fdd-sec"><h4>2 · Authentication (checked from the call)</h4>${authHTML(l)}</div>
             <div class="fdd-sec"><h4>3 · Call note (optional)</h4><textarea class="fdd-note" id="fdd-pc-note" maxlength="1500" placeholder="Who called, what they wanted, what you told them or the message you took, and who it goes to." oninput="fddPracticeNote(this.value)">${esc(l.note)}</textarea></div>
-            <button class="fdd-go alt" id="fdd-pc-go" onclick="fddPracticeReview()" ${l.selected && l.auth ? '' : 'disabled'}>Get my debrief →</button>
+            <button class="fdd-go alt" id="fdd-pc-go" onclick="fddPracticeReview()">Get my debrief →</button>
+            <p id="fdd-pc-go-note" style="margin:6px 0 0;font-size:11.5px;color:#92400e">${esc(pcGoNote())}</p>
             <details class="fdd-sec" style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript</summary><div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div></details>`;
     }
-    function pcWrapButton() { const b = $id('fdd-pc-go'); if (b && P) b.disabled = !(P.selected && P.auth); }
-    window.fddPracticeAuth = function (v) { if (P) { P.auth = v; pcWrapButton(); } };
+    const pcGoNote = () => P && !P.selected ? 'No file matched yet: the debrief counts the file as not found. Search above, or choose “No matching case on file”.' : '';
+    function pcWrapButton() { const n = $id('fdd-pc-go-note'); if (n) n.textContent = pcGoNote(); }
     window.fddPracticeNote = function (v) { if (P) P.note = cut(v, 1500); };
 
+    /* ---------- practice: the RECEPTION MOCK CALL scorecard ---------- */
+    // 14 items, each 0-5. 'auto': checked from the call (above); 'ai': from the review of the transcript.
+    const RUBRIC = [
+        ['intro', 'Introduction of Law Firm and Name', 'auto'], ['auth', 'Authentication (Name, DOL, DOB, Claim No, Case No.)', 'auto'],
+        ['service', 'Customer Service', 'ai'], ['assertive', 'Assertiveness', 'ai'], ['listening', 'Listening Skills', 'ai'],
+        ['comprehension', 'Comprehension', 'ai'], ['details', 'Attention to Details', 'ai'], ['resolution', 'Resolution', 'ai'],
+        ['transfer', 'Transfer Procedure', 'ai'], ['closing', 'Closing Spiel', 'auto'], ['time', 'Time Management', 'auto'],
+        ['deadair', 'Dead Air/Fillers', 'auto'], ['clarity', 'Clarity of Speech (Articulation, Volume, Enunciation)', 'ai'], ['tone', 'Tone of Voice', 'ai']
+    ];
+    const AI_KEYS = RUBRIC.filter(r => r[2] === 'ai').map(r => r[0]);
+    const CORE_AI = ['service', 'assertive', 'listening', 'comprehension', 'details', 'resolution'];
+
     const transcriptText = (l) => l.msgs.map(m => m.who === 'caller' ? `Caller: ${m.text}` : m.who === 'you' ? `Receptionist: ${m.text}` : `(${m.text})`).join('\n');
-    const REVIEW_SYSTEM = 'You coach receptionists in training at a personal injury law firm. You review one practice phone call against the firm\'s front-desk rules and the answer key, and you reply with JSON only. Be specific and fair: refer to what the receptionist actually said. Judge only what is in the transcript and the wrap-up; the receptionist could not see the answer key. The transcript may come from speech recognition, so ignore small transcription slips. Write to the receptionist as "you". Never mention AI, models or prompts.';
+    const REVIEW_SYSTEM = 'You coach receptionists in training at a personal injury law firm. You score one practice phone call on the firm\'s RECEPTION MOCK CALL scorecard, against the firm\'s front-desk rules, its reception SOP and the answer key, and you reply with JSON only. Be specific and fair: refer to what the receptionist actually said. Judge only what is in the transcript and the wrap-up; the receptionist could not see the answer key. The transcript may come from speech recognition, so ignore small transcription slips. Write to the receptionist as "you". Never mention AI, models or prompts.';
     function reviewPrompt(l) {
-        const c = l.call, k = caseOf(c.mock), F = window.MOCK_FIRM || {}, g = c.gives || {};
+        const c = l.call, k = caseOf(c.mock), F = window.MOCK_FIRM || {}, g = c.gives || {}, a = l.auto;
         const picked = l.selected === 'none' ? 'not in the system' : l.selected ? `${l.selected}${caseOf(l.selected) ? ' · ' + caseOf(l.selected).client.name : ''}` : 'none';
+        let tx = transcriptText(l); if (tx.length > 16000) tx = '…' + tx.slice(-16000);
         return `FIRM FRONT-DESK RULES
 ${(F.rules || []).map(r => '- ' + r).join('\n')}
+
+RECEPTION SOP
+${(F.sop || []).map(r => '- ' + r).join('\n')}
 
 DIRECTORY
 ${(F.directory || []).map(d => `- ${d.name}, ${d.role}, ext ${d.ext}`).join('\n')}
 
 ANSWER KEY FOR THIS CALL
 Caller: ${g.name || 'unknown'}${g.relationship ? ` (${g.relationship})` : ''}
-Caller's file: ${k ? `${k.id} · ${k.client.name} · case ${k.caseNumber || ''} · DOL ${k.dateOfLoss}` : 'none: the caller is not in the system'}
-Correct authentication: ${authLabel(c.auth)}
-${k && k.reception ? `On the file: ${k.reception.verify}\n` : ''}Identifiers the receptionist had to ask the caller for: ${needFor(c)}
+Caller's file: ${k ? `${k.id} · ${k.client.name} · case ${k.caseNumber || ''} · DOL ${k.dateOfLoss} · status ${k.phase}` : 'none: the caller is not in the system'}
+Who the caller is: ${authLabel(c.auth)}
+${k && k.reception ? `On the file: ${k.reception.verify}\n` : ''}Identifiers the receptionist had to get: ${a.auth.personal ? 'full name, date of birth, date of the accident and one more identifier on file (claim #, case #, address or SSN last 4)' + (c.auth === 'authorized' ? ', and the relationship to the client' : '') : needFor(c)}
 The right way to handle it: ${c.actions[c.answer]}
 Why: ${c.why}
 Wrong ways (for reference): ${c.actions.filter((_, i) => i !== c.answer).join(' | ')}
 
-TRANSCRIPT
-${transcriptText(l)}
+TRANSCRIPT (${a.spoken ? 'a spoken call' : 'a typed call: the receptionist typed their side'})
+${tx}
 
 THE RECEPTIONIST'S WRAP-UP (after the call)
-File they matched: ${picked}
-Their authentication decision: ${authLabel(l.auth) || 'none'}
+File they matched: ${picked}${a.file.ok ? ' (the right file)' : ' (not the caller\'s file)'}
 Their call note: ${l.note.trim() || '(none)'}
 
+ALREADY SCORED FROM THE CALL (don't rate these again; mention them in the verdict only if they matter)
+- Introduction of Law Firm and Name: ${a.intro.score}/5. ${a.intro.note}
+- Authentication: ${a.auth.score}/5. ${a.auth.note}
+- Closing Spiel: ${a.closing.score}/5. ${a.closing.note}
+- Time Management: ${a.time.score}/5. ${a.time.note}
+- Dead Air/Fillers: ${a.deadair.score}/5. ${a.deadair.note}
+
+RATE THESE from 0 to 5 (5: what a senior receptionist would do; 4: good, small gaps; 3: acceptable; 2: needs work; 1: poor; 0: not done at all):
+- service (Customer Service): courteous, patient and helpful; acknowledged the caller's concern; the caller felt taken care of.
+- assertive (Assertiveness): polite but in control of the call; held the firm's rules (verification, what may not be shared) without giving in or being rude; guided the caller to the next step.
+- listening (Listening Skills): picked up what the caller said and asked; didn't make them repeat themselves; answered their actual question.
+- comprehension (Comprehension): understood the request and the file (status, who's who) and gave only correct information.
+- details (Attention to Details): caught the details: names (spelled and read back when they're hard), numbers, identifiers that don't match the file, the right file when names repeat; read back the callback number; a complete message when one was needed.${a.file.ok ? '' : ' They matched the wrong file, or none: at most 2.'}
+- resolution (Resolution): reached the right outcome from the key, or the right next step, and the caller knew what happens next.
+- transfer (Transfer Procedure): when the call needed a transfer or routing to someone: the right person from the directory, the caller told who they're being put through to, and the person taking it told the caller's name and reason (SOP). null when no transfer or routing was needed.
+- clarity (Clarity of Speech): ${a.spoken ? 'from the transcript of what they said: clear, complete sentences, no garbled or trailing phrases.' : 'null: this call was typed.'}
+- tone (Tone of Voice): ${a.spoken ? 'from what they said: warm, calm and professional (the transcript can\'t carry the voice itself, so judge the wording).' : 'null: this call was typed.'}
+
 Reply with exactly this JSON:
-{"askedIds": true or false, "idsNote": "", "handling": 0-100, "handlingNote": "", "breach": true or false, "breachNote": "", "verdict": "", "strengths": [""], "improve": [""], "betterLine": ""}
-- askedIds: true only if, during the call, the receptionist asked the caller for every identifier listed in the key (asking counts even if the caller couldn't answer). idsNote: one sentence on what they asked for or missed.
-- handling (0-100): how well they handled the call: reached the right outcome from the key; gave only correct information from the file; took a complete message (name, callback number, reason, who it's for) when one was needed; routed to the right person; stayed courteous and in control; closed the call clearly. 90-100: what a senior receptionist would do. 70-89: right outcome with small gaps. 40-69: partly right. Below 40: wrong outcome. handlingNote: 1-2 sentences.
-- breach: true if the receptionist disclosed case information (even confirming the person is a client) to a caller who was not verified or not authorized, read an identifier out to the caller, or gave legal advice, a case value or a settlement opinion. breachNote: what was disclosed, or "".
+{"ratings": {"service": 0, "assertive": 0, "listening": 0, "comprehension": 0, "details": 0, "resolution": 0, "transfer": 0, "clarity": 0, "tone": 0}, "notes": {"service": "", "assertive": "", "listening": "", "comprehension": "", "details": "", "resolution": "", "transfer": "", "clarity": "", "tone": ""}, "breach": false, "breachNote": "", "verdict": "", "strengths": [""], "improve": [""], "betterLine": ""}
+- ratings: whole numbers from 0 to 5, or null where it says null. notes: one short sentence each, on what they did.
+- breach: true if the receptionist disclosed case information (even confirming the person is a client) to a caller who was not verified or not authorized, read an identifier out to the caller, gave out any part of a Social Security number, or gave legal advice, a case value or a settlement opinion. breachNote: what was disclosed, or "".
 - verdict: one sentence overall. strengths and improve: 1 to 3 short points each.
 - betterLine: one thing they could have said, word for word, at the moment it mattered most.`;
     }
-    function parseReview(text) {
+    function parseReview(text, spoken) {
         const t = String(text || '').replace(/```(?:json)?/gi, '');
         const a = t.indexOf('{'), b = t.lastIndexOf('}');
         if (a < 0 || b <= a) return null;
         let j; try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
-        if (!j || typeof j !== 'object' || !isFinite(Number(j.handling))) return null;
+        if (!j || typeof j !== 'object') return null;
+        const r = j.ratings && typeof j.ratings === 'object' ? j.ratings : {}, n = j.notes && typeof j.notes === 'object' ? j.notes : {};
+        const rate = (v) => v == null || v === '' || /^n\/?a$/i.test(String(v)) || !isFinite(Number(v)) ? null : Math.max(0, Math.min(5, Math.round(Number(v))));
+        const ratings = {}, notes = {};
+        AI_KEYS.forEach(key => { ratings[key] = rate(r[key]); notes[key] = cut(n[key], 300); });
+        if (!spoken) ratings.clarity = ratings.tone = null;
+        if (CORE_AI.filter(key => ratings[key] == null).length > 1) return null;   // not a scorecard
         const list = (v) => (Array.isArray(v) ? v : v ? [v] : []).map(x => cut(x, 300)).filter(Boolean).slice(0, 3);
-        return { askedIds: j.askedIds === true || j.askedIds === 'true', idsNote: cut(j.idsNote, 400),
-            handling: Math.max(0, Math.min(100, Math.round(Number(j.handling)))), handlingNote: cut(j.handlingNote, 600),
-            breach: j.breach === true || j.breach === 'true', breachNote: cut(j.breachNote, 400), verdict: cut(j.verdict, 400),
+        return { ratings, notes, breach: j.breach === true || j.breach === 'true', breachNote: cut(j.breachNote, 400), verdict: cut(j.verdict, 400),
             strengths: list(j.strengths), improve: list(j.improve), betterLine: cut(j.betterLine, 400) };
     }
-    // find 30 and authenticate 30 against the key; identifiers 10 and handling 30 from the review.
+    // The scorecard: each item 0-5, null when it doesn't apply, undefined while the review isn't in.
+    // The score is the share of the points on the items that have one. A disclosure scores
+    // Authentication and Resolution 0; the wrong file caps Attention to Details at 2.
     function pcScore(l) {
-        const c = l.call, rv = l.review;
-        const find = l.selected === (c.mock || 'none'), authOk = l.auth === c.auth, idsOk = rv.askedIds;
-        const handling = rv.breach ? 0 : rv.handling;
-        return { id: c.id, mock: c.mock, mode: 'practice', voice: l.usedLive ? 'live' : 'standard', find, authOk, idsOk, breach: rv.breach, handling,
-            secs: Math.max(0, Math.round((l.t1 - l.t0) / 1000)),
-            score: (find ? 30 : 0) + (authOk ? 30 : 0) + (idsOk ? 10 : 0) + Math.round(handling * 0.3) };
+        const c = l.call, a = l.auto, rv = l.review;
+        const items = RUBRIC.map(([key, label, how]) => {
+            let s, note = '';
+            if (how === 'auto') { s = a[key].score; note = a[key].note; }
+            else if (rv) { s = rv.ratings[key]; note = rv.notes[key] || ''; }
+            if ((key === 'clarity' || key === 'tone') && !a.spoken) { s = null; note = 'Rated on spoken calls only: this call was typed.'; }
+            if (key === 'transfer' && rv && s == null && !note) note = 'No transfer was needed on this call.';
+            if (key === 'details' && typeof s === 'number' && !a.file.ok && s > 2) { s = 2; note = (note ? note + ' ' : '') + 'The file you matched isn\'t the caller\'s.'; }
+            if (rv && rv.breach && (key === 'auth' || key === 'resolution')) { s = 0; note = `Disclosure: ${rv.breachNote || 'information was shared that shouldn\'t have been'}.`; }
+            return { key, label, how, s, note };
+        });
+        const rated = items.filter(i => typeof i.s === 'number'), pts = rated.reduce((n, i) => n + i.s, 0);
+        const of = (key) => items.find(i => i.key === key).s;
+        return { id: c.id, mock: c.mock, mode: 'practice', voice: l.usedLive ? 'live' : 'standard', partial: !rv, items,
+            find: a.file.ok, authOk: a.auth.full, breach: !!(rv && rv.breach), secs: a.secs, answerSecs: a.answer,
+            score: rated.length ? Math.round(pts / (5 * rated.length) * 100) : 0, points: pts, outOf: 5 * rated.length,
+            authPct: Math.round(of('auth') / 5 * 100), actionPct: typeof of('resolution') === 'number' ? Math.round(of('resolution') / 5 * 100) : 0 };
     }
+    // The debrief shows the items checked from the call at once; the reviewed items follow. If the review
+    // can't be had, those five stay on screen with a way to try again, and the call is saved once it comes.
     window.fddPracticeReview = async function () {
-        const my = P; if (!my || !my.ended || !my.selected || !my.auth || my.reviewing) return;
+        const my = P; if (!my || !my.ended || my.reviewing || my.review) return;
+        my.auto = autoChecks(my); my.result = pcScore(my);
         my.reviewing = true; my.reviewError = null; screen = 'pcdebrief'; paint();
+        const top = () => { const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0; };
+        top();
         const r = await askWithRetry('review', REVIEW_SYSTEM, [{ role: 'user', text: reviewPrompt(my) }], true, () => P !== my);
         if (!r) return;
         my.reviewing = false;
-        const rv = r.ok ? parseReview(r.text) : null;
+        const rv = r.ok ? parseReview(r.text, my.auto.spoken) : null;
         if (!rv) { my.reviewError = r.ok ? 'The review came back unreadable.' : r.error; paint(); return; }
-        my.review = rv; my.result = pcScore(my); paint();
-        const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0;
+        my.review = rv; my.result = pcScore(my); paint(); top();
         savePractice(my);
     };
     window.fddPracticeBackToWrap = function () { if (P && !P.review && !P.reviewing) { screen = 'pcwrap'; paint(); } };
     async function savePractice(l) {
-        const r = l.result;
-        const detail = Object.assign({}, r, { picked: { selected: l.selected, auth: l.auth }, turns: l.msgs.filter(m => m.who === 'you').length,
-            note: cut(l.note, 1500), review: l.review, transcript: '' });
+        const r = l.result, rv = l.review;
+        const detail = Object.assign({}, r, { items: r.items.map(i => ({ k: i.key, s: i.s === undefined ? null : i.s, n: cut(i.note, 240) })),
+            picked: { selected: l.selected }, auth: { got: l.auto.auth.groups.filter(x => x.ok).map(x => x.hit), missing: l.auto.auth.missing },
+            turns: l.msgs.filter(m => m.who === 'you').length, note: cut(l.note, 1500),
+            review: { breach: rv.breach, breachNote: rv.breachNote, verdict: rv.verdict, strengths: rv.strengths, improve: rv.improve, betterLine: rv.betterLine }, transcript: '' });
         const full = transcriptText(l);
-        detail.transcript = full.length > 12000 ? '…' + full.slice(-12000) : full;
+        detail.transcript = full.length > 9000 ? '…' + full.slice(-9000) : full;
         while (JSON.stringify([detail]).length > 19000 && detail.transcript.length > 500) detail.transcript = '…' + detail.transcript.slice(-Math.floor(detail.transcript.length * 0.7));
         l.saved = 'saving'; paintSaved();
         try {
             const res = await fetch('/api/drill-results', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
                 body: JSON.stringify({ mode: 'practice', program: l.program, calls: 1, details: [detail], score: r.score,
-                    findPct: r.find ? 100 : 0, authPct: Math.round(((r.authOk ? 30 : 0) + (r.idsOk ? 10 : 0)) / 40 * 100), actionPct: r.handling, avgSeconds: r.secs })
+                    findPct: r.find ? 100 : 0, authPct: r.authPct, actionPct: r.actionPct, avgSeconds: r.secs })
             });
             const data = await res.json().catch(() => ({}));
             l.saved = data && data.success ? 'saved' : 'failed';
@@ -1312,30 +1524,44 @@ Reply with exactly this JSON:
         el.textContent = l.saved === 'saving' ? 'Saving…' : l.saved === 'saved' ? '✓ Saved to your results (your trainer sees them too)' : l.saved === 'failed' ? 'Couldn\'t save this result. Check your connection.' : '';
     }
 
+    function rubricHTML(r) {
+        return `<table class="fdd-rub"><tbody>${r.items.map((i, n) => {
+            const num = typeof i.s === 'number';
+            return `<tr><td class="n">${n + 1}</td><td><b>${esc(i.label)}</b><span class="how ${i.how === 'ai' ? 'ai' : ''}">${i.how === 'ai' ? 'review' : 'from the call'}</span>${i.note ? `<span class="nt">${esc(i.note)}</span>` : ''}</td>
+                <td class="s ${num ? (i.s <= 2 ? 'lo' : '') : 'na'}">${num ? `${i.s}/5` : i.s === null ? 'N/A' : '…'}</td></tr>`;
+        }).join('')}</tbody></table>`;
+    }
     function pcDebriefHTML() {
-        const l = P, c = l.call, k = caseOf(c.mock);
-        if (l.reviewing) return `<div class="fdd-sec" style="text-align:center;padding:26px 12px"><div style="font-size:26px">📝</div><b>Reviewing your call…</b><p style="margin:6px 0 0;color:#64748b;font-size:12px">This takes a few seconds.</p></div>`;
-        if (!l.review) return `<div class="fdd-fb bad"><b>Couldn't get your debrief.</b> ${esc(l.reviewError || '')}</div>
-            <button class="fdd-go alt" onclick="fddPracticeReview()">Try again</button><button class="fdd-go" onclick="fddPracticeBackToWrap()">← Back to the wrap-up</button>`;
-        const r = l.result, rv = l.review, cls = r.score >= 85 ? 'ok' : r.score >= 60 ? 'mid' : 'bad';
-        const li = (a) => a.length ? `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
-        return `<div class="fdd-sec" style="text-align:center"><div class="fdd-score">${r.score}/100</div><div style="color:#64748b">Practice call · ⏱ ${fmtSec(r.secs)} · ${l.msgs.filter(m => m.who === 'you').length} replies</div>
-                <div class="fdd-grid"><div><span>Find</span><b>${r.find ? 30 : 0}/30</b></div><div><span>Authenticate</span><b>${r.authOk ? 30 : 0}/30</b></div><div><span>Identifiers</span><b>${r.idsOk ? 10 : 0}/10</b></div><div><span>Handling</span><b>${Math.round(r.handling * 0.3)}/30</b></div></div>
+        const l = P, c = l.call, k = caseOf(c.mock), a = l.auto, r = l.result, rv = l.review;
+        if (!a || !r) return '';
+        const cls = r.score >= 85 ? 'ok' : r.score >= 60 ? 'mid' : 'bad';
+        const li = (x) => x.length ? `<ul>${x.map(v => `<li>${esc(v)}</li>`).join('')}</ul>` : '';
+        const res = r.items.find(i => i.key === 'resolution').s, au = r.items.find(i => i.key === 'auth').s;
+        const authLine = c.auth === 'failed'
+            ? `The caller's details don't match the file, so they couldn't be verified and nothing about the case could be shared. ${a.auth.full ? 'You asked for everything you needed to find that out.' : a.auth.note}`
+            : `${authLabel(c.auth)}. ${a.auth.full ? (a.auth.personal ? 'Fully authenticated.' : 'You got what this caller needed.') : 'Not fully authenticated. ' + a.auth.note}`;
+        const status = l.reviewing ? `<div class="fdd-fb mid"><b>📝 Reviewing your call…</b> The items checked from the call are in; the rest takes a few seconds.</div>`
+            : !rv ? `<div class="fdd-fb bad"><b>The rest of the scorecard didn't load.</b> ${esc(l.reviewError || '')} The items checked from the call are below. This call is saved once the review comes through.
+                <button class="fdd-go alt" onclick="fddPracticeReview()">Try the review again</button><button class="fdd-go" onclick="fddPracticeBackToWrap()">← Back to the wrap-up</button></div>` : '';
+        return `<div class="fdd-sec" style="text-align:center"><div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#64748b;text-transform:uppercase">Reception mock call</div>
+                <div class="fdd-score">${r.score}/100</div>
+                <div style="color:#64748b">${rv ? '' : 'So far: the items checked from the call · '}${r.points}/${r.outOf} points · ⏱ ${fmtSec(r.secs)} · answered in ${r.answerSecs} s</div>
+                <div class="fdd-grid"><div><span>File</span><b>${r.find ? '✓' : '✗'}</b></div><div><span>Authentication</span><b>${au}/5</b></div><div><span>Resolution</span><b>${typeof res === 'number' ? res + '/5' : '…'}</b></div><div><span>Replies</span><b>${l.msgs.filter(m => m.who === 'you').length}</b></div></div>
                 <div id="fdd-pc-saved" style="font-size:11.5px"></div></div>
+            ${status}
+            ${rv && rv.breach ? `<div class="fdd-fb bad"><div class="fdd-breach" style="margin:0">⚠ Disclosure: ${esc(rv.breachNote || 'information was shared that shouldn\'t have been')}. Authentication and Resolution score 0.</div></div>` : ''}
+            <div class="fdd-sec"><h4>Scorecard</h4>${rubricHTML(r)}</div>
             <div class="fdd-fb ${cls}">
-                <div>${r.find ? '✓' : '✗'} <b>Find:</b> ${k ? `${esc(k.id)} · ${esc(k.client.name)} (${esc(k.caseNumber || '')}, DOL ${esc(k.dateOfLoss)})` : 'not in the system'}${r.find ? '' : ` (you picked ${esc(l.selected === 'none' ? 'not in the system' : l.selected)})`}</div>
-                <div>${r.authOk ? '✓' : '✗'} <b>Authenticate:</b> ${esc(authLabel(c.auth))}${r.authOk ? '' : ` (you picked: ${esc(authLabel(l.auth))})`}</div>
-                <div>${r.idsOk ? '✓' : '✗'} <b>Asked for:</b> ${esc(needFor(c))}. ${esc(rv.idsNote)}</div>
-                <div>${rv.handling >= 70 && !rv.breach ? '✓' : '✗'} <b>Handling ${r.handling}/100:</b> ${esc(rv.handlingNote)}</div>
-                ${rv.breach ? `<div class="fdd-breach">⚠ Disclosure: ${esc(rv.breachNote || 'information was shared that shouldn\'t have been')}. Handling scores 0.</div>` : ''}
+                <div>${r.find ? '✓' : '✗'} <b>File:</b> ${k ? `${esc(k.id)} · ${esc(k.client.name)} (${esc(k.caseNumber || '')}, DOL ${esc(k.dateOfLoss)})` : 'not in the system'}${r.find ? '' : ` (you ${l.selected ? `picked ${esc(l.selected === 'none' ? 'not in the system' : l.selected)}` : 'didn\'t match a file'})`}</div>
+                <div>${a.auth.full ? '✓' : '✗'} <b>Authentication:</b> ${esc(authLine)}</div>
                 <div style="margin-top:6px"><b>The key:</b> ${esc(c.actions[c.answer])}</div>
                 <div style="margin-top:3px;color:#334155">${esc(c.why)}</div>
                 ${k && k.reception ? `<div style="margin-top:5px;color:#64748b;font-size:11.5px"><b>On file:</b> ${esc(k.reception.verify)}</div>` : ''}</div>
-            <div class="fdd-sec fdd-rv"><h4>Debrief</h4>
+            ${rv ? `<div class="fdd-sec fdd-rv"><h4>Debrief</h4>
                 ${rv.verdict ? `<p style="margin:0 0 6px"><b>${esc(rv.verdict)}</b></p>` : ''}
                 ${rv.strengths.length ? `<div style="font-weight:700;color:#047857">What went well</div>${li(rv.strengths)}` : ''}
                 ${rv.improve.length ? `<div style="font-weight:700;color:#b45309">To work on</div>${li(rv.improve)}` : ''}
-                ${rv.betterLine ? `<div class="better"><b>Try saying:</b> “${esc(rv.betterLine)}”</div>` : ''}</div>
+                ${rv.betterLine ? `<div class="better"><b>Try saying:</b> “${esc(rv.betterLine)}”</div>` : ''}</div>` : ''}
             <details class="fdd-sec"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript${l.note ? ' and your note' : ''}</summary>
                 <div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div>${l.note ? `<p style="margin:6px 0 0;font-size:12px"><b>Your note:</b> ${esc(l.note)}</p>` : ''}</details>
             <button class="fdd-go alt" onclick="fddPracticeStart()">📞 Take another call</button>
@@ -1350,7 +1576,7 @@ Reply with exactly this JSON:
             const r = origApply.apply(this, arguments);
             buildUI();
             const signedIn = typeof hasAuthorizedAccess === 'function' && hasAuthorizedAccess();
-            if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on'); $id('fdd-panel').classList.remove('open'); }
+            if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on', 'fdd-open'); fitCase(); $id('fdd-panel').classList.remove('open'); }
             else if (signedIn && new URLSearchParams(location.search).get('drill') && !window.__fddOpened) { window.__fddOpened = true; setTimeout(openFrontDeskDrill, 80); }
             return r;
         };

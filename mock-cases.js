@@ -63,13 +63,23 @@ const MOCK_FIRM = {
         { name: 'Accounting / Disbursements', role: 'Settlement checks and trust account', ext: '500' }
     ],
     rules: [
-        'Verify every caller who asks about a case: full name, date of birth, and one more identifier on file (home address, or the last 4 of the SSN). Never read an identifier out to the caller; ask them to give it to you.',
+        'Verify every caller who asks about a case: full name, date of birth, the date of the accident (DOL), and one more identifier on file (the claim number, our case number, the home address, or the last 4 of the SSN). Never read an identifier out to the caller; ask them to give it to you.',
         'Only the client, or a person the file lists as authorized (a guardian, a power of attorney, or someone on a signed communication authorization), gets case information. Everyone else gets "I can take a message" and nothing more, not even whether the firm represents that person.',
         'The front desk never gives legal advice, case values, settlement opinions or deadlines to act on. Take a complete message and route it.',
         'Insurance adjusters and opposing counsel go to the attorney or case manager on the file. Never agree to a recorded statement, confirm facts, or accept a settlement offer.',
         'Media calls: "We have no comment. I can take your name and number for the attorney." Nothing else.',
         'A complete message: date and time, caller name and role, callback number, best time to call, case name, what they need, how urgent, and your initials. Log it as a Note on the case and route it to the person on the file.',
         'Urgent (route now, not by message): a client in danger or in crisis, a deadline or court date in the next 7 days, a settlement offer with a time limit, a statute of limitations close, a subpoena or a process server, or anyone threatening legal action against the firm.'
+    ],
+    // The reception SOP (Job Description & SOPs: Receptionist). The practice calls' debrief grades by it,
+    // and the Reception Simulator lists it with the rules.
+    sop: [
+        'Answer at once: the one-ring policy.',
+        'Open every call with the spiel: "Thank you for calling Legal Support Help. This is (your name)." (In these practice calls the firm is also called LSH Training Law Group.)',
+        'Before you transfer a call, tell the person who takes it the caller\'s name and why they are calling. Always a cold transfer unless you are told otherwise. Tell the caller who you are putting them through to.',
+        'Never give out a Social Security number or any part of it. A provider or an adjuster who asks for it sends the request in writing to prelit@legalsupporthelp.com.',
+        'Case updates follow the case status and who is calling (the client, a medical provider or an adjuster): say only what the file supports. Adjusters put their requests and offers in writing to prelit@legalsupporthelp.com. Litigation matters go to the litigation team, or a paralegal follows up.',
+        'Close every call: offer more help ("Is there anything else I can help you with?"), thank the caller, and say goodbye.'
     ]
 };
 

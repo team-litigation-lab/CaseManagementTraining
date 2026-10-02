@@ -9,7 +9,8 @@
 // Notes and Tasks can be edited, saved, reloaded and reset. Takes a practice call
 // on the standard voice (the caller's lines and the review answered by the test,
 // one busy line retried): answer, greet, pick the file from the search bar, the
-// caller hangs up, wrap up, debrief, saved as a practice call. The sidebar has one
+// caller hangs up, wrap up (authentication checked from the call), the scorecard
+// debrief, saved as a practice call (reception-wrapup.cjs tests the scorecard in full). The sidebar has one
 // calendar (the Firm Calendar; calendar.cjs tests it) and no .ics downloads. The Caller
 // scenarios panel (with its reception call scripts) is for Admins only, on every file.
 // Trainees never see the Training Library (its files are tagged by case number), and
@@ -55,7 +56,8 @@ const SAVED = [
         if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: false, results: [] });
         if (u.pathname === '/api/call-ai') {
             const b = JSON.parse(route.request().postData()); aiCalls.push(b);
-            if (b.purpose === 'review') return j({ success: true, text: '```json\n' + JSON.stringify({ askedIds: true, idsNote: 'You asked for everything.', handling: 90, handlingNote: 'Right outcome.', breach: false, breachNote: '', verdict: 'Well handled.', strengths: ['Verified first'], improve: ['Read back the callback number'], betterLine: 'May I have your date of birth?' }) + '\n```' });
+            if (b.purpose === 'review') return j({ success: true, text: '```json\n' + JSON.stringify({ ratings: { service: 4, assertive: 4, listening: 4, comprehension: 4, details: 4, resolution: 5, transfer: null, clarity: 3, tone: 3 },
+                notes: { service: 'Polite.', resolution: 'Right outcome.' }, breach: false, breachNote: '', verdict: 'Well handled.', strengths: ['Verified first'], improve: ['Read back the callback number'], betterLine: 'May I have your date of birth?' }) + '\n```' });
             if (busyOnce) { busyOnce = false; return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ success: false, error: 'The line is busy.' }) }); }
             const last = b.messages[b.messages.length - 1].text;
             return j({ success: true, text: /goodbye/i.test(last) ? 'Okay, thank you. Bye! [END_CALL]' : 'Caller: "Sure, one second."' });
@@ -255,7 +257,8 @@ const SAVED = [
     await page.waitForTimeout(500);
     if (!drills.length || drills[0].score !== 100) fail(`drill result not saved as 100 (${JSON.stringify(drills[0] && drills[0].score)})`);
 
-    // Not asking for the DOL costs the 10 identifier points only when the name is on more than one file.
+    // Not asking for the DOL costs the 10 identifier points on a call about a case (the caller has to be verified),
+    // or when the name is on more than one file; not on the other calls.
     await page.evaluate(() => fddHome()); await page.waitForTimeout(200);
     await page.selectOption('#fdd-len', { index: 3 }); // all calls, so both kinds come up
     await page.click('button:has-text("Take the first call")');
@@ -263,7 +266,8 @@ const SAVED = [
     for (let k = 0; k < n && !(seen.same && seen.single); k++) {
         const c = await page.evaluate(() => { const el = document.querySelector('.fdd-caller'); return el && DRILL_CALLS.find(d => el.textContent.includes(fddHeardAs(d.opening).slice(1, 30))); });
         if (!c) break;
-        const same = await page.evaluate((id) => { const k = MOCK_CASES.find(x => x.id === id); return k ? MOCK_CASES.filter(x => x.client.name === k.client.name).length > 1 : false; }, c.mock);
+        const same = await page.evaluate((id) => { const k = MOCK_CASES.find(x => x.id === id); return k ? MOCK_CASES.filter(x => x.client.name === k.client.name).length > 1 : false; }, c.mock)
+            || ['client', 'authorized', 'failed'].includes(c.auth);
         for (const a of ['Full name', 'Date of birth', 'Address', 'Last 4 of SSN', 'Callback number', 'Relationship to the client', 'Ask them to spell it', 'Read it back (NATO)']) { const b = page.locator(`.fdd-asks button:has-text("${a}")`); if (await b.count()) await b.click(); }
         await page.fill('.fdd-search', c.mock || 'zzzz-no-match');
         if (c.mock) await page.click(`.fdd-row:has(.id:text-is("${c.mock}"))`); else await page.click('button:has-text("No matching case on file")');
@@ -272,7 +276,7 @@ const SAVED = [
         await page.click('#fdd-submit');
         const sc = await page.textContent('.fdd-fb b');
         const want = same ? '90/100' : '100/100';
-        if (sc !== want) fail(`drill call ${c.id} without asking the DOL scored ${sc}, expected ${want}${same ? ' (its client name is on more than one file)' : ''}`);
+        if (sc !== want) fail(`drill call ${c.id} without asking the DOL scored ${sc}, expected ${want}${same ? ' (a caller to verify, or a client name on more than one file)' : ''}`);
         seen[same ? 'same' : 'single'] = true;
         await page.click('button:has-text("Next call"), button:has-text("See my results")');
     }
@@ -330,18 +334,23 @@ const SAVED = [
         await page.click('#fdd-pc-send');
         await page.waitForSelector('#fdd-pc-go', { timeout: 9000 });   // the caller hung up: wrap-up
         if (!(await page.textContent('#fdd-pick-line')).includes(lc.mock || 'not in the system')) fail('the wrap-up lost the file picked during the call');
-        if (!(await page.isDisabled('#fdd-pc-go'))) fail('the debrief button is on before an authentication decision');
-        await page.check(`input[name="fdd-auth"][value="${lc.auth}"]`);
+        // authentication is checked from the call (asked for the name and DOB only), with no choice to make
+        const authv = await page.evaluate(() => ({ radios: document.querySelectorAll('input[name="fdd-auth"]').length, v: (document.querySelector('.fdd-authv') || {}).textContent || '', chips: [...document.querySelectorAll('.fdd-id')].map(e => e.textContent.trim()) }));
+        if (authv.radios || !/Not fully authenticated/.test(authv.v) || !authv.chips.includes('✓ Full name')) fail(`the wrap-up's authentication check is wrong: ${JSON.stringify(authv)}`);
         await page.fill('#fdd-pc-note', 'CI note: caller verified, message taken.');
         await page.click('#fdd-pc-go');
-        await page.waitForSelector('.fdd-score', { timeout: 9000 });
-        const sc = await page.textContent('.fdd-score');
-        if (sc !== '97/100') fail(`the practice call scored ${sc} (expected 97/100: find 30, auth 30, identifiers 10, handling 90 → 27)`);
+        await page.waitForSelector('.fdd-rv', { timeout: 9000 });
+        // the scorecard: intro 3 (no name), closing 3 (no offer of more help), time 5, dead air 5, authentication by
+        // what this caller needed (2 of 4 → 3; an authorized caller 2 of 5 → 2); reviewed: 4,4,4,4,4,5; N/A: transfer,
+        // and clarity and tone on a typed call
+        const authPts = lc.auth === 'authorized' ? 2 : 3, want = Math.round((3 + authPts + 3 + 5 + 5 + 25) / 55 * 100);
+        const sc = await page.textContent('.fdd-score'), rows = await page.locator('.fdd-rub tr').count();
+        if (sc !== want + '/100' || rows !== 14) fail(`the practice call scored ${sc} on ${rows} items (expected ${want}/100 on the 14-item scorecard)`);
         const rv = aiCalls.find(b => b.purpose === 'review'), rt = rv ? rv.messages[0].text : '';
-        if (!rv || !rv.json || !rt.includes(lc.why) || !rt.includes('Receptionist: Thank you for calling LSH') || !rt.includes('CI note')) fail('the review request is missing the key, the transcript or the call note');
+        if (!rv || !rv.json || !rt.includes(lc.why) || !rt.includes('Receptionist: Thank you for calling LSH') || !rt.includes('CI note') || !rt.includes('RECEPTION SOP')) fail('the review request is missing the key, the transcript, the call note or the SOP');
         await page.waitForTimeout(500);
         const pr = drills.find(x => x.mode === 'practice');
-        if (!pr || pr.score !== 97 || pr.calls !== 1 || pr.actionPct !== 90 || pr.details[0].voice !== 'standard' || !/Receptionist: Thank you/.test(pr.details[0].transcript)) fail(`the practice call wasn't saved as a practice result (${JSON.stringify(pr && { score: pr.score, calls: pr.calls, actionPct: pr.actionPct, voice: pr.details[0].voice })})`);
+        if (!pr || pr.score !== want || pr.calls !== 1 || pr.actionPct !== 100 || pr.details[0].voice !== 'standard' || !/Receptionist: Thank you/.test(pr.details[0].transcript)) fail(`the practice call wasn't saved as a practice result (${JSON.stringify(pr && { score: pr.score, calls: pr.calls, actionPct: pr.actionPct, voice: pr.details[0].voice })})`);
         if (!(await page.isVisible('text=Saved to your results'))) fail('the debrief doesn\'t say the call was saved');
     }
     await page.evaluate(() => fddClose());

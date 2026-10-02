@@ -157,6 +157,13 @@ const failures = []; const fail = (m) => failures.push(m);
     googleReply = () => ({ status: 400, body: { error: { message: 'User location is not supported for the API use.' } } });
     r = await post({ callId: 'D05' });
     if (r.status !== 502 || r.data.code !== 'REGION' || !/region/.test(r.data.error)) fail(`the region refusal isn't explained: ${JSON.stringify(r.data)}`);
+    // with the EA-PA Worker's relay bound (GEMINI_RELAY), a refused region gets its token from the US instead
+    const relayed = [];
+    env.GEMINI_RELAY = { idFromName: (n) => n, get: (id, o) => ({ fetch: async (u, init) => { const b = JSON.parse(init.body); relayed.push({ hint: o && o.locationHint, url: b.url });
+        return new Response(JSON.stringify({ name: 'auth_tokens/from-the-us' }), { status: 200, headers: { 'Content-Type': 'application/json' } }); } }) };
+    r = await post({ callId: 'D05' });
+    if (!r.data.success || r.data.token !== 'auth_tokens/from-the-us' || relayed.length !== 1 || relayed[0].hint !== 'wnam' || !/\/auth_tokens$/.test(relayed[0].url)) fail(`a refused region didn't get its live token through the relay: ${JSON.stringify({ r: r.data, relayed })}`);
+    delete env.GEMINI_RELAY; (await import(pathToFileURL(path.join(ROOT, 'functions/_ai.js')).href))._resetRelay();
     googleReply = () => ({ status: 200, body: { name: 'auth_tokens/x' } });
     sql.exec(`DELETE FROM live_call_log`);
     sql.exec(`INSERT INTO live_call_log (username, call_id, model) SELECT 'ci', 'D01', 'm' FROM (WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c WHERE x < 60) SELECT x FROM c)`);
@@ -192,7 +199,8 @@ const failures = []; const fail = (m) => failures.push(m);
         if (u.pathname === '/api/case-repository') return j({ success: true, cases: [] });
         if (u.pathname === '/api/call-ai') {   // the practice call's standard voice and review
             const b = JSON.parse(route.request().postData()); aiCalls.push(b);
-            if (b.purpose === 'review') return j({ success: true, text: JSON.stringify({ askedIds: false, idsNote: 'You didn\'t ask for an address or SSN.', handling: 60, handlingNote: 'Partly right.', breach: false, breachNote: '', verdict: 'A start.', strengths: ['Polite'], improve: ['Verify first'], betterLine: 'Can I have your address?' }) });
+            if (b.purpose === 'review') return j({ success: true, text: JSON.stringify({ ratings: { service: 3, assertive: 3, listening: 3, comprehension: 3, details: 3, resolution: 3, transfer: null, clarity: 3, tone: 3 },
+                notes: { resolution: 'Partly right.' }, breach: false, breachNote: '', verdict: 'A start.', strengths: ['Polite'], improve: ['Verify first'], betterLine: 'Can I have your address?' }) });
             return j({ success: true, text: 'Okay, I can hold on.' });
         }
         return j({ success: true });
@@ -390,11 +398,14 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!who) fail('couldn\'t tell which caller the practice call was');
     else {
         if (who.mock) { await page.fill('.fdd-search', who.mock); await page.click(`.fdd-row:has(.id:text-is("${who.mock}"))`); } else await page.click('#fdd-none');
-        await page.check(`input[name="fdd-auth"][value="${who.auth}"]`);
         await page.click('#fdd-pc-go');
-        await page.waitForSelector('.fdd-score', { timeout: 5000 }).catch(() => {});
+        await page.waitForSelector('.fdd-rv', { timeout: 5000 }).catch(() => {});
+        // the scorecard: intro 1 (thanks only), closing 0, time 5, dead air 5, authentication from the call (the name only:
+        // 1 of 4 or 5 → 1 for a caller to verify, 1 of 2 → 3 otherwise); reviewed: 3 each; a spoken call, so clarity and tone count
+        const authPts = ['client', 'authorized', 'failed'].includes(who.auth) ? 1 : 3, want = Math.round((1 + authPts + 0 + 5 + 5 + 8 * 3) / 65 * 100);
         const sc = await page.textContent('.fdd-score').catch(() => '');
-        if (sc !== '78/100') fail(`the practice call scored ${sc} (expected 78: find 30, auth 30, identifiers 0, handling 60 → 18)`);
+        const clarity = await page.evaluate(() => { const tr = [...document.querySelectorAll('.fdd-rub tr')].find(t => /Clarity of Speech/.test(t.textContent)); return tr ? tr.querySelector('td.s').textContent : ''; });
+        if (sc !== want + '/100' || clarity !== '3/5') fail(`the live practice call scored ${sc}, clarity ${clarity} (expected ${want}/100, clarity 3/5: a spoken call)`);
         await page.waitForTimeout(300);
         const pr = drills.find(x => x.mode === 'practice');
         if (!pr || pr.details[0].voice !== 'live' || !/Receptionist: Thank you for calling, how can I help\?/.test(pr.details[0].transcript) || !/Caller: Okay, I can hold on\./.test(pr.details[0].transcript)) fail(`the practice call wasn't saved with its live and standard-voice transcript: ${JSON.stringify(pr && pr.details[0]).slice(0, 300)}`);

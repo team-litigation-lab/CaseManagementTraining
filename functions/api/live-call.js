@@ -122,7 +122,7 @@ export async function onRequestPost({ request, env }) {
             if (skip.has(k.slot + '|' + model)) continue;
             if (perKey && k.n >= perKey) { full = true; continue; }
             let r;
-            try { r = await createLiveToken(k.key, call, model, Date.now(), maxMinutes(env)); } catch (e) { r = { ok: false, status: 502, error: String(e && e.message || e) }; }
+            try { r = await createLiveToken(k.key, call, model, Date.now(), maxMinutes(env), env); } catch (e) { r = { ok: false, status: 502, error: String(e && e.message || e) }; }
             if (r.ok) {
                 const ins = await db.prepare(`INSERT INTO live_call_log (username, call_id, model, key_slot) VALUES (?, ?, ?, ?) RETURNING id`).bind(session.username, call.id, model, k.slot).first();
                 if (Math.random() < 0.02) await db.prepare(`DELETE FROM live_call_log WHERE created_at < datetime('now', '-3 days')`).run();

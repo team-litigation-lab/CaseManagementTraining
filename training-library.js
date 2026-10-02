@@ -186,7 +186,71 @@
         const digits = q.replace(/\D/g, '');
         return digits.length >= 4 && text.replace(/\D/g, '').includes(digits);
     }
-    window.mockSearch = (query) => (window.MOCK_CASES || []).filter(c => mockMatches(c, query));
+    // Names as they sound. On the phone a receptionist types what they hear: "Brittani" or "Britney" for
+    // Brittany, "Kirkoobree" for Kirkcudbright. A name word matches when it is a letter or two off (by its
+    // length), when it sounds the same (soundKey), or when it matches how a hard-to-say name is heard or
+    // said (MOCK_NAME_SOUNDS in mock-cases.js). Only the client's and their contact's names are compared.
+    const soundKey = (w) => {
+        let s = String(w || '').toLowerCase().replace(/[^a-z]/g, '');
+        if (!s) return '';
+        s = s.replace(/^(kn|gn|pn|wr|ps)/, m => m[1]).replace(/^x/, 's').replace(/^wh/, 'w')
+            .replace(/ph/g, 'f').replace(/gh(?![aeiou])/g, '').replace(/ck|q/g, 'k').replace(/sch/g, 'sk').replace(/tch/g, 'ch')
+            .replace(/dg(?=[eiy])/g, 'j').replace(/c(?=[eiy])/g, 's').replace(/c/g, 'k').replace(/x/g, 'ks').replace(/z/g, 's')
+            .replace(/([^aeiou])h/g, '$1').replace(/y/g, 'i');
+        return (s[0] + s.slice(1).replace(/[aeiouw]/g, '')).replace(/(.)\1+/g, '$1');
+    };
+    const editDistance = (a, b) => {
+        if (Math.abs(a.length - b.length) > 2) return 3;
+        let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+        for (let i = 1; i <= a.length; i++) {
+            const cur = [i];
+            for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+            prev = cur;
+        }
+        return prev[b.length];
+    };
+    const _names = {};
+    const nameWords = (c) => _names[c.id] || (_names[c.id] = (() => {
+        // The people a caller is or calls about: the client and the client's contact (not the firm's staff
+        // or the insurers', whose names are on many files).
+        const people = [c.client.name, c.client.emergency && c.client.emergency.name];
+        const sounds = window.MOCK_NAME_SOUNDS || {}, out = [];
+        people.filter(Boolean).join(' ').replace(/[A-Za-z][A-Za-z'-]*/g, w => {
+            const word = w.replace(/['-]/g, '').toLowerCase();
+            if (word.length >= 3) out.push(word);
+            const hard = sounds[w[0].toUpperCase() + w.slice(1).toLowerCase()];
+            if (hard) [hard.heard, hard.say].forEach(v => out.push(String(v).replace(/[^A-Za-z]/g, '').toLowerCase()));
+            return w;
+        });
+        return [...new Set(out)];
+    })());
+    const soundsLike = (q, w) => {
+        if (q.length < 3 || w.length < 3) return false;
+        if (q.length >= 4 && w.startsWith(q)) return true;
+        const allowed = q.length >= 6 ? 2 : q.length >= 5 ? 1 : 0;
+        if (allowed && q[0] === w[0] && editDistance(q, w) <= allowed) return true;
+        const kq = soundKey(q);
+        return kq.length >= 3 && kq === soundKey(w);
+    };
+    // A close match: every word of the search is in the file (as above) or sounds like a person's name
+    // on it. Numbers must match exactly.
+    function mockSoundsLike(c, query) {
+        const words = norm(query).split(' ').filter(Boolean);
+        if (!words.length) return false;
+        const t = norm(_idx[c.id] || (_idx[c.id] = searchText(c))), names = nameWords(c);
+        return words.every(raw => {
+            if (t.includes(raw)) return true;
+            const w = raw.replace(/[^a-z]/g, '');
+            return !/\d/.test(raw) && w.length >= 3 && names.some(n => soundsLike(w, n));
+        });
+    }
+    // Exact matches first, then the files with a name that sounds like what was typed.
+    window.mockSearch = (query) => {
+        const all = window.MOCK_CASES || [], exact = all.filter(c => mockMatches(c, query));
+        return exact.concat(all.filter(c => !exact.includes(c) && mockSoundsLike(c, query)));
+    };
+    // True when a file is in the results only because a name on it sounds like the search.
+    window.mockSoundsLike = (c, query) => !mockMatches(c, query) && mockSoundsLike(c, query);
     const isAdmin = () => { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); };
     // Trainees never see the Training Library: to them a mock case is a case file, known by its case number.
     const kindWord = () => isAdmin() ? 'Training Library case' : 'case file';
@@ -817,12 +881,12 @@
         const c = findCase(id); if (!c || !facts) return;
         if (!originals[id]) { originals[id] = {}; Object.entries(FACT_PATHS).forEach(([k, p]) => { originals[id][k] = getPath(c, p); }); }
         Object.entries(FACT_PATHS).forEach(([k, p]) => { if (typeof facts[k] === 'string' && (k !== 'name' || facts[k].trim())) setPath(c, p, facts[k]); });
-        delete _idx[id];
+        delete _idx[id]; delete _names[id];
     }
     function unpatchFacts(id) {
         const c = findCase(id), o = originals[id]; if (!c || !o) return;
         Object.entries(FACT_PATHS).forEach(([k, p]) => setPath(c, p, o[k]));
-        delete originals[id]; delete _idx[id];
+        delete originals[id]; delete _idx[id]; delete _names[id];
     }
     // What the search and the library list use, read from the editor.
     function readFacts() {
