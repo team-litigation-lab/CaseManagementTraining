@@ -346,8 +346,8 @@
                 return; // finalized case — its ID is fixed, never regenerated here
             }
             field.innerText = currentCaseIsDraft
-                ? 'DRAFT \u2014 ID assigned on Save Case'
-                : 'Will be assigned by the server on Save Case';
+                ? 'DRAFT \u2014 assigned on Save Case'
+                : 'Assigned on Save Case';
         }
 
 
