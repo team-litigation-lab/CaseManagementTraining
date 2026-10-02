@@ -75,7 +75,7 @@ function submitRegistration() {
 }
 
 // The server's answer. When the site's Functions aren't running (Cloudflare's daily request limit
-// ran out: README, "Staying under Cloudflare's daily request limit"), /api/ answers with the page's
+// ran out: README, "Keeping Cloudflare requests down"), /api/ answers with the page's
 // HTML or an empty 405 instead: that's said plainly, not as a network error or a wrong password.
 async function readServerReply(response) {
     const text = await response.text();

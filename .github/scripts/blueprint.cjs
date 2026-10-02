@@ -4,7 +4,8 @@
 // blueprint only (no Trainer tab), the trainee deck never names the Training Library or the
 // trainer tools, ◀ ▶, the ← → keys and the contents strip go through every slide, Esc closes it,
 // and ⬇ Download PDF saves the trainee PDF (one page a slide, with the slides' titles and the version stamp). An Admin
-// gets both decks as tabs and a PDF of each; in 👁 Trainee view an Admin gets the trainee deck only.
+// (a trainer) gets the Trainer and Trainee decks as tabs and a PDF of each, never the Admin deck; the Master Account
+// gets all three, opening on the Admin blueprint, and its PDF; in 👁 Trainee view an Admin gets the trainee deck only.
 // Every slide fits its frame (nothing cut off) on a laptop and on a phone; no page errors.
 // Usage: node .github/scripts/blueprint.cjs   (from the repository root; needs `npm i playwright jspdf@4.2.1`)
 const { chromium } = require('playwright');
@@ -127,10 +128,12 @@ let base;
     const a = await page.evaluate(() => ({ deck: document.getElementById('lbp-slide').dataset.deck, tabs: [...document.querySelectorAll('#lbp-tabs button')].filter(b => b.offsetParent).map(b => b.textContent.trim()) }));
     if (a.deck !== 'trainer' || a.tabs.join() !== 'Trainer blueprint,Trainee blueprint') fail(`an Admin's Blueprint should open the Trainer deck with both tabs: ${JSON.stringify(a)}`);
     const aw = await walk(page, 'trainer 1366px'); aw.out.forEach(fail);
-    if (aw.total !== 12) fail(`the trainer deck has ${aw.total} slides (expected a cover and 11)`);
+    if (aw.total !== 21) fail(`the trainer deck has ${aw.total} slides (expected a cover and 20)`);
+    if (await page.evaluate(() => { LSHBlueprint.deck('admin'); return document.getElementById('lbp-slide').dataset.deck; }) !== 'trainer') fail('a trainer could switch to the Admin blueprint');
+    if (await page.evaluate(() => !!document.querySelector('#lbp-tabs button[data-deck="admin"]'))) fail('a trainer has an Admin blueprint tab');
     [dl] = await Promise.all([page.waitForEvent('download'), page.click('#lbp-pdf-btn')]);
     pdf = inspect(fs.readFileSync(await dl.path()));
-    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Trainer.pdf' || pdf.pages !== 12 || !/Master Control/.test(pdf.text)) fail(`the trainer PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
+    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Trainer.pdf' || pdf.pages !== 21 || !/Master Control/.test(pdf.text) || !/Facilitated mock calls/.test(pdf.text)) fail(`the trainer PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
     await page.click('#lbp-tabs button[data-deck="trainee"]');
     if (await page.evaluate(() => document.getElementById('lbp-slide').dataset.deck) !== 'trainee') fail('the Trainee blueprint tab didn\'t switch the deck');
     [dl] = await Promise.all([page.waitForEvent('download'), page.click('#lbp-pdf-btn')]);
@@ -145,7 +148,28 @@ let base;
     if (tv.deck !== 'trainee' || tv.tabs) fail(`in Trainee view an Admin should get the trainee deck only: ${JSON.stringify(tv)}`);
     await page.context().close();
 
+    // ---- the Master Account: all three decks, opening on the Admin blueprint ----
+    const MASTER = { username: 'LSHADMIN123', fullName: 'LSH Admin', batchId: '', userType: 'Admin' };
+    page = await openPage(browser, { width: 1366, height: 768 }, MASTER);
+    await page.click('#lbp-open-btn'); await page.waitForTimeout(300);
+    const m = await page.evaluate(() => ({ deck: document.getElementById('lbp-slide').dataset.deck, tabs: [...document.querySelectorAll('#lbp-tabs button')].filter(b => b.offsetParent).map(b => b.textContent.trim()) }));
+    if (m.deck !== 'admin' || m.tabs.join() !== 'Admin blueprint,Trainer blueprint,Trainee blueprint') fail(`the Master Account's Blueprint should open the Admin deck with three tabs: ${JSON.stringify(m)}`);
+    const mw = await walk(page, 'admin 1366px'); mw.out.forEach(fail);
+    if (mw.total !== 16) fail(`the admin deck has ${mw.total} slides (expected a cover and 15)`);
+    [dl] = await Promise.all([page.waitForEvent('download'), page.click('#lbp-pdf-btn')]);
+    pdf = inspect(fs.readFileSync(await dl.path()));
+    const adminTitles = await page.evaluate(() => LSHBlueprint.decks().admin.slides.map(s => s.title));
+    const adminMissing = adminTitles.filter(x => !pdf.text.includes(x.replace(/[^\x00-\xff]/g, '').trim()));
+    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Admin.pdf' || pdf.pages !== 16 || adminMissing.length) fail(`the admin PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages, missing ${adminMissing.join(' | ')}`);
+    await page.click('#lbp-tabs button[data-deck="trainer"]');
+    if (await page.evaluate(() => document.getElementById('lbp-slide').dataset.deck) !== 'trainer') fail('the Master Account\'s Trainer blueprint tab didn\'t switch the deck');
+    await page.context().close();
+    // the Admin and Trainer decks fit on a phone too
+    page = await openPage(browser, { width: 390, height: 844 }, MASTER);
+    for (const deck of ['admin', 'trainer']) { await page.evaluate((d) => LSHBlueprint.open(d), deck); (await walk(page, `${deck} 390px`)).out.forEach(fail); }
+    await page.context().close();
+
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log(`Blueprint test passed (trainee deck ${tw.total} slides and its PDF; trainer deck ${aw.total} slides and its PDF; Trainee view gets the trainee deck; every slide fits at 1366 and 390 wide).`);
+    console.log(`Blueprint test passed (trainee deck ${tw.total} slides and its PDF; trainer deck ${aw.total} slides and its PDF; admin deck ${mw.total} slides and its PDF, for the Master Account only; Trainee view gets the trainee deck; every slide fits at 1366 and 390 wide).`);
 })().catch(e => { console.error(e); process.exit(1); });

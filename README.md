@@ -452,19 +452,20 @@ Trainees see only the first three groups, so their sidebar is the program, their
 
 Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#capture-area`, so it's never part of a saved case.
 
-## 🧭 Blueprint (how the CMS works, for trainees and for trainers)
+## 🧭 Blueprint (how the CMS works, for trainees, trainers and the Admin)
 
-Sidebar → **🧭 Blueprint** (after 📊 My Dashboard) opens a full-screen slide deck that explains the CMS. There are two versions:
+Sidebar → **🧭 Blueprint** (after 📊 My Dashboard) opens a full-screen slide deck that explains the CMS, like the Orientation in EA / PA. There are three versions:
 - **Trainee blueprint** (11 slides and a cover): what the CMS is, signing in and the sidebar, finding a case, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Reception Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
-- **Trainer blueprint** (Admins only; 11 slides and a cover): signing in as a trainer and Master Control, registrations and users, Monitoring and 👁 Watch live, Case Logs, Broadcast & Ping, Pause and Lock, the Training Library, the Case Library and Latest Updates, the Intake folder, the Firm Calendar, time and drill results, and Trainee view.
+- **Trainer blueprint** (Admins only; 20 slides and a cover): signing in, before a batch starts, the program links, registrations and users, Monitoring and 👁 Watch live, Case Logs, Broadcast & Ping, access control, the Training Library, the case header (Client's Name, SSN, Client's ID), facilitated mock calls, the Reception Simulator and its RECEPTION MOCK CALL scorecard, grading and feedback, the Case Library and Latest Updates, the Intake folder, the Firm Calendar, time and drill results, a training day, Trainee view, and when something goes wrong.
+- **Admin blueprint** (the Master Account only; 15 slides and a cover): who does what, signing in and sessions, accounts and batches, Master Control, Pause and Lock, Cloudflare usage and billing (Workers Paid), the AI keys, updates, data and records, database upkeep, the settings (secrets; limits and bindings), the routine, when something breaks, and the known gaps.
 
-Trainees, and Admins in 👁 Trainee view, get the Trainee blueprint only. Admins get both as tabs, so they can share the Trainee blueprint in Google Meet on day one.
+Trainees, and Admins in 👁 Trainee view, get the Trainee blueprint only. Trainers get the Trainer and Trainee blueprints as tabs, so they can share the Trainee blueprint in Google Meet on day one. The Master Account gets all three, opening on the Admin blueprint (`canAdmin` in `blueprint-content.js`).
 
 - **Moving around:** ◀ ▶, the ← → keys, or the numbered contents strip under the slide. **Esc** or **✕ Close** closes it.
 - **Fits the screen:** the slide is laid out at 1280×720 (620×1000 in portrait on a phone) and scaled to the window.
-- **⬇ Download PDF:** the deck that's showing, as a landscape PDF with one page per slide (`LSH_CMS_Blueprint_Trainee.pdf` or `LSH_CMS_Blueprint_Trainer.pdf`). It's made in the browser with jsPDF, loaded from cdnjs the first time, as real text.
+- **⬇ Download PDF:** the deck that's showing, as a landscape PDF with one page per slide (`LSH_CMS_Blueprint_Trainee.pdf`, `LSH_CMS_Blueprint_Trainer.pdf` or `LSH_CMS_Blueprint_Admin.pdf`). It's made in the browser with jsPDF, loaded from cdnjs the first time, as real text.
 - **Always up to date with the deploy:** the PDF is made from the deployed site each time it's downloaded. Its cover, its footers and the header carry the deployed version (`deploy` and the start of the page's ETag, which changes with every deploy) and the date it was made.
-- **Changing it:** the slides are the `TRAINEE` and `TRAINER` lists in `blueprint-content.js` (`icon`, `title`, `points`, `where`, `tip`). The page and the PDFs are drawn by `lsh-blueprint.js`, **the same file on every LSH platform** (change it in one, copy it to all); each platform has its own `blueprint-content.js`.
+- **Changing it:** the slides are the `TRAINEE`, `TRAINER` and `ADMIN` lists in `blueprint-content.js` (`icon`, `title`, `points`, `where`, `tip`). The page and the PDFs are drawn by `lsh-blueprint.js`, **the same file on every LSH platform** (change it in one, copy it to all); each platform has its own `blueprint-content.js`. The Admin deck is optional: a platform without `admin` and `canAdmin` in its content shows the two decks as before.
 
 ## 👁 Live view (watch a trainee's screen as they work)
 
@@ -507,11 +508,13 @@ These checks fetch static files, which Cloudflare serves free; they don't count 
 
 Code: `cms-update.js`.
 
-## 📉 Staying under Cloudflare's daily request limit
+## 📉 Keeping Cloudflare requests down
 
-On Cloudflare's free plan, Pages Functions (everything under `/api/`) get **100,000 requests a day for the whole account**, previews included. When they run out, Cloudflare serves the site as static files only until 00:00 UTC: pages load, but nothing that needs the server works. Signing in fails (`/api/login` answers 405 with an empty body; the sign-in screen says "The CMS server isn't answering right now"; before, it said "Network error. Failed to hit validation server."), and `/api/state` returns the page's HTML instead of JSON. Every way of signing in needs the server, so none works until it's back. The Workers Paid plan ($5 a month) raises the limit to 10 million requests a month. Usage is under **Workers & Pages** in the Cloudflare dashboard.
+The account is on the **Workers Paid** plan: Pages Functions (everything under `/api/`) count toward **10 million requests a month** for the whole account, then $0.30 per extra million, with no daily limit (and no spending cap: set a billing notification in Cloudflare). Usage is under **Workers & Pages** in the Cloudflare dashboard.
 
-To keep well under it:
+On the free plan, which the account used before, Pages Functions got **100,000 requests a day for the whole account**, previews included. When they ran out, Cloudflare served the site as static files only until 00:00 UTC: pages loaded, but nothing that needed the server worked. Signing in fails (`/api/login` answers 405 with an empty body; the sign-in screen says "The CMS server isn't answering right now"; before, it said "Network error. Failed to hit validation server."), and `/api/state` returns the page's HTML instead of JSON. Every way of signing in needs the server, so none works until it's back.
+
+To keep requests (and the bill) down:
 - `_routes.json` sends only `/api/*` to Functions. The page, scripts, stylesheets and images are served as static files, which are free and don't count. Before this, the root `_middleware.js` made every file request run a Function.
 - An open page asks the server only as often as it needs to:
 
