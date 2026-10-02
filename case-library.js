@@ -62,7 +62,9 @@
         const t = norm(text);
         if (q.split(' ').every(w => t.includes(w))) return true;
         const digits = q.replace(/\D/g, '');
-        return digits.length >= 4 && text.replace(/\D/g, '').includes(digits);
+        if (digits.length >= 4 && text.replace(/\D/g, '').includes(digits)) return true;
+        // a client name spelled the way it sounds ("Brittani", "Lei Abot"), as for the library's files
+        return !!(window.lshNameSoundsLike && window.lshNameSoundsLike(f.name, q));
     }
     // scope: all | mock | saved | mine. An empty query only lists "mine".
     function search(query, scope) {
@@ -206,8 +208,7 @@
         // The case list export lists every trainee's cases, so it's for Admins only. So is the Case Library
         // window: trainees get their own cases in the sidebar and the search bar above the case.
         // Trainees' sidebar is the program, their cases and their work: Latest Updates and the Trainer tools
-        // (Training Library, Front Desk, Intake Folder, Firm Calendar, Export Case List) are for Admins.
-        const exp = $id('export-repo-btn'); if (exp) exp.style.display = on && isAdmin() ? '' : 'none';
+        // (Training Library, Intake Folder, Firm Calendar) are for Admins.
         const ob = $id('cl-open-btn'); if (ob) ob.style.display = on && isAdmin() ? '' : 'none';
         const up = $id('cl-updates-btn'); if (up) up.style.display = on && isAdmin() ? '' : 'none';
         const tools = $id('sb-trainer'); if (tools) tools.style.display = on && isAdmin() ? '' : 'none';

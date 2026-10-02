@@ -56,7 +56,7 @@
                  2. #sb-cases: My cases (trainees) / Case Library (Admins), from case-library.js; Admins also get
                     Open Case Library and Latest Updates
                  3. #sb-work: New Intake, Download Case Summary, the timer, My Dashboard
-                 4. #sb-trainer (Admins only): Training Library, Front Desk, Intake Folder, Firm Calendar, Export Case List
+                 4. #sb-trainer (Admins only): Training Library, Intake Folder, Firm Calendar
                  The open case's own actions (Close, Archive, Discard, Save, Update) are in the bar at the bottom of
                  the case (#case-actions-bar), with ✕ at its top right. -->
             <div id="sb-program" class="sb-group"></div>
@@ -79,9 +79,8 @@
             </div>
             <div id="sb-trainer" class="sb-group">
                 <p class="sb-head">Trainer tools</p>
-                <!-- training-library.js, front-desk-drill.js and intake-folder.js add their buttons above the Firm Calendar's -->
+                <!-- training-library.js and intake-folder.js add their buttons above the Firm Calendar's -->
                 <button id="fc-open-btn" onclick="openFirmCalendar()" class="w-full border border-orange-500 text-orange-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900 mb-2">📅 Firm Calendar</button>
-                <button id="export-repo-btn" onclick="exportRepo()" class="w-full h-9 flex items-center justify-center bg-[#2563eb] hover:bg-blue-700 text-white text-[10px] font-black rounded uppercase leading-none" style="box-sizing:border-box;">Export Case List</button>
             </div>
         </div>
         <div id="session-footer" style="margin:16px;"></div>
@@ -610,21 +609,21 @@
                     <div class="portal-tab" id="portal-tab-admin" onclick="switchPortalTab('Admin')">Admin Portal</div>
                 </div>
                 <div id="auth-login-msg" class="auth-msg"></div>
-                <div class="auth-field login-username-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" placeholder="Enter your username"></div>
+                <div class="auth-field login-username-field"><label>Username</label><input type="text" id="login-username" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter your username"></div>
                 <div class="auth-field login-trainer-field"><label>Your name</label><input type="text" id="login-trainer-name" autocomplete="name" maxlength="60" placeholder="First and last name"><p class="auth-hint">Trainers: your name and the admin password sign you in as yourself. No registration needed. Leave it blank for the Master Account.</p></div>
-                <div class="auth-field"><label id="login-password-label" for="login-password">Batch ID</label><input type="text" id="login-password" autocomplete="off" placeholder="Your Batch ID, e.g. B300926"><p class="auth-hint login-batch-hint">Registered before with a password? It still works here.</p></div>
+                <div class="auth-field login-password-field"><label id="login-password-label" for="login-password">Admin password</label><input type="password" id="login-password" autocomplete="off" placeholder="Enter the admin password"></div>
                 <button class="auth-submit" onclick="attemptLogin()">Log In</button>
                 <div class="auth-switch auth-register-link">No account yet? <a onclick="showRegisterView()">Register here</a></div>
             </div>
 
             <!-- REGISTER VIEW -->
             <div id="auth-register-view" class="hidden">
-                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, sign in with your username and Batch ID, or open the CMS from your training platform and just type your name.</p>
+                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, sign in with just your username, or open the CMS from your training platform and just type your name.</p>
                 <div id="auth-register-msg" class="auth-msg"></div>
                 <!-- Three fields only (functions/api/register.js): no email, start date or password. Trainees sign in with
-                     their username and Batch ID; an Admin can change a trainee's Batch ID later (Registrations / Users tabs). -->
+                     just their username (the Batch ID stays on the account); an Admin can change a trainee's Batch ID later (Registrations / Users tabs). -->
                 <div class="auth-field"><label for="reg-fullname">Full Name</label><input type="text" id="reg-fullname" autocomplete="off" maxlength="60" data-allow="name" placeholder="e.g., Juan P. Dela Cruz"></div>
-                <div class="auth-field"><label for="reg-batchid">Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" maxlength="24" data-allow="batch" placeholder="e.g., B300926"><p class="auth-hint">B and the date your batch started (DDMMYY), e.g. B300926. Your trainer gives it to you, and you sign in with it.</p></div>
+                <div class="auth-field"><label for="reg-batchid">Batch ID</label><input type="text" id="reg-batchid" autocomplete="off" maxlength="24" data-allow="batch" placeholder="e.g., B300926"><p class="auth-hint">B and the date your batch started (DDMMYY), e.g. B300926. Your trainer gives it to you. You only type it here: after that you sign in with your username.</p></div>
                 <div class="auth-field"><label for="reg-username">Username</label><input type="text" id="reg-username" autocomplete="off" maxlength="30" data-allow="alnum-underscore" placeholder="Choose a username"></div>
                 <!-- Not a field any more (only trainees register), but it stays: cases are saved with every <select> on the
                      page by position (posSels in app.js), this one included, so removing it would shift every saved case. -->
@@ -709,7 +708,7 @@
                     <div class="admin-tile">
                         <h4>Trainees Online Now</h4>
                         <div class="admin-stat" id="admin-stat-online">0</div>
-                        <div class="admin-stat-label">Active in the last 60 seconds</div>
+                        <div class="admin-stat-label">Active in the last 90 seconds</div>
                     </div>
                     <div class="admin-tile">
                         <h4>Pending Registrations</h4>
@@ -1045,8 +1044,10 @@
     <script src="intake-form.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>
-    <!-- 🧭 the CMS Blueprint: a trainee deck and (Admins) a trainer deck, with a PDF of each -->
-    <script src="blueprint.js"></script>
+    <!-- 🧭 the Blueprint: a trainee deck and (Admins) a trainer deck, with a PDF of each.
+         blueprint-content.js is the CMS's slides; lsh-blueprint.js is the same file on every LSH platform. -->
+    <script src="blueprint-content.js"></script>
+    <script src="lsh-blueprint.js"></script>
     <script src="guest-access.js"></script>
     <!-- live view: Admins watch a trainee's screen as they work (Master Control → Monitoring → 👁 Watch live) -->
     <script src="live-view.js"></script>

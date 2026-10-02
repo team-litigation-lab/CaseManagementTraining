@@ -49,6 +49,9 @@
             document.querySelectorAll('[contenteditable="true"]').forEach(el => { el.innerHTML = ''; });
             // dropdowns back to their defaults too (e.g. Employment Status: N/A), so a new case doesn't inherit the last one's
             document.querySelectorAll('#capture-area select').forEach(sel => { const d = Array.from(sel.options).findIndex(o => o.defaultSelected); sel.selectedIndex = d < 0 ? 0 : d; });
+            // ...and the big status words with them (a closed case's MEDIATION over a new case's Intake)
+            const phaseSel = document.getElementById('phase-selector');
+            if (phaseSel && document.getElementById('display-phase')) updatePhaseDisplay(phaseSel.value);
             applyKeyed(null);
             const nameField = document.getElementById('client-name-field');
             if (nameField) nameField.innerText = '';
@@ -168,12 +171,14 @@
         const LOCK_KEY = 'LSH_PAGE_LOCKED';
         const SESSION_KEY = 'LSH_SESSION_V1';
         // Heartbeats keep the session alive (the server allows 120 s between them) and show who's
-        // online. Every 30 s, every 45 s in a background tab, and every 3 s while a trainer watches
-        // this trainee live (live-view.js). Sparing on purpose: every /api/ request counts toward
-        // Cloudflare's daily Functions requests, and the site stops answering when they run out.
+        // online. Every 30 s, every 45 s in a background tab. Sparing on purpose: every /api/ request
+        // counts toward Cloudflare's daily Functions requests, and the site stops answering when they
+        // run out. A trainee's heartbeat waits at the server (up to HEARTBEAT_HOLD_S) for a trainer to
+        // open 👁 Watch live, so the live view starts within a second or two at no extra request; while
+        // watched, live-view.js sends the screen itself.
         const HEARTBEAT_INTERVAL_MS = 30000;
         const HEARTBEAT_HIDDEN_MS = 45000;
-        const HEARTBEAT_WATCHED_MS = 3000;
+        const HEARTBEAT_HOLD_S = 29;
         const HEARTBEAT_GRACE_MS = 45000;   // "online" = a heartbeat in the last 90 s (twice this)
         const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes — adjust if needed
         const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
@@ -235,8 +240,11 @@
             const v = saved[selects.indexOf(sel)];
             if (v && sel.value !== v) sel.value = normalizePhase(v);
         }
+        // The big status words and the status dropdown always say the same thing: setting one sets the other.
         function updatePhaseDisplay(val) {
-            document.getElementById('display-phase').innerText = normalizePhase(val).toUpperCase();
+            const v = normalizePhase(val), sel = document.getElementById('phase-selector');
+            if (sel && v && sel.value !== v && Array.from(sel.options).some(o => o.value === v)) sel.value = v;
+            document.getElementById('display-phase').innerText = String(v || (sel && sel.value) || 'Intake').toUpperCase();
         }
 
         function handleOtherSystem(selectId, otherInputId, revertId) {
@@ -1637,21 +1645,6 @@
             }
         }
 
-        // Export now downloads the currently visible case METADATA (name,
-        // Case ID, phase, owner, timestamps) as a JSON reference list — full
-        // field content lives server-side per case and is fetched on demand
-        // via loadCase(), so a bulk local export/import of full content no
-        // longer applies now that the repository itself is the shared source
-        // of truth. Import has been removed for the same reason: re-importing
-        // raw JSON directly into a shared, permission-checked server
-        // repository isn't a meaningful operation anymore.
-        function exportRepo() {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(_repoCache, null, 2)], { type: 'application/json' }));
-            a.download = 'LSH_Case_List.json';
-            a.click();
-        }
-
         /* ---------- PDF export ---------- */
         // Pulls a same-origin R2 file back down and re-encodes it as a data
         // URI so html2canvas can rasterize it. Returns null (never throws) on
@@ -1965,14 +1958,8 @@
             if (window.mockFlushUpdates) window.mockFlushUpdates({ keepalive: true });   // Notes/Tasks typed on a library case survive the reload
             location.reload();
         }
-        function paintTraineeViewBar() {
-            let bar = document.getElementById('trainee-view-bar');
-            if (!isTraineeView()) { if (bar) bar.remove(); document.body.classList.remove('trainee-view'); return; }
-            document.body.classList.add('trainee-view');
-            if (!bar) {
-                document.body.insertAdjacentHTML('beforeend', `<div id="trainee-view-bar" class="no-print" role="status"><span>👁 <b>Trainee view</b> · you're seeing the site the way trainees do</span><button onclick="setTraineeView(false)">⇦ Back to trainer view</button></div>`);
-            }
-        }
+        // Trainee view has no bar of its own: the sidebar's ⇦ Back to trainer view is the way back.
+        function markTraineeView() { document.body.classList.toggle('trainee-view', isTraineeView()); }
         function setSession(user) {
             sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                 fullName: user.fullName,
@@ -2004,7 +1991,7 @@
             const footer = document.getElementById('session-footer');
             const portalTitle = document.getElementById('portal-title');
 
-            paintTraineeViewBar();
+            markTraineeView();
             if (!session) {
                 gate.classList.add('open');
                 gate.style.setProperty('display', 'flex', 'important');
@@ -2737,31 +2724,38 @@
         }
         function closeMonitorCase() { document.getElementById('monitor-case-modal').classList.remove('open'); }
         let heartbeatTimer = null;
-        let heartbeatWatched = false;   // the last heartbeat's answer: a trainer is watching (live-view.js)
+        let heartbeatRunning = false, heartbeatBusy = false, heartbeatAgain = false;
         let idleTimer = null;
 
-        function sendHeartbeat() {
+        // opts.hold: wait at the server for a trainer to start watching (only the scheduled heartbeats of a
+        // trainee nobody watches; never the one sent to revive a lapsed session)
+        function sendHeartbeat(opts) {
             const session = getSession();
             if (!session) return Promise.resolve(false);
-            return fetch('/api/heartbeat', {
+            const beat = {
+                fullName: session.fullName,
+                currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
+            };
+            if (opts && opts.hold) beat.hold = HEARTBEAT_HOLD_S;
+            // live view (live-view.js): where the trainee is
+            let live = {};
+            try { live = window.lshLiveReport ? window.lshLiveReport() : {}; } catch (e) { live = {}; }
+            return Promise.resolve(live).catch(() => ({})).then(extra => fetch('/api/heartbeat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify(Object.assign({
-                    fullName: session.fullName,
-                    currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
-                }, window.lshLiveReport ? window.lshLiveReport() : {}))   // live view (live-view.js): where the trainee is
-            })
-            .then(r => {
+                body: JSON.stringify(Object.assign(beat, extra))
+            }))
+            .then(async r => {
                 if (r.status === 401) {
                     handleSessionExpired('Your session has expired. Please log in again.');
                     return false;
                 }
-                if (r.ok) r.clone().json().then(d => {
-                    const on = !!(d && d.watched);
-                    if (window.lshLiveWatched) window.lshLiveWatched(on);
-                    if (on !== heartbeatWatched) { heartbeatWatched = on; if (heartbeatTimer) scheduleHeartbeat(); }   // a trainer started or stopped watching
-                }).catch(() => {});
+                if (r.ok) {
+                    const d = await r.clone().json().catch(() => null);
+                    // is a trainer watching? d.screenId: the trainee's screen the server has
+                    if (d && window.lshLiveWatched) window.lshLiveWatched(!!d.watched, d);
+                }
                 return r.ok;
             })
             .catch(() => false);
@@ -2789,19 +2783,41 @@
                 clearTimeout(heartbeatTimer);
                 heartbeatTimer = null;
             }
-            heartbeatWatched = false;
+            heartbeatRunning = false;
+            heartbeatAgain = false;
         }
 
-        function scheduleHeartbeat() {
+        // One heartbeat at a time: the next goes 30 s (45 s in a background tab) after the last was sent,
+        // or straight after it when the last one waited at the server.
+        function scheduleHeartbeat(wait) {
             clearTimeout(heartbeatTimer);
-            const wait = heartbeatWatched ? HEARTBEAT_WATCHED_MS : document.hidden ? HEARTBEAT_HIDDEN_MS : HEARTBEAT_INTERVAL_MS;
-            heartbeatTimer = setTimeout(() => { sendHeartbeat(); scheduleHeartbeat(); }, wait);
+            heartbeatTimer = setTimeout(heartbeatLoop, Math.max(0, wait || 0));
         }
+        function heartbeatLoop() {
+            heartbeatTimer = null;
+            if (!heartbeatRunning) return;
+            if (heartbeatBusy) { heartbeatAgain = true; return; }
+            heartbeatBusy = true;
+            const sentAt = Date.now();
+            const hold = !!(window.lshLiveCanWait && window.lshLiveCanWait());   // a trainee nobody watches (live-view.js)
+            sendHeartbeat({ hold }).then(() => {
+                heartbeatBusy = false;
+                if (!heartbeatRunning) return;
+                const wait = heartbeatAgain ? 0 : sentAt + (document.hidden ? HEARTBEAT_HIDDEN_MS : HEARTBEAT_INTERVAL_MS) - Date.now();
+                heartbeatAgain = false;
+                scheduleHeartbeat(wait);
+            });
+        }
+        // live-view.js: a watch just ended, so the next heartbeat (waiting for the next watch) goes now
+        window.lshHeartbeatSoon = function () {
+            if (!heartbeatRunning) return;
+            if (heartbeatBusy) heartbeatAgain = true; else scheduleHeartbeat(0);
+        };
 
         function startHeartbeat() {
             stopHeartbeat();
-            sendHeartbeat();
-            scheduleHeartbeat();
+            heartbeatRunning = true;
+            heartbeatLoop();
         }
 
         function onUserActivity() {

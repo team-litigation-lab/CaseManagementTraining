@@ -251,6 +251,13 @@
     };
     // True when a file is in the results only because a name on it sounds like the search.
     window.mockSoundsLike = (c, query) => !mockMatches(c, query) && mockSoundsLike(c, query);
+    // The same for any name (a saved case's client, in case-library.js): every word of the search is in the
+    // name or sounds like a word of it.
+    window.lshNameSoundsLike = (name, query) => {
+        const names = norm(name).split(/[^a-z']+/).map(w => w.replace(/'/g, '')).filter(w => w.length >= 3);
+        const words = norm(query).split(' ').filter(Boolean);
+        return !!words.length && words.every(raw => { const w = raw.replace(/[^a-z]/g, ''); return !/\d/.test(raw) && w.length >= 3 && names.some(n => n.startsWith(w) || soundsLike(w, n)); });
+    };
     const isAdmin = () => { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); };
     // Trainees never see the Training Library: to them a mock case is a case file, known by its case number.
     const kindWord = () => isAdmin() ? 'Training Library case' : 'case file';

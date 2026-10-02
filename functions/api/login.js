@@ -1,4 +1,4 @@
-import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned, batchKey, shortenOldBatchIds } from '../_utils.js';
+import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned, shortenOldBatchIds } from '../_utils.js';
 import { cleanGuestName, splitName, trainerUsername } from '../_guest.js';
 // The Admin Portal signs in with the admin password (no username):
 //   - with a trainer's name: as that trainer's own Admin account, made on first use
@@ -7,9 +7,10 @@ import { cleanGuestName, splitName, trainerUsername } from '../_guest.js';
 //     keeps every admin power it has.
 // The password is the MASTER_ADMIN_PASSWORD secret on the Pages project (the earlier
 // name, ADMIN_PORTAL_PASSWORD, still works), never the code (README → Admin Portal).
-// The Trainee Portal signs in with a username and Batch ID: registration asks for no
-// password (register.js). An account that has a password (registered before that)
-// can still use it in place of the Batch ID.
+// The Trainee Portal signs in with the username alone: the Batch ID was given at
+// registration (register.js) and is on the account, and an Admin approves every
+// registration before it can sign in. Only a Trainee account signs in this way, never
+// an Admin's; an Admin account with a password of its own still needs that password.
 const adminPasswords = (env) => [env.MASTER_ADMIN_PASSWORD, env.ADMIN_PORTAL_PASSWORD].map(p => String(p || '')).filter(Boolean);
 async function sameSecret(given, want) {
     const enc = new TextEncoder();
@@ -79,19 +80,23 @@ export async function onRequestPost({ request, env }) {
         if (user && user.revoked) return json({ success: false, error: 'Access for this name has been revoked by an administrator.' }, 403);
         if (!user) return json({ success: false, error: 'Couldn\'t open your trainer account. Please try again.' }, 500);
     } else {
-        const secret = String(body.batchId || password || '');
-        if (!username || !secret) {
-            return json({ success: false, error: 'Please enter your username and Batch ID.' }, 400);
-        }
+        const name = String(username || '').trim();
+        if (!name) return json({ success: false, error: 'Please enter your username.' }, 400);
         // Fetch by username only — a password is checked in JS via verifyPassword()
         // so we can support hashed rows (and transparently upgrade legacy
         // plaintext rows) instead of comparing with `password = ?` in SQL.
-        user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
-        // The Batch ID signs in Trainee accounts only, never an Admin's.
-        const byBatch = !!(user && user.user_type === 'Trainee' && batchKey(secret) && batchKey(user.batch_id) === batchKey(secret));
-        usedPassword = !byBatch && !!user && !String(user.password || '').startsWith('disabled:') && await verifyPassword(secret, user.password);
-        if (!byBatch && !usedPassword) {
-            return json({ success: false, error: 'Incorrect username or Batch ID.' }, 401);
+        user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(name).first();
+        if (!user) {
+            // typed with other capitals (a phone capitalises the first letter): the one trainee it can only be
+            const alike = (await db.prepare(`SELECT * FROM users WHERE username = ? COLLATE NOCASE AND user_type = 'Trainee' LIMIT 2`).bind(name).all()).results || [];
+            if (alike.length === 1) user = alike[0];
+        }
+        const trainee = !!(user && user.user_type === 'Trainee');
+        // Any other account needs its own password (an older tab may still send a Batch ID: a trainee doesn't need it).
+        const secret = String(password || body.batchId || '');
+        usedPassword = !trainee && !!secret && !!user && !String(user.password || '').startsWith('disabled:') && await verifyPassword(secret, user.password);
+        if (!trainee && !usedPassword) {
+            return json({ success: false, error: secret && portalMode !== 'Trainee' ? 'Incorrect username or password.' : 'No trainee account is registered under that username.' }, 401);
         }
         if (usedPassword && isLegacyPlaintext(user.password)) await upgradePasswordHash(db, user.id, secret);
     }

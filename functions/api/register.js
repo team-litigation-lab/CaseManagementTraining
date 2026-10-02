@@ -3,9 +3,9 @@ import { isGuestUsername, isTrainerUsername, cleanGuestName, parseFullName } fro
 // Trainees register with three things: their full name, their Batch ID (B + the
 // date their batch started, DDMMYY, e.g. B300926: cleanBatchId in _utils.js) and a
 // username. There's no password: once an Admin approves the registration, they
-// sign in with their username and Batch ID (login.js), or with just their name
+// sign in with just their username (login.js), or with just their name
 // from a training platform (guest-login.js).
-// Accounts registered earlier with a password keep it.
+// Accounts registered earlier with a password sign in the same way.
 const USERNAME_RE = /^[A-Za-z0-9_]{3,30}$/;
 // Day 1 of training is the day they register: the trainee's own date (their time
 // zone) when it's within a day of the server's, otherwise the server's.
