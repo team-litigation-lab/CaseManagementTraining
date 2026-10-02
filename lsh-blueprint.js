@@ -70,7 +70,7 @@
     .lbp-cover-body{flex:1;min-height:0;padding:34px 70px 24px;display:flex;flex-direction:column}
     .lbp-cover-sub{margin:0 0 26px;font-size:26px;color:#334155;font-weight:600}
     .lbp-contents{list-style:none;margin:0;padding:0;columns:2;column-gap:50px;flex:1}
-    .lbp-contents li{break-inside:avoid;display:flex;align-items:center;gap:14px;font-size:22px;color:#1e293b;margin-bottom:15px}
+    .lbp-contents li{break-inside:avoid;display:flex;align-items:center;gap:14px;font-size:calc(22px * var(--lbp-k,1));color:#1e293b;margin-bottom:calc(15px * var(--lbp-k,1))}
     .lbp-contents li span{flex:0 0 auto;width:32px;height:28px;border-radius:6px;background:#f97316;color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center}
     .lbp-version{font-size:14px;font-weight:700;color:#94a3b8;letter-spacing:.03em}
     .lbp-card{height:100%;display:flex;flex-direction:column}
@@ -98,7 +98,7 @@
     #lbp-slide.portrait .lbp-cover-body{padding:30px 36px}
     #lbp-slide.portrait .lbp-cover-sub{font-size:23px}
     #lbp-slide.portrait .lbp-contents{columns:1}
-    #lbp-slide.portrait .lbp-contents li{font-size:21px;margin-bottom:12px}
+    #lbp-slide.portrait .lbp-contents li{font-size:calc(21px * var(--lbp-k,1));margin-bottom:calc(12px * var(--lbp-k,1))}
     @media (max-width:760px){.lbp-top{padding:12px 14px}.lbp-top h2{font-size:16px}#lbp-body{padding:10px 10px 8px}#lbp-toc{display:none}}
     @media print{#lbp-page{display:none!important}}`;
 
@@ -181,7 +181,7 @@
         slide.style.width = BW + 'px'; slide.style.height = BH + 'px';
         slide.style.transform = `translate(-50%, -50%) scale(${Math.max(0.1, Math.min(W / BW, H / BH))})`;
         // a slide with a lot to say: its text gets a little smaller until it all fits (down to 70%)
-        const main = slide.querySelector('.lbp-main');
+        const main = slide.querySelector('.lbp-main, .lbp-cover-body');
         let k = 1; slide.style.setProperty('--lbp-k', '1');
         while (main && k > 0.7 && (main.scrollHeight > main.clientHeight + 1 || [...main.children].some(e => e.scrollHeight > e.clientHeight + 1))) {
             k = Math.round((k - 0.05) * 100) / 100; slide.style.setProperty('--lbp-k', String(k));
