@@ -11,6 +11,7 @@
 //   - no registered trainee with that name: they're asked to register first.
 // Admin accounts are never reached this way (Trainee accounts only).
 import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds } from '../_utils.js';
+import { portalOnly } from '../_portal.js';
 import { GUEST_SOURCES, ensureGuestTables, cleanGuestName, cleanGuestBatch, guestUsername } from '../_guest.js';
 
 const BLOCKED = {
@@ -58,6 +59,9 @@ export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
+    if (portalOnly(env)) {
+        return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Open the CMS from the LSH Training Portal: a typed name no longer signs anyone in.' }, 403);
+    }
     const from = String(body.from || '').toLowerCase();
     if (!GUEST_SOURCES[from]) {
         return json({ success: false, code: 'NOT_FROM_PLATFORM', error: 'Signing in with just your name works when you open the CMS from your training platform. Otherwise, sign in with your CMS username and password, or register.' }, 403);

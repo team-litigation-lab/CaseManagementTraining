@@ -1,5 +1,6 @@
 import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned, shortenOldBatchIds } from '../_utils.js';
 import { cleanGuestName, splitName, trainerUsername } from '../_guest.js';
+import { portalOnly } from '../_portal.js';
 // The Admin Portal signs in with the admin password (no username):
 //   - with a trainer's name: as that trainer's own Admin account, made on first use
 //     (no registration), so pings, logs and reviews show who they are;
@@ -48,7 +49,7 @@ async function trainerUser(db, name) {
     return user;
 }
 // The Master Account's row, created on first use (with no usable password of its own).
-async function adminPortalUser(db) {
+export async function adminPortalUser(db) {
     let user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(MASTER_USERNAME).first();
     if (!user) {
         await db.prepare(
@@ -82,6 +83,10 @@ export async function onRequestPost({ request, env }) {
     } else {
         const name = String(username || '').trim();
         if (!name) return json({ success: false, error: 'Please enter your username.' }, 400);
+        if (portalOnly(env) && portalMode === 'Trainee') {
+            // Trainees sign in on the LSH Training Portal and open the CMS from there (portal-login.js): a username alone opens nothing.
+            return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Trainees sign in on the LSH Training Portal and open the CMS from there.' }, 403);
+        }
         // Fetch by username only — a password is checked in JS via verifyPassword()
         // so we can support hashed rows (and transparently upgrade legacy
         // plaintext rows) instead of comparing with `password = ?` in SQL.
@@ -91,7 +96,7 @@ export async function onRequestPost({ request, env }) {
             const alike = (await db.prepare(`SELECT * FROM users WHERE username = ? COLLATE NOCASE AND user_type = 'Trainee' LIMIT 2`).bind(name).all()).results || [];
             if (alike.length === 1) user = alike[0];
         }
-        const trainee = !!(user && user.user_type === 'Trainee');
+        const trainee = !!(user && user.user_type === 'Trainee') && !portalOnly(env);
         // Any other account needs its own password (an older tab may still send a Batch ID: a trainee doesn't need it).
         const secret = String(password || body.batchId || '');
         usedPassword = !trainee && !!secret && !!user && !String(user.password || '').startsWith('disabled:') && await verifyPassword(secret, user.password);
