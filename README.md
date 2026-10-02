@@ -438,19 +438,31 @@ Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#captur
 
 ## 👁 Live view (watch a trainee's screen as they work)
 
-**Master Control → Monitoring → 👁 Watch live** on any trainee who is online opens their live view. It updates every 3 seconds and shows:
+**Master Control → Monitoring → 👁 Watch live** on any trainee who is online opens their live view. It's close to real time, for facilitated mock calls (a trainer plays the caller over Google Meet and watches the trainee work the call in the CMS): it starts within a second or two, and what the trainee does shows about a second later. At the top:
 - **Now:** where they are: the screen (case workspace, My Dashboard, sign-in), the case (client and Case ID) and the tab, plus anything open over it (📝 New Intake and the step they're on, 📞 Reception Simulator and the call, 🔍 Case Library, another window). It also says when the CMS tab is in the background.
-- **Where they've been:** a trail of each change, newest first, with the time (the last 40 steps).
-- **Their case, as on their screen:** the case header (client, Case ID, status, type, DOL, SOL, attorney, case manager, the tab they're on) and every filled-in section, refreshed as they type (within a few seconds).
+
+Below it, two tabs:
+- **🖥 Screen** (shown first): their CMS tab exactly as it looks on their screen right now. The same layout, any panel or window open over the case (📞 Reception Simulator, the Training Library, 🔍 Case Library, 📝 New Intake…), what they've typed in every box and field, the options they've chosen, where each part is scrolled, the field they're in (outlined in orange) and their mouse pointer (a red dot). It's shown at the size of their browser window, scaled down to fit, with the window's size and how long ago it was updated. **● Live** shows while it's less than 2 seconds behind; **○ Not live** when it isn't (their page stopped answering, or their tab is in the background). It mirrors their CMS tab only, not other tabs, windows or programs on their computer.
+- **📋 Summary, trail and case:**
+  - **Where they've been:** a trail of each change, newest first, with the time (the last 40 steps).
+  - **Their case, as on their screen:** the case header (client, Case ID, status, type, DOL, SOL, attorney, case manager, the tab they're on) and every filled-in section, as text, refreshed as they type (within a few seconds).
 
 How it works:
-- The trainee's page reports where it is with each heartbeat: every 30 seconds, and every 3 seconds while a trainer is watching. The trainee's page learns it's being watched at its next heartbeat, so the live view can take up to 30 seconds to start.
-- Only while a trainer is watching does it also send the case itself, at most every 3 seconds and only when something changed. Watching ends 15 seconds after the trainer closes the window, and the heartbeat goes back to every 30 seconds.
+- **Starting.** The trainee's page sends its heartbeat every 30 seconds, as always. While nobody watches the trainee, that heartbeat waits at the server (up to 29 seconds) and answers as soon as a trainer opens 👁 Watch live. So the trainee's page hears of it within about a second, at no extra request. (While heartbeats wait, the server looks about once a second at who is being watched: one look, shared by all the heartbeats waiting there, that reads nothing while nobody is watched.)
+- **While watched**, the trainee's page sends (`/api/live-screen`) right after each change: a quarter of a second after the page changes, they type, scroll or move the mouse, and at most once a second; otherwise a short "still here" every 1.5 seconds. One request at a time. Nothing at all while their CMS tab is in the background: it says so once, and the live view keeps their last screen.
+- **The screen** isn't a screen share: there's no permission prompt for the trainee. The page makes a copy of itself (in an idle moment between keystrokes, so typing doesn't stutter), writes in what's typed in each field and the options chosen, takes out every script, `on…` handler and `javascript:` link, and blanks passwords. The copy is zipped and sent only when it changed (a screen is usually 50 to 100 KB zipped; copying it takes the page about 10 ms). Scrolling, the mouse pointer and the clocks go separately, in a few bytes, so they aren't a new copy.
+- **The live view** reads about once a second while it's open and its tab is in view, and gets the screen only when it changed. Nothing while the trainer's tab is in the background: the watch then ends by itself after 6 seconds, and starts again within a second or two when they come back. Closing the window ends it the same way.
+- **Requests.** Nobody watching: nothing extra, just the heartbeat every 30 seconds. While watched: about 40 a minute from the trainee's page (up to 60 while they're busy) and 60 a minute from the live view. A 30-minute mock call is about 3,000 to 3,600 requests in all.
+- A zipped screen over 700 KB isn't sent (D1 keeps a row under 1 MB): the live view says it's too big and shows the summary. The screen is kept in its own table (`live_screen`), and only while someone watches: the first request from the trainee's page after the watch ends deletes it. Only the trainee's own page writes their screen, and only Admins can read it.
+- Safe to show: the Admin's page cleans the copy again (a trainee could send one by hand) and shows it in a sandboxed frame, a separate origin that can't reach the Admin's page or cookies. A Content Security Policy lets only the live view's own small script run in it (it scrolls the copy and draws the pointer), and nothing loads from anywhere but this site and Google Fonts. The frame can't be clicked: it's for watching.
+- A trainee page opened before this update can't send its screen: the live view says so and shows the summary until their page loads the new version (it does by itself, see **🔄 New versions load by themselves**, or they can reload). Until then it learns it's watched at its next heartbeat (up to 30 seconds).
 - The trainee sees **👁 Your trainer is viewing your screen** at the top right while they're watched.
-- What trainees type is shown as text, never run as HTML. The same now holds for Monitoring's "View Latest Saved" and the Case Logs views.
+- In the summary, what trainees type is shown as text, never run as HTML. The same now holds for Monitoring's "View Latest Saved" and the Case Logs views.
 - Trainers' own screens aren't watched.
 
-Code: `live-view.js`, `functions/_liveview.js` (the `live_view` table, made on first use), `/api/live-view`, and the heartbeat.
+What the screen can't show: anything drawn on a `<canvas>` (the CMS has none), pictures from other websites, the name of a file picked in a file box, the text cursor and selected text, and anything outside the CMS tab. Small differences can come from the trainer's own browser (fonts, scrollbars).
+
+Code: `live-view.js`, `functions/_liveview.js` (the `live_view` and `live_screen` tables, made on first use), `/api/live-view`, `/api/live-screen`, and the heartbeat (`app.js`, `functions/api/heartbeat.js`).
 
 ## 🔄 New versions load by themselves
 
@@ -475,7 +487,8 @@ To keep well under it:
 
   | What | How often (tab in view) | Tab in the background |
   |---|---|---|
-  | Heartbeat (keeps the session alive; the server allows 120 s between them) | every 30 s (every 3 s while a trainer watches it live) | every 45 s |
+  | Heartbeat (keeps the session alive; the server allows 120 s between them; a trainee's waits at the server for a trainer to start watching) | every 30 s | every 45 s |
+  | 👁 Live view, only while a trainer watches (see **👁 Live view**) | the trainee's page: right after each change, at most once a second, else every 1.5 s; the live view: every second | nothing |
   | Site state (announcements, alerts, pings, pause and lock) | every 15 s | every 30 s (a ping stays up for a minute) |
   | The case list | every minute, and after each save | paused; refreshed when the tab comes back |
   | Timer | every minute | paused |
@@ -719,14 +732,20 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - an unknown name is sent to Register, with the name and batch filled in;
   - name sign-in is refused without a platform;
   - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
-- **Live view** (`.github/scripts/live-view.cjs`, in the same job): the real heartbeat and `/api/live-view` code on SQLite, with a trainee's page and an Admin's page in a browser. It checks:
+- **Live view** (`.github/scripts/live-view.cjs`, in the same job): the real heartbeat, `/api/live-view` and `/api/live-screen` code on SQLite, with a trainee's page and an Admin's page in a browser. It checks:
   - where a trainee is, and a new step on the trail only when it changes;
   - a snapshot is kept only while an Admin watches, and an oversized one is skipped;
   - only Admins can read the live view, and reading it marks the trainee as watched;
   - Admins aren't recorded, and a watch ends when it isn't renewed;
+  - their screen: kept only while watched and deleted when the watch ends; the live view gets the copy only when it doesn't have it yet; scrolling and the pointer alone update it; an oversized screen isn't kept and the Admin is told; a page that can't mirror is flagged as an older version; a trainee writes only their own screen and can't read anyone's;
+  - a trainee's heartbeat waits while nobody watches and answers within about a second when a watch starts; an Admin's never waits; `/api/live-screen` keeps a screen only while watched, only the sender's own, and needs a session;
   - in the browser: 👁 Watch live in Monitoring shows the case and tab, what the trainee typed (as plain text, never run), the New Intake form and the trail;
-  - the trainee is told while they're watched, and not after;
-  - the trainee's page sends a heartbeat every 30 s (not every 2 s), every 3 s while watched, and every 30 s again once the watch ends.
+  - real time: their screen shows within a couple of seconds of 👁 Watch live with no heartbeat sent by hand; a change reaches the Admin's screen in about a second; while watched the trainee's page sends about once a second (a "still here" every 1.5 s when idle, at most one a second while typing, the copy only when it changed, never for a mouse move, and no copy at all while nothing changes, even when the page sets an attribute and puts it back the way `case-fit.js` measures) and the live view reads about once a second, and not at all while its tab is hidden; "● Live" stays on while watching, goes off when the trainee's page stops; a hidden trainee tab says so once and then sends nothing; with nobody watching, only the heartbeat (which waits at the server), counted over 34 s;
+  - 🖥 Screen comes first and shows their page in a sandboxed frame at their window's size: what they typed in boxes and fields, the option they chose, the Reception Simulator open over the case, how far a box is scrolled, the mouse pointer and the New Intake form with what they typed and chose in it, with passwords blank;
+  - markup put on the trainee's page (an `onerror` image, a script, a `javascript:` link, a frame) is taken out before it's sent, and never runs on the Admin's page or in the frame; a crafted screen sent straight to the API (scripts, handlers, `<noscript>` and `<svg>`/`<math>` tricks, a declarative shadow root, `javascript:` links and forms) is cleaned again on the Admin's page;
+  - a screen too big to mirror, and an older trainee page that can't mirror, are explained and show the summary, and the screen comes back when it can;
+  - the trainee is told while they're watched, and not after.
+  - It prints what it measured: how long the watch took to start, how long changes took to reach the Admin, the requests a minute on each side, and the time spent copying the page.
 - **Autosave** (`.github/scripts/autosave.cjs`): nothing is sent while the trainee types or glances at another tab; the tab away for a while sends the case once, and nothing again when nothing changed; offline sends nothing and says the work is kept here, and the connection back sends it; a suspended page (`freeze`) and a closing page send it; a case never saved isn't sent while the page closes; a save that never got through is sent on the next visit (and a visit with nothing unsaved sends nothing); the idle archive sends only unsaved work.
 - **New versions** (`.github/scripts/cms-update.cjs`, in the same job): a test server that answers like Cloudflare Pages (scripts and stylesheets with an ETag, the page without one), with "deploying" a new file. It checks that:
   - the page watches its own scripts, stylesheets and page, and nothing from a CDN; with nothing new deployed, nothing happens;
