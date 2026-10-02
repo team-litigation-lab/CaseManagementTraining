@@ -26,6 +26,23 @@ async function adminPasswordOk(env, password) {
     for (const want of adminPasswords(env)) if (await sameSecret(password, want)) ok = true;
     return ok;
 }
+// Wrong passwords count against the connection (its IP), so the admin password can't be guessed by trying:
+// after ADMIN_TRIES_PER_HOUR wrong ones in an hour, sign-ins with a password wait for the next hour. The count
+// shares guest-login.js's table (_guest.js), keyed "admin:<ip>"; if that table isn't there yet, nothing is limited.
+const ADMIN_TRIES_PER_HOUR = 20;
+async function wrongPasswords(db, request, add) {
+    const ip = 'admin:' + (request.headers.get('CF-Connecting-IP') || 'unknown');
+    const hour = Math.floor(Date.now() / 3600000);
+    try {
+        const r = await db.prepare(`SELECT window_start, count FROM guest_login_rate WHERE ip = ?`).bind(ip).first();
+        const count = r && r.window_start === hour ? r.count : 0;
+        if (!add) return count;
+        await db.prepare(`INSERT INTO guest_login_rate (ip, window_start, count) VALUES (?, ?, ?)
+                          ON CONFLICT(ip) DO UPDATE SET window_start = excluded.window_start, count = excluded.count`).bind(ip, hour, count + 1).run();
+        return count + 1;
+    } catch (e) { return 0; }
+}
+const TOO_MANY = () => json({ success: false, error: 'Too many wrong passwords from this network. Please wait up to an hour and try again.' }, 429);
 // A trainer's own Admin account, by name, made on first use (with no usable password
 // of its own: the admin password is the key, as for the Master Account).
 async function trainerUser(db, name) {
@@ -76,7 +93,11 @@ export async function onRequestPost({ request, env }) {
         const rawName = String(body.name || '').trim();
         const name = rawName ? cleanGuestName(rawName) : '';
         if (rawName && !name) return json({ success: false, error: 'Enter your first and last name (letters, spaces, hyphens or apostrophes; up to 60 characters), or leave it blank to sign in as the Master Account.' }, 400);
-        if (!(await adminPasswordOk(env, String(password)))) return json({ success: false, error: 'Incorrect admin password.' }, 401);
+        if (await wrongPasswords(db, request, false) >= ADMIN_TRIES_PER_HOUR) return TOO_MANY();
+        if (!(await adminPasswordOk(env, String(password)))) {
+            await wrongPasswords(db, request, true);
+            return json({ success: false, error: 'Incorrect admin password.' }, 401);
+        }
         user = name ? await trainerUser(db, name) : await adminPortalUser(db);
         if (user && user.revoked) return json({ success: false, error: 'Access for this name has been revoked by an administrator.' }, 403);
         if (!user) return json({ success: false, error: 'Couldn\'t open your trainer account. Please try again.' }, 500);
@@ -99,8 +120,10 @@ export async function onRequestPost({ request, env }) {
         const trainee = !!(user && user.user_type === 'Trainee') && !portalOnly(env);
         // Any other account needs its own password (an older tab may still send a Batch ID: a trainee doesn't need it).
         const secret = String(password || body.batchId || '');
+        if (!trainee && secret && await wrongPasswords(db, request, false) >= ADMIN_TRIES_PER_HOUR) return TOO_MANY();
         usedPassword = !trainee && !!secret && !!user && !String(user.password || '').startsWith('disabled:') && await verifyPassword(secret, user.password);
         if (!trainee && !usedPassword) {
+            if (secret) await wrongPasswords(db, request, true);
             return json({ success: false, error: secret && portalMode !== 'Trainee' ? 'Incorrect username or password.' : 'No trainee account is registered under that username.' }, 401);
         }
         if (usedPassword && isLegacyPlaintext(user.password)) await upgradePasswordHash(db, user.id, secret);

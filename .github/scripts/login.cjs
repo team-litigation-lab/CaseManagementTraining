@@ -9,8 +9,8 @@
 // and the older ADMIN_PORTAL_PASSWORD both work; a wrong admin password, a bad
 // name and no admin password set up are refused; "trainer-" usernames can't be
 // registered; a session stays alive with a heartbeat up to 2 minutes old (a
-// background tab) and ends after that; /api/state lists the last minute's pings,
-// with their age measured on the server; an approved trainee signs in with the
+// background tab) and ends after that; /api/state lists the last minute's pings sent to
+// whoever asks (none signed out, and never who else a ping went to), with their age measured on the server; an approved trainee signs in with the
 // username alone (typed with other capitals too, when only one trainee has it), never an
 // Admin account, and a registration waiting for approval or a revoked one is still refused; registration
 // asks for just the full name, Batch ID and username (no grayed-out field), keeps the
@@ -238,9 +238,14 @@ const failures = []; const fail = (m) => failures.push(m);
     sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('old', '__all__', 'A', ago(300));
     sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('[TASK] first', JSON.stringify(['tia', 'bo']), 'A', ago(5));
     sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('[TASK] second', 'tia', 'A', ago(2));
-    const st = await (await stateApi.onRequestGet({ env })).json();
+    // ...only the asker's own: Tia's two (the one sent to Tia and Bo says just [tia]); signed out, none
+    const tiaCookie = (await post({ username: 'tia', portalMode: 'Trainee' })).cookie.match(/lsh_session=[^;]+/)[0];
+    const st = await (await stateApi.onRequestGet({ request: new Request('http://x/api/state', { headers: { Cookie: tiaCookie } }), env })).json();
     const got = (st.pings || []).map(p => `${p.text}@${Math.round(p.ageMs / 1000)}`).join(',');
-    if (got !== '[TASK] second@2,[TASK] first@5' || !Array.isArray(st.pings[1].target) || st.ping.text !== '[TASK] second' || typeof st.ping.ageMs !== 'number') fail(`/api/state's pings are wrong: ${JSON.stringify(st.pings)} / ${JSON.stringify(st.ping)}`);
+    if (got !== '[TASK] second@2,[TASK] first@5' || JSON.stringify(st.pings[1].target) !== '["tia"]' || st.ping.text !== '[TASK] second' || typeof st.ping.ageMs !== 'number') fail(`/api/state's pings are wrong: ${JSON.stringify(st.pings)} / ${JSON.stringify(st.ping)}`);
+    if (/\bbo\b/.test(JSON.stringify(st))) fail('/api/state told Tia who else a ping went to');
+    const anon = await (await stateApi.onRequestGet({ request: new Request('http://x/api/state'), env })).json();
+    if ((anon.pings || []).length || anon.ping) fail(`/api/state gave pings to someone signed out: ${JSON.stringify(anon.pings)}`);
     const gone = await oldCal.onRequestGet({ request: new Request('http://x/api/training-calendar'), env });
     const mj = await gone.json();
     if (gone.status !== 410 || !/Reload the page/.test(mj.error || '')) fail('the old Training Calendar endpoint does not tell the tab to reload');

@@ -10,7 +10,8 @@ export async function onRequestPost({ request, env }) {
             // pairs this 'logout' row with the matching earlier 'login' row
             // (same actor_username) to compute session duration. Without this
             // call, every session showed a login with no matching logout.
-            await logActivity(env.DB, payload.username, payload.batchId, 'logout', null);
+            // { iat }: which sign-in ended, so that session can't be brought back by a heartbeat (heartbeat.js).
+            await logActivity(env.DB, payload.username, payload.batchId, 'logout', { iat: payload.iat });
         }
     } catch (e) {
         console.error('logout heartbeat cleanup failed', e);

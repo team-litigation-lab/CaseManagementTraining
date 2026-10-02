@@ -237,7 +237,9 @@
     window.ttExport = function () {
         const rows = [['Date', 'Trainee', 'Client / case', 'Case ID', 'Activity', 'Description', 'Billable', 'Time (h:mm)', 'Billed hours']]
             .concat(T.entries.map(e => [e.date, e.ownerName, e.caseLabel, shownRef(e.caseRef), e.activity, e.description, e.billable ? 'Yes' : 'No', hm(e.seconds), e.hours.toFixed(1)]));
-        const csv = rows.map(r => r.map(v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+        // A typed cell starting = + - @ (or a tab/return) would run as a formula in Excel: a leading ' keeps it text.
+        const cell = (v) => { let t = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(t) && !/^-?\d+(\.\d+)?$/.test(t)) t = "'" + t; return `"${t.replace(/"/g, '""')}"`; };
+        const csv = rows.map(r => r.map(cell).join(',')).join('\r\n');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
         a.download = T.view === 'case' ? `time-${(openCase() || { label: 'case' }).label.replace(/[^\w-]+/g, '-')}.csv` : `timesheet-${T.anchor}.csv`;
