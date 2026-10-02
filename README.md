@@ -278,7 +278,7 @@ The top of the case is the client's demographics. Each box has its label above i
 
 The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in either changes both. Only the Profile tab's is saved, so cases saved before keep every field where it was (`data-mirror` in `app.js`).
 
-**Client's ID** is the small card in the middle of the header (`client-id.js`):
+**Client's ID** is the card in the middle of the header (`client-id.js`). In a narrower window the right side (case number, status, search) gives up room first, then the ID card, and the client's boxes least; if the header still doesn't fit, the case is shown smaller (`case-fit.js` counts the header too).
 - **A Training Library client** has a **mock ID** made from their file: name, date of birth, address, and an ID number of its own. It's marked *SPECIMEN · for training only · not a government ID*, follows no real state's design, and has a drawn silhouette, not a photo. A trainee's saved work on a library file shows that client's mock ID too.
 - **Any other client:** **⬆ Upload ID** takes a photo or scan of their ID (JPG, PNG or WebP).
   - The photo is redrawn at most 1,600 px on its long side as a JPG before it's sent. That keeps it under the 2 MB upload limit and leaves the photo's location data behind.
@@ -783,7 +783,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - a saved case on a library file shows that client's mock ID;
   - Upload ID refuses a file that isn't a picture and sends a large photo as a JPG under 2 MB;
   - the card shows the uploaded ID, it's saved with the case, comes back when the case is opened again, and Remove takes it off;
-  - with the site's styles, at 1440 px the header fits its card with the ID card in the middle. Without them, run it with `TAILWIND_JS` set to a copy of Tailwind.
+  - with the site's styles, at 1440 px the header fits its card with the ID card in the middle, at least 180 px wide; at 1280 px everything stays inside the card and "CASE ID:" stays on one line. Without the styles, run it with `TAILWIND_JS` set to a copy of Tailwind.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
   - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;

@@ -174,10 +174,21 @@ const failures = []; const fail = (m) => failures.push(m);
             const phase = r(document.getElementById('display-phase')), bar = r(document.getElementById('cl-bar'));
             return { cardR: card.right, rightR: Math.max(right.right, phase.right, bar ? bar.right : 0), leftR: left.right, idL: id.left, idR: id.right, rightL: right.left, zoom: getComputedStyle(document.body).getPropertyValue('--case-zoom') || '1' };
         });
-        if (lay.rightR > lay.cardR + 1 || !(lay.leftR <= lay.idL && lay.idR <= lay.rightL)) fail(`at 1440 px the header doesn't fit its card, or the ID card isn't in the middle: ${JSON.stringify(lay)}`);
+        if (lay.rightR > lay.cardR + 1 || !(lay.leftR <= lay.idL && lay.idR <= lay.rightL) || lay.idR - lay.idL < 180) fail(`at 1440 px the header doesn't fit its card, or the ID card isn't in the middle at a good size: ${JSON.stringify(lay)}`);
+        // a narrower window: everything still inside the card ("CASE ID:" on one line), shrunk or zoomed to fit
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await page.evaluate(() => { blankCaseEditorContent(); generateCaseId(); lshFitCase(); }); await page.waitForTimeout(600);
+        const narrow = await page.evaluate(() => {
+            const r = (el) => el.getBoundingClientRect(), card = r(document.querySelector('.header-card'));
+            const lab = document.getElementById('case-id-field').previousElementSibling;
+            const parts = ['#cl-bar', '#display-phase', '#case-id-field', '#kx-client-id', '.hdr-client'].map(sel => document.querySelector(sel)).filter(Boolean);
+            return { cardR: Math.round(card.right), maxR: Math.round(Math.max(...parts.map(el => r(el).right))), labelLines: Math.round(r(lab).height / parseFloat(getComputedStyle(lab).lineHeight || '12')), idText: document.getElementById('case-id-field').textContent };
+        });
+        if (narrow.maxR > narrow.cardR + 1 || narrow.labelLines > 1 || narrow.idText !== 'Assigned on Save Case') fail(`at 1280 px the header sticks out of its card, or "CASE ID:" wraps: ${JSON.stringify(narrow)}`);
+        await page.setViewportSize({ width: 1440, height: 900 });
     } else console.log('(The site\'s styles (Tailwind) didn\'t load here: the layout check was skipped. Set TAILWIND_JS to run it.)');
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); }
-    console.log(`Case header test passed (visible boxes, Client's Name label; the SSN beside Contact; mock IDs for ${all.length} library clients; Upload ID, saved and back; ${tailwind ? 'the layout at 1440 px' : 'layout not checked'}).`);
+    console.log(`Case header test passed (visible boxes, Client's Name label; the SSN beside Contact; mock IDs for ${all.length} library clients; Upload ID, saved and back; ${tailwind ? 'the layout at 1440 and 1280 px' : 'layout not checked'}).`);
 })().catch(e => { console.error(e); process.exit(1); });

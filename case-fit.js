@@ -32,8 +32,13 @@
     document.head.appendChild(css);
 
     // Wider than its box? (The case's ✕ sits just outside the card's corner, inside the case's padding, so it
-    // doesn't count: the padding is set below as well as by the page's styles.)
-    const over = (ca) => ca.scrollWidth > ca.clientWidth + 1;
+    // doesn't count: the padding is set below as well as by the page's styles.) The case header counts too: its
+    // right side (status, search) sticking out of the card is too wide, even while it's still inside that padding.
+    const over = (ca) => {
+        if (ca.scrollWidth > ca.clientWidth + 1) return true;
+        const row = ca.querySelector('.header-card > .flex.justify-between');
+        return !!(row && row.offsetParent && row.scrollWidth > row.clientWidth + 1);
+    };
     let watch = null, watchUntil = 0, pressed = false;
     // Never change the case's size under someone's mouse: not while a button is down or a drag is on.
     ['pointerdown', 'dragstart'].forEach(t => document.addEventListener(t, () => { pressed = true; }, true));
