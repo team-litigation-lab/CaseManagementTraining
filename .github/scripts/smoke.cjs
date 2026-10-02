@@ -14,7 +14,7 @@
 // calendar (the Firm Calendar; calendar.cjs tests it) and no .ics downloads. The Caller
 // scenarios panel (with its reception call scripts) is for Admins only, on every file.
 // Trainees never see the Training Library (its files are tagged by case number), and
-// an Admin's Trainee view shows the trainee screens, then switches back.
+// an Admin's Trainee view shows the trainee screens (no floating bar), then switches back from the sidebar.
 // Intake folder: a typed intake saved from Intake mode (autosave and Save Case file
 // it there, never as a case), reviewed, moved to the case files; a document uploaded.
 // Fails on any page error.
@@ -470,15 +470,16 @@ const SAVED = [
     await admin.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('notes'); });
     await admin.waitForSelector('#capture-area.mock-upd-ready', { timeout: 5000 }).catch(() => fail('in Trainee view the library case\'s Notes never opened for editing'));
     const tv = await admin.evaluate(() => ({ type: getSession().userType, real: getRealSession().userType, bar: !!document.querySelector('#trainee-view-bar'),
+        back: !!(document.querySelector('#session-footer button[onclick="setTraineeView(false)"]') || {}).offsetParent,
         lib: !!(document.getElementById('lib-open-btn') || {}).offsetParent, mc: !!document.querySelector('#session-footer button[onclick="openAdminDashboard()"]'),
         calls: !!document.querySelector('#mock-banner button[onclick="openCallsPanel()"]'), text: /training library/i.test(document.body.innerText),
         openLib: !!(document.getElementById('cl-open-btn') || {}).offsetParent, viewOnly: mockIsViewOnly(),
         tools: !!(document.getElementById('sb-trainer') || {}).offsetParent, updates: !!(document.getElementById('cl-updates-btn') || {}).offsetParent }));
-    if (tv.type !== 'Trainee' || tv.real !== 'Admin' || !tv.bar || tv.lib || tv.mc || tv.calls || tv.text || tv.openLib || !tv.viewOnly || tv.tools || tv.updates) fail(`Trainee view doesn't look like a trainee's screen: ${JSON.stringify(tv)}`);
+    if (tv.type !== 'Trainee' || tv.real !== 'Admin' || tv.bar || !tv.back || tv.lib || tv.mc || tv.calls || tv.text || tv.openLib || !tv.viewOnly || tv.tools || tv.updates) fail(`Trainee view doesn't look like a trainee's screen: ${JSON.stringify(tv)}`);
     await admin.click('#pane-notes .add-btn');
     await admin.click('#note-body tr:last-child td:nth-child(3) [contenteditable]');
     await admin.keyboard.type('Typed right before trainer view');
-    await Promise.all([admin.waitForNavigation({ waitUntil: 'load' }), admin.click('#trainee-view-bar button')]);
+    await Promise.all([admin.waitForNavigation({ waitUntil: 'load' }), admin.click('#session-footer button:has-text("Back to trainer view")')]);
     if (!adminUpdates.some(b => b.includes('Typed right before trainer view'))) fail('a note typed on a library case just before leaving Trainee view was not saved');
     await admin.waitForTimeout(1200);
     const back = await admin.evaluate(() => ({ type: getSession().userType, bar: !!document.querySelector('#trainee-view-bar'), lib: !!(document.getElementById('lib-open-btn') || {}).offsetParent }));
