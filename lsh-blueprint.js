@@ -1,8 +1,9 @@
 /* =========================================================
    🧭 LSH BLUEPRINT — the same file on every LSH platform (change it in one, copy it to all)
-   A full-screen slide deck that explains a platform, in two versions:
+   A full-screen slide deck that explains a platform, in two versions (three where a platform has an Admin deck):
    - the Trainee blueprint, for trainees;
-   - the Trainer blueprint, for admins only.
+   - the Trainer blueprint, for admins only;
+   - the Admin blueprint (optional), for whoever canAdmin() says: the person who runs the platform itself.
    Trainees (and an admin in Trainee view) get the trainee deck only; admins get both as tabs,
    so they can share the Trainee blueprint in Google Meet. ◀ ▶, the ← → keys or the contents strip
    move through it; Esc closes it. ⬇ Download PDF saves the deck that's showing: a landscape PDF,
@@ -16,13 +17,15 @@
      file      the PDF file name's start, e.g. "LSH_CMS" → LSH_CMS_Blueprint_Trainee.pdf
      logo      an image for the navy cover band (the white-lettered LSH logo)
      trainee   { sub, slides } or null      trainer   { sub, slides } or null
+     admin     { sub, slides } or null (optional), shown only when canAdmin() returns true
                a slide is { icon, title, points: [...], where, tip }
+     canAdmin()   optional: may this admin see the Admin blueprint? (no function: nobody does)
      role()    'trainer' (an admin, not in Trainee view), 'trainee', or null (signed out)
      version() the platform's version (a string, or a Promise of one)
      mount(html)  optional: puts the "🧭 Blueprint" button (html) where the platform wants it
      traineeTab   optional { label, open() }: the trainee deck lives elsewhere (the courses'
                   Orientation); the tab calls open() instead of showing a deck
-   API: LSHBlueprint.open('trainer'|'trainee'), .close(), .go(n, absolute), .deck(which), .pdf()
+   API: LSHBlueprint.open('admin'|'trainer'|'trainee'), .close(), .go(n, absolute), .deck(which), .pdf()
    ========================================================= */
 (function () {
     'use strict';
@@ -31,7 +34,9 @@
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const cfg = () => window.LSH_BLUEPRINT || {};
     const role = () => { try { return (cfg().role && cfg().role()) || null; } catch (e) { return null; } };
-    const NAMES = { trainee: 'Trainee blueprint', trainer: 'Trainer blueprint' };
+    const NAMES = { trainee: 'Trainee blueprint', trainer: 'Trainer blueprint', admin: 'Admin blueprint' };
+    const FILES = { trainee: 'Trainee', trainer: 'Trainer', admin: 'Admin' };
+    const canAdmin = () => { try { return typeof cfg().canAdmin === 'function' && !!cfg().canAdmin(); } catch (e) { return false; } };
     const deckOf = (which) => { const d = cfg()[which]; return d && d.slides && d.slides.length ? Object.assign({ key: which, name: NAMES[which] }, d) : null; };
     let cur = 'trainee', at = 0, version = '';
 
@@ -71,7 +76,7 @@
     .lbp-cover-sub{margin:0 0 26px;font-size:26px;color:#334155;font-weight:600}
     .lbp-contents{list-style:none;margin:0;padding:0;columns:2;column-gap:50px;flex:1}
     .lbp-contents li{break-inside:avoid;display:flex;align-items:center;gap:14px;font-size:calc(22px * var(--lbp-k,1));color:#1e293b;margin-bottom:calc(15px * var(--lbp-k,1))}
-    .lbp-contents li span{flex:0 0 auto;width:32px;height:28px;border-radius:6px;background:#f97316;color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center}
+    .lbp-contents li span{flex:0 0 auto;width:calc(32px * var(--lbp-k,1));height:calc(28px * var(--lbp-k,1));border-radius:6px;background:#f97316;color:#fff;font-size:calc(15px * var(--lbp-k,1));font-weight:800;display:flex;align-items:center;justify-content:center}
     .lbp-version{font-size:14px;font-weight:700;color:#94a3b8;letter-spacing:.03em}
     .lbp-card{height:100%;display:flex;flex-direction:column}
     .lbp-head{display:flex;align-items:center;gap:24px;background:#0f2148;padding:30px 52px 28px;border-bottom:6px solid #f97316}
@@ -180,10 +185,12 @@
         slide.classList.toggle('portrait', portrait);
         slide.style.width = BW + 'px'; slide.style.height = BH + 'px';
         slide.style.transform = `translate(-50%, -50%) scale(${Math.max(0.1, Math.min(W / BW, H / BH))})`;
-        // a slide with a lot to say: its text gets a little smaller until it all fits (down to 70%)
+        // a slide with a lot to say: its text gets a little smaller until it all fits (down to 70%; a long
+        // deck's cover, which is only its contents, down to 50%)
         const main = slide.querySelector('.lbp-main, .lbp-cover-body');
+        const floor = main && main.classList.contains('lbp-cover-body') ? 0.5 : 0.7;
         let k = 1; slide.style.setProperty('--lbp-k', '1');
-        while (main && k > 0.7 && (main.scrollHeight > main.clientHeight + 1 || [...main.children].some(e => e.scrollHeight > e.clientHeight + 1))) {
+        while (main && k > floor && (main.scrollHeight > main.clientHeight + 1 || [...main.children].some(e => e.scrollHeight > e.clientHeight + 1))) {
             k = Math.round((k - 0.05) * 100) / 100; slide.style.setProperty('--lbp-k', String(k));
         }
     }
@@ -191,6 +198,7 @@
     // which decks this person may see
     function allowed() {
         const r = role(), out = [];
+        if (r === 'trainer' && deckOf('admin') && canAdmin()) out.push('admin');
         if (r === 'trainer' && deckOf('trainer')) out.push('trainer');
         if (r && (deckOf('trainee') || (r === 'trainer' && cfg().traineeTab))) out.push('trainee');
         return out;
@@ -244,7 +252,7 @@
         isOpen() { const p = $id('lbp-page'); return !!(p && p.classList.contains('open')); },
         current() { return { deck: cur, slide: at }; },
         pdf: (which) => makePdf(which),
-        decks: () => ({ trainee: deckOf('trainee'), trainer: deckOf('trainer') }),
+        decks: () => ({ trainee: deckOf('trainee'), trainer: deckOf('trainer'), admin: deckOf('admin') }),
         refresh: mount
     };
     window.LSHBlueprint = API;
@@ -368,7 +376,7 @@
             await loadJsPdf();
             if (!version) await loadVersion();
             const doc = buildPdf(d, await imageData(cfg().logo));
-            const name = `${cfg().file || 'LSH'}_Blueprint_${key === 'trainer' ? 'Trainer' : 'Trainee'}.pdf`;
+            const name = `${cfg().file || 'LSH'}_Blueprint_${FILES[key] || 'Trainee'}.pdf`;
             doc.save(name);
             return { name, pages: doc.getNumberOfPages(), version };
         } catch (e) {
