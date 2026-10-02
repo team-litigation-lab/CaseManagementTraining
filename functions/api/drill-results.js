@@ -57,9 +57,11 @@ export async function onRequestPost({ request, env }) {
     const { session } = auth;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
-    const calls = Math.max(1, Math.min(50, parseInt(body.calls, 10) || 0));
-    const details = JSON.stringify(Array.isArray(body.details) ? body.details.slice(0, 50) : []);
-    if (details.length > 20000) return json({ success: false, error: 'Result too large.' }, 413);
+    // A whole drill fits: every call in the pool (61 today), each live call with its transcript (up to 4,000
+    // characters, front-desk-drill.js), well inside D1's 2 MB row.
+    const calls = Math.max(1, Math.min(100, parseInt(body.calls, 10) || 0));
+    const details = JSON.stringify(Array.isArray(body.details) ? body.details.slice(0, 100) : []);
+    if (details.length > 600000) return json({ success: false, error: 'Result too large.' }, 413);
     await ensureTable(env.DB);
     const userRow = await env.DB.prepare(`SELECT first_name, mi, last_name, suffix FROM users WHERE username = ?`).bind(session.username).first();
     await env.DB.prepare(

@@ -823,7 +823,7 @@
     #capture-area.mock-ro #chrono-container > tr > td:first-child::before, #capture-area.mock-ro .kx-x, #capture-area.mock-ro .doc-drop { display: none !important; }
     @media print { #chrono-container > tr > td:first-child::before { display: none; } }
     /* tasks an Admin sent: waiting for Accept */
-    #task-inbox { position: fixed; right: 18px; bottom: 18px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; max-width: 340px; }
+    #task-inbox { position: fixed; right: 18px; bottom: 18px; z-index: 2500;   /* over windows (1500), under the alert (2600) and pause (2800) screens */ display: flex; flex-direction: column; gap: 10px; max-width: 340px; }
     /* Clear of the Front Desk panel (front-desk-drill.js) and its "Back to the call" button, so a task card never covers their buttons. */
     body:has(#fdd-panel.open) #task-inbox { right: calc(min(500px, 100vw) + 18px); }
     body:has(#fdd-mini[style*="block"]) #task-inbox { bottom: 74px; }

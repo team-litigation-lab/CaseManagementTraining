@@ -134,6 +134,9 @@
     // blankCaseEditorContent() calls this: any wipe of the editor ends library mode.
     window.mockReset = function () {
         mockId = null; mockViewOnly = false; mockEditing = false; mockMine = false; viewReason = '';
+        // Leaving a case file still loading (another case, a new one, Close, signing out): nothing more of it lands,
+        // and the editor isn't left shut. (showBase clears the editor too, while a case file loads: not leaving.)
+        if (!inShowBase) { openSeq++; const area = $id('capture-area'); if (area) area.classList.remove('mock-loading'); }
         setReadOnly(false);
         paintBanner();
     };
@@ -930,8 +933,10 @@
         } catch (e) { return { ok: false }; }
     }
     // The library version on screen: the original from mock-cases.js (with any known edit's facts).
+    let inShowBase = false;
     function showBase(c) {
-        if (typeof blankCaseEditorContent === 'function') blankCaseEditorContent();
+        inShowBase = true;
+        try { if (typeof blankCaseEditorContent === 'function') blankCaseEditorContent(); } finally { inShowBase = false; }
         if (typeof revertOther === 'function') revertOther('main-case-type', 'main-case-other', 'main-revert');
         fillCase(c);
         // The file's case number, as on a real file (the banner says it's a library case).
@@ -1119,10 +1124,13 @@
         // An Admin's edit of this case (if any) replaces the original, then a trainee's own work (or Notes and Tasks) goes on top.
         // A copy stays shut until what goes on top of it is in, so nothing is typed over the wrong version.
         const seq = ++openSeq, area = $id('capture-area');
+        if (area) area.classList.remove('mock-loading');   // (one still loading was left for this one)
         if (area && (editor || mine || edits[c.id])) area.classList.add('mock-loading');
+        // Left before it finished loading (another case, a new one, Close): the editor opens again unless a newer case file is loading.
+        const stop = () => { if (seq === openSeq && area) area.classList.remove('mock-loading'); };
         fetchEdit(c.id).then(async r => {
             const current = () => seq === openSeq && mockId === c.id && (editor ? mockEditing : mine ? mockMine : mockViewOnly);
-            if (!current()) return;
+            if (!current()) return stop();
             if (r.ok) showEdit(c, r.edit);
             if (editor && !r.ok) { // can't tell what the library has now: don't let an edit of an old version go over it
                 mockEditing = false; mockViewOnly = true; setReadOnly(true); paintBanner();
@@ -1130,14 +1138,14 @@
             }
             if (mine) {
                 const m = r.ok ? await fetchMine(c.id) : { ok: false };
-                if (!current()) return;
+                if (!current()) return stop();
                 if (!m.ok) { // can't tell whether they saved work on this file before: view only, so a save can't go over it
                     mockMine = false; mockViewOnly = true; viewReason = 'error'; paintBanner();
                     if (typeof showToast === 'function') showToast('Couldn\'t load your saved work on this case file, so it\'s view only for now (you can still add Notes and Tasks). Reopen it to work on it.', 'error', 6000);
                 } else {
                     if (m.saved) showMine(c, m.saved, !!opts.fresh);
                     else {
-                        const u = await fetchUpdates(c.id); if (!current()) return;
+                        const u = await fetchUpdates(c.id); if (!current()) return stop();
                         if (u) showUpdates(u); // their Notes and Tasks from before carry over
                         if (typeof noteServerCopy === 'function') noteServerCopy(); // only their changes from here on are work to save
                     }

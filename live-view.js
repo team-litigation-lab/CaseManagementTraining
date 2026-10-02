@@ -355,6 +355,7 @@
                 stats.sends++; stats.bytes += text.length; if (body.screen.data) stats.screens++;
                 const r = await fetch('/api/live-screen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: text });
                 const d = await r.json().catch(() => null);
+                if (r.status === 401) { setWatched(false); return; }   // signed out or expired: nothing more goes
                 if (r.ok && d && d.success) {
                     ok = true;
                     if (!d.watched) setWatched(false);   // the trainer stopped watching

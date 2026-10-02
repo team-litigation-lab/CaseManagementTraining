@@ -27,6 +27,7 @@
             return true;
         }
         function blankCaseEditorContent() {
+            _editorGen++;
             // Wipes any case content currently sitting in the DOM so a
             // hidden/removed overlay can't expose it.
             //
@@ -165,6 +166,10 @@
 
         let currentCaseId = null; // server-side case_repository row id (null = never saved)
         let _syncedSig = null; // fingerprint of the server's copy of the case in the editor (caseSig, autosave)
+        // Which case the editor holds: changes whenever the editor is cleared or another case goes in (New, Close,
+        // Discard, opening a case). A save still on its way when that happens belongs to the case it was sent for:
+        // its answer doesn't attach that case's id to whatever the editor holds now.
+        let _editorGen = 0;
         let currentCaseIsDraft = false; // true = loaded/created case has NO permanent Case ID yet
         let currentCaseCanEdit = true; // false when viewing a foreign case read-only (not owner/admin)
         let _emptyCaptureAreaTemplate = null; // pristine clone of #capture-area, captured once at load, used to render read-only previews of OTHER users' cases without touching the live editor
@@ -236,7 +241,7 @@
         window.normalizePhase = normalizePhase;
         // A saved select value the status list no longer has (an old phase name): put the matching status in.
         function fixPhaseSelect(selects, saved) {
-            const sel = selects.find(el => el.id === 'phase-selector'); if (!sel) return;
+            const sel = selects.find(el => el && el.id === 'phase-selector'); if (!sel) return;
             const v = saved[selects.indexOf(sel)];
             if (v && sel.value !== v) sel.value = normalizePhase(v);
         }
@@ -584,13 +589,34 @@
         // (data-mirror: a second view of another field, e.g. the header's SSN; not saved itself)
         const posEdits = (root) => Array.from((root || document).querySelectorAll('[contenteditable="true"]')).filter(el => !el.closest('[data-keyed]') && !el.hasAttribute('data-mirror'));
         const posSels = (root) => Array.from((root || document).querySelectorAll('select')).filter(el => !el.closest('[data-keyed]'));
+        // The dropdowns a saved case's values (sels) go back into, by position. They were saved from posSels() over
+        // the whole page, which starts with the dropdowns above the case editor (the clock's time zone, the program
+        // picker) and ends with those below it (sign-in, Master Control). Only the case's own get a value: opening
+        // a case never changes the clock's zone or a picker. A copy of the editor (a preview: Monitoring, Case Logs,
+        // the live view) holds only the case's own, so the ones above it are counted in front.
+        function savedSelects(root) {
+            const area = document.getElementById('capture-area'), all = posSels(document);
+            if (!root || root === document) return all.map(el => (area && area.contains(el) ? el : null));
+            const before = area ? all.filter(el => !area.contains(el) && (area.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING)).length : 0;
+            return new Array(before).fill(null).concat(posSels(root));
+        }
         const _keyedTemplates = {};
         document.querySelectorAll('[data-keyed="rows"][id]').forEach(el => { _keyedTemplates[el.id] = el.innerHTML; });
         const keyedFields = (el) => (el.matches('[contenteditable="true"], select') ? [el] : []).concat(Array.from(el.querySelectorAll('[contenteditable="true"], select')));
+        // A Training Library case file locks the dropdowns outside the trainee's areas (training-library.js:
+        // disabled + data-mock-ro). The lock is the library's, not the case's: it's left out of what's saved, so a
+        // saved case never opens with dead dropdowns, and locking or unlocking an area isn't an edit.
+        function savedHtml(el) {
+            if (!el) return '';
+            if (!el.querySelector('[data-mock-ro]')) return el.innerHTML;
+            const copy = el.cloneNode(true);
+            copy.querySelectorAll('[data-mock-ro]').forEach(x => { x.removeAttribute('disabled'); x.removeAttribute('data-mock-ro'); });
+            return copy.innerHTML;
+        }
         function captureKeyed(root) {
             const out = {};
             (root || document).querySelectorAll('[data-keyed][id]').forEach(el => {
-                if (el.dataset.keyed === 'rows') { out[el.id] = { html: el.innerHTML, sels: Array.from(el.querySelectorAll('select')).map(x => x.value) }; return; }
+                if (el.dataset.keyed === 'rows') { out[el.id] = { html: savedHtml(el), sels: Array.from(el.querySelectorAll('select')).map(x => x.value) }; return; }
                 const fields = {};
                 keyedFields(el).forEach((x, i) => { fields[x.dataset.k || i] = x.tagName === 'SELECT' ? x.value : x.innerHTML; });
                 out[el.id] = { fields };
@@ -717,18 +743,18 @@
                     emergencyName: textOf('emergency-name-field'), emergencyPhone: textOf('emergency-phone-field')
                 },
                 html: {
-                    pass: document.getElementById('passenger-container').innerHTML,
-                    facs: document.getElementById('facility-container').innerHTML,
-                    chrono: document.getElementById('chrono-container').innerHTML,
-                    fin: document.getElementById('fin-body').innerHTML,
-                    pipum: document.getElementById('pip-um-container').innerHTML,
-                    bi: document.getElementById('bi-container').innerHTML,
-                    docs: document.getElementById('doc-body').innerHTML,
-                    lit: document.getElementById('lit-body').innerHTML,
-                    liens: document.getElementById('lien-container').innerHTML,
-                    notes: document.getElementById('note-body').innerHTML,
-                    tasks: document.getElementById('task-body').innerHTML,
-                    police: document.getElementById('police-body').innerHTML
+                    pass: savedHtml(document.getElementById('passenger-container')),
+                    facs: savedHtml(document.getElementById('facility-container')),
+                    chrono: savedHtml(document.getElementById('chrono-container')),
+                    fin: savedHtml(document.getElementById('fin-body')),
+                    pipum: savedHtml(document.getElementById('pip-um-container')),
+                    bi: savedHtml(document.getElementById('bi-container')),
+                    docs: savedHtml(document.getElementById('doc-body')),
+                    lit: savedHtml(document.getElementById('lit-body')),
+                    liens: savedHtml(document.getElementById('lien-container')),
+                    notes: savedHtml(document.getElementById('note-body')),
+                    tasks: savedHtml(document.getElementById('task-body')),
+                    police: savedHtml(document.getElementById('police-body'))
                 },
                 inputs: posEdits().map(el => el.innerHTML),
                 sels: posSels().map(el => el.value),
@@ -764,7 +790,7 @@
 
             const edits = posEdits(root);
             (content.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = cleanCaseHtml(v); });
-            const selects = posSels(root);
+            const selects = savedSelects(root);
             (content.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
             fixPhaseSelect(selects, content.sels || []);
             applyKeyed(content.keyed, root);
@@ -853,41 +879,25 @@
            is auto-archived/reassigned via the inactivity prompt.
            ========================================================= */
         const CURRENT_DRAFT_KEY = 'LSH_CURRENT_EDITOR_DRAFT_V1';
-        let _draftRestoredThisLoad = false; // ensures restoreCurrentEditorState() only auto-runs once per page load
+        let _draftRestoredFor = null; // who restoreCurrentEditorState() last ran for: once per person signing in on this page
 
+        // The draft is the same content a save sends (buildCaseContentPayload: Attorney and Case Manager
+        // included, so a refresh never blanks them on the server), plus what the editor needs to carry on,
+        // and whose it is (owner): it only ever comes back for that person (restoreCurrentEditorState).
         function persistCurrentEditorState() {
             if (!hasAuthorizedAccess()) return; // never persist a blanked/unauthorized DOM over a real draft
             try {
-                const snapshot = {
+                const snapshot = Object.assign(buildCaseContentPayload(), {
+                    owner: (getRealSession() || {}).username || null,
                     currentCaseId,
                     currentCaseIsDraft,
-                    caseType: document.getElementById('main-case-type') ? document.getElementById('main-case-type').value : null,
-                    caseTypeOther: document.getElementById('main-case-other') ? document.getElementById('main-case-other').innerHTML : '',
-                    caseTypeOtherVisible: !!(document.getElementById('main-case-other') && !document.getElementById('main-case-other').classList.contains('hidden')),
                     phase: document.getElementById('display-phase') ? document.getElementById('display-phase').innerText : 'INTAKE',
-                    html: {
-                        pass: document.getElementById('passenger-container').innerHTML,
-                        facs: document.getElementById('facility-container').innerHTML,
-                        chrono: document.getElementById('chrono-container').innerHTML,
-                        fin: document.getElementById('fin-body').innerHTML,
-                        pipum: document.getElementById('pip-um-container').innerHTML,
-                        bi: document.getElementById('bi-container').innerHTML,
-                        docs: document.getElementById('doc-body').innerHTML,
-                        lit: document.getElementById('lit-body').innerHTML,
-                        liens: document.getElementById('lien-container').innerHTML,
-                        notes: document.getElementById('note-body').innerHTML,
-                        tasks: document.getElementById('task-body').innerHTML,
-                        police: document.getElementById('police-body').innerHTML
-                    },
-                    inputs: posEdits().map(el => el.innerHTML),
-                    sels: posSels().map(el => el.value),
-                    keyed: captureKeyed(),
                     currentCaseCanEdit,
                     caseIdFieldText: document.getElementById('case-id-field') ? document.getElementById('case-id-field').innerText : '',
                     mock: window.mockSnapshot ? window.mockSnapshot() : null,
                     syncedSig: _syncedSig,   // what the server has: differs from this case = unsaved work (sent on the next visit)
                     savedAt: new Date().toISOString()
-                };
+                });
                 localStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(snapshot));
             } catch (e) { console.warn('Could not persist in-progress case:', e); }
         }
@@ -929,38 +939,13 @@
             let data;
             try { data = JSON.parse(raw); } catch (e) { return false; }
             if (!data) return false;
+            // Someone else's work on this computer (a shared one) never comes back for the next person.
+            const me = (getRealSession() || {}).username;
+            if (data.owner && data.owner !== me) return false;
             // A view-only Training Library case is reopened fresh from mock-cases.js.
             if (data.mock && window.mockRestore && window.mockRestore(data.mock)) return true;
             try {
-                const H = (k) => cleanCaseHtml((data.html && data.html[k]) || '');
-                document.getElementById('passenger-container').innerHTML = H('pass');
-                document.getElementById('facility-container').innerHTML = H('facs');
-                document.getElementById('chrono-container').innerHTML = H('chrono');
-                document.getElementById('fin-body').innerHTML = H('fin');
-                document.getElementById('pip-um-container').innerHTML = H('pipum');
-                document.getElementById('bi-container').innerHTML = H('bi');
-                document.getElementById('doc-body').innerHTML = H('docs');
-                document.getElementById('lit-body').innerHTML = H('lit');
-                document.getElementById('lien-container').innerHTML = H('liens');
-                document.getElementById('note-body').innerHTML = H('notes');
-                document.getElementById('task-body').innerHTML = H('tasks');
-                if (data.html && data.html.police) document.getElementById('police-body').innerHTML = H('police');
-
-                const edits = posEdits();
-                (data.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = cleanCaseHtml(v); });
-                const selects = posSels();
-                (data.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
-                fixPhaseSelect(selects, data.sels || []);
-                applyKeyed(data.keyed);
-
-                if (data.caseTypeOtherVisible && document.getElementById('main-case-type') && document.getElementById('main-case-other')) {
-                    document.getElementById('main-case-type').classList.add('hidden');
-                    document.getElementById('main-case-other').classList.remove('hidden');
-                    document.getElementById('main-case-other').innerHTML = cleanCaseHtml(data.caseTypeOther || '');
-                    if (document.getElementById('main-revert')) document.getElementById('main-revert').style.display = 'inline-block';
-                } else if (data.caseType && document.getElementById('main-case-type')) {
-                    document.getElementById('main-case-type').value = data.caseType;
-                }
+                applyCaseContentToDOM(data, document);
 
                 currentCaseId = (typeof data.currentCaseId === 'number') ? data.currentCaseId : null;
                 currentCaseIsDraft = !!data.currentCaseIsDraft;
@@ -972,13 +957,23 @@
                     generateCaseId();
                 }
                 if (data.phase) updatePhaseDisplay(data.phase);
-
-                if (typeof updateTotals === 'function') updateTotals();
-                toggleOwnerExtra();
-                toggleDriverInsuredExtra();
                 // Work the server never got (the page closed, crashed or lost power first): send it now.
                 _syncedSig = data.syncedSig || null;
-                setTimeout(() => saveOnInterruption('recovered'), 1500);
+                const recover = () => setTimeout(() => saveOnInterruption('recovered'), 1500);
+                // A draft kept before drafts held Attorney and Case Manager: take those two from the server's copy
+                // first, so sending the recovered work doesn't blank them. If that can't be read, nothing is sent.
+                if (!('attorney' in data) && currentCaseId !== null) {
+                    const id = currentCaseId;
+                    fetch('/api/case-repository?id=' + encodeURIComponent(id), { credentials: 'include' }).then(r => r.json()).then(d => {
+                        const c = d && d.success && d.case && d.case.content;
+                        if (!c || currentCaseId !== id) return;
+                        const a = document.getElementById('attorney-field'), m = document.getElementById('case-manager-field');
+                        if (a && !a.value) a.value = c.attorney || '';
+                        if (m && !m.value) m.value = c.caseManager || '';
+                        persistCurrentEditorState();
+                        recover();
+                    }).catch(() => {});
+                } else recover();
                 return true;
             } catch (e) {
                 console.warn('Could not restore in-progress case:', e);
@@ -1439,6 +1434,7 @@
             const clientName = (document.getElementById('client-name-field').innerText.split('\n')[0] || 'Unnamed Client').trim();
             const phase = document.getElementById('display-phase').innerText;
             const medTotal = document.getElementById('med-total') ? document.getElementById('med-total').innerText : '';
+            const gen = _editorGen, sig = caseSig();   // what's being sent (typing during the save is still unsaved)
             try {
                 const res = await fetch('/api/case-repository', {
                     method: 'POST',
@@ -1454,12 +1450,17 @@
                     if (quiet) return { ok: false, error: (data && data.error) || 'Unknown error.' };
                     alert('Could not save: ' + ((data && data.error) || 'Unknown error.')); return;
                 }
+                if (gen !== _editorGen) {   // the editor moved on to another case while this one was saving
+                    refreshRepoCache();
+                    if (quiet) return { ok: true, caseId: data.caseId };
+                    showToast(`${clientName} was saved (Case ID ${data.caseId}).`, 'success'); return;
+                }
                 const wasAlreadyFinal = (currentCaseId !== null && !currentCaseIsDraft);
                 currentCaseId = data.id;
                 currentCaseIsDraft = false;
                 currentCaseCanEdit = true;
                 document.getElementById('case-id-field').innerText = data.caseId;
-                noteServerCopy();
+                noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
                 if (quiet) return { ok: true, caseId: data.caseId };
@@ -1488,6 +1489,7 @@
             const phase = document.getElementById('display-phase').innerText;
             const medTotal = document.getElementById('med-total') ? document.getElementById('med-total').innerText : '';
             const targetId = (currentCaseId !== null && currentCaseIsDraft) ? currentCaseId : null;
+            const gen = _editorGen, sig = caseSig();
             try {
                 const res = await fetch('/api/case-repository', {
                     method: 'POST',
@@ -1497,11 +1499,12 @@
                 });
                 const data = await res.json();
                 if (!data || !data.success) { alert('Could not archive: ' + ((data && data.error) || 'Unknown error.')); return; }
+                if (gen !== _editorGen) { refreshRepoCache(); showToast(`${clientName} was archived as a draft.`, 'success'); return; }   // the editor moved on meanwhile
                 currentCaseId = data.id;
                 currentCaseIsDraft = true;
                 currentCaseCanEdit = true;
                 generateCaseId();
-                noteServerCopy();
+                noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
                 alert('Case archived as a draft. No Case ID has been assigned yet — open this draft and use "Save Case" whenever you\'re ready to finalize it.');
@@ -1524,6 +1527,7 @@
             const clientName = (document.getElementById('client-name-field').innerText.split('\n')[0] || 'Unnamed Client').trim();
             const phase = document.getElementById('display-phase').innerText;
             const medTotal = document.getElementById('med-total') ? document.getElementById('med-total').innerText : '';
+            const gen = _editorGen, sig = caseSig();
             try {
                 const res = await fetch('/api/case-repository', {
                     method: 'POST',
@@ -1535,7 +1539,8 @@
                 });
                 const data = await res.json();
                 if (!data || !data.success) { alert('Could not update: ' + ((data && data.error) || 'Unknown error.')); return; }
-                noteServerCopy();
+                if (gen !== _editorGen) { refreshRepoCache(); showToast(`${clientName} was updated.`, 'success'); return; }   // the editor moved on meanwhile
+                noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
                 alert("Saved case updated.");
@@ -1564,7 +1569,7 @@
             const clientName = (document.getElementById('client-name-field').innerText.split('\n')[0] || 'Unnamed Client').trim();
             const phase = document.getElementById('display-phase').innerText;
             const medTotal = document.getElementById('med-total') ? document.getElementById('med-total').innerText : '';
-            const sig = caseSig();
+            const sig = caseSig(), gen = _editorGen;
             // A trainee's work on a Training Library case file is their own case for that file, never a draft
             // (the server keeps one per trainee per file).
             const mine = !!(window.mockIsMine && window.mockIsMine());
@@ -1582,6 +1587,7 @@
                 });
                 const data = await res.json();
                 if (!data || !data.success) return false;
+                if (gen !== _editorGen) { refreshRepoCache(); return true; }   // saved; the editor holds another case now
                 currentCaseId = data.id;
                 if (typeof data.isDraft === 'boolean') currentCaseIsDraft = data.isDraft;
                 if (mine && data.caseId) document.getElementById('case-id-field').innerText = data.caseId;
@@ -1612,7 +1618,10 @@
         // case only when it differs (unsaved work).
         function caseSig() {
             try {
-                const t = JSON.stringify([buildCaseContentPayload(), (document.getElementById('client-name-field') || {}).innerText || '', (document.getElementById('display-phase') || {}).innerText || '']);
+                // the case's own dropdowns only: the clock's time zone or the program picker changing isn't an edit
+                const p = buildCaseContentPayload(), own = savedSelects(document);
+                p.sels = p.sels.map((v, i) => (own[i] ? v : null));
+                const t = JSON.stringify([p, (document.getElementById('client-name-field') || {}).innerText || '', (document.getElementById('display-phase') || {}).innerText || '']);
                 let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193); }
                 return (h >>> 0).toString(16) + '.' + t.length;
             } catch (e) { return null; }
@@ -1659,16 +1668,26 @@
             if (list) delete list.dataset.blanked;
             if (window.renderCaseLibrarySidebar) window.renderCaseLibrarySidebar();
         }
+        let _loadSeq = 0;
         async function loadCase(id) {
             if (!hasAuthorizedAccess()) return; // blocked: not logged in, or site is locked
             if (window.mockConfirmLeave && !window.mockConfirmLeave()) return; // unsaved changes to a Training Library case
+            // Work in the editor the server doesn't have yet would be lost: ask first (as New and Close do).
+            if (currentCaseId !== id && !(window.mockSnapshot && window.mockSnapshot().mockId) && hasUnsyncedChanges()
+                && !confirm('Open this case? Changes to the case in the editor that aren\'t saved yet will be lost. Cancel, then Save or Update, to keep them.')) return;
+            const seq = ++_loadSeq;   // clicked another case meanwhile: only the last one opens
             try {
                 const res = await fetch('/api/case-repository?id=' + encodeURIComponent(id), { credentials: 'include' });
                 const data = await res.json();
+                if (seq !== _loadSeq) return;
                 if (!data || !data.success) { showToast((data && data.error) || 'Could not load that case.', 'error'); return; }
                 const c = data.case;
                 if (window.mockFlushUpdates) window.mockFlushUpdates(); // save Notes/Tasks edits on a library case first
                 if (window.mockReset) window.mockReset(); // leaving any Training Library case
+                // The editor starts empty, so nothing of the case that was open (a field this case never had, an
+                // "Other" box) stays on screen under this one's name.
+                blankCaseEditorContent();
+                revertOther('main-case-type', 'main-case-other', 'main-revert');
                 applyCaseContentToDOM(c.content, document);
                 currentCaseId = c.id;
                 currentCaseIsDraft = !!c.isDraft;
@@ -1695,11 +1714,20 @@
                 const res = await fetch('/api/case-repository?id=' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
                 const data = await res.json();
                 if (!data || !data.success) { showToast((data && data.error) || 'Could not delete that case.', 'error'); return; }
-                if (currentCaseId === id) { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }
+                forgetDeletedOpenCase(id);
                 refreshRepoCache();
             } catch (e2) {
                 showToast('Network error deleting that case.', 'error');
             }
+        }
+        // The case open in the editor was just deleted: the editor is cleared (and this browser's copy of it
+        // forgotten), so autosave can't bring it back as a new draft.
+        function forgetDeletedOpenCase(id) {
+            if (currentCaseId !== id) return;
+            currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true;
+            document.getElementById('client-name-field').innerText = ''; // already asked: newCase() needn't ask again
+            window.newCase();
+            showToast('The case you had open was deleted, so the editor was cleared.', 'info');
         }
 
         /* ---------- PDF export ---------- */
@@ -1948,7 +1976,10 @@
                 });
                 select.appendChild(og);
             });
-            select.value = preferred;
+            // The zone picked last on this computer (opening a case no longer sets it, so it's remembered on its own).
+            let saved = null; try { saved = localStorage.getItem('LSH_CLOCK_TZ'); } catch (e) {}
+            select.value = saved && zones.concat('UTC').includes(saved) ? saved : preferred;
+            select.addEventListener('change', () => { try { localStorage.setItem('LSH_CLOCK_TZ', select.value); } catch (e) {} });
         }
 
         function refreshClock() {
@@ -2059,20 +2090,28 @@
                 portalTitle.innerText = 'LEGAL SUPPORT HELP TRAINING INTERFACE';
                 blankCaseEditorContent();
                 renderRepo();
+                _draftRestoredFor = null;   // whoever signs in next gets their own work back (and only theirs)
+                // Nothing of the last person's stays open over the sign-in screen: the live view of a trainee
+                // (and this page's own screen going to one), the Client's ID view, the Blueprint.
+                if (window.lshLiveWatched) window.lshLiveWatched(false);
+                if (window.closeLiveView) window.closeLiveView();
+                if (window.lshClientId) window.lshClientId.close();
+                if (window.LSHBlueprint && document.getElementById('lbp-page')) window.LSHBlueprint.close();
                 return;
             }
             gate.classList.remove('open');
             gate.style.removeProperty('display');
             portalTitle.innerText = `LEGAL SUPPORT HELP TRAINING INTERFACE - ${session.userType.toUpperCase()} PORTAL`;
 
-            // Restore in-progress editor content exactly once per page load
-            // (covers both "logged in already, hit refresh" and "just logged
-            // back in after being logged out mid-edit"). Guarded so later,
-            // unrelated calls to applySessionUI() during the same page life
-            // (e.g. after opening/closing Master Control) never stomp on
-            // whatever the user has typed since.
-            if (!_draftRestoredThisLoad) {
-                _draftRestoredThisLoad = true;
+            // Restore in-progress editor content once each time someone signs in
+            // on this page (covers both "logged in already, hit refresh" and "just
+            // logged back in after being logged out mid-edit"). Guarded so later,
+            // unrelated calls to applySessionUI() while they stay signed in (e.g.
+            // after opening/closing Master Control) never stomp on whatever they
+            // have typed since. The draft is theirs only (its owner).
+            const signedInAs = (getRealSession() || {}).username || null;
+            if (_draftRestoredFor !== signedInAs) {
+                _draftRestoredFor = signedInAs;
                 restoreCurrentEditorState();
             }
             refreshRepoCache(); // don't wait for the next background poll — show the shared repository immediately on login
@@ -2093,7 +2132,15 @@
             }
         }
 
-        function logoutSession(reason) {
+        // Log Out (or the inactivity timeout): work the server doesn't have yet is sent first (a new case as a
+        // draft), then this computer forgets the case, so the next person here never gets it. If it can't be
+        // sent (offline), it stays in this browser for this person only (the draft's owner).
+        async function logoutSession(reason) {
+            if (hasAuthorizedAccess() && hasUnsyncedChanges()) {
+                let sent = false;
+                try { sent = await Promise.race([Promise.resolve(autoSaveProgress('logout')), new Promise(r => setTimeout(() => r(false), 6000))]); } catch (e) { sent = false; }
+                if (sent) clearPersistedEditorState();
+            } else clearPersistedEditorState();
             stopHeartbeat();
             stopIdleTracking();
             fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
@@ -2647,7 +2694,7 @@
                     if (data && data.success) {
                         done++;
                         _caseLogsSelected.delete(id);
-                        if (currentCaseId === id) { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }
+                        forgetDeletedOpenCase(id);
                     } else failed.push((data && data.error) || 'Could not delete a case.');
                 } catch (e) { failed.push('Network error deleting a case.'); }
             }

@@ -541,10 +541,17 @@ Nothing is sent to the server while you work: no timer, and no save when you loo
 | **The device** puts the page to sleep, or the tab has been away for 2 minutes | Sent. |
 | **A crash or power cut** (the page gets no warning) | The work comes back from this browser on the next visit and is sent then (*Unsaved work from your last visit saved*). |
 | **5 minutes idle** | The *Still working?* prompt; with no answer in 30 seconds the case is archived as a draft. |
+| **Log Out** (or signed out for inactivity) | Sent first, then this computer forgets the case. If it can't be sent (offline), it stays in this browser for that person only. |
 
-Only work the server doesn't have yet is sent: a fingerprint of the case is taken each time it's saved to or opened from the server, and an interruption with nothing new sends nothing. **Save Case**, **Archive** and **Update Case** save right away, as before.
+Only work the server doesn't have yet is sent: a fingerprint of the case is taken each time it's saved to or opened from the server, and an interruption with nothing new sends nothing. The fingerprint covers the case's own fields only, so changing the clock's time zone or the program picker isn't an edit. **Save Case**, **Archive** and **Update Case** save right away, as before.
 
-Code: `saveOnInterruption()`, `autoSaveProgress()` and `caseSig()` in `app.js`. Test: `.github/scripts/autosave.cjs`.
+**A refresh** puts back exactly what a save sends, Attorney and Case Manager included, and sends nothing when the server already has it. A draft kept before drafts held those two takes them from the server's copy before any recovered work is sent.
+
+**A shared computer:** the case kept in the browser belongs to whoever was signed in (its owner). It comes back only for that person, whoever signs in next starts with an empty editor, and waiting tasks are kept per person too (none show signed out). Signing out also closes the live view, the Client's ID view and the Blueprint.
+
+**Opening a case** starts from an empty editor, so no field or "Other" box from the last case stays under the new one's name. It asks first when the case in the editor has unsaved changes, and when two cases are clicked quickly only the last one opens. The dropdowns outside the case (the clock's time zone, the program picker) are never changed by opening a case. **Deleting the open case** (🗑 or Case Logs) clears the editor, so autosave can't bring it back. A save still on its way when New, Close or another case is chosen stays with the case it was sent for.
+
+Code: `saveOnInterruption()`, `autoSaveProgress()`, `caseSig()`, `persistCurrentEditorState()`, `restoreCurrentEditorState()`, `savedSelects()` and `loadCase()` in `app.js`. Tests: `.github/scripts/autosave.cjs`, `.github/scripts/data-loss.cjs`.
 
 ## 🗑 Deleting trainees' cases (Master Control → Case Logs)
 
@@ -645,7 +652,7 @@ A timer for billable and non-billable hours, the way a firm's case management sy
   - **This case:** the time on the open case, with totals.
   - **My timesheet:** one week at a time, with a bar for each day and totals for billable hours, non-billable hours, billable share and time worked.
   - **👥 All trainees** (Admins): everyone's time for the week, with a total for each trainee.
-  - Entries can be edited (✎) and deleted (🗑). **⬇ Export CSV** downloads the list shown.
+  - Entries can be edited (✎) and deleted (🗑). Editing without touching the hours keeps the entry's time to the second (the box shows it rounded to 0.1 h), so changing only the description never changes what's billed. **⬇ Export CSV** downloads the list shown.
 - **Activities:**
   - Usually billable: case review & strategy, client communication, medical records & bills review, drafting & correspondence, demand & negotiation, discovery, legal research, and court, hearing or deposition.
   - Usually not billable: intake (before retainer), scheduling & calendaring, filing & administrative, internal meeting, and training. They show with a dashed outline.
@@ -822,6 +829,13 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - Upload ID refuses a file that isn't a picture and sends a large photo as a JPG under 2 MB;
   - the card shows the uploaded ID, it's saved with the case, comes back when the case is opened again, and Remove takes it off;
   - with the site's styles, at 1440 px the header fits its card with the ID card in the middle, at least 180 px wide; at 1280 px everything stays inside the card and "CASE ID:" stays on one line; resizing the window from 1600 px down to 960 px and back, nothing in the header sticks out of the card or runs into its neighbour. Without the styles, run it with `TAILWIND_JS` set to a copy of Tailwind.
+- **Data loss** (`.github/scripts/data-loss.cjs`, in the same job): the case editor in a browser with an in-memory case store, then the drill and time server code on SQLite. It checks that:
+  - a refresh keeps Attorney and Case Manager and sends nothing; recovered work from an older draft gets them from the server's copy first;
+  - on a shared computer the next person gets neither the last one's case nor their tasks (none show signed out), and an Admin's live view closes when they sign out; Log Out sends unsaved work, then forgets the case;
+  - opening a case never changes the clock's time zone, and a preview shows the right status;
+  - opening a case starts empty, asks before losing unsaved work, and a slow load overtaken by a newer click doesn't land; deleting the open case clears the editor and nothing is sent; a save that comes back after New doesn't attach to the new case;
+  - opening a Training Library case file as a trainee isn't an edit (leaving it sends nothing, and the library's locked dropdowns aren't saved); leaving one while it loads doesn't leave the editor shut;
+  - a whole live drill (61 calls with transcripts) saves; editing a time entry's description keeps its time to the second (a 150 s entry, in the browser and on the server).
 - **Security** (`.github/scripts/security.cjs`, in the same job): the real server code on SQLite with a stand-in for R2, then the case editor in a browser. It checks that:
   - an uploaded PDF or photo opens in the browser, while an HTML page, an SVG, XML or a file with no type is stored and sent as a download, an old HTML file too; a key outside `documents/` or with `..` isn't looked up;
   - a trainer approves a trainee but can't change the Master Account or another Admin; the Master Account can change an Admin but not itself;
