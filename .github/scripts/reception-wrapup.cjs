@@ -88,7 +88,7 @@ const failures = []; const fail = (m) => failures.push(m);
         const main = document.querySelector('#app-shell > main').getBoundingClientRect(), panel = document.getElementById('fdd-panel').getBoundingClientRect(), ca = document.getElementById('capture-area');
         const bar = document.getElementById('cl-bar-input').getBoundingClientRect(), hit = document.elementFromPoint(bar.left + bar.width / 2, bar.top + bar.height / 2);
         const what = (e) => e ? e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).slice(0, 3).join('.') : '') : 'nothing';
-        return { mainRight: Math.round(main.right), panelLeft: Math.round(panel.left), barRight: Math.round(bar.right), overflow: (() => { const x = document.getElementById('case-close-x'); x.style.setProperty('display', 'none', 'important'); const o = ca.scrollWidth - ca.clientWidth; x.style.removeProperty('display'); return o; })(), hit: what(hit),
+        return { mainRight: Math.round(main.right), panelLeft: Math.round(panel.left), barRight: Math.round(bar.right), overflow: ca.scrollWidth - ca.clientWidth, hit: what(hit),
             barShown: !!(hit && hit.closest('#cl-bar')), sidebar: !!document.getElementById('sidebar').offsetParent, zoom: getComputedStyle(ca).zoom };
     });
     const side = await where();
@@ -103,8 +103,8 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => fddClose());
     // resizing the browser: the case is fitted to the window again (smaller in a narrow one, full size in a wide one)
-    const sized = async (w) => { await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(500); return page.evaluate(() => { const ca = document.getElementById('capture-area'), x = document.getElementById('case-close-x');
-        x.style.setProperty('display', 'none', 'important'); const over = ca.scrollWidth - ca.clientWidth; x.style.removeProperty('display'); return { zoom: Number(getComputedStyle(ca).zoom), over }; }); };
+    const sized = async (w) => { await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(500); return page.evaluate(() => { const ca = document.getElementById('capture-area');
+        return { zoom: Number(getComputedStyle(ca).zoom), over: ca.scrollWidth - ca.clientWidth }; }); };
     const wide = await sized(1920), small = await sized(1000), back = await sized(1920);
     if (wide.zoom !== 1 || back.zoom !== 1 || !(small.zoom < 1 && small.zoom >= 0.7) || small.over > 1) fail(`resizing the browser doesn't fit the case to the window: ${JSON.stringify({ wide, small, back })}`);
     await page.setViewportSize({ width: 1440, height: 900 }); await page.evaluate(() => { document.querySelector('.header-card').style.minWidth = ''; lshFitCase(); }); await page.waitForTimeout(300);
