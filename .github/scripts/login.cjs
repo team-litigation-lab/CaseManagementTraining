@@ -10,14 +10,15 @@
 // name and no admin password set up are refused; "trainer-" usernames can't be
 // registered; a session stays alive with a heartbeat up to 2 minutes old (a
 // background tab) and ends after that; /api/state lists the last minute's pings,
-// with their age measured on the server; trainees still sign in with
-// username and Batch ID (an older account's password still works); registration
+// with their age measured on the server; an approved trainee signs in with the
+// username alone (typed with other capitals too, when only one trainee has it), never an
+// Admin account, and a registration waiting for approval or a revoked one is still refused; registration
 // asks for just the full name, Batch ID and username (no grayed-out field), keeps the
 // typed Batch ID through approval, and scrolls on a small screen; an Admin changes a
 // trainee's Batch ID in the Registrations and Users tabs (never an Admin's), and the
-// trainee signs in with the new one; Batch IDs are B + DDMMYY (a real date), typed in
+// trainee's next sign-in carries the new one; the Trainee tab has no second box; Batch IDs are B + DDMMYY (a real date), typed in
 // any form, issued that way, and the old long forms saved before are shortened at the
-// first sign-in (an old one still signs in); the Users tab groups trainees by Batch ID,
+// first sign-in; the Users tab groups trainees by Batch ID,
 // the newest batch first; a browser tab still running the old Training
 // Calendar gets told to reload. The admin password here is a test value.
 // Usage: node .github/scripts/login.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
@@ -157,31 +158,48 @@ const failures = []; const fail = (m) => failures.push(m);
     if (g.status !== 200 || JSON.stringify(ana) !== JSON.stringify({ first_name: 'Ana Maria', mi: null, last_name: 'Reyes', suffix: 'Jr.', training_start_date: today })) fail(`a name with a suffix was split wrong: ${JSON.stringify(ana)}`);
     g = await regApi({ fullName: 'Juan Other', batchId: 'B050225', username: 'juan_dc' });
     if (g.status !== 409) fail(`a taken username could be registered again (${g.status})`);
-    // signing in: username and Batch ID, once approved; a password still works for an account that has one
-    r = await post({ username: 'juan_dc', batchId: 'B0502 2026', portalMode: 'Trainee' });
+    // signing in: the username alone, once approved (the Batch ID is on the account from registration)
+    r = await post({ username: 'juan_dc', portalMode: 'Trainee' });
     if (r.status !== 403 || !/pending/i.test(r.data.error || '')) fail(`a registration waiting for approval wasn't told so (${r.status} ${r.data.error})`);
     const adminCookie = (await post({ portalMode: 'Admin', password: 'ci-master-pass' })).cookie.match(/lsh_session=[^;]+/)[0];
     const asAdmin = async (api, url, body, cookie = adminCookie) => { const x = await api.onRequestPost({ request: new Request('http://x' + url, { method: 'POST', headers: cookie ? { Cookie: cookie } : {}, body: JSON.stringify(body) }), env }); return { status: x.status, data: await x.json() }; };
     let a = await asAdmin(statusApi, '/api/update-status', { userId: juan.id, newStatus: 'Approved' });
     if (a.status !== 200 || a.data.batchId !== 'B050226' || sql.prepare("SELECT value FROM batch_id_counter WHERE user_type = 'Trainee'").get().value !== 0) fail(`approving kept no typed Batch ID: ${JSON.stringify(a.data)}`);
-    r = await post({ username: 'juan_dc', batchId: 'b05022026', portalMode: 'Trainee' });
-    if (r.status !== 200 || r.data.user.batch_id !== 'B050226' || !/lsh_session=/.test(r.cookie)) fail(`an approved trainee couldn't sign in with username and Batch ID (any capitals or spacing): ${r.status} ${JSON.stringify(r.data)}`);
+    r = await post({ username: 'juan_dc', portalMode: 'Trainee' });
+    if (r.status !== 200 || r.data.user.batch_id !== 'B050226' || !/lsh_session=/.test(r.cookie)) fail(`an approved trainee couldn't sign in with just the username: ${r.status} ${JSON.stringify(r.data)}`);
     const juanCookie = r.cookie.match(/lsh_session=[^;]+/)[0];
-    r = await post({ username: 'juan_dc', batchId: 'B05022027', portalMode: 'Trainee' });
-    if (r.status !== 401 || !/Batch ID/.test(r.data.error || '')) fail(`a wrong Batch ID signed in, or the message doesn't say Batch ID (${r.status} ${r.data.error})`);
-    r = await post({ username: 'juan_dc', password: juan.password, portalMode: 'Trainee' });
-    if (r.status === 200) fail('a registered trainee could be reached with the placeholder password');
-    r = await post({ username: 'tia', batchId: 'trainee123', portalMode: 'Trainee' });
-    if (r.status !== 200) fail(`a trainee who registered with a password can't use it any more (${r.status})`);
-    r = await post({ username: 'olga', batchId: 'B05022026-LSHTRAINEE-001', portalMode: 'Trainee' });
-    const r3 = await post({ username: 'olga', batchId: 'b050226', portalMode: 'Trainee' });
-    if (r.status !== 200 || r3.status !== 200 || r3.data.user.batch_id !== 'B050226') fail(`a trainee with an old long Batch ID can't sign in with it, or with the short one (${r.status}, ${r3.status})`);
-    r = await post({ username: 'tia', batchId: 'b1', portalMode: 'Trainee' });
-    if (r.status !== 200) fail(`a trainee who registered with a password can't sign in with their Batch ID (${r.status})`);
-    r = await post({ username: 'trainer-maria-lopez', batchId: maria.batch_id, portalMode: 'Trainee' });
-    const r2 = await post({ username: 'trainer-maria-lopez', batchId: maria.batch_id });
-    if (r.status === 200 || r2.status === 200) fail('an Admin account could be signed in with its Batch ID');
-    // an Admin changes a trainee's Batch ID; the trainee signs in with the new one
+    r = await post({ username: '  Juan_DC ', portalMode: 'Trainee' });
+    if (r.status !== 200 || r.data.user.username !== 'juan_dc') fail(`a username typed with other capitals (a phone's first capital) didn't sign in: ${r.status} ${JSON.stringify(r.data)}`);
+    r = await post({ username: 'juan_dc', batchId: 'B0502 2026', portalMode: 'Trainee' });
+    if (r.status !== 200) fail(`a sign-in from a tab still sending a Batch ID was refused (${r.status})`);
+    sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Kim', 'One', 'k1@x.io', 'Trainee', 'B050226', 'kim_k', 'disabled:x', 'Approved'), ('Kim', 'Two', 'k2@x.io', 'Trainee', 'B050226', 'Kim_K', 'disabled:x', 'Approved')`).run();
+    r = await post({ username: 'KIM_K', portalMode: 'Trainee' });
+    if (r.status !== 401) fail(`a username two trainees share in other capitals signed one of them in (${r.status})`);
+    r = await post({ username: 'Kim_K', portalMode: 'Trainee' });
+    if (r.status !== 200 || r.data.user.last_name !== 'Two') fail(`the exact username didn't sign in its own trainee (${r.status} ${JSON.stringify(r.data.user)})`);
+    r = await post({ username: 'nobody_here', portalMode: 'Trainee' });
+    if (r.status !== 401 || !/No trainee account/.test(r.data.error || '')) fail(`an unknown username wasn't refused plainly (${r.status} ${r.data.error})`);
+    r = await post({ portalMode: 'Trainee' });
+    if (r.status !== 400 || !/username/.test(r.data.error || '')) fail(`a sign-in with no username wasn't asked for one (${r.status} ${r.data.error})`);
+    r = await post({ username: 'olga', portalMode: 'Trainee' });
+    if (r.status !== 200 || r.data.user.batch_id !== 'B050226') fail(`a trainee who registered with a password (and an old long Batch ID) can't sign in with just the username (${r.status})`);
+    r = await post({ username: 'tia', password: 'trainee123', portalMode: 'Trainee' });
+    if (r.status !== 200) fail(`an older tab sending a trainee's password was refused (${r.status})`);
+    // never an Admin account by its username alone, its Batch ID, or other capitals
+    for (const [body, what] of [
+        [{ username: 'trainer-maria-lopez', portalMode: 'Trainee' }, 'a trainer\'s username on the Trainee tab'],
+        [{ username: 'trainer-maria-lopez' }, 'a trainer\'s username with no portal'],
+        [{ username: 'TRAINER-MARIA-LOPEZ', portalMode: 'Trainee' }, 'a trainer\'s username in capitals'],
+        [{ username: 'trainer-maria-lopez', batchId: maria.batch_id, portalMode: 'Trainee' }, 'a trainer\'s Batch ID'],
+        [{ username: 'trainer-maria-lopez', batchId: maria.batch_id }, 'a trainer\'s Batch ID with no portal'],
+        [{ username: utils.MASTER_USERNAME, portalMode: 'Trainee' }, 'the Master Account\'s username'],
+        [{ username: utils.MASTER_USERNAME }, 'the Master Account\'s username with no portal'],
+        [{ username: 'trainer-lei-abut', portalMode: 'Admin' }, 'a trainer\'s username on the Admin tab with no password'],
+    ]) {
+        r = await post(body);
+        if (r.status === 200) fail(`an Admin account was signed in with ${what}`);
+    }
+    // an Admin changes a trainee's Batch ID; the trainee's next sign-in carries the new one
     a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: 'B2' }, juanCookie);
     if (a.status !== 403) fail(`a trainee could change a Batch ID (${a.status})`);
     a = await asAdmin(batchApi, '/api/update-batch', { userId: juan.id, batchId: 'B2' }, '');
@@ -196,10 +214,14 @@ const failures = []; const fail = (m) => failures.push(m);
     const moved = sql.prepare("SELECT u.batch_id AS u, h.batch_id AS h FROM users u JOIN heartbeats h ON h.username = u.username WHERE u.id = ?").get(juan.id);
     if (a.status !== 200 || a.data.batchId !== 'B121026' || moved.u !== 'B121026' || moved.h !== 'B121026') fail(`an Admin couldn't change a trainee's Batch ID: ${a.status} ${JSON.stringify(a.data)} ${JSON.stringify(moved)}`);
     if (!sql.prepare("SELECT 1 FROM activity_log WHERE action = 'update-batch'").get()) fail('changing a Batch ID was not logged');
-    r = await post({ username: 'juan_dc', batchId: 'B0502 2026', portalMode: 'Trainee' });
-    if (r.status !== 401) fail(`the old Batch ID still signs in after an Admin changed it (${r.status})`);
-    r = await post({ username: 'juan_dc', batchId: 'B12102026', portalMode: 'Trainee' });
-    if (r.status !== 200) fail(`the new Batch ID doesn't sign in (${r.status})`);
+    r = await post({ username: 'juan_dc', portalMode: 'Trainee' });
+    if (r.status !== 200 || r.data.user.batch_id !== 'B121026') fail(`after an Admin changed the Batch ID, the trainee's sign-in doesn't carry the new one (${r.status} ${r.data.user && r.data.user.batch_id})`);
+    // a revoked or suspended trainee is still refused (the username alone doesn't get past that)
+    for (const st of ['Suspended', 'Revoked', 'Rejected']) {
+        sql.prepare("UPDATE users SET status = ? WHERE username = 'kim_k'").run(st);
+        r = await post({ username: 'kim_k', portalMode: 'Trainee' });
+        if (r.status !== 403) fail(`a ${st.toLowerCase()} trainee signed in with the username (${r.status})`);
+    }
     // a background tab's heartbeat (browsers slow it to one a minute) keeps the session; a closed tab's ends
     sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', '-60 seconds') WHERE username = 'tia'").run();
     if (!(await utils.isSessionHeartbeatAlive(env.DB, 'tia'))) fail('a session with a 60 s old heartbeat (a background tab) was treated as expired');
@@ -265,10 +287,12 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.click('#portal-tab-trainee');
     if (await page.isVisible('#login-trainer-name')) fail('the Trainee tab shows the trainer name field');
     await page.click('#portal-tab-admin');
-    // the Trainee tab signs in with the username and Batch ID (shown as typed); the admin password typed on the Admin tab doesn't carry over
+    // the Trainee tab asks for the username only: no second box, and the admin password typed on the Admin tab doesn't carry over
     await page.click('#portal-tab-trainee');
-    const tf = await page.evaluate(() => { const f = document.getElementById('login-password'); return [document.getElementById('login-password-label').textContent, f.type, f.value].join('|'); });
-    if (tf !== 'Batch ID|text|') fail(`the Trainee tab's second field should be an empty "Batch ID" text box (got ${tf})`);
+    if (await page.isVisible('#login-password')) fail('the Trainee tab still shows a second box (Batch ID or password)');
+    if ((await page.inputValue('#login-password')) !== '') fail('the admin password typed on the Admin tab was kept for the Trainee tab');
+    const traineeFields = await page.$$eval('#auth-login-view input', els => els.filter(e => e.offsetParent).map(e => e.id));
+    if (traineeFields.join() !== 'login-username') fail(`the Trainee tab asks for ${traineeFields.join(', ')} (expected the username only)`);
     await page.click('#portal-tab-admin');
     if ((await page.getAttribute('#login-password', 'type')) !== 'password') fail('the Admin tab shows the admin password as plain text');
     // registration: full name, Batch ID and username only, typed in (nothing grayed out), and it scrolls on a phone
@@ -299,12 +323,13 @@ const failures = []; const fail = (m) => failures.push(m);
     if ((await page.inputValue('#reg-batchid')) !== 'B050226') fail(`the Batch ID box wasn't shortened to B050226 (${await page.inputValue('#reg-batchid')})`);
     const localToday = await page.evaluate(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; });
     if (JSON.stringify(registered) !== JSON.stringify([{ fullName: 'Rosa Newcomer', batchId: 'B050226', username: 'rosa_n', trainingStartDate: localToday }])) fail(`registration sent ${JSON.stringify(registered)}`);
-    if (!/sign in with your username and Batch ID/.test(await page.textContent('#auth-register-msg'))) fail(`after registering, the message doesn't say how to sign in: ${await page.textContent('#auth-register-msg')}`);
+    if (!/sign in with your username\./.test(await page.textContent('#auth-register-msg'))) fail(`after registering, the message doesn't say how to sign in: ${await page.textContent('#auth-register-msg')}`);
     await page.waitForSelector('#auth-login-view', { state: 'visible', timeout: 5000 }).catch(() => fail('registering did not go back to the sign-in screen'));
     if ((await page.inputValue('#login-username')) !== 'rosa_n') fail('the sign-in screen did not fill in the username just registered');
-    await page.fill('#login-password', 'B0502-2026'); await page.click('#auth-login-view .auth-submit'); await page.waitForTimeout(400);
+    await page.focus('#login-username'); await page.keyboard.press('Enter'); await page.waitForTimeout(400);
     last = posted[posted.length - 1] || {};
-    if (JSON.stringify(last) !== JSON.stringify({ username: 'rosa_n', batchId: 'B0502-2026', portalMode: 'Trainee' })) fail(`the Trainee tab sent ${JSON.stringify(last)} (expected the username and Batch ID)`);
+    if (JSON.stringify(last) !== JSON.stringify({ username: 'rosa_n', portalMode: 'Trainee' })) fail(`the Trainee tab sent ${JSON.stringify(last)} (expected the username only)`);
+    if (/required/.test(await page.textContent('#auth-login-msg'))) fail(`the Trainee tab still asks for something besides the username: ${await page.textContent('#auth-login-msg')}`);
 
     // an Admin changes Batch IDs from the Registrations and Users tabs (the real /api/users and /api/update-batch)
     sql.prepare("UPDATE heartbeats SET last_seen = datetime('now') WHERE username = ?").run(utils.MASTER_USERNAME);
