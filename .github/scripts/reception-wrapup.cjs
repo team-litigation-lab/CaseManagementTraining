@@ -16,7 +16,8 @@
 // - a poor call: no spiel, answered late, a long silence and fillers, nothing verified, no file matched: the
 //   wrap-up says so; the review fails the first time, and the debrief still shows the five items checked from the
 //   call and offers to try again; nothing is saved until the review comes through, then it is.
-// Usage: node .github/scripts/reception-wrapup.cjs   (from the repository root; needs `npm i playwright`)
+// Usage: node .github/scripts/reception-wrapup.cjs   (from the repository root; needs `npm i playwright`;
+//        TAILWIND_JS=path/to/tailwind.js to use a saved copy of the site's styles when the browser can't reach their CDN)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd();
@@ -37,6 +38,8 @@ const failures = []; const fail = (m) => failures.push(m);
     page.on('dialog', d => d.accept());
     const drills = [], reviews = [];
     let review = 'good', failNextReview = false;
+    // TAILWIND_JS=<a saved copy of cdn.tailwindcss.com>: lay the page out with the site's styles when the browser can't reach the CDN
+    if (process.env.TAILWIND_JS) await page.route('https://cdn.tailwindcss.com/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(process.env.TAILWIND_JS, 'utf8') }));
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
@@ -77,9 +80,9 @@ const failures = []; const fail = (m) => failures.push(m);
     if (found['901378'].includes('MC-01')) fail('a number one digit off matched a case number (numbers must match exactly)');
 
     // 2. the panel and the case side by side on a wide screen
-    // the case is laid out at least 1100 px wide here, as it is with the site's styles (Tailwind, from its CDN, which a
-    // test browser may not reach), so the fit is tested the same way everywhere
-    await page.evaluate(() => { openMockCase('MC-04', { silent: true, viewOnly: true }); document.querySelector('.header-card').style.minWidth = '1100px'; openFrontDeskDrill(); });
+    // the case's header is held at least 1000 px wide here, about as the site's styles (Tailwind, from its CDN, which a
+    // test browser may not reach) lay it out, so the fit is tested the same way with or without them
+    await page.evaluate(() => { openMockCase('MC-04', { silent: true, viewOnly: true }); document.querySelector('.header-card').style.minWidth = '1000px'; openFrontDeskDrill(); });
     await page.waitForTimeout(400);
     const where = () => page.evaluate(() => {
         const main = document.querySelector('#app-shell > main').getBoundingClientRect(), panel = document.getElementById('fdd-panel').getBoundingClientRect(), ca = document.getElementById('capture-area');
