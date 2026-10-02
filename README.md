@@ -360,7 +360,7 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
   - In Master Control → Ping, **Send as a task** makes the ping stay on the trainee's screen with an **Accept** button, until they accept or dismiss it.
   - **Accept** adds the task, with who assigned it, to the open case's **Tasks** list and opens that tab. On a Training Library case it's saved right away, and the trainee can edit it and change who it's assigned to like any task; on their own case, Save or Update keeps it.
   - Pending tasks are kept in that browser until the trainee acts on them.
-  - **Delivery:** `/api/state` lists the last minute's pings with each one's age measured on the server, so tasks sent a moment apart to different trainees all arrive, and a trainee whose computer clock is off still gets theirs. Each ping shows once per browser (a reload doesn't offer an accepted task again). The task card sits beside the Front Desk panel, not over its buttons.
+  - **Delivery:** `/api/state` lists the last minute's pings for the signed-in person (their own and the ones to everyone) with each one's age measured on the server, so tasks sent a moment apart to different trainees all arrive, and a trainee whose computer clock is off still gets theirs. Each ping shows once per browser (a reload doesn't offer an accepted task again). The task card sits beside the Front Desk panel, not over its buttons.
 - **Monitoring:** *View Latest Saved* works again. The username was placed inside the click handler in a way that broke it. Names are now shown as text, not HTML.
 
 **How they're saved:**
@@ -666,6 +666,25 @@ A timer for billable and non-billable hours, the way a firm's case management sy
 
 Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the calendar, it adds no `<select>` or contenteditable to the page.
 
+## 🔒 Security
+
+- **Uploaded files** (Doc Hub, Intake folder, Client's ID, alert pictures) are served from this site, so a file a browser would run could run as whoever opened it. Only a PDF, a photo (PNG, JPG, GIF, WebP) or plain text opens in the browser. Anything else, an HTML page or an SVG included, is kept and sent as a download, and so is any older file stored as one of those (`fileTypeIsInline` in `functions/_utils.js`; `upload.js`, `file.js`). `/api/file` serves only keys under `documents/`.
+- **Opening someone else's case.** An Admin opens trainees' cases, and every trainee opens an Admin's library edits. Saved case content is markup (table rows, line breaks, the rows' × buttons), so before it goes back on the page it's cleaned (`cleanCaseHtml` in `app.js`). It's read in an inert template, then scripts, frames, `javascript:` and `data:` links and every `on…` handler are dropped, except the app's own row buttons, which only call the case editor's helpers with plain values. The case summary (Download Case Summary), Case Versions, the drill feedback and the intake grade show typed text as text.
+- **Pings** (`/api/state`) go only to the person they were sent to: the page gets its own and the ones to everyone, never who else a ping went to, and none signed out. It reads who's asking from the signed session cookie, with no extra database read.
+- **Who can change whom:** only the Master Account changes another Admin's status (approve, reject, suspend, reinstate, revoke), and nobody can change the Master Account's.
+- **Admin password:** after 20 wrong passwords from one network in an hour, sign-ins with a password from there wait until the next hour (`login.js`). Trainees signing in with the username aren't affected.
+- **Logging out ends that session:** the session can't be brought back by a heartbeat from the old cookie (`logout.js` records which sign-in ended; `heartbeat.js`).
+- **Migrate D1** (the workflow) copies the live database (the one in `wrangler.toml`) into a new one, then points the site at it. It deletes the database it's given first, so it refuses the live database's name and a blank one.
+- **Time & Billing CSV:** a typed cell starting with `=`, `+`, `-` or `@` gets a leading `'` so Excel shows it as text instead of running it.
+
+### Known gaps
+
+- One admin password for the Master Account and every trainer.
+- Lock and Unlock need a password today's Admin accounts don't have.
+- `vacuum-d1.yml` points at an old database, and **Run Database Vacuum** always fails.
+- An uploaded file opens for anyone signed in who has its link.
+- No screen yet for saved Reception Simulator transcripts, and Trainer Notes aren't shown to trainees.
+
 ## Checks (GitHub Actions)
 
 `.github/workflows/checks.yml` runs on every pull request and every push to `main`. A red **Checks** status means something is broken, and the log says what:
@@ -803,6 +822,13 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - Upload ID refuses a file that isn't a picture and sends a large photo as a JPG under 2 MB;
   - the card shows the uploaded ID, it's saved with the case, comes back when the case is opened again, and Remove takes it off;
   - with the site's styles, at 1440 px the header fits its card with the ID card in the middle, at least 180 px wide; at 1280 px everything stays inside the card and "CASE ID:" stays on one line; resizing the window from 1600 px down to 960 px and back, nothing in the header sticks out of the card or runs into its neighbour. Without the styles, run it with `TAILWIND_JS` set to a copy of Tailwind.
+- **Security** (`.github/scripts/security.cjs`, in the same job): the real server code on SQLite with a stand-in for R2, then the case editor in a browser. It checks that:
+  - an uploaded PDF or photo opens in the browser, while an HTML page, an SVG, XML or a file with no type is stored and sent as a download, an old HTML file too; a key outside `documents/` or with `..` isn't looked up;
+  - a trainer approves a trainee but can't change the Master Account or another Admin; the Master Account can change an Admin but not itself;
+  - after 20 wrong admin passwords from one network, even the right one waits there; another network and a trainee's username sign-in aren't affected;
+  - a heartbeat takes the signed-in name, not the page's; after logging out, a heartbeat with the old cookie doesn't bring the session back; signing in again works;
+  - a case with markup that would run (an `<img onerror>`, a script, a frame, an SVG animation, `javascript:` and `data:` links, a `fetch()` button) runs nothing when opened, keeps its table row, its × button and its file links; every row the editor makes itself, and every handler in them, goes through the cleaner unchanged;
+  - Download Case Summary and Case Versions show typed markup as text.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
   - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;
@@ -818,7 +844,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - an approved trainee signs in with just the username (other capitals too, when only one trainee has it; exactly, when two do); no username or an unknown one is refused plainly; a tab still sending a Batch ID or password signs in too; an Admin account (a trainer's or the Master Account) is never signed in by username, Batch ID or other capitals; a pending, suspended, revoked or declined account is still refused; the Trainee tab shows the username box only and sends the username only;
   - the sign-in views are forms of their own, never submitted, so signing in never reloads the page; no box with a password is loose on the page, and the case search bar is a form of its own with no password in it and no "name" in its hint; a search box the browser autofills by itself is emptied, but not one being typed in, nor a name box;
   - a session stays alive with a heartbeat up to 2 minutes old (a background tab, e.g. while on a Google Meet tab) and ends after that;
-  - `/api/state` lists the last minute's pings with their age measured on the server;
+  - `/api/state` lists the last minute's pings sent to whoever asks (the one sent to two trainees shows only the asker), with their age measured on the server, and none to someone signed out;
   - registration asks for just the Full Name, Batch ID and Username (nothing grayed out), refuses a bad name, Batch ID or username, saves the name split into its columns, keeps the typed Batch ID through approval, then opens sign-in with the username filled in; it scrolls on a small screen;
   - Batch IDs are `B` + DDMMYY: any typed form is read as that (the date must be real, so 31 Feb is refused), the CMS issues them that way, the old long forms saved before are shortened at the first sign-in, and the Users tab groups trainees by Batch ID, the newest batch first;
   - an Admin changes a trainee's Batch ID with ✎ Batch ID in the Registrations and Users tabs (an empty one isn't sent; Esc cancels); trainees can't, an Admin's own can't be, and it's logged;

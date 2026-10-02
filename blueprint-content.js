@@ -308,7 +308,7 @@
               where: 'Cloudflare → Storage & Databases → D1 · R2.',
               tip: 'An uploaded file opens for anyone signed in who has its link.' },
             { icon: '⚠', title: 'Database upkeep', points: [
-                'migrate-d1.yml first deletes its target database, and the default target is the live one. Don\'t run it as it stands.',
+                'migrate-d1.yml copies the live database into a new one you name, then points the site at it. It refuses the live database\'s name, since it deletes the one it\'s given first.',
                 'vacuum-d1.yml points at the old database, not the live one; the Run Database Vacuum button always fails.',
                 'Neither is needed for normal running.',
                 'To undo a mistake, use D1 Time Travel.'],
@@ -346,10 +346,10 @@
             { icon: '📝', title: 'Known gaps', points: [
                 'One admin password for the Master Account and every trainer.',
                 'Lock and Unlock need a password today\'s Admin accounts don\'t have.',
-                'migrate-d1.yml can delete the live database; vacuum-d1.yml points at an old one.',
+                'vacuum-d1.yml points at an old database, and Run Database Vacuum always fails.',
                 'An uploaded file opens for anyone signed in who has its link.',
                 'No screen yet for saved Reception Simulator transcripts, and Trainer Notes aren\'t shown to trainees.'],
-              where: 'README → Known gaps.',
+              where: 'README → 🔒 Security → Known gaps.',
               tip: 'Plan around these until they\'re fixed.' }
         ]
     };

@@ -1,4 +1,4 @@
-import { json, nextBatchId, logActivity, requireSession } from '../_utils.js';
+import { json, nextBatchId, logActivity, requireSession, MASTER_USERNAME, isMaster } from '../_utils.js';
 // Handles the two reversible registration-review outcomes: Approved and
 // Rejected. Permanent revocation of an already-approved user is a
 // different, irreversible operation (deletes the account entirely) and is
@@ -18,6 +18,13 @@ export async function onRequestPost({ request, env }) {
     }
     const user = await db.prepare(`SELECT * FROM users WHERE id = ?`).bind(userId).first();
     if (!user) return json({ success: false, error: 'User not found.' }, 404);
+    // The same rules as suspend / revoke: the Master Account is never changed here, and only it may change another Admin.
+    if (user.username === MASTER_USERNAME) {
+        return json({ success: false, error: 'The Master Account\'s status can\'t be changed.' }, 403);
+    }
+    if (user.user_type === 'Admin' && !isMaster(session)) {
+        return json({ success: false, error: 'Only the Master Account can change another Admin\'s status.' }, 403);
+    }
     let batchId = user.batch_id;
     if (newStatus === 'Approved' && !batchId) {
         const referenceDate = user.user_type === 'Admin' ? user.created_at : user.training_start_date;

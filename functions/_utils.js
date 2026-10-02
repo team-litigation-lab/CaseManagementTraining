@@ -161,6 +161,17 @@ export async function requireSession(request, env, { adminOnly = false, skipHear
     return { ok: true, session: payload };
 }
 
+/* =====================================================================
+   FILES FROM THE DOCUMENTS BUCKET (upload.js stores, file.js serves)
+   Files are served from this site, so one a browser would run (HTML, SVG,
+   XML, scripts) would run as whoever opened it. Only these types open in
+   the browser; anything else is sent as a download.
+   ===================================================================== */
+export const INLINE_FILE_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/plain']);
+export function fileTypeIsInline(type) {
+    return INLINE_FILE_TYPES.has(String(type || '').split(';')[0].trim().toLowerCase());
+}
+
 export async function getSiteState(db) {
     const row = await db.prepare(`SELECT locked, locked_by_batch FROM site_state WHERE id = 1`).first();
     return { locked: !!(row && row.locked), lockedBy: row ? row.locked_by_batch : null };

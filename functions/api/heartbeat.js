@@ -30,14 +30,28 @@ export async function onRequestPost({ request, env }) {
 
     // Identity comes from the verified session, not the request body —
     // otherwise anyone could POST a heartbeat claiming to be any username,
-    // overwriting that user's "currently online" row.
-    await upsertSessionHeartbeat(db, {
+    // overwriting that user's "currently online" row. The name too: the one
+    // signed into the session (older sessions without it fall back to the page's).
+    const beat = {
         username: session.username,
-        fullName: fullName || session.username,
+        fullName: session.fullName || fullName || session.username,
         batchId: session.batchId,
         userType: session.userType,
         currentCase: currentCase || null
-    });
+    };
+    // A signed-out session stays signed out. Logging out deletes the heartbeat row and records which sign-in
+    // ended (logout.js, the token's iat); a beat that finds no row checks that before making one again, so a
+    // copy of an old session cookie can't bring the session back. A normal beat finds its row: one statement.
+    const touched = await db.prepare(
+        `UPDATE heartbeats SET full_name = ?, batch_id = ?, user_type = ?, current_case = ?, last_seen = datetime('now') WHERE username = ?`
+    ).bind(beat.fullName, beat.batchId || null, beat.userType || null, beat.currentCase, beat.username).run();
+    if (!(touched && touched.meta && touched.meta.changes)) {
+        const ended = await db.prepare(
+            `SELECT 1 AS ended FROM activity_log WHERE actor_username = ? AND action = 'logout' AND details = ? LIMIT 1`
+        ).bind(session.username, JSON.stringify({ iat: session.iat })).first().catch(() => null);
+        if (ended) return json({ success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' }, 401);
+        await upsertSessionHeartbeat(db, beat);
+    }
 
     // Live view (_liveview.js): where a trainee is, and while an Admin watches, their screen and a snapshot
     // of their case. Always the session's own user: nobody can write another trainee's screen.

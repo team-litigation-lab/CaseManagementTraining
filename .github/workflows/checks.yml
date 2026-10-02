@@ -112,6 +112,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/client-id.cjs
+      - name: Security (uploads download, status changes, admin password tries, logout, a case can't run anything)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/security.cjs
       - name: Live view (an Admin watches a trainee's screen live, mirrored as it is)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

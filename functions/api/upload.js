@@ -1,4 +1,4 @@
-import { json, requireSession } from '../_utils.js';
+import { json, requireSession, fileTypeIsInline } from '../_utils.js';
 
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
@@ -26,10 +26,13 @@ export async function onRequestPost({ request, env }) {
 
     const filename = safeFilename(file.name);
     const key = `documents/${crypto.randomUUID()}-${filename}`;
+    // A PDF, a photo or plain text opens in the browser; anything else (an HTML page, an SVG…) is kept as a
+    // download, so nothing uploaded can run as the person who opens it (_utils.js → INLINE_FILE_TYPES).
+    const inline = fileTypeIsInline(file.type);
     await env.DOCUMENTS.put(key, file.stream(), {
         httpMetadata: {
-            contentType: file.type || 'application/octet-stream',
-            contentDisposition: `inline; filename="${filename}"`
+            contentType: inline ? String(file.type).toLowerCase() : 'application/octet-stream',
+            contentDisposition: `${inline ? 'inline' : 'attachment'}; filename="${filename}"`
         },
         customMetadata: {
             uploadedBy: auth.session.username,

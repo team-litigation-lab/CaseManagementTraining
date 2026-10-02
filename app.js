@@ -597,12 +597,64 @@
             });
             return out;
         }
+        /* Saved case content is markup (table rows, line breaks, bold text, the row buttons), and someone else's
+           case is opened too: an Admin opens a trainee's, every trainee opens an Admin's library edit. Before any
+           of it goes back on the page it's cleaned (cleanCaseHtml): it's parsed in an inert <template> (nothing
+           in it loads or runs there), then anything that could run is dropped: script-like elements, javascript:
+           and data: links, and every on…= handler except the app's own row buttons, which only ever call the
+           case editor's helpers below with plain values. What's left is text and layout. */
+        const CASE_HTML_DROP = new Set(['script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet', 'link', 'meta', 'base',
+            'style', 'template', 'noscript', 'portal', 'foreignobject', 'animate', 'animatemotion', 'animatetransform', 'set', 'handler', 'listener']);
+        const CASE_HTML_URL_ATTRS = new Set(['href', 'src', 'xlink:href', 'action', 'formaction', 'background', 'poster', 'data', 'srcset', 'lowsrc', 'dynsrc', 'cite', 'ping']);
+        const CASE_HANDLER_FNS = new Set(['handleDocUpload', 'handleOtherSystem', 'revertOther', 'addChronoDate', 'updateTotals', 'afterKeyedApplied',
+            'window.afterKeyedApplied', 'applyReportKind', 'calcSettlement', 'calcWages', 'toggleDriverInsuredExtra', 'toggleOwnerExtra', 'updatePhaseDisplay',
+            'generateCaseId', 'sortChronology', 'docDropCat', 'docDrop', 'docDragOver', 'docDragLeave', 'addRow', 'addBI', 'addPIPUM', 'addLien',
+            'addFacility', 'addChronology', 'addDocument', 'addParty', 'addAuthorized', 'addDemand', 'showTab',
+            'lshClientId.pick', 'lshClientId.open', 'lshClientId.remove']);
+        const CASE_HANDLER_ARG = /^(?:'[\w .:#\-]*'|-?\d+(?:\.\d+)?|this|this\.(?:id|value|checked)|event|true|false|null)$/;
+        function caseHandlerOk(code) {
+            return String(code).split(';').map(x => x.trim()).filter(Boolean).every(st => {
+                if (/^this(?:\.parentElement|\.closest\('[\w.#\-]+'\))*\.remove\(\)$/.test(st)) return true;
+                if (/^this(?:\.parentElement)+\.innerHTML\s*=\s*''$/.test(st)) return true;
+                if (/^(?:event\.stopPropagation|event\.preventDefault|this\.blur)\(\)$/.test(st) || st === 'return false') return true;
+                if (/^window\.afterKeyedApplied\s*&&\s*afterKeyedApplied\(\)$/.test(st)) return true;
+                const m = /^([\w.]+)\((.*)\)$/.exec(st);
+                if (!m || !CASE_HANDLER_FNS.has(m[1])) return false;
+                return !m[2].trim() || m[2].split(',').every(a => CASE_HANDLER_ARG.test(a.trim()));
+            });
+        }
+        const _cleanTpl = document.createElement('template');
+        function cleanCaseHtml(html) {
+            if (typeof html !== 'string') return html == null ? '' : String(html);
+            if (html.indexOf('<') < 0) return html;   // plain text: nothing to clean
+            _cleanTpl.innerHTML = html;               // parsed as a template's content: inert, and table rows stay rows
+            const frag = _cleanTpl.content;
+            frag.querySelectorAll('*').forEach(el => {
+                if (CASE_HTML_DROP.has(el.localName.toLowerCase())) { el.remove(); return; }
+                Array.from(el.attributes).forEach(a => {
+                    const n = a.name.toLowerCase();
+                    if (n.startsWith('on')) { if (!caseHandlerOk(a.value)) el.removeAttribute(a.name); return; }
+                    if (n === 'srcdoc' || n === 'is') { el.removeAttribute(a.name); return; }
+                    if (!CASE_HTML_URL_ATTRS.has(n)) return;
+                    const url = a.value.replace(/[\u0000- ]/g, '');
+                    // data: stays only as the Doc Hub saved it before R2: a picture, or a file link that downloads
+                    const picture = /^data:image\/(?:png|jpe?g|gif|webp);/i.test(url);
+                    const dataOk = (n === 'src' && el.localName === 'img' && picture) || (n === 'href' && (picture || el.hasAttribute('download')));
+                    if (/^(?:javascript|vbscript|data):/i.test(url) && !dataOk) el.removeAttribute(a.name);
+                });
+            });
+            const out = _cleanTpl.innerHTML;
+            _cleanTpl.innerHTML = '';
+            return out;
+        }
+        window.cleanCaseHtml = cleanCaseHtml;
+
         // Puts saved keyed sections back; a section with nothing saved goes back to empty.
         function applyKeyed(keyed, root) {
             (root || document).querySelectorAll('[data-keyed][id]').forEach(el => {
                 const k = keyed && keyed[el.id];
                 if (el.dataset.keyed === 'rows') {
-                    el.innerHTML = k && typeof k.html === 'string' ? k.html : (_keyedTemplates[el.id] || '');
+                    el.innerHTML = k && typeof k.html === 'string' ? cleanCaseHtml(k.html) : (_keyedTemplates[el.id] || '');
                     const sels = el.querySelectorAll('select');
                     ((k && k.sels) || []).forEach((v, i) => { if (sels[i]) sels[i].value = v; });
                     return;
@@ -612,7 +664,7 @@
                     if (x.tagName === 'SELECT') {
                         if (v !== undefined) x.value = v;
                         else { const d = Array.from(x.options).findIndex(o => o.defaultSelected); x.selectedIndex = d < 0 ? 0 : d; }
-                    } else x.innerHTML = v !== undefined ? v : '';
+                    } else x.innerHTML = v !== undefined ? cleanCaseHtml(v) : '';
                 });
             });
             if (!root || root === document) { if (typeof window.afterKeyedApplied === 'function') window.afterKeyedApplied(); }
@@ -693,24 +745,25 @@
             root = root || document;
             if (!content) return;
             const $ = (id) => root.querySelector('#' + id);
-            $('passenger-container').innerHTML = (content.html && content.html.pass) || '';
-            $('facility-container').innerHTML = (content.html && content.html.facs) || '';
-            $('chrono-container').innerHTML = (content.html && content.html.chrono) || '';
-            $('fin-body').innerHTML = (content.html && content.html.fin) || '';
-            $('pip-um-container').innerHTML = (content.html && content.html.pipum) || '';
-            $('bi-container').innerHTML = (content.html && content.html.bi) || '';
-            $('doc-body').innerHTML = (content.html && content.html.docs) || '';
-            $('lit-body').innerHTML = (content.html && content.html.lit) || '';
-            $('lien-container').innerHTML = (content.html && content.html.liens) || '';
-            $('note-body').innerHTML = (content.html && content.html.notes) || '';
-            $('task-body').innerHTML = (content.html && content.html.tasks) || '';
+            const H = (k) => cleanCaseHtml((content.html && content.html[k]) || '');   // someone else's case may be opened: cleaned
+            $('passenger-container').innerHTML = H('pass');
+            $('facility-container').innerHTML = H('facs');
+            $('chrono-container').innerHTML = H('chrono');
+            $('fin-body').innerHTML = H('fin');
+            $('pip-um-container').innerHTML = H('pipum');
+            $('bi-container').innerHTML = H('bi');
+            $('doc-body').innerHTML = H('docs');
+            $('lit-body').innerHTML = H('lit');
+            $('lien-container').innerHTML = H('liens');
+            $('note-body').innerHTML = H('notes');
+            $('task-body').innerHTML = H('tasks');
             // (html.police: the report's own fields, #police-body; cases saved before the Report Type choice have the same markup)
-            if (content.html && content.html.police) $('police-body').innerHTML = content.html.police;
+            if (content.html && content.html.police) $('police-body').innerHTML = H('police');
             if ($('attorney-field')) $('attorney-field').value = content.attorney || '';
             if ($('case-manager-field')) $('case-manager-field').value = content.caseManager || '';
 
             const edits = posEdits(root);
-            (content.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
+            (content.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = cleanCaseHtml(v); });
             const selects = posSels(root);
             (content.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
             fixPhaseSelect(selects, content.sels || []);
@@ -722,7 +775,7 @@
             if (content.caseTypeOtherVisible && mainType && mainOther) {
                 mainType.classList.add('hidden');
                 mainOther.classList.remove('hidden');
-                mainOther.innerHTML = content.caseTypeOther || '';
+                mainOther.innerHTML = cleanCaseHtml(content.caseTypeOther || '');
                 if (mainRevert) mainRevert.style.display = 'inline-block';
             } else if (content.caseType && mainType) {
                 mainType.value = content.caseType;
@@ -879,21 +932,22 @@
             // A view-only Training Library case is reopened fresh from mock-cases.js.
             if (data.mock && window.mockRestore && window.mockRestore(data.mock)) return true;
             try {
-                document.getElementById('passenger-container').innerHTML = (data.html && data.html.pass) || '';
-                document.getElementById('facility-container').innerHTML = (data.html && data.html.facs) || '';
-                document.getElementById('chrono-container').innerHTML = (data.html && data.html.chrono) || '';
-                document.getElementById('fin-body').innerHTML = (data.html && data.html.fin) || '';
-                document.getElementById('pip-um-container').innerHTML = (data.html && data.html.pipum) || '';
-                document.getElementById('bi-container').innerHTML = (data.html && data.html.bi) || '';
-                document.getElementById('doc-body').innerHTML = (data.html && data.html.docs) || '';
-                document.getElementById('lit-body').innerHTML = (data.html && data.html.lit) || '';
-                document.getElementById('lien-container').innerHTML = (data.html && data.html.liens) || '';
-                document.getElementById('note-body').innerHTML = (data.html && data.html.notes) || '';
-                document.getElementById('task-body').innerHTML = (data.html && data.html.tasks) || '';
-                if (data.html && data.html.police) document.getElementById('police-body').innerHTML = data.html.police;
+                const H = (k) => cleanCaseHtml((data.html && data.html[k]) || '');
+                document.getElementById('passenger-container').innerHTML = H('pass');
+                document.getElementById('facility-container').innerHTML = H('facs');
+                document.getElementById('chrono-container').innerHTML = H('chrono');
+                document.getElementById('fin-body').innerHTML = H('fin');
+                document.getElementById('pip-um-container').innerHTML = H('pipum');
+                document.getElementById('bi-container').innerHTML = H('bi');
+                document.getElementById('doc-body').innerHTML = H('docs');
+                document.getElementById('lit-body').innerHTML = H('lit');
+                document.getElementById('lien-container').innerHTML = H('liens');
+                document.getElementById('note-body').innerHTML = H('notes');
+                document.getElementById('task-body').innerHTML = H('tasks');
+                if (data.html && data.html.police) document.getElementById('police-body').innerHTML = H('police');
 
                 const edits = posEdits();
-                (data.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = v; });
+                (data.inputs || []).forEach((v, i) => { if (edits[i]) edits[i].innerHTML = cleanCaseHtml(v); });
                 const selects = posSels();
                 (data.sels || []).forEach((v, i) => { if (selects[i]) selects[i].value = v; });
                 fixPhaseSelect(selects, data.sels || []);
@@ -902,7 +956,7 @@
                 if (data.caseTypeOtherVisible && document.getElementById('main-case-type') && document.getElementById('main-case-other')) {
                     document.getElementById('main-case-type').classList.add('hidden');
                     document.getElementById('main-case-other').classList.remove('hidden');
-                    document.getElementById('main-case-other').innerHTML = data.caseTypeOther || '';
+                    document.getElementById('main-case-other').innerHTML = cleanCaseHtml(data.caseTypeOther || '');
                     if (document.getElementById('main-revert')) document.getElementById('main-revert').style.display = 'inline-block';
                 } else if (data.caseType && document.getElementById('main-case-type')) {
                     document.getElementById('main-case-type').value = data.caseType;
@@ -1673,22 +1727,25 @@
             const virtualPage = document.createElement('div');
             Object.assign(virtualPage.style, { padding: '46px', backgroundColor: '#ffffff', color: '#0f2148', fontFamily: "'IBM Plex Sans', Arial, sans-serif", lineHeight: '1.5' });
 
-            const clientName = document.getElementById('client-name-field').innerText.trim() || "UNNAMED CLIENT";
-            const phase = document.getElementById('display-phase').innerText;
-            const caseId = document.getElementById('case-id-field').innerText.trim() || '—';
-            const attorneyName = (document.getElementById('attorney-field') && document.getElementById('attorney-field').value.trim()) || '—';
-            const caseManagerName = (document.getElementById('case-manager-field') && document.getElementById('case-manager-field').value.trim()) || '—';
+            // Everything below goes into the page as HTML, and all of it was typed by someone: escaped (e).
+            const e = escapeHtmlAttr;
+            const rawClientName = document.getElementById('client-name-field').innerText.trim() || "UNNAMED CLIENT";
+            const clientName = e(rawClientName);
+            const phase = e(document.getElementById('display-phase').innerText);
+            const caseId = e(document.getElementById('case-id-field').innerText.trim() || '—');
+            const attorneyName = e((document.getElementById('attorney-field') && document.getElementById('attorney-field').value.trim()) || '—');
+            const caseManagerName = e((document.getElementById('case-manager-field') && document.getElementById('case-manager-field').value.trim()) || '—');
             const logoSrc = AGENCY_LOGO;
 
             // Person who originally submitted / created this case record.
-            const subName = info.submittedBy || '—';
-            const subBatch = info.submittedByBatch || '—';
-            const subDate = info.submittedAt || '—';
+            const subName = e(info.submittedBy || '—');
+            const subBatch = e(info.submittedByBatch || '—');
+            const subDate = e(info.submittedAt || '—');
 
             // Person producing THIS particular downloaded copy (may be a different person).
-            const copyName = info.producedByName || '—';
-            const copyBatch = info.producedByBatch || '—';
-            const copyDate = info.producedAt || new Date().toLocaleString();
+            const copyName = e(info.producedByName || '—');
+            const copyBatch = e(info.producedByBatch || '—');
+            const copyDate = e(info.producedAt || new Date().toLocaleString());
 
             // How many times this case's file has been downloaded, per the database record.
             const printSeq = (typeof info.printSequence === 'number') ? info.printSequence : 1;
@@ -1774,8 +1831,8 @@
                 const inputs = card.querySelectorAll('[contenteditable="true"], select');
                 inputs.forEach(input => {
                     const val = input.tagName === 'SELECT' ? input.value : input.innerText.trim();
-                    const labelText = findFieldLabel(input);
-                    const displayVal = val || 'None';
+                    const labelText = e(findFieldLabel(input));
+                    const displayVal = e(val || 'None');
                     sectionContent += `<div style="margin-bottom: 11px; padding-bottom: 6px; border-bottom: 1px solid #f1f5f9; break-inside: avoid;">
                         <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing:0.04em;">${labelText}</div>
                         <div style="font-size: 12px; font-weight: 600; color: ${val ? '#0f2148' : '#94a3b8'}; margin-top:2px;${val ? '' : ' font-style:italic;'}">${displayVal}</div>
@@ -1783,7 +1840,7 @@
                 });
                 if (sectionContent) {
                     virtualPage.innerHTML += `<div style="margin-bottom: 26px; break-inside: avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
-                        <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">${header.innerText}</div>
+                        <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">${e(header.innerText)}</div>
                         <div style="padding: 16px 18px;">${sectionContent}</div>
                     </div>`;
                 }
@@ -1808,25 +1865,25 @@
             let docHubContent = '';
             for (const row of docRows) {
                 const categoryEl = row.querySelector('td:first-child div');
-                const category = categoryEl ? categoryEl.innerText.trim() : '';
+                const category = e(categoryEl ? categoryEl.innerText.trim() : '');
                 const summaryEl = row.querySelector('[contenteditable="true"]');
-                const summary = summaryEl ? summaryEl.innerText.trim() : '';
+                const summary = e(summaryEl ? summaryEl.innerText.trim() : '');
                 const linkEl = row.querySelector('.doc-attachment a');
 
                 let attachmentHtml = '';
                 if (linkEl) {
                     const href = linkEl.getAttribute('href') || '';
-                    const filename = linkEl.getAttribute('download') || linkEl.innerText.trim();
+                    const filename = e(linkEl.getAttribute('download') || linkEl.innerText.trim());
                     const mime = linkEl.getAttribute('data-r2-mime') || '';
                     const isLegacyImage = /^data:image\//i.test(href);
                     const isR2Image = !!href && !/^data:/i.test(href) && /^image\//i.test(mime);
                     if (isLegacyImage) {
                         // Pre-R2 row: the base64 is still sitting in the href.
-                        attachmentHtml = `<div style="margin-top:8px;"><img src="${href}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`;
+                        attachmentHtml = `<div style="margin-top:8px;"><img src="${e(href)}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`;
                     } else if (isR2Image) {
                         const dataUri = await fetchAsDataURI(href);
                         attachmentHtml = dataUri
-                            ? `<div style="margin-top:8px;"><img src="${dataUri}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`
+                            ? `<div style="margin-top:8px;"><img src="${e(dataUri)}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`
                             : `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">📎 Attached file: ${filename}</div>`;
                     } else {
                         attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">📎 Attached file: ${filename}</div>`;
@@ -1854,7 +1911,7 @@
                     <span>For internal training use only</span>
                 </div>`;
 
-            const exportOptions = { margin: [0.5, 0.5], filename: `LSH_SUMMARY_${clientName.replace(/\s+/g, '_')}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+            const exportOptions = { margin: [0.5, 0.5], filename: `LSH_SUMMARY_${rawClientName.replace(/\s+/g, '_')}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(exportOptions).from(virtualPage).save().then(() => virtualPage.remove());
         }
 
@@ -2612,10 +2669,11 @@
             const container = document.getElementById('case-versions-list');
             if (!container) return;
             if (!versions.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No previous versions recorded for this case yet.</p>'; return; }
+            const e = escapeHtmlAttr;   // names and phases are typed by whoever saved the case
             container.innerHTML = versions.map(function (v) {
-                return '<div class="reg-row" style="cursor:pointer;" onclick="openCaseVersionView(' + caseRepositoryId + ', ' + v.id + ')"><div class="reg-info">' +
-                    '<b>' + (v.clientName || 'Untitled Case') + ' <span class="status-pill ' + (v.isDraft ? 'status-pending' : 'status-approved') + '">' + (v.isDraft ? 'DRAFT' : (v.phase || '')) + '</span></b>' +
-                    '<div class="reg-meta">Saved by ' + (v.savedBy || '\u2014') + (v.savedByBatch ? ' \u00B7 Batch ' + v.savedByBatch : '') + ' \u00B7 ' + new Date(v.savedAt).toLocaleString() + '</div>' +
+                return '<div class="reg-row" style="cursor:pointer;" onclick="openCaseVersionView(' + Number(caseRepositoryId) + ', ' + Number(v.id) + ')"><div class="reg-info">' +
+                    '<b>' + e(v.clientName || 'Untitled Case') + ' <span class="status-pill ' + (v.isDraft ? 'status-pending' : 'status-approved') + '">' + (v.isDraft ? 'DRAFT' : e(v.phase || '')) + '</span></b>' +
+                    '<div class="reg-meta">Saved by ' + e(v.savedBy || '\u2014') + (v.savedByBatch ? ' \u00B7 Batch ' + e(v.savedByBatch) : '') + ' \u00B7 ' + new Date(v.savedAt).toLocaleString() + '</div>' +
                     '</div><div style="font-size:11px;color:#64748b;">View &rarr;</div></div>';
             }).join('');
         }

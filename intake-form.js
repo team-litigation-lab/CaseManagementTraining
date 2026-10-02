@@ -951,7 +951,7 @@
                 ? `<b>New case created</b><span>${res.caseId ? `Case ID <span class="mono">${esc(res.caseId)}</span> · ` : ''}${esc(who)} · it's open in the editor.</span>`
                 : `<b>Not saved yet</b><span>${esc(res.error)} The case is open in the editor, filled in from the intake: click <b>Save Case</b> to try again.</span>`}</div>
             <div class="nm-grade">
-                <div class="nm-ring g-${g.letter}"><b>${g.score}%</b><span>${g.letter} · ${esc(g.word)}</span><em>Intake grade</em></div>
+                <div class="nm-ring g-${esc(g.letter)}"><b>${Number(g.score) || 0}%</b><span>${esc(g.letter)} · ${esc(g.word)}</span><em>Intake grade</em></div>
                 <div class="nm-bars">
                     ${bar('Key information', g.key.total ? g.key.got / g.key.total * 100 : 0, `${g.key.got} of ${g.key.total}`)}
                     ${bar('Questions answered', g.questions.pct, `${g.questions.answered} of ${g.questions.total}`)}
@@ -1292,7 +1292,7 @@
         let bar = box.querySelector('.io-bar');
         if (!bar) { box.insertAdjacentHTML('beforeend', '<div class="io-bar" style="display:contents"></div>'); bar = box.querySelector('.io-bar'); }
         bar.innerHTML = rec ? `<span class="io-tag">📋 INTAKE FORM</span>
-            <span class="io-txt"><b>${esc(FORMS[rec.form].title)} intake</b>${rec.grade ? ` · grade <b>${rec.grade.score}% (${esc(rec.grade.letter)})</b>` : ''} · saved ${esc(fmtWhen(rec.completedAt))}${rec.completedBy ? ' by ' + esc(rec.completedBy) : ''}</span>
+            <span class="io-txt"><b>${esc(FORMS[rec.form].title)} intake</b>${rec.grade ? ` · grade <b>${Number(rec.grade.score) || 0}% (${esc(rec.grade.letter)})</b>` : ''} · saved ${esc(fmtWhen(rec.completedAt))}${rec.completedBy ? ' by ' + esc(rec.completedBy) : ''}</span>
             <button type="button" class="go" onclick="openNewMatter({ view: true })">View intake form</button><button type="button" onclick="printIntakeOnFile()">🖨 Print</button>` : '';
     }
     /* ---------- print ---------- */
@@ -1323,7 +1323,7 @@
             table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:4px 6px;border-bottom:1px solid #e5e7eb}td.l{width:44%;color:#444}td.h{font-weight:700;color:#c2410c;padding-top:10px}
             .e{color:#aaa}tr{break-inside:avoid}</style></head><body>
             <h1>Legal Support Help · ${esc(f.title)} client intake</h1>
-            <div class="sub">${clientOf(a) ? `<b>${esc(clientOf(a))}</b> · ` : ''}${rec.completedAt ? `saved ${esc(fmtWhen(rec.completedAt))}${rec.completedBy ? ' by ' + esc(rec.completedBy) : ''}` : 'not saved yet'}${rec.grade ? ` · intake grade ${rec.grade.score}% (${esc(rec.grade.letter)})` : ''} · printed ${esc(today())}</div>
+            <div class="sub">${clientOf(a) ? `<b>${esc(clientOf(a))}</b> · ` : ''}${rec.completedAt ? `saved ${esc(fmtWhen(rec.completedAt))}${rec.completedBy ? ' by ' + esc(rec.completedBy) : ''}` : 'not saved yet'}${rec.grade ? ` · intake grade ${Number(rec.grade.score) || 0}% (${esc(rec.grade.letter)})` : ''} · printed ${esc(today())}</div>
             ${sections}</body></html>`;
         const w = window.open('', '_blank');
         if (!w) { toast('The print window was blocked. Allow pop-ups for this site, then try again.', 'error'); return; }
