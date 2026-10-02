@@ -374,7 +374,7 @@ const SAVED = [
     if (await page.locator('#sidebar-actions button:has-text(".ics")').count()) fail('the sidebar still offers .ics downloads');
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
     if (!(await page.locator('#tab-calendar').count())) fail('the Calendar tab is missing');
-    // A trainee's sidebar: the program, their cases, then New Intake, Download Case Summary, the timer and My Dashboard.
+    // A trainee's sidebar: the program, their cases, then New Intake, Download Case Summary, the timer, My Dashboard and the Blueprint.
     // No Latest Updates, Intake Folder, Firm Calendar or other trainer tools; the case's own actions are at the bottom of the case.
     const side = await page.evaluate(() => ({
         groups: [...document.querySelectorAll('#sidebar-actions > .sb-group')].filter(g => g.offsetParent).map(g => g.id),
@@ -383,7 +383,7 @@ const SAVED = [
         oldButtons: [...document.querySelectorAll('#sidebar-actions button')].filter(b => /save case|archive|update saved|close case/i.test(b.textContent)).length,
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
-    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn' || side.hidden.length || side.oldButtons
+    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn,lbp-open-btn' || side.hidden.length || side.oldButtons
         // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
         || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
 
@@ -455,7 +455,7 @@ const SAVED = [
         tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
     const work = await admin.evaluate(() => [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id));
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
-    if (work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's 📞 Reception Simulator isn't right before My Dashboard: ${work.join()}`);
+    if (work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn,lbp-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's 📞 Reception Simulator isn't right before My Dashboard: ${work.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');
