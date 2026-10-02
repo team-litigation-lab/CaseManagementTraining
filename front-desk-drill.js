@@ -219,8 +219,6 @@
     .fdd-script ul{margin:2px 0 0 16px;padding:0}
     .fdd-scripts-bar{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
     .fdd-scripts-bar button{font-size:10px;font-weight:800;text-transform:uppercase;background:#fff;border:1px solid #0f2148;color:#0f2148;border-radius:6px;padding:6px 9px;cursor:pointer}
-    /* wide screens: the case moves over while the panel is open, so the case and its search bar stay in view */
-    @media (min-width:1100px){body.fdd-open #app-shell > main{margin-right:min(500px,100vw)}}
     .fdd-row .close{font-size:9.5px;font-weight:800;text-transform:uppercase;border-radius:4px;padding:1px 5px;background:#fef3c7;color:#92400e;white-space:nowrap}
     .fdd-ids{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 6px}
     .fdd-id{font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px;border:1px solid #cbd5e1;background:#fff;color:#334155}
@@ -297,20 +295,24 @@
         $id('fdd-panel').classList.add('open'); $id('fdd-panel').setAttribute('aria-hidden', 'false'); document.body.classList.add('fdd-open');
         $id('fdd-mini').style.display = 'none';
         if (!D && !P) { screen = 'home'; loadHistory(); }
-        paint();
+        paint(); fitCase();
     };
     window.fddClose = function () {
         if (D && screen === 'call' && !confirm('Leave the drill? This run won\'t be scored.')) return;
         if (P && (screen === 'practice' || screen === 'pcwrap') && !confirm('Leave this call? It won\'t be scored.')) return;
         hangUp(); stopTimer(); D = null; endPractice(); screen = 'home';
-        document.body.classList.remove('fdd-on', 'fdd-open');
+        document.body.classList.remove('fdd-on', 'fdd-open'); fitCase();
         $id('fdd-panel').classList.remove('open'); $id('fdd-panel').setAttribute('aria-hidden', 'true');
         $id('fdd-mini').style.display = 'none';
     };
     // Hide the panel to read the case behind it; the floating button brings it back. (On a wide screen the
-    // case moves over while the panel is open, so both are in view: body.fdd-open.)
-    window.fddMinimize = function () { $id('fdd-panel').classList.remove('open'); document.body.classList.remove('fdd-open'); $id('fdd-mini').style.display = 'block'; };
-    window.fddRestore = function () { $id('fdd-panel').classList.add('open'); document.body.classList.add('fdd-open'); $id('fdd-mini').style.display = 'none'; };
+    // case moves over while the panel is open, so both are in view: body.fdd-open, fitCase.)
+    window.fddMinimize = function () { $id('fdd-panel').classList.remove('open'); document.body.classList.remove('fdd-open'); fitCase(); $id('fdd-mini').style.display = 'block'; };
+    window.fddRestore = function () { $id('fdd-panel').classList.add('open'); document.body.classList.add('fdd-open'); fitCase(); $id('fdd-mini').style.display = 'none'; };
+    // While the panel is open (body.fdd-open) the case moves over beside it on a wide screen, the sidebar stepping
+    // aside and the case shown a little smaller when there isn't room (case-fit.js); hiding or closing the panel
+    // puts it all back.
+    const fitCase = () => { if (window.lshFitCase) window.lshFitCase(); };
 
     /* ---------- drill flow ---------- */
     window.fddStart = function () {
@@ -414,13 +416,13 @@
         if ((screen === 'practice' || screen === 'pcwrap') && P) {
             P.selected = id;
             if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true, viewOnly: true });
-            pcPick(); return;
+            pcPick(); setTimeout(fitCase, 50); return;
         }
         if (!D || !D.cur) return;
         const cur = D.cur; if (cur.submitted) return;
         cur.selected = id;
         if (id !== 'none' && typeof openMockCase === 'function') openMockCase(id, { silent: true, viewOnly: true });
-        paint();
+        paint(); setTimeout(fitCase, 50);
     };
     // True while a call is on the line and not yet scored: the top-bar case search
     // (case-library.js) then records the case it opens as this call's pick.
@@ -1574,7 +1576,7 @@ Reply with exactly this JSON:
             const r = origApply.apply(this, arguments);
             buildUI();
             const signedIn = typeof hasAuthorizedAccess === 'function' && hasAuthorizedAccess();
-            if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on', 'fdd-open'); $id('fdd-panel').classList.remove('open'); }
+            if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on', 'fdd-open'); fitCase(); $id('fdd-panel').classList.remove('open'); }
             else if (signedIn && new URLSearchParams(location.search).get('drill') && !window.__fddOpened) { window.__fddOpened = true; setTimeout(openFrontDeskDrill, 80); }
             return r;
         };

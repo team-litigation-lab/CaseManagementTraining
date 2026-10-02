@@ -4,8 +4,10 @@
 // Checks:
 // - the search finds names spelled the way they sound ("Brittani", "Britney Kirkoobree" → Brittany Kirkcudbright,
 //   "Garsia" → Garcia), exact matches first, and tags those results "Sounds like"; numbers still match exactly;
-// - on a wide screen the case moves over while the panel is open, so the case's search bar isn't covered; ▭ Case
-//   gives it the whole width again; on a narrow screen the panel goes over the case as before;
+// - on a wide screen the case moves over while the panel is open (the sidebar stepping aside, and the case shown a
+//   little smaller, when there isn't room), so nothing on it, its search bar included, runs under the panel; ▭ Case
+//   gives it the whole width, the sidebar and its size back; on a narrow screen the panel goes over the case as before;
+// - resizing the browser fits the case to the window again: smaller (not below 70%) when it's narrow, full size when wide;
 // - a good practice call: the wrap-up checks the authentication from the call (name, DOB, DOL and one more
 //   identifier) with no choice to make, the debrief button works without one, and the debrief is the RECEPTION
 //   MOCK CALL scorecard: 14 items, the five checked from the call (opening spiel, authentication, closing spiel,
@@ -75,28 +77,34 @@ const failures = []; const fail = (m) => failures.push(m);
     if (found['901378'].includes('MC-01')) fail('a number one digit off matched a case number (numbers must match exactly)');
 
     // 2. the panel and the case side by side on a wide screen
-    await page.evaluate(() => { openMockCase('MC-04', { silent: true, viewOnly: true }); openFrontDeskDrill(); });
+    // the case is laid out at least 1100 px wide here, as it is with the site's styles (Tailwind, from its CDN, which a
+    // test browser may not reach), so the fit is tested the same way everywhere
+    await page.evaluate(() => { openMockCase('MC-04', { silent: true, viewOnly: true }); document.querySelector('.header-card').style.minWidth = '1100px'; openFrontDeskDrill(); });
     await page.waitForTimeout(400);
     const where = () => page.evaluate(() => {
-        const main = document.querySelector('#app-shell > main').getBoundingClientRect(), panel = document.getElementById('fdd-panel').getBoundingClientRect();
+        const main = document.querySelector('#app-shell > main').getBoundingClientRect(), panel = document.getElementById('fdd-panel').getBoundingClientRect(), ca = document.getElementById('capture-area');
         const bar = document.getElementById('cl-bar-input').getBoundingClientRect(), hit = document.elementFromPoint(bar.left + bar.width / 2, bar.top + bar.height / 2);
         const what = (e) => e ? e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).slice(0, 3).join('.') : '') : 'nothing';
-        return { mainRight: Math.round(main.right), panelLeft: Math.round(panel.left), bar: [bar.left, bar.top, bar.right, bar.bottom].map(Math.round), view: [innerWidth, innerHeight],
-            hit: what(hit), underPanel: !!(hit && hit.closest('#fdd-panel')), barShown: !!(hit && hit.closest('#cl-bar')) };
+        return { mainRight: Math.round(main.right), panelLeft: Math.round(panel.left), barRight: Math.round(bar.right), overflow: (() => { const x = document.getElementById('case-close-x'); x.style.setProperty('display', 'none', 'important'); const o = ca.scrollWidth - ca.clientWidth; x.style.removeProperty('display'); return o; })(), hit: what(hit),
+            barShown: !!(hit && hit.closest('#cl-bar')), sidebar: !!document.getElementById('sidebar').offsetParent, zoom: getComputedStyle(ca).zoom };
     });
-    let side = await where();
-    if (!side.barShown) { await page.waitForTimeout(1000); side = await where(); }
-    if (side.mainRight > side.panelLeft + 1 || side.bar[2] > side.panelLeft + 1 || side.underPanel) fail(`with the panel open on a wide screen, the panel covers the case or its search bar: ${JSON.stringify(side)}`);
-    else if (!side.barShown) console.log(`note: the case's search bar is beside the panel, but something else is on top of it: ${JSON.stringify(side)}`);
+    const side = await where();
+    if (side.mainRight > side.panelLeft + 1 || side.barRight > side.panelLeft + 1 || side.overflow > 1 || !side.barShown) fail(`with the panel open on a wide screen, the case or its search bar runs under the panel: ${JSON.stringify(side)}`);
     await page.evaluate(() => fddMinimize()); await page.waitForTimeout(250);
-    const full = await page.evaluate(() => Math.round(document.querySelector('#app-shell > main').getBoundingClientRect().right));
-    if (full < 1430) fail(`after ▭ Case the case doesn't get the whole width back (right edge ${full})`);
+    const full = await where();
+    if (full.mainRight < 1430 || !full.sidebar || Number(full.zoom) !== 1) fail(`after ▭ Case the case doesn't get the whole width, the sidebar and its size back: ${JSON.stringify(full)}`);
     await page.setViewportSize({ width: 900, height: 800 });
     await page.evaluate(() => fddRestore()); await page.waitForTimeout(250);
     const narrow = await page.evaluate(() => Math.round(document.querySelector('#app-shell > main').getBoundingClientRect().right));
     if (narrow < 890) fail(`on a narrow screen the case shouldn't shrink behind the panel (right edge ${narrow})`);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => fddClose());
+    // resizing the browser: the case is fitted to the window again (smaller in a narrow one, full size in a wide one)
+    const sized = async (w) => { await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(500); return page.evaluate(() => { const ca = document.getElementById('capture-area'), x = document.getElementById('case-close-x');
+        x.style.setProperty('display', 'none', 'important'); const over = ca.scrollWidth - ca.clientWidth; x.style.removeProperty('display'); return { zoom: Number(getComputedStyle(ca).zoom), over }; }); };
+    const wide = await sized(1920), small = await sized(1000), back = await sized(1920);
+    if (wide.zoom !== 1 || back.zoom !== 1 || !(small.zoom < 1 && small.zoom >= 0.7) || small.over > 1) fail(`resizing the browser doesn't fit the case to the window: ${JSON.stringify({ wide, small, back })}`);
+    await page.setViewportSize({ width: 1440, height: 900 }); await page.evaluate(() => { document.querySelector('.header-card').style.minWidth = ''; lshFitCase(); }); await page.waitForTimeout(300);
 
     // helpers: a practice call from a given caller; say a line and wait for the caller's answer
     const callFrom = async (id) => {
