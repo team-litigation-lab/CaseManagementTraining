@@ -1,4 +1,5 @@
 import { json, logActivity, isUsernameTombstoned, cleanBatchId } from '../_utils.js';
+import { portalOnly } from '../_portal.js';
 import { isGuestUsername, isTrainerUsername, cleanGuestName, parseFullName } from '../_guest.js';
 // Trainees register with three things: their full name, their Batch ID (B + the
 // date their batch started, DDMMYY, e.g. B300926: cleanBatchId in _utils.js) and a
@@ -19,6 +20,9 @@ export async function onRequestPost({ request, env }) {
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
+    if (portalOnly(env)) {
+        return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Registration is on the LSH Training Portal now. Register there, then open the CMS from the Portal.' }, 403);
+    }
     const rawName = String(body.fullName || '').trim();
     const rawBatch = String(body.batchId || '').trim();
     const username = String(body.username || '').trim();
