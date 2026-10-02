@@ -102,17 +102,50 @@
     /* 1. IDENTITY SYSTEM */
     #client-name-field {
         font-family: 'IBM Plex Sans', Arial, Helvetica, sans-serif;
-        font-size: 32px !important;
+        font-size: 28px !important;
         font-weight: 900 !important;
         color: #000000 !important;
         text-transform: uppercase !important;
-        line-height: 1.1 !important;
+        line-height: 1.15 !important;
         outline: none !important;
-        border: none !important;
-        background: transparent !important;
-        padding: 0 !important;
-        min-width: 420px;
+        padding: 6px 12px !important;
+        min-height: 48px;
     }
+
+    /* The case header: the client's demographics (labels above the boxes), the Client's ID card in the middle,
+       and the case number, status and search on the right. */
+    .header-card > .flex.justify-between { gap: 20px; }
+    .hdr-client { display: grid; grid-template-columns: repeat(3, 150px); gap: 8px 12px; align-items: end; flex: none; }
+    .hdr-client .hdr-name { grid-column: 1 / -1; }
+    .hdr-client .hdr-people { display: contents; }
+    .hdr-f > label { margin-bottom: 4px; line-height: 1.2; }
+    .hdr-f > [contenteditable="true"], .hdr-input { min-height: 36px; }
+    .hdr-client .target-settlement-display { font-size: 16px !important; padding: 6px 10px; }
+    .hdr-input { width: 100%; font-size: 12px; font-weight: 700; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; outline: none; }
+    .hdr-input:focus { background: #fff; border-color: var(--orange); box-shadow: 0 0 0 2px rgba(249,115,22,0.12); }
+    .hdr-id { flex: none; width: 170px; margin: 0 auto; }
+    /* the right side (case number, status, search) gives up room first when the window is narrower */
+    .header-card > .flex.justify-between > .text-right { flex: 0 1 auto; min-width: 300px; }
+    #display-phase { min-width: 0; }
+    /* a long status (UM OR UIM DEMANDED) drops under the dropdown rather than squeezing into a column */
+    .header-card .text-right > :has(> #display-phase) { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
+    .cid-card { width: 170px; }
+    .cid-thumb { display: block; width: 170px; padding: 0; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; cursor: zoom-in; overflow: hidden; box-shadow: 0 2px 6px rgba(15,23,42,.08); }
+    .cid-thumb:hover { border-color: var(--orange); }
+    .cid-thumb svg { display: block; width: 100%; height: auto; }
+    .cid-photo img { display: block; width: 100%; height: 107px; object-fit: cover; }
+    .cid-empty { height: 107px; border: 1.5px dashed #cbd5e1; border-radius: 9px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 11px; font-weight: 700; color: #64748b; }
+    .cid-up { font-size: 10.5px; font-weight: 800; color: #fff; background: #0c4a6e; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; text-transform: uppercase; letter-spacing: .03em; }
+    .cid-up:hover { background: #075985; }
+    .cid-modal { position: fixed; inset: 0; z-index: 9000; background: rgba(2,6,23,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .cid-box { background: #fff; border-radius: 12px; width: min(620px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 14px 16px 16px; box-shadow: 0 20px 50px rgba(0,0,0,.4); }
+    .cid-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; color: #0f172a; }
+    .cid-x { border: none; background: #f1f5f9; border-radius: 999px; width: 28px; height: 28px; cursor: pointer; font-weight: 800; }
+    .cid-big svg, .cid-big img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid #cbd5e1; }
+    .cid-note { font-size: 11.5px; color: #64748b; margin: 8px 0 0; }
+    .cid-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .cid-actions button { font-size: 11px; font-weight: 800; text-transform: uppercase; border-radius: 6px; padding: 8px 12px; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #0f172a; }
+    .cid-actions .cid-remove { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
 
     .target-settlement-display {
         font-size: 20px !important;
@@ -138,6 +171,9 @@
        stays in the page but can't be seen, so an empty field keeps its height. Search boxes and the Time and
        Calendar forms keep theirs. */
     #capture-area [contenteditable="true"]:empty:before { color: transparent; }
+    /* ...and every box on the case has a border you can see, filled or empty */
+    #capture-area [contenteditable="true"] { border-color: #cbd5e1; }
+    #capture-area [contenteditable="true"]:focus { border-color: var(--orange); }
     #attorney-field::placeholder, #case-manager-field::placeholder { color: transparent; }
 
     /* 2. INTEGRATED CASE BAR */

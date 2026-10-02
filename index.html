@@ -93,16 +93,25 @@
                 <!-- ✕ closes the case (closeCase in app.js); the same as Close in the bar at the bottom of the case -->
                 <button id="case-close-x" type="button" class="case-close-x no-print" onclick="closeCase()" title="Close this case" aria-label="Close this case">✕</button>
                 <div class="flex justify-between items-start">
-                    <div class="space-y-1">
-                        <div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div>
-                        <div class="flex items-center gap-6">
-                            <div class="flex items-center gap-2"><label class="mb-0 contact-label">Contact:</label><div id="client-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" style="min-width:140px" class="text-xs font-bold text-slate-700"></div></div>
-                            <div class="flex items-center gap-2"><label class="mb-0 text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" style="min-width:120px" class="target-settlement-display"></div></div>
+                    <!-- The client's demographics, labels above the boxes. The name, Contact and Target Settlement are saved by
+                         their position on the page, so they keep this order. The SSN here is a second view of the Profile tab's
+                         SSN (data-mirror: not saved itself; client-id.js keeps the two the same). -->
+                    <div class="hdr-client">
+                        <div class="hdr-f hdr-name"><label for="client-name-field">Client's Name</label><div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div></div>
+                        <div class="hdr-f"><label class="contact-label">Contact:</label><div id="client-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" class="text-xs font-bold text-slate-700"></div></div>
+                        <div class="hdr-f"><label class="contact-label" for="head-ssn-field">SSN:</label><div id="head-ssn-field" data-mirror contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn" class="text-xs font-bold text-slate-700"></div></div>
+                        <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div></div>
+                        <div id="attorney-cm-container" class="hdr-people">
+                            <div class="hdr-f"><label class="contact-label" for="attorney-field">Attorney:</label><input type="text" id="attorney-field" placeholder="Attorney name" class="hdr-input"></div>
+                            <div class="hdr-f"><label class="contact-label" for="case-manager-field">Case Manager:</label><input type="text" id="case-manager-field" placeholder="Case manager name" class="hdr-input"></div>
                         </div>
-                        <div id="attorney-cm-container" class="flex items-center gap-6 mt-1">
-                            <div class="flex items-center gap-2"><label class="mb-0 contact-label">Attorney:</label><input type="text" id="attorney-field" placeholder="Attorney name" style="min-width:160px" class="text-xs font-bold text-slate-700 bg-transparent outline-none border-b border-slate-300 focus:border-orange-500"></div>
-                            <div class="flex items-center gap-2"><label class="mb-0 contact-label">Case Manager:</label><input type="text" id="case-manager-field" placeholder="Case manager name" style="min-width:160px" class="text-xs font-bold text-slate-700 bg-transparent outline-none border-b border-slate-300 focus:border-orange-500"></div>
-                        </div>
+                    </div>
+                    <!-- The client's ID (client-id.js): a mock ID for a Training Library client; for any other client, a photo of
+                         their ID uploaded here. Saved by id (data-keyed): the hidden field holds the uploaded file's key. -->
+                    <div id="kx-client-id" data-keyed class="hdr-id">
+                        <label>Client's ID</label>
+                        <div contenteditable="true" data-k="file" style="display:none" aria-hidden="true"></div>
+                        <div id="client-id-card" class="cid-card"></div>
                     </div>
                     <div class="text-right">
                         <div class="flex items-center gap-3 mb-2 justify-end"><label class="mb-0">Case ID:</label><div id="case-id-field" contenteditable="false" class="text-xs font-bold text-slate-500 min-w-[160px] bg-slate-100 px-2 py-0.5 rounded mono">LSH-----</div></div>
@@ -178,7 +187,7 @@
                 <div id="profile-grid" class="grid grid-cols-3 gap-8">
                     <div class="space-y-6">
                         <div class="pdf-card shadow-sm"><div class="section-head">Identity</div>
-                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div id="client-dob-field" contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
+                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div id="client-dob-field" contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div id="client-ssn-field" contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
                             <div class="mb-4"><label>Email Address</label><div id="client-email-field" contenteditable="true" data-ph="name@example.com" data-fmt="email"></div></div><div><label>Home Address</label><div id="client-address-field" contenteditable="true" data-ph="Street, City, State, ZIP"></div></div>
                         </div>
                         <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><div class="section-head" style="background:#fff7ed;color:#c2410c;">Emergency Contact</div>
@@ -1039,6 +1048,7 @@
     <script src="live-call.js"></script>
     <script src="call-voice.js"></script>
     <script src="case-fit.js"></script>
+    <script src="client-id.js"></script>
     <script src="front-desk-drill.js"></script>
     <script src="case-library.js"></script>
     <script src="intake-folder.js"></script>
