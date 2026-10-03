@@ -8,7 +8,6 @@
 import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds } from '../_utils.js';
 import { ensureGuestTables, cleanGuestBatch, guestUsername } from '../_guest.js';
 import { readPortalTicket, portalOnly, portalSecret, adminPasswordsSet } from '../_portal.js';
-import { adminPortalUser } from './login.js';
 
 const normName = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
 function nameVariants(u) {
@@ -43,12 +42,14 @@ export async function onRequestPost({ request, env }) {
             ? 'The LSH Training Portal couldn\'t be verified (code: bad-signature). Please tell your administrator: the Portal and the CMS need the same sign-in secret.'
             : 'This sign-in link has expired. Open the CMS again from the LSH Training Portal.' }, 401);
     }
+    // Administrators type the admin password here, like on every other platform: a Portal ticket never signs one in.
+    if (who.admin || who.system) {
+        return json({ success: false, code: 'ADMIN_PASSWORD_REQUIRED', error: 'Administrators sign in with the admin password.' }, 403);
+    }
     await shortenOldBatchIds(db);
 
     let user, guest = false;
-    if (who.admin) {
-        user = await adminPortalUser(db);
-    } else {
+    {
         const typed = normName(`${who.first} ${who.last}`);
         const batch = cleanGuestBatch(who.batch) || '';
         const { results } = await db.prepare(`SELECT * FROM users WHERE user_type = 'Trainee' AND username NOT LIKE 'guest-%' LIMIT 5000`).all();
