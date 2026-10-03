@@ -26,7 +26,7 @@ const BLOCKED = {
 
 export async function onRequestGet({ env }) {
     // hasSecret / hasAdminPassword say which of the two settings is missing when portalOnly is false (true/false only, never the values)
-    return json({ success: true, portalOnly: portalOnly(env), hasSecret: !!portalSecret(env), hasAdminPassword: adminPasswordsSet(env) }, 200, { 'Cache-Control': 'no-store' });
+    return json({ success: true, portalOnly: portalOnly(env), hasSecret: !!portalSecret(env), hasAdminPassword: adminPasswordsSet(env), verifies: portalSecret(env) ? 'here' : 'via the Portal' }, 200, { 'Cache-Control': 'no-store' });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -37,7 +37,9 @@ export async function onRequestPost({ request, env }) {
     const why = {};
     const who = await readPortalTicket(env, body.ticket, why);
     if (!who) {
-        return json({ success: false, code: why.r || 'format', error: why.r === 'signature'
+        return json({ success: false, code: why.r || 'format', error: why.r === 'unreachable'
+            ? 'The CMS couldn\'t reach the LSH Training Portal to confirm your sign-in. Please try again in a moment.'
+            : why.r === 'signature'
             ? 'The LSH Training Portal couldn\'t be verified (code: bad-signature). Please tell your administrator: the Portal and the CMS need the same sign-in secret.'
             : 'This sign-in link has expired. Open the CMS again from the LSH Training Portal.' }, 401);
     }
