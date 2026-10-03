@@ -1,6 +1,8 @@
 // Portal-only sign-in test: with the admin password set (and PORTAL_ONLY not "off"), the CMS signs trainees in only from the
 // LSH Training Portal's ticket (checked by the Portal, stubbed here), never by a typed name or a username alone, never lets a
-// trainee register in the CMS, and never signs an administrator in from a ticket (they type the admin password).
+// trainee register in the CMS, and never signs an administrator in from a ticket (they type the admin password). When several
+// accounts have the trainee's name it narrows them down (Batch ID, declined registrations left out, the approved account over
+// ones still waiting) and refuses, never guesses, when it can't tell them apart (two approved; one beside a suspended one).
 // Usage: node .github/scripts/portal.cjs   (from the repository root; Node 22.13+)
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path'); const { pathToFileURL } = require('url');
@@ -30,13 +32,28 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         CREATE TABLE batch_id_counter (user_type TEXT PRIMARY KEY, value INTEGER NOT NULL DEFAULT 0);
         INSERT INTO batch_id_counter VALUES ('Admin', 0), ('Trainee', 0);
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Tia', 'Trainee', 't@x.io', 'Trainee', 'B300926', 'tia', 'disabled:x', 'Pending');
-        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Rex', 'Revoked', 'r@x.io', 'Trainee', 'B300926', 'rex', 'disabled:x', 'Revoked');`);
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Rex', 'Revoked', 'r@x.io', 'Trainee', 'B300926', 'rex', 'disabled:x', 'Revoked');
+        -- the same name more than once: a declined registration and the account in use; an approved one and one still waiting;
+        -- two approved in the same batch; one approved and one suspended; two in different batches
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Dee', 'Double', 'd1@x.io', 'Trainee', 'B300926', 'dee_old', 'disabled:x', 'Rejected');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Dee', 'Double', 'd2@x.io', 'Trainee', 'B300926', 'dee', 'disabled:x', 'Approved');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Pat', 'Pair', 'p1@x.io', 'Trainee', 'B300926', 'pat', 'disabled:x', 'Approved');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Pat', 'Pair', 'p2@x.io', 'Trainee', 'B300926', 'pat_again', 'disabled:x', 'Pending');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Sam', 'Same', 's1@x.io', 'Trainee', 'B300926', 'sam1', 'disabled:x', 'Approved');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Sam', 'Same', 's2@x.io', 'Trainee', 'B300926', 'sam2', 'disabled:x', 'Approved');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Sue', 'Split', 'u1@x.io', 'Trainee', 'B300926', 'sue', 'disabled:x', 'Approved');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Sue', 'Split', 'u2@x.io', 'Trainee', 'B300926', 'sue_s', 'disabled:x', 'Suspended');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Bea', 'Batch', 'b1@x.io', 'Trainee', 'B300926', 'bea_sep', 'disabled:x', 'Approved');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Bea', 'Batch', 'b2@x.io', 'Trainee', 'B011026', 'bea_oct', 'disabled:x', 'Approved');`);
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret', MASTER_ADMIN_PASSWORD: 'ci-master-pass' };   // no PORTAL_SSO_SECRET: tickets are checked by the Portal
     // the Portal's answer, stubbed
     const answers = {
         trainee: { ok: true, first: 'Tia', last: 'Trainee', batch: 'B300926' },
         newbie: { ok: true, first: 'Nia', last: 'Newbie', batch: 'B300926' },
         revoked: { ok: true, first: 'Rex', last: 'Revoked', batch: 'B300926' },
+        dee: { ok: true, first: 'Dee', last: 'Double', batch: 'B300926' }, pat: { ok: true, first: 'Pat', last: 'Pair', batch: '' },
+        sam: { ok: true, first: 'Sam', last: 'Same', batch: 'B300926' }, sue: { ok: true, first: 'Sue', last: 'Split', batch: 'B300926' },
+        bea: { ok: true, first: 'Bea', last: 'Batch', batch: 'B011026' },
         admin: { ok: true, admin: true }, system: { ok: true, system: true },
         forged: { ok: false, code: 'signature' }, expired: { ok: false, code: 'expired' }
     };
@@ -55,6 +72,18 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     if (r.status !== 200 || !/^guest-/.test(r.data.user.username)) fail(`a trainee with no CMS account should get an approved one (${r.status} ${JSON.stringify(r.data)})`);
     r = await call(portalLogin, 'onRequestPost', { ticket: 'revoked' });
     if (r.status !== 403) fail(`a revoked trainee must stay blocked (${r.status})`);
+    // the same name more than once: narrowed down when it can be told apart, refused (never guessed) when it can't
+    const as = async (t) => { const x = await call(portalLogin, 'onRequestPost', { ticket: t }); return { status: x.status, user: x.data.user && x.data.user.username, cookie: !!x.cookie, code: x.data.code }; };
+    let d = await as('dee');
+    if (d.status !== 200 || d.user !== 'dee') fail(`a declined registration with the same name should be left out: ${JSON.stringify(d)}`);
+    d = await as('pat');
+    if (d.status !== 200 || d.user !== 'pat' || sql.prepare("SELECT status FROM users WHERE username='pat_again'").get().status !== 'Pending') fail(`the approved account should be used over one still waiting (and that one left as it is): ${JSON.stringify(d)}`);
+    d = await as('bea');
+    if (d.status !== 200 || d.user !== 'bea_oct') fail(`the Portal's Batch ID should pick the account in that batch: ${JSON.stringify(d)}`);
+    for (const t of ['sam', 'sue']) {
+        d = await as(t);
+        if (d.status !== 409 || d.cookie || d.code !== 'NEED_BATCH') fail(`${t === 'sam' ? 'two approved accounts with the same name and batch' : 'an approved account beside a suspended one'} must be refused, not guessed: ${JSON.stringify(d)}`);
+    }
     for (const t of ['admin', 'system']) {
         r = await call(portalLogin, 'onRequestPost', { ticket: t });
         if (r.status !== 403 || r.data.code !== 'ADMIN_PASSWORD_REQUIRED' || r.cookie) fail(`a ${t} ticket must never sign anyone in (${r.status} ${JSON.stringify(r.data)})`);

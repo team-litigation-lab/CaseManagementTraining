@@ -1,10 +1,11 @@
 // GET  /api/portal-login            → { portalOnly }  (does the CMS take sign-ins only from the Portal?)
 // POST /api/portal-login { ticket } → signs in from the LSH Training Portal's signed ticket (functions/_portal.js)
-//   - an administrator's ticket opens the Master Account (the Portal checked their admin password);
-//   - a trainee's ticket opens their registered CMS account (matched by first + last name, and Batch ID when
-//     two trainees share a name). The Portal's approval is the only approval: a registration still waiting in the
-//     CMS is approved by it (revoked, rejected and suspended accounts stay blocked). A trainee with no CMS account
-//     yet gets one, already approved, so nobody registers twice.
+//   - an administrator's (or the Portal's system) ticket never signs anyone in: administrators type the admin password;
+//   - a trainee's ticket opens their registered CMS account (matched by first + last name; when several accounts
+//     have the name: the Batch ID, then leaving out declined registrations, then the one approved account over
+//     ones still waiting; still more than one: refused, never guessed). The Portal's approval is the only
+//     approval: a registration still waiting in the CMS is approved by it (revoked, rejected and suspended
+//     accounts stay blocked). A trainee with no CMS account yet gets one, already approved, so nobody registers twice.
 import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds } from '../_utils.js';
 import { ensureGuestTables, cleanGuestBatch, guestUsername } from '../_guest.js';
 import { readPortalTicket, portalOnly, portalSecret, adminPasswordsSet } from '../_portal.js';
@@ -54,14 +55,27 @@ export async function onRequestPost({ request, env }) {
         const batch = cleanGuestBatch(who.batch) || '';
         const { results } = await db.prepare(`SELECT * FROM users WHERE user_type = 'Trainee' AND username NOT LIKE 'guest-%' LIMIT 5000`).all();
         let matches = (results || []).filter(u => nameVariants(u).has(typed));
+        // Several accounts with the name (often the same person registered twice): narrow it down, never guess.
+        //  1. the Portal's Batch ID;
+        //  2. a registration that was declined isn't an account anyone uses;
+        //  3. one approved account and the rest still waiting (never signed in, so nothing in them): the approved one.
+        //     Not when one of them is suspended or revoked: the other account mustn't be a way round that.
         if (matches.length > 1 && batch) {
             const narrowed = matches.filter(u => u.batch_id && batchKey(u.batch_id).includes(batchKey(batch)));
             if (narrowed.length) matches = narrowed;
         }
+        if (matches.length > 1) {
+            const notDeclined = matches.filter(u => u.status !== 'Rejected');
+            if (notDeclined.length) matches = notDeclined;
+        }
+        if (matches.length > 1 && matches.every(u => u.status === 'Approved' || u.status === 'Pending')) {
+            const approved = matches.filter(u => u.status === 'Approved');
+            if (approved.length === 1) matches = approved;
+        }
         if (matches.length === 1) {
             user = matches[0];
         } else if (matches.length > 1) {
-            return json({ success: false, code: 'NEED_BATCH', error: 'More than one CMS trainee has your name. Please tell your trainer so they can link your account.' }, 409);
+            return json({ success: false, code: 'NEED_BATCH', error: 'More than one CMS account has your name, so the CMS can\'t tell which one is yours. Please tell your trainer: in Master Control → Users they can remove the extra account, or give each one its own Batch ID.' }, 409);
         } else {
             // no registered account: a name-only account, already approved (made once, found again by the same name + batch)
             await ensureGuestTables(db);
