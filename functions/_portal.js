@@ -13,7 +13,8 @@ const enc = new TextEncoder();
 export const portalSecret = (env) => String(env.PORTAL_SSO_SECRET || '').trim();
 export const adminPasswordsSet = (env) => [env.MASTER_ADMIN_PASSWORD, env.ADMIN_PORTAL_PASSWORD].some(p => String(p || '').trim());
 // Portal-only needs only the admin password to be set (the same condition the training programs use for their lock-in).
-export const portalOnly = (env) => adminPasswordsSet(env);
+// PORTAL_ONLY=off is the way back to the old sign-ins (the CMS's own tests use it); leave it unset in production.
+export const portalOnly = (env) => adminPasswordsSet(env) && String(env.PORTAL_ONLY || '').trim().toLowerCase() !== 'off';
 const PORTAL_VERIFY_URL = 'https://cm-training-activity.pages.dev/api/verify-ticket';
 
 function b64url(bytes) {
