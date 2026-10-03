@@ -82,7 +82,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     const pendingTrainee = addUser('Pat', 'Pending', 'Trainee', 'pat', 'Pending');
     const otherAdmin = addUser('Ola', 'Admin', 'Admin', 'trainer-ola-admin', 'Approved');
     const bucket = r2();
-    const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret', MASTER_ADMIN_PASSWORD: 'ci-master-pass', DOCUMENTS: bucket };
+    const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret', MASTER_ADMIN_PASSWORD: 'ci-master-pass', PORTAL_ONLY: 'off', DOCUMENTS: bucket };
     const login = async (body, ip = '10.0.0.1') => { const r = await loginApi.onRequestPost({ request: new Request('http://x/api/login', { method: 'POST', headers: { 'CF-Connecting-IP': ip }, body: JSON.stringify(body) }), env }); return { status: r.status, cookie: ((r.headers.get('set-cookie') || '').match(/lsh_session=[^;]+/) || [''])[0], data: await r.json() }; };
     const call = async (fn, url, cookie, init = {}) => { const r = await fn({ request: new Request('http://x' + url, { ...init, headers: { ...(init.headers || {}), ...(cookie ? { Cookie: cookie } : {}) } }), env }); return r; };
 

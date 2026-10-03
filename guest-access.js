@@ -196,8 +196,17 @@
             + '<a href="' + PORTAL_LOGIN + '" style="display:block;background:#f97316;color:#fff;font-weight:700;text-decoration:none;padding:12px;border-radius:10px">Go to the LSH Training Portal</a>'
             + '<p style="margin:22px 0 0;font-size:12px;color:#94a3b8">Trainer or admin? <a href="#" id="portal-admin-link" style="color:#fff;font-weight:700">Sign in with the admin password</a></p>');
         const a = el.querySelector('#portal-admin-link');
-        if (a) a.onclick = (e) => { e.preventDefault(); dismissed = true; el.remove(); if (typeof window.showLoginView === 'function') window.showLoginView(); };
+        if (a) a.onclick = (e) => { e.preventDefault(); openAdminLogin(); };
     }
+    // Administrators always type the admin password: straight to the Admin Portal sign-in (no ticket, no name form).
+    function openAdminLogin() {
+        dismissed = true;
+        const o = document.getElementById('portal-only-overlay'); if (o) o.remove();
+        if (typeof window.showLoginView === 'function') window.showLoginView();
+        if (typeof window.switchPortalTab === 'function') window.switchPortalTab('Admin');
+    }
+    const wantAdmin = params.get('admin') === '1';
+    if (wantAdmin) { try { const u = new URL(location.href); u.searchParams.delete('admin'); history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash); } catch (e) { /* keep the address */ } }
     const session = () => { try { return typeof getSession === 'function' ? getSession() : null; } catch (e) { return null; } };
 
     async function signInFromTicket() {
@@ -206,6 +215,7 @@
         try {
             const res = await fetch('/api/portal-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ticket }) });
             const data = await res.json().catch(() => ({}));
+            if (data.code === 'ADMIN_PASSWORD_REQUIRED') { openAdminLogin(); return; }
             if (!res.ok || !data.success) { notice = data.error || 'We couldn’t sign you in from the LSH Training Portal. Open the CMS from the Portal again.'; return; }
             const u = data.user;
             setSession({ fullName: u.fullName, batchId: u.batchId, userType: u.userType, username: u.username });
@@ -235,7 +245,8 @@
         fetch('/api/portal-login', { credentials: 'include' }).then((r) => r.json()).then((d) => {
             portalOnly = !!(d && d.portalOnly);
             if (!portalOnly) return;
-            if (ticket) signInFromTicket();   // a Portal ticket always wins: whoever opened it from the Portal is who is signed in
+            if (wantAdmin && !session()) openAdminLogin();
+            else if (ticket) signInFromTicket();   // a Portal ticket always wins: whoever opened it from the Portal is who is signed in
             else if (!session()) showNotice();
         }).catch(() => { /* status unknown: leave the usual sign-in */ });
     }

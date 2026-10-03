@@ -73,7 +73,7 @@ const failures = []; const fail = (m) => failures.push(m);
     sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Ty', 'Typed', 't2@x.io', 'Trainee', 'B30092026', 'typed_ty', 'disabled:x', 'Approved')`).run();
     sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Lei', 'Abut', 'l@x.io', 'Admin', 'B30092026-LSHADMIN-003', 'trainer-lei-abut', 'disabled:x', 'Approved')`).run();
     sql.prepare(`INSERT INTO heartbeats (username, full_name, batch_id, user_type, last_seen) VALUES ('olga', 'Olga Oldbatch', 'B05022026-LSHTRAINEE-001', 'Trainee', datetime('now', '-1 day'))`).run();
-    const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret' };
+    const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret', PORTAL_ONLY: 'off' };   // the old sign-ins; .github/scripts/portal.cjs tests the Portal-only mode
     const post = async (body) => { const r = await loginApi.onRequestPost({ request: new Request('http://x/api/login', { method: 'POST', body: JSON.stringify(body) }), env }); return { status: r.status, cookie: r.headers.get('set-cookie') || '', data: await r.json() }; };
 
     // Batch IDs: B + the date the batch started (DDMMYY); the older long forms read as the short one

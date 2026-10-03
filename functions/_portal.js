@@ -13,7 +13,8 @@ const enc = new TextEncoder();
 export const portalSecret = (env) => String(env.PORTAL_SSO_SECRET || '').trim();
 export const adminPasswordsSet = (env) => [env.MASTER_ADMIN_PASSWORD, env.ADMIN_PORTAL_PASSWORD].some(p => String(p || '').trim());
 // Portal-only needs only the admin password to be set (the same condition the training programs use for their lock-in).
-export const portalOnly = (env) => adminPasswordsSet(env);
+// PORTAL_ONLY=off is the way back to the old sign-ins (the CMS's own tests use it); leave it unset in production.
+export const portalOnly = (env) => adminPasswordsSet(env) && String(env.PORTAL_ONLY || '').trim().toLowerCase() !== 'off';
 const PORTAL_VERIFY_URL = 'https://cm-training-activity.pages.dev/api/verify-ticket';
 
 function b64url(bytes) {
@@ -28,7 +29,7 @@ function same(a, b) {
     return d === 0;
 }
 
-// Returns { admin:true } | { first, last, batch } | null; `why.r` says why a ticket was refused.
+// Returns { system:true } | { admin:true } | { first, last, batch } | null; `why.r` says why a ticket was refused.
 export async function readPortalTicket(env, ticket, why = {}) {
     const secret = portalSecret(env);
     if (!secret) return readViaPortal(env, ticket, why);
@@ -41,6 +42,7 @@ export async function readPortalTicket(env, ticket, why = {}) {
     try { t = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)))); } catch (e) { why.r = 'format'; return null; }
     const exp = Number(t && t.exp);
     if (!exp || Date.now() > exp || exp - Date.now() > MAX_AHEAD_MS) { why.r = 'expired'; return null; }
+    if (t.r === 's') return { system: true };   // the Portal's own server-side tools: never signs a person in
     if (t.r === 'a') return { admin: true };
     const first = String(t.first || '').trim(), last = String(t.last || '').trim(), batch = String(t.b || '').trim();
     if (!first || !last) { why.r = 'format'; return null; }
@@ -55,6 +57,7 @@ async function readViaPortal(env, ticket, why) {
         out = await res.json();
     } catch (e) { why.r = 'unreachable'; return null; }
     if (!out || !out.ok) { why.r = (out && out.code) || 'format'; return null; }
+    if (out.system) return { system: true };
     if (out.admin) return { admin: true };
     const first = String(out.first || '').trim(), last = String(out.last || '').trim(), batch = String(out.batch || '').trim();
     if (!first || !last) { why.r = 'format'; return null; }
