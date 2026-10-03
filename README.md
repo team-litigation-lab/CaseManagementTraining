@@ -270,6 +270,19 @@ Trainees **register in the CMS once**, so their trainer can follow their work. A
 
 Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
 
+## 🔐 Signing in from the LSH Training Portal
+
+With the admin password set (and `PORTAL_ONLY` not `off`), trainees sign in only on the LSH Training Portal and open the CMS from there. The Portal's signed ticket says who they are (first and last name, and their Batch ID). Administrators type the admin password (`functions/api/portal-login.js`, `functions/_portal.js`, `guest-access.js`).
+
+**Finding the trainee's account** (by first and last name; capitalisation, accents and a middle initial or suffix don't matter):
+- **One account has the name:** that one. A registration still waiting is approved by the Portal; declined, suspended and revoked accounts get their usual message.
+- **No account:** one is made, already approved.
+- **Several accounts have the name** (often the same person registered twice), narrowed down in this order:
+  1. the Portal's Batch ID;
+  2. declined registrations are left out;
+  3. one approved account beside ones still waiting (never signed in, so empty): the approved one.
+- **Still more than one** (two approved accounts in the same batch, or one beside a suspended or revoked one): refused, never guessed. The trainee is asked to tell their trainer, who removes the extra account or gives each one its own Batch ID in Master Control → Users. A suspended account never lets its owner in through another account with the same name.
+
 ## 🪪 The case header: Client's Name, SSN and the Client's ID
 
 The top of the case is the client's demographics. Each box has its label above it and a border you can see, empty or filled:
