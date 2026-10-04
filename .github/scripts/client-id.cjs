@@ -112,10 +112,12 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.click('#head-ssn-field'); await page.keyboard.type('123456789'); await page.waitForTimeout(150);
     s = await ssnOf();
     if (s[0] !== '123-45-6789' || s[1] !== '123-45-6789') fail(`typing the SSN beside Contact didn't change the Profile tab's: ${JSON.stringify(s)}`);
+    // the Profile tab no longer shows its SSN box (it's the saved one, filled when a case loads): what's put there shows beside Contact
     await page.evaluate(() => showTab('profile'));
-    await page.click('#client-ssn-field'); await page.keyboard.press('Control+A'); await page.keyboard.type('987654321'); await page.waitForTimeout(150);
+    if (await page.isVisible('#client-ssn-field')) fail('the Profile tab still shows the SSN');
+    await page.evaluate(() => { document.getElementById('client-ssn-field').innerHTML = '987-65-4321'; }); await page.waitForTimeout(150);
     s = await ssnOf();
-    if (s[0] !== '987-65-4321' || s[1] !== '987-65-4321') fail(`typing the Profile tab's SSN didn't change the one beside Contact: ${JSON.stringify(s)}`);
+    if (s[0] !== '987-65-4321' || s[1] !== '987-65-4321') fail(`the Profile tab's (saved) SSN didn't show beside Contact: ${JSON.stringify(s)}`);
     let saved = await page.evaluate(() => buildCaseContentPayload());
     if (saved.inputs.length !== POSITIONAL_EDITS || saved.inputs.filter(v => /987-65-4321/.test(v)).length !== 1) fail('the SSN was saved twice, or not once, in the case\'s fields');
     // a case saved before this change: its SSN shows in both places, its other fields where they were

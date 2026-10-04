@@ -143,7 +143,8 @@ let base;
             remove: !!document.querySelector('#kx-demand .kx-dl-x'), boxes: document.querySelectorAll('#kx-demand .kx-dl').length };
     });
     if (uploads.length !== 1) fail(`the demand letter wasn't uploaded (${uploads.length} uploads)`);
-    if (!dl.linked || !/Demand letter 1\.pdf/.test(dl.linked.text) || !/^\/api\/file\?key=documents%2F/.test(dl.linked.href || '')) fail(`the uploaded letter isn't linked on the demand: ${JSON.stringify(dl.linked)}`);
+    // (named by the firm's convention: <Case ID>_<Last-First>_Demand-Letter_<date>.pdf; docs-drive.cjs checks the naming itself)
+    if (!dl.linked || !/_Demand-Letter_\d{4}-\d{2}-\d{2}\.pdf$/.test(dl.linked.text) || !/^\/api\/file\?key=documents%2F/.test(dl.linked.href || '')) fail(`the uploaded letter isn't linked on the demand: ${JSON.stringify(dl.linked)}`);
     if (!dl.back || dl.back.href !== (dl.linked || {}).href || dl.boxes !== 1) fail(`the demand letter didn't come back with the case: ${JSON.stringify(dl)}`);
     if (!dl.remove) fail('a demand letter has no × to remove it');
     else {
