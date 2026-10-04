@@ -36,12 +36,12 @@
               shot: 'blueprint/trainee-search.jpg', shotAlt: 'The search bar showing four Maria Santos files, each with its case number, date of birth and date of loss' },
             { icon: '📇', title: 'Contacts', points: [
                 'A card for everyone in the case files: medical providers, adjusters, opposing counsel, clients and others.',
-                'Each card has the phone, email or address on file and the cases the contact is on. Click a case to open it.',
-                'Search by name, company, phone (any format), email, claim number or client.',
+                'Type in the small 📇 Search contacts bar: name, company, phone (any format), email, claim number or client.',
+                'Enter or a click pops up the contact\'s card: phone, email, address and the cases they\'re on. Click a case to open it.',
                 'Others: emergency contacts, the parties at fault, lien holders, health plans, police agencies and employers.'],
-              where: 'Sidebar → 📇 Contacts, under My cases · the small 📇 search bar under Search cases, at the top right of the case.',
+              where: 'The small 📇 Search contacts bar, under Search cases at the top right of the case.',
               tip: 'A provider or an adjuster on the line? Search their number to see which cases they\'re on, then route the call.',
-              shot: 'blueprint/trainee-contacts.jpg', shotAlt: '📇 Contacts: the cards for everyone on Linda Garcia\'s case, from her providers to the defense counsel' },
+              shot: 'blueprint/trainee-contacts.jpg', shotAlt: 'A contact card popped up from the search bar: Richard Voss, defense counsel, with his phone, email and cases' },
             { icon: '📝', title: 'New Intake', points: [
                 'Pick the case type: MVA, Slip and Fall, Premises Liability, Dog Bite or Medical Malpractice.',
                 'Fill in its intake form, which follows the firm\'s intake sheet for that type of case.',
@@ -187,7 +187,7 @@
               tip: 'Run a mock call from a file\'s call script before the trainees try the Reception Simulator.',
               shot: 'blueprint/trainer-library.jpg', shotAlt: 'The Training Library: the case files by program, with the PDF buttons' },
             { icon: '🪪', title: 'The case header', points: [
-                'The client\'s details at the top of every case: Client\'s Name, Contact, SSN, Target Settlement, Attorney, Case Manager and DOB.',
+                'The client\'s details at the top of every case: Client\'s Name, Contact, SSN, DOB, Attorney, Case Manager and Target Settlement.',
                 'The SSN is the Profile tab\'s too (typing in either changes both). The DOB is typed in the header only.',
                 'Client\'s ID: a library client has a mock ID (marked SPECIMEN); any other client gets ⬆ Upload ID.',
                 'Click the ID to see it larger. An uploaded ID can be replaced or removed, and is kept with the case once it\'s saved.'],
@@ -231,7 +231,7 @@
             { icon: '🔍', title: 'Case Library and Latest Updates', points: [
                 '🔍 Open Case Library: every file and every trainee\'s saved cases, with filters and the ☎ firm directory.',
                 '🕑 Latest Updates: cases by their latest update, with a search of the Case Notes ("Intake grade" finds graded intakes).',
-                '📇 Contacts (sidebar, and a Case Library tab): a card for every provider, adjuster, opposing counsel, client and other contact in the case files.',
+                '📇 Search contacts (under Search cases): pops up the card of any provider, adjuster, opposing counsel, client or other contact in the case files.',
                 'Every trainee\'s saved cases and drafts are also in Master Control → Case Logs.'],
               where: 'Sidebar → Case Library · 🔍 Open Case Library · 🕑 Latest Updates.',
               tip: 'Latest Updates is the quickest way to see who worked on what today.',

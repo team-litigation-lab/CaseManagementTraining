@@ -10,12 +10,12 @@
      👤 Clients             the firm's clients (the same person on two files: one card, both files)
      👥 Others              emergency contacts, the parties at fault, lien holders, health plans, police
                             agencies and employers
-   Each card has the contact details on file and the cases the contact is on (client, case number and what
-   they are on that case); a case opens the file. Search by name, company, phone (any format), email,
-   claim, report or file number, or a client's name or case number.
-   Open it from the sidebar (📇 Contacts, everyone), the small 📇 search bar under the case header's Search cases
-   (everyone: matching contacts drop down as you type; Enter or a click opens their cards), or the Case Library's
-   📇 Contacts tab (Admins).
+   There's no directory to browse: the small 📇 Search contacts bar under the case header's Search cases (everyone
+   signed in) finds them. Matching contacts drop down as you type (whose name matches first); Enter (the top one,
+   or the one picked with ↓ ↑) or a click pops up that contact's card, with the others that matched beside it.
+   Search by name, company, phone (any format), email, claim, report or file number, or a client's name or case
+   number. A card has the contact details on file and the cases the contact is on (client, case number and what
+   they are on that case); a case opens the file. Esc, ✕ or a click outside closes the card.
    Trainees never see the Training Library: a case is shown by its client and case number only.
    ========================================================= */
 (function () {
@@ -28,9 +28,9 @@
         ['client', '👤', 'Clients'], ['other', '👥', 'Others']
     ];
     const ICON = Object.fromEntries(KINDS.map(([k, i]) => [k, i]));
+    const ONE = { provider: '🩺 Medical provider', adjuster: '🛡 Adjuster', counsel: '⚖ Opposing counsel', client: '👤 Client', other: '👥 Other contact' };
     const SPECIALTY = { EMC: 'Urgent care', Chiro: 'Chiropractor', Ortho: 'Orthopedics', 'Emergency Hospital': 'Emergency hospital', Surgery: 'Surgery',
         'Pain Management': 'Pain management', 'Physical Therapy (PT)': 'Physical therapy', 'MRI / Imaging': 'MRI / imaging' };
-    const state = { kind: 'all', q: '' };
     let BOOK = null;
 
     const PHONE = /\(\d{3}\) \d{3}-\d{4}/;
@@ -112,6 +112,13 @@
         if (!words.length) return true;
         return words.every(w => e.text.includes(w) || (digits(w).length >= 3 && digits(w).length === w.replace(/[\s().-]/g, '').length && e.digits.includes(digits(w))));
     }
+    // the contacts that match, best first: whose name matches, then company / role, then the rest (a case, a phone…)
+    function find(q) {
+        const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+        if (!words.length) return [];
+        const rank = (e) => words.every(w => e.name.toLowerCase().includes(w)) ? 0 : words.every(w => (e.name + ' ' + e.title).toLowerCase().includes(w)) ? 1 : 2;
+        return book().map((e, i) => ({ e, i, r: rank(e) })).filter(x => matches(x.e, q)).sort((a, b) => a.r - b.r || a.i - b.i).map(x => x.e);
+    }
 
     /* ---------- the cards ---------- */
     const SHOW = 4;   // cases shown on a card before "Show all"
@@ -136,46 +143,18 @@
         </div>`;
     }
     const caseBtn = (l) => `<button type="button" data-case="${esc(l.id)}" onclick="LSHContacts.openCase('${esc(l.id)}')" title="Open this case file"><b>${esc(l.client)}</b>${l.number ? ` <code>${esc(l.number)}</code>` : ''}${l.note ? `<span>${esc(l.note)}</span>` : ''}</button>`;
-    function listHTML() {
-        const all = book(), q = state.q.trim();
-        const hits = all.filter(e => (state.kind === 'all' || e.kind === state.kind) && matches(e, q));
-        if (!all.length) return `<p class="ct-empty">No case files are loaded.</p>`;
-        if (!hits.length) return `<p class="ct-empty">No contact matches “${esc(q)}”. Try part of a name, a company, a phone number or a claim number.</p>`;
-        return KINDS.filter(([k]) => state.kind === 'all' || state.kind === k).map(([k, icon, label]) => {
-            const group = hits.filter(e => e.kind === k);
-            return group.length ? `<section class="ct-group"><h4>${icon} ${esc(label)} <span>${group.length}</span></h4><div class="ct-grid">${group.map(e => cardHTML(e, q)).join('')}</div></section>` : '';
-        }).join('');
-    }
-    function chipsHTML() {
-        const all = book(), q = state.q.trim();
-        const n = (k) => all.filter(e => (k === 'all' || e.kind === k) && matches(e, q)).length;
-        return [['all', '', 'All']].concat(KINDS).map(([k, icon, label]) =>
-            `<button type="button" class="${state.kind === k ? 'on' : ''}" data-kind="${k}" onclick="LSHContacts.kind('${k}')">${icon ? icon + ' ' : ''}${esc(label)} (${n(k)})</button>`).join('');
-    }
-    // into any two boxes: the search and chips, and the cards (the Contacts window, or the Case Library's tab)
-    let target = null;
-    function paint(filters, body) {
-        target = { filters, body };
-        filters.innerHTML = `<input type="search" id="ct-search" class="cl-search" placeholder="Search a name, company, phone, email, claim # or client…" value="${esc(state.q)}"
-                oninput="LSHContacts.search(this.value)" autocomplete="off" spellcheck="false" aria-label="Search the contacts">
-            <div class="cl-chips ct-chips" id="ct-chips">${chipsHTML()}</div>`;
-        body.innerHTML = `<div id="ct-list">${listHTML()}</div>`;
-    }
-    function repaint() {
-        if (!target || !target.body.isConnected) return;
-        const chips = target.filters.querySelector('#ct-chips'); if (chips) chips.innerHTML = chipsHTML();
-        const list = target.body.querySelector('#ct-list'); if (list) { list.innerHTML = listHTML(); target.body.scrollTop = 0; }
-    }
-
-    /* ---------- the window ---------- */
+    /* ---------- the card that pops up ---------- */
     const CSS = `
-    #contacts-modal .modal-box{width:min(1100px,96vw);height:min(860px,92vh);display:flex;flex-direction:column}
-    #contacts-modal .ct-sub{margin:2px 0 12px}
-    .ct-chips button{white-space:nowrap}
-    .ct-group{margin:4px 0 18px}
-    .ct-group h4{margin:0 0 10px;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#0f2148}
-    .ct-group h4 span{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:#e2e8f0;color:#475569;font-size:11px}
-    .ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+    #ct-pop{z-index:2995}
+    #ct-pop .ct-pop-box{position:relative;width:min(470px,94vw);max-height:88vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(15,33,72,.35);padding:16px 16px 14px;text-align:left}
+    #ct-pop .ct-pop-x{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-weight:900;cursor:pointer}
+    #ct-pop .ct-pop-x:hover{border-color:#f97316;color:#c2410c}
+    #ct-pop .ct-pop-kicker{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;margin:0 40px 8px 2px}
+    #ct-pop .ct-card{border-left-width:6px;padding:14px 16px}
+    #ct-pop .ct-who b{font-size:16px}
+    .ct-pop-also{margin-top:10px;font-size:11.5px;color:#64748b;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .ct-pop-also button{border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700;color:#0f2148;cursor:pointer}
+    .ct-pop-also button:hover{border-color:#f97316;background:#fff7ed}
     .ct-card{border:1px solid #e2e8f0;border-left:5px solid #94a3b8;border-radius:10px;background:#fff;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
     .ct-card.ct-provider{border-left-color:#16a34a}.ct-card.ct-adjuster{border-left-color:#2563eb}.ct-card.ct-counsel{border-left-color:#b91c1c}
     .ct-card.ct-client{border-left-color:#f97316}.ct-card.ct-other{border-left-color:#64748b}
@@ -194,8 +173,6 @@
     .ct-cases button span{display:block;font-size:11px;color:#64748b}
     .ct-more{display:flex;flex-direction:column;gap:4px}.ct-more[hidden]{display:none}
     .ct-cases .ct-all{background:none;border:1px dashed #cbd5e1;color:#1d4ed8;font-weight:700;text-align:center}
-    .ct-empty{color:#64748b;font-size:13px;padding:18px 4px}
-    @media (max-width:640px){.ct-grid{grid-template-columns:1fr}}
     #ct-bar{position:relative;margin-top:6px}
     #cl-bar.in-header #ct-bar{width:min(460px,100%);margin-left:auto}
     .ctb-field{display:flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px;background:#f8fafc}
@@ -208,39 +185,58 @@
     .ctb-results button:hover,.ctb-results button.on{background:#fff7ed}
     .ctb-results b{display:block;font-size:12.5px;color:#0f172a}
     .ctb-results small{display:block;font-size:11px;color:#64748b;line-height:1.35}
-    .ctb-results .ctb-all{justify-content:center;font-size:11.5px;font-weight:800;color:#1d4ed8;border-top:1px dashed #e2e8f0;border-radius:0;margin-top:4px}
-    .ctb-empty{font-size:12px;color:#64748b;padding:8px}`;
+    .ctb-note,.ctb-empty{font-size:11.5px;color:#64748b;padding:7px 8px}
+    .ctb-note{border-top:1px dashed #e2e8f0;margin-top:4px}`;
     function addCss() { if (!$id('ct-css')) { const st = document.createElement('style'); st.id = 'ct-css'; st.textContent = CSS; document.head.appendChild(st); } }
-    function buildUI() {
-        if ($id('contacts-modal')) return;
+    function buildPop() {
+        if ($id('ct-pop')) return;
         addCss();
         document.body.insertAdjacentHTML('beforeend', `
-        <div class="modal-overlay no-print" id="contacts-modal" style="z-index:2995;" role="dialog" aria-modal="true" aria-labelledby="ct-title">
-            <div class="modal-box wide">
-                <h2 class="serif" id="ct-title">📇 Contacts</h2>
-                <div class="sub mono ct-sub">Everyone in the case files: medical providers, adjusters, opposing counsel, clients and others, with the cases they're on.</div>
-                <div id="ct-filters"></div>
-                <div id="ct-body" style="overflow-y:auto;flex:1;"></div>
-                <div class="modal-btn-row"><button class="btn-ghost" onclick="closeContacts()">Close</button></div>
+        <div class="modal-overlay no-print" id="ct-pop" role="dialog" aria-modal="true" aria-label="Contact card">
+            <div class="ct-pop-box">
+                <button type="button" class="ct-pop-x" onclick="closeContacts()" title="Close (Esc)" aria-label="Close">✕</button>
+                <div class="ct-pop-kicker" id="ct-pop-kicker">📇 Contact</div>
+                <div id="ct-pop-card"></div>
+                <div class="ct-pop-also" id="ct-pop-also"></div>
             </div>
         </div>`);
-        $id('contacts-modal').addEventListener('click', (e) => { if (e.target.id === 'contacts-modal') window.closeContacts(); });
+        $id('ct-pop').addEventListener('click', (e) => { if (e.target.id === 'ct-pop') window.closeContacts(); });
+    }
+    // pop up one contact's card; `others` are the rest of what the search matched (to switch to)
+    let shown = null;
+    function show(e, q, others) {
+        if (!e) return false;
+        buildPop();
+        shown = { e, q: q || '', others: (others || []).filter(x => x !== e) };
+        $id('ct-pop-kicker').textContent = ONE[e.kind] || '📇 Contact';
+        $id('ct-pop-card').innerHTML = cardHTML(e, q);
+        const more = shown.others.slice(0, 8);
+        $id('ct-pop-also').innerHTML = more.length
+            ? `<span>Also matching “${esc(shown.q)}”:</span>${more.map((x, i) => `<button type="button" data-o="${i}">${ICON[x.kind]} ${esc(x.name)}</button>`).join('')}${shown.others.length > more.length ? `<span>+${shown.others.length - more.length} more</span>` : ''}`
+            : '';
+        $id('ct-pop-also').querySelectorAll('button[data-o]').forEach(b => b.addEventListener('click', () => {
+            const pick = more[+b.dataset.o], rest = [e].concat(shown.others.filter(x => x !== pick));
+            show(pick, shown.q, rest);
+        }));
+        $id('ct-pop').classList.add('open');
+        const x = $id('ct-pop').querySelector('.ct-pop-x'); if (x) x.focus();
+        return true;
     }
     const signedIn = () => typeof getSession === 'function' && !!getSession();
+    // openContacts('Richard Voss'): pop up the best match's card (no query: go to the search bar)
     window.openContacts = function (query) {
         if (!signedIn()) return false;
-        buildUI();
-        if (typeof query === 'string') { state.q = query; state.kind = 'all'; }
-        paint($id('ct-filters'), $id('ct-body'));
-        $id('contacts-modal').classList.add('open');
-        const i = $id('ct-search'); if (i) { i.focus(); i.select(); }
-        return true;
+        const q = String(query || '').trim();
+        if (!q) { const i = $id('ct-bar-input'); if (i) i.focus(); return false; }
+        const hits = find(q);
+        if (!hits.length) { if (typeof showToast === 'function') showToast(`No contact matches “${q}”.`, 'info'); return false; }
+        return show(hits[0], q, hits);
     };
-    window.closeContacts = function () { const m = $id('contacts-modal'); if (m) m.classList.remove('open'); };
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $id('contacts-modal') && $id('contacts-modal').classList.contains('open')) window.closeContacts(); });
+    window.closeContacts = function () { const m = $id('ct-pop'); if (m) m.classList.remove('open'); shown = null; };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $id('ct-pop') && $id('ct-pop').classList.contains('open')) { e.preventDefault(); window.closeContacts(); } });
 
-    // the small search bar under the case header's Search cases (case-library.js's #cl-bar): matching contacts drop
-    // down as you type; Enter (or 📇 All matches) opens the Contacts window searched for it, a contact opens it on that name
+    // the small search bar under the case header's Search cases (case-library.js's #cl-bar)
+    const LIST = 6;   // contacts listed under the bar
     function mountBar() {
         const bar = $id('cl-bar'), wrap = bar && bar.querySelector('.clb-wrap');
         if (!wrap || $id('ct-bar')) return;
@@ -250,57 +246,46 @@
             <div id="ct-bar-results" class="ctb-results" role="listbox" aria-label="Matching contacts"></div>
         </div>`);
         const input = $id('ct-bar-input'), box = $id('ct-bar-results');
-        let hits = [], sel = -1;
-        const close = () => { box.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); sel = -1; };
-        const open = (q) => { input.value = ''; close(); input.blur(); window.openContacts(q); };
+        let hits = [], sel = 0;
+        const close = () => { box.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); };
+        const pop = (i) => { const q = input.value.trim(); close(); input.blur(); show(hits[i], q, hits); };
         function paint() {
             const q = input.value.trim();
-            if (q.length < 2) { close(); return; }
-            hits = book().filter(e => matches(e, q));
+            if (q.length < 2) { close(); hits = []; return; }
+            hits = find(q);
+            sel = Math.max(0, Math.min(sel, Math.min(hits.length, LIST) - 1));
             box.innerHTML = hits.length
-                ? hits.slice(0, 6).map((e, i) => `<button type="button" role="option" data-i="${i}" class="${i === sel ? 'on' : ''}"><span aria-hidden="true">${ICON[e.kind]}</span><span><b>${esc(e.name)}</b><small>${esc(e.title)}${e.phone ? ' · ' + esc(e.phone) : ''}</small><small>${e.links.length === 1 ? esc(e.links[0].client) : e.links.length + ' cases'}</small></span></button>`).join('')
-                  + `<button type="button" class="ctb-all" data-all="1">📇 All ${hits.length} match${hits.length === 1 ? '' : 'es'} in Contacts</button>`
+                ? hits.slice(0, LIST).map((e, i) => `<button type="button" role="option" data-i="${i}" class="${i === sel ? 'on' : ''}" aria-selected="${i === sel}"><span aria-hidden="true">${ICON[e.kind]}</span><span><b>${esc(e.name)}</b><small>${esc(e.title)}${e.phone ? ' · ' + esc(e.phone) : ''}</small><small>${e.links.length === 1 ? esc(e.links[0].client) : e.links.length + ' cases'}</small></span></button>`).join('')
+                  + (hits.length > LIST ? `<div class="ctb-note">+${hits.length - LIST} more: keep typing to narrow it down.</div>` : '')
                 : `<div class="ctb-empty">No contact matches “${esc(q)}”.</div>`;
             box.classList.add('open'); input.setAttribute('aria-expanded', 'true');
         }
-        input.addEventListener('input', () => { sel = -1; paint(); });
+        input.addEventListener('input', () => { sel = 0; paint(); });
         input.addEventListener('focus', paint);
         input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 120));
         input.addEventListener('keydown', (e) => {
-            const n = Math.min(hits.length, 6);
-            if (e.key === 'ArrowDown' && n) { e.preventDefault(); sel = (sel + 1) % n; paint(); }
+            const n = Math.min(hits.length, LIST);
+            if (e.key === 'ArrowDown' && n) { e.preventDefault(); if (!box.classList.contains('open')) paint(); else { sel = (sel + 1) % n; paint(); } }
             else if (e.key === 'ArrowUp' && n) { e.preventDefault(); sel = (sel - 1 + n) % n; paint(); }
-            else if (e.key === 'Enter') { e.preventDefault(); const q = input.value.trim(); if (sel >= 0 && hits[sel]) open(hits[sel].name); else if (q) open(q); }
+            else if (e.key === 'Enter') { e.preventDefault(); if (input.value.trim().length >= 2 && !hits.length) paint(); if (hits[sel]) pop(sel); }
             // (a search box clears itself on Esc: the first Esc only closes the list, the second clears it)
-            else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (box.classList.contains('open')) close(); else { input.value = ''; input.blur(); } }
+            else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (box.classList.contains('open')) close(); else { input.value = ''; hits = []; input.blur(); } }
         });
         box.addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the input while clicking the list
-        box.addEventListener('click', (e) => {
-            const b = e.target.closest('button'); if (!b) return;
-            if (b.dataset.all) open(input.value.trim()); else if (hits[+b.dataset.i]) open(hits[+b.dataset.i].name);
-        });
-    }
-
-    // the sidebar button, for everyone signed in
-    function mount() {
-        mountBar();
-        const after = $id('cl-updates-btn') || $id('cl-open-btn');
-        if (after && !$id('ct-open-btn')) after.insertAdjacentHTML('afterend', `<button id="ct-open-btn" type="button" onclick="openContacts()" class="${esc(after.className)}">📇 Contacts</button>`);
-        const b = $id('ct-open-btn'); if (b) b.style.display = signedIn() ? '' : 'none';
+        box.addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b && hits[+b.dataset.i]) pop(+b.dataset.i); });
     }
 
     window.LSHContacts = {
         all: () => book(),
-        paint,
-        search(v) { state.q = String(v || ''); repaint(); },
-        kind(k) { state.kind = k === 'all' || ICON[k] ? k : 'all'; repaint(); },
-        // a case on a card: the file opens (the Case Library closes too, if it's open)
+        find,
+        show: (name) => window.openContacts(name),
+        // a case on a card: the card closes and the file opens
         openCase(id) {
             window.closeContacts();
             if (typeof window.closeCaseLibrary === 'function') window.closeCaseLibrary();
             if (typeof window.openMockCase === 'function') window.openMockCase(id);
         }
     };
-    function start() { mount(); setInterval(mount, 2000); }
+    function start() { mountBar(); setInterval(mountBar, 2000); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

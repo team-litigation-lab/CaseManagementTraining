@@ -54,7 +54,7 @@
             <!-- The sidebar, in this order (trainees see the first three groups only):
                  1. #sb-program: the training program (training-library.js puts its select here)
                  2. #sb-cases: My cases (trainees) / Case Library (Admins), from case-library.js; Admins also get
-                    Open Case Library and Latest Updates; everyone gets 📇 Contacts (contacts.js)
+                    Open Case Library and Latest Updates
                  3. #sb-work: New Intake, Download Case Summary, the timer, My Dashboard
                  4. #sb-trainer (Admins only): Training Library, Intake Folder, Firm Calendar
                  The open case's own actions (Close, Archive, Discard, Save, Update) are in the bar at the bottom of
@@ -94,18 +94,20 @@
                 <button id="case-close-x" type="button" class="case-close-x no-print" onclick="closeCase()" title="Close this case" aria-label="Close this case">✕</button>
                 <div class="flex justify-between items-start">
                     <!-- The client's demographics, labels above the boxes. The name, Contact and Target Settlement are saved by
-                         their position on the page, so they keep this order. The SSN and the DOB here are second views of the Profile
-                         tab's SSN and DOB (data-mirror: not saved themselves; client-id.js keeps each pair the same). The Profile tab's
-                         DOB box is hidden: it's the one that's saved, so cases saved before keep their DOB. -->
+                         their position on the page, so they keep this order (Target Settlement is the third: the SSN and DOB between
+                         aren't positional). The SSN and the DOB here are second views of the Profile tab's SSN and DOB (data-mirror:
+                         not saved themselves; client-id.js keeps each pair the same). The Profile tab's DOB box is hidden: it's the one
+                         that's saved, so cases saved before keep their DOB. Row 1: Contact, SSN, DOB; row 2: Attorney, Case Manager,
+                         Target Settlement. -->
                     <div class="hdr-client">
                         <div class="hdr-f hdr-name"><label for="client-name-field">Client's Name</label><div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div></div>
                         <div class="hdr-f"><label class="contact-label">Contact:</label><div id="client-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" class="text-xs font-bold text-slate-700"></div></div>
                         <div class="hdr-f"><label class="contact-label" for="head-ssn-field">SSN:</label><div id="head-ssn-field" data-mirror contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn" class="text-xs font-bold text-slate-700"></div></div>
-                        <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div></div>
+                        <div class="hdr-f"><label class="contact-label" for="head-dob-field">DOB:</label><div id="head-dob-field" data-mirror contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date" class="text-xs font-bold text-slate-700"></div></div>
                         <div id="attorney-cm-container" class="hdr-people">
                             <div class="hdr-f"><label class="contact-label" for="attorney-field">Attorney:</label><input type="text" id="attorney-field" placeholder="Attorney name" class="hdr-input"></div>
                             <div class="hdr-f"><label class="contact-label" for="case-manager-field">Case Manager:</label><input type="text" id="case-manager-field" placeholder="Case manager name" class="hdr-input"></div>
-                            <div class="hdr-f"><label class="contact-label" for="head-dob-field">DOB:</label><div id="head-dob-field" data-mirror contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date" class="text-xs font-bold text-slate-700"></div></div>
+                            <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div></div>
                         </div>
                     </div>
                     <!-- The client's ID (client-id.js): a mock ID for a Training Library client; for any other client, a photo of
@@ -1023,7 +1025,8 @@
     <script src="front-desk-drill.js"></script>
     <script src="case-library.js"></script>
     <script src="intake-folder.js"></script>
-    <!-- 📇 Contacts: a card for everyone in the case files (medical providers, adjusters, opposing counsel, clients, others) -->
+    <!-- 📇 Contacts: the small Search contacts bar under the case header's Search cases pops up a contact's card
+         (medical providers, adjusters, opposing counsel, clients, others in the case files) -->
     <script src="contacts.js"></script>
     <script src="case-sections.js"></script>
     <script src="intake-form.js"></script>
