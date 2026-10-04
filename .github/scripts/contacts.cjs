@@ -68,7 +68,7 @@ let base;
     // ---- a trainee, on a laptop, on a view-only file (the Front Desk) ----
     let page = await openPage(browser, { width: 1366, height: 800 }, TRAINEE, '?program=reception');
     await page.evaluate(() => openMockCase('MC-05', { silent: true })); await page.waitForTimeout(600);
-    const where = await page.evaluate(() => { const bar = document.getElementById('ct-bar'), cases = document.querySelector('#cl-bar .clb-wrap');
+    const where = await page.evaluate(() => { const bar = document.getElementById('ct-bar'), cases = document.querySelector('#cl-bar .clb-field');
         const a = cases && cases.getBoundingClientRect(), b = bar && bar.getBoundingClientRect();
         return { sidebar: !!document.getElementById('ct-open-btn') || /📇/.test(document.getElementById('sidebar-actions').textContent),
             bar: !!(bar && bar.offsetParent), under: !!(a && b && b.top >= a.bottom - 1 && b.top - a.bottom < 20), smaller: !!(a && b && b.height < a.height),
@@ -123,9 +123,13 @@ let base;
     await page.click('#ct-pop-also button:has-text("Brandon Voss")'); await page.waitForTimeout(150);
     c = await card(page);
     if (!c || c.name !== 'Brandon Voss' || !c.also.includes('Richard Voss')) fail(`"Also matching" should switch the card: ${JSON.stringify(c && { name: c.name, also: c.also })}`);
-    // Esc closes the card
+    // Esc closes the card; the focus goes back to the bar (no list until typing or ↓)
     await page.keyboard.press('Escape'); await page.waitForTimeout(100);
     if (await card(page)) fail('Esc didn\'t close the contact card');
+    const back = await page.evaluate(() => ({ focus: document.activeElement && document.activeElement.id, open: document.getElementById('ct-bar-results').classList.contains('open') }));
+    if (back.focus !== 'ct-bar-input' || back.open) fail(`after the card closes the focus should be back in the contacts bar, list closed: ${JSON.stringify(back)}`);
+    await page.keyboard.press('ArrowDown'); await page.waitForTimeout(80);
+    if (!(await list(page)).open) fail('↓ in the bar after a card should list the matches again');
     // ↓ then Enter pops up the second
     await type(page, 'voss'); await page.keyboard.press('ArrowDown'); await page.waitForTimeout(80);
     l = await list(page);
@@ -139,6 +143,15 @@ let base;
     await page.click('#ct-bar-results button:has(b:text-is("Dana Whitfield"))'); await page.waitForTimeout(200);
     c = await card(page);
     if (!c || c.name !== 'Dana Whitfield' || !/Keystone Mutual Insurance/.test(c.title) || !/KM-26-118834/.test(c.text)) fail(`a click on a match should pop up its card: ${JSON.stringify(c && { name: c.name, title: c.title })}`);
+    // selecting text on the card and letting go outside it keeps the card
+    const who = await page.locator('#ct-pop .ct-who b').boundingBox(), boxR = await page.locator('#ct-pop .ct-pop-box').boundingBox();
+    await page.mouse.move(who.x + 2, who.y + who.height / 2); await page.mouse.down();
+    await page.mouse.move(boxR.x + boxR.width + 40, who.y + who.height / 2, { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(120);
+    if (!(await card(page))) fail('selecting text on the card and letting go outside it closed the card');
+    // Tab stays on the card
+    const tabs = await page.evaluate(() => { const box = document.querySelector('#ct-pop .ct-pop-box'); return [...box.querySelectorAll('button,a[href]')].filter(b => b.offsetParent).length; });
+    for (let i = 0; i < tabs + 2; i++) await page.keyboard.press('Tab');
+    if (!(await page.evaluate(() => document.getElementById('ct-pop').contains(document.activeElement)))) fail('Tab left the open contact card');
     await page.mouse.click(8, 8); await page.waitForTimeout(150);
     if (await card(page)) fail('a click outside the card didn\'t close it');
     // search by company, phone (any format), email, claim, client, case number
@@ -152,6 +165,26 @@ let base;
     if (!/No contact matches/.test(l.text)) fail('a search with no match should say so');
     await type(page, 'st'); l = await list(page);
     if (l.names.length !== 6 || !/\+\d+ more/.test(l.text)) fail(`a long list shows 6 and "+N more": ${l.names.length} ${l.text.slice(-60)}`);
+    // ↓ to the last one: it is scrolled into view before Enter pops it up
+    for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(100);
+    const seen = await page.evaluate(() => { const on = document.querySelector('#ct-bar-results button.on'), r = on.getBoundingClientRect();
+        const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { name: on.querySelector('b').textContent, visible: !!(at && on.contains(at)) }; });
+    if (!seen.visible) fail(`the highlighted contact (${seen.name}) is off screen`);
+    // Tab goes on past the list (its rows are reached with the arrows), and the focus is not lost
+    await page.keyboard.press('Tab'); await page.waitForTimeout(250);
+    const tabbed = await page.evaluate(() => ({ inList: document.getElementById('ct-bar-results').contains(document.activeElement), body: document.activeElement === document.body }));
+    if (tabbed.inList || tabbed.body) fail(`Tab from the contacts bar should move on to the next field: ${JSON.stringify(tabbed)}`);
+    // the Search cases drop-down never covers the contacts bar
+    await page.click('#cl-bar-input'); await page.waitForTimeout(120);
+    await page.click('#ct-bar-input'); await page.waitForTimeout(160);
+    if (await page.evaluate(() => document.activeElement.id) !== 'ct-bar-input') fail('with Search cases open, a click on the contacts bar didn\'t reach it');
+    await page.click('#cl-bar-input'); await page.keyboard.type('hendricks'); await page.waitForTimeout(150);
+    const before = await page.evaluate(() => mockCurrentId());
+    await page.click('#ct-bar-input'); await page.waitForTimeout(400);
+    const after = await page.evaluate(() => ({ id: mockCurrentId(), focus: document.activeElement.id }));
+    if (after.id !== before || after.focus !== 'ct-bar-input') fail(`a click on the contacts bar with Search cases' results open opened another file: ${before} → ${JSON.stringify(after)}`);
+    await page.fill('#cl-bar-input', '');
     // the bar's Esc: first closes the list, second clears it
     await type(page, 'voss'); await page.keyboard.press('Escape'); await page.waitForTimeout(80);
     const esc1 = await page.evaluate(() => ({ open: document.getElementById('ct-bar-results').classList.contains('open'), v: document.getElementById('ct-bar-input').value }));
@@ -173,6 +206,22 @@ let base;
     // the drop-down never names the Training Library either
     await type(page, 'santos'); l = await list(page);
     if (/training library|\bMC-\d{2}\b/i.test(l.text)) fail('a trainee sees the Training Library in the contacts list');
+    await page.context().close();
+
+    // ---- a trainee on a Front Desk Drill call: a case opened from a card is the call's pick, view only ----
+    page = await openPage(browser, { width: 1366, height: 800 }, TRAINEE, '?program=cm');
+    await page.evaluate(() => fddStart()); await page.waitForTimeout(500);
+    if (!(await page.evaluate(() => fddOnCall()))) fail('the drill call didn\'t start');
+    else {
+        await page.evaluate(() => openContacts('Paul Hendricks')); await page.waitForTimeout(150);
+        await page.click(`#ct-pop .ct-cases button:has-text("${target.caseNumber}")`); await page.waitForTimeout(800);
+        const drill = await page.evaluate(() => ({ on: fddOnCall(), id: mockCurrentId(), viewOnly: /view only during the drill/.test(document.body.innerText) }));
+        if (drill.id !== target.id || !drill.viewOnly) fail(`on a drill call a case opened from a contact card should open view only as the call's pick: ${JSON.stringify(drill)}`);
+    }
+    // signing out closes the card (nothing of the last person's stays over the sign-in screen)
+    await page.evaluate(() => openContacts('Linda Garcia')); await page.waitForTimeout(150);
+    await page.evaluate(() => { sessionStorage.removeItem('LSH_SESSION_V1'); if (typeof handleSessionExpired === 'function') handleSessionExpired('test'); }); await page.waitForTimeout(300);
+    if (await card(page)) fail('a contact card stays open over the sign-in screen');
     await page.context().close();
 
     // ---- a trainee, on a phone: the card fits ----

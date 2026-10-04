@@ -200,13 +200,26 @@
                 <div class="ct-pop-also" id="ct-pop-also"></div>
             </div>
         </div>`);
-        $id('ct-pop').addEventListener('click', (e) => { if (e.target.id === 'ct-pop') window.closeContacts(); });
+        // close on a click on the backdrop, but not when a text selection started on the card ends there
+        let downOnBackdrop = false;
+        $id('ct-pop').addEventListener('mousedown', (e) => { downOnBackdrop = e.target.id === 'ct-pop'; });
+        $id('ct-pop').addEventListener('click', (e) => { if (e.target.id === 'ct-pop' && downOnBackdrop) window.closeContacts(); downOnBackdrop = false; });
+        // Tab stays on the card while it is open
+        $id('ct-pop').addEventListener('keydown', (e) => {
+            if (e.key !== 'Tab') return;
+            const f = [...$id('ct-pop').querySelectorAll('button,a[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent);
+            if (!f.length) return;
+            const first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        });
     }
     // pop up one contact's card; `others` are the rest of what the search matched (to switch to)
-    let shown = null;
+    let shown = null, back = null, focusBar = null;   // back: where the focus goes when the card closes
     function show(e, q, others) {
         if (!e) return false;
         buildPop();
+        if (!shown) { const a = document.activeElement; back = a && a !== document.body && !$id('ct-pop').contains(a) ? a : null; }
         shown = { e, q: q || '', others: (others || []).filter(x => x !== e) };
         $id('ct-pop-kicker').textContent = ONE[e.kind] || '📇 Contact';
         $id('ct-pop-card').innerHTML = cardHTML(e, q);
@@ -232,22 +245,33 @@
         if (!hits.length) { if (typeof showToast === 'function') showToast(`No contact matches “${q}”.`, 'info'); return false; }
         return show(hits[0], q, hits);
     };
-    window.closeContacts = function () { const m = $id('ct-pop'); if (m) m.classList.remove('open'); shown = null; };
+    // closeContacts(): the focus goes back to where it was (or the search bar); closeContacts(false) leaves it
+    window.closeContacts = function (refocus) {
+        const m = $id('ct-pop'), wasOpen = !!(m && m.classList.contains('open'));
+        if (m) m.classList.remove('open');
+        shown = null;
+        const to = back; back = null;
+        if (!wasOpen || refocus === false) return;
+        if (to && document.contains(to) && to.offsetParent && to.id !== 'ct-bar-input') to.focus();
+        else if (focusBar) focusBar();
+    };
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $id('ct-pop') && $id('ct-pop').classList.contains('open')) { e.preventDefault(); window.closeContacts(); } });
 
     // the small search bar under the case header's Search cases (case-library.js's #cl-bar)
     const LIST = 6;   // contacts listed under the bar
     function mountBar() {
-        const bar = $id('cl-bar'), wrap = bar && bar.querySelector('.clb-wrap');
-        if (!wrap || $id('ct-bar')) return;
+        const bar = $id('cl-bar'), field = bar && bar.querySelector('.clb-wrap > .clb-field');
+        if (!field || $id('ct-bar')) return;
         addCss();
-        wrap.insertAdjacentHTML('afterend', `<div id="ct-bar">
+        // inside .clb-wrap, right under the Search cases box: the cases dropdown opens below this bar, not over it
+        field.insertAdjacentHTML('afterend', `<div id="ct-bar">
             <div class="ctb-field"><span aria-hidden="true">📇</span><input type="search" id="ct-bar-input" name="ct-bar-q" placeholder="Search contacts: provider, adjuster, counsel, client…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search contacts" aria-controls="ct-bar-results" aria-expanded="false"></div>
             <div id="ct-bar-results" class="ctb-results" role="listbox" aria-label="Matching contacts"></div>
         </div>`);
         const input = $id('ct-bar-input'), box = $id('ct-bar-results');
-        let hits = [], sel = 0;
+        let hits = [], sel = 0, quiet = false;
         const close = () => { box.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); };
+        focusBar = () => { quiet = true; input.focus(); quiet = false; };   // back from a card: no list until typing or ↓
         const pop = (i) => { const q = input.value.trim(); close(); input.blur(); show(hits[i], q, hits); };
         function paint() {
             const q = input.value.trim();
@@ -255,18 +279,22 @@
             hits = find(q);
             sel = Math.max(0, Math.min(sel, Math.min(hits.length, LIST) - 1));
             box.innerHTML = hits.length
-                ? hits.slice(0, LIST).map((e, i) => `<button type="button" role="option" data-i="${i}" class="${i === sel ? 'on' : ''}" aria-selected="${i === sel}"><span aria-hidden="true">${ICON[e.kind]}</span><span><b>${esc(e.name)}</b><small>${esc(e.title)}${e.phone ? ' · ' + esc(e.phone) : ''}</small><small>${e.links.length === 1 ? esc(e.links[0].client) : e.links.length + ' cases'}</small></span></button>`).join('')
+                ? hits.slice(0, LIST).map((e, i) => `<button type="button" role="option" tabindex="-1" data-i="${i}" class="${i === sel ? 'on' : ''}" aria-selected="${i === sel}"><span aria-hidden="true">${ICON[e.kind]}</span><span><b>${esc(e.name)}</b><small>${esc(e.title)}${e.phone ? ' · ' + esc(e.phone) : ''}</small><small>${e.links.length === 1 ? esc(e.links[0].client) : e.links.length + ' cases'}</small></span></button>`).join('')
                   + (hits.length > LIST ? `<div class="ctb-note">+${hits.length - LIST} more: keep typing to narrow it down.</div>` : '')
                 : `<div class="ctb-empty">No contact matches “${esc(q)}”.</div>`;
             box.classList.add('open'); input.setAttribute('aria-expanded', 'true');
         }
         input.addEventListener('input', () => { sel = 0; paint(); });
-        input.addEventListener('focus', paint);
+        input.addEventListener('focus', () => { if (!quiet) paint(); });
         input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 120));
         input.addEventListener('keydown', (e) => {
             const n = Math.min(hits.length, LIST);
-            if (e.key === 'ArrowDown' && n) { e.preventDefault(); if (!box.classList.contains('open')) paint(); else { sel = (sel + 1) % n; paint(); } }
-            else if (e.key === 'ArrowUp' && n) { e.preventDefault(); sel = (sel - 1 + n) % n; paint(); }
+            if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && n) {
+                e.preventDefault();
+                if (!box.classList.contains('open')) paint();
+                else { sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + n) % n; paint(); }
+                const on = box.querySelector('button.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+            }
             else if (e.key === 'Enter') { e.preventDefault(); if (input.value.trim().length >= 2 && !hits.length) paint(); if (hits[sel]) pop(sel); }
             // (a search box clears itself on Esc: the first Esc only closes the list, the second clears it)
             else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (box.classList.contains('open')) close(); else { input.value = ''; hits = []; input.blur(); } }
@@ -279,10 +307,13 @@
         all: () => book(),
         find,
         show: (name) => window.openContacts(name),
-        // a case on a card: the card closes and the file opens
+        // a case on a card: the card closes and the file opens the way Search cases opens it
+        // (on a Front Desk Drill call that is the call's pick, view only)
         openCase(id) {
-            window.closeContacts();
+            window.closeContacts(false);
+            if (typeof window.caseLibraryOpen === 'function') return window.caseLibraryOpen('mock', id);
             if (typeof window.closeCaseLibrary === 'function') window.closeCaseLibrary();
+            if (window.fddOnCall && window.fddOnCall() && window.fddPick) return window.fddPick(id);
             if (typeof window.openMockCase === 'function') window.openMockCase(id);
         }
     };
