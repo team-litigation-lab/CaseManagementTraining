@@ -86,8 +86,8 @@ function fakeSpeech() {
     const until = (fn, what, ms = 4000) => page.waitForFunction(fn, null, { timeout: ms }).catch(() => fail(`timed out waiting for ${what}`));
 
     // 1. the sidebar: 📞 Reception Simulator right before 📊 My Dashboard (Admins)
-    const side = await page.evaluate(() => { const b = document.getElementById('fdd-open-btn'); return { text: b && b.textContent.trim(), shown: !!(b && b.offsetParent), next: b && b.nextElementSibling && b.nextElementSibling.id }; });
-    if (side.text !== '📞 Reception Simulator' || !side.shown || side.next !== 'dash-open-btn') fail(`the sidebar's Reception Simulator button: ${JSON.stringify(side)}`);
+    const side = await page.evaluate(() => { const b = document.getElementById('fdd-open-btn'); return { text: b && b.textContent.trim(), shown: !!(b && b.offsetParent), group: b && b.parentElement.id, prev: b && b.previousElementSibling && b.previousElementSibling.id }; });
+    if (side.text !== '📞 Reception Simulator' || !side.shown || side.group !== 'sb-work' || side.prev !== 'nm-open-btn') fail(`the sidebar's Reception Simulator button (after New Intake): ${JSON.stringify(side)}`);
     await page.click('#fdd-open-btn');
     await page.waitForSelector('#fdd-panel.open', { timeout: 3000 }).catch(() => fail('📞 Reception Simulator did not open the panel'));
 

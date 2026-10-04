@@ -11,33 +11,6 @@
 </head>
 <body>
 
-    <!-- CLASSIFICATION / TIME BAR -->
-    <div id="classification-bar" class="no-print">
-        <div class="cls-left">
-            <span id="portal-title">LEGAL SUPPORT HELP TRAINING INTERFACE</span>
-        </div>
-        <div class="announcement-ticker" id="announcement-ticker">
-            <span class="announcement-tag" id="announcement-tag">ANNOUNCEMENT:</span>
-            <div class="ticker-viewport">
-                <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
-            </div>
-        </div>
-        <div class="clock-widget">
-            <span id="live-clock">--:--:--</span>
-            <select id="tz-select" onchange="refreshClock()" style="max-width:220px;">
-                <option value="Asia/Manila">Manila (PHT)</option>
-                <option value="UTC">UTC</option>
-                <option value="America/New_York">New York (ET)</option>
-                <option value="America/Chicago">Chicago (CT)</option>
-                <option value="America/Denver">Denver (MT)</option>
-                <option value="America/Los_Angeles">Los Angeles (PT)</option>
-                <option value="Europe/London">London (GMT/BST)</option>
-                <option value="Asia/Tokyo">Tokyo (JST)</option>
-                <option value="Australia/Sydney">Sydney (AEST)</option>
-            </select>
-        </div>
-    </div>
-
     <div id="app-shell">
     <aside id="sidebar" class="no-print custom-scrollbar">
         <div id="sidebar-header">
@@ -55,7 +28,9 @@
                  1. #sb-program: the training program (training-library.js puts its select here)
                  2. #sb-cases: My cases (trainees) / Case Library (Admins), from case-library.js; Admins also get
                     Open Case Library and Latest Updates
-                 3. #sb-work: New Intake, Download Case Summary, the timer, My Dashboard
+                 3. #sb-work: New Intake and the Reception Simulator (front-desk-drill.js adds it)
+                 Download Case Summary, My Dashboard and the Blueprint are at the top right (#top-actions); the date and time
+                 are above the case (#case-clock-row); the billable timer is in the case header under the search bars (time-tracker.js).
                  4. #sb-trainer (Admins only): Training Library, Intake Folder, Firm Calendar
                  The open case's own actions (Close, Archive, Discard, Save, Update) are in the bar at the bottom of
                  the case (#case-actions-bar), with ✕ at its top right. -->
@@ -70,12 +45,8 @@
             </div>
             <div id="sb-work" class="sb-group">
                 <!-- New Intake: pick the case type, fill in its intake form; saving it grades it and creates the new case (intake-form.js).
-                     These two are styled like the Training Library and Front Desk cards (.side-card in styles.css). -->
+                     Styled like the Training Library and Front Desk cards (.side-card in styles.css). -->
                 <button id="nm-open-btn" onclick="openNewIntake()" class="side-card side-card-orange">📝 New Intake</button>
-                <button id="download-summary-btn" onclick="requestDownload()" class="side-card side-card-blue">📄 Download Case Summary (PDF)</button>
-                <!-- the billable / non-billable timer (time-tracker.js fills it) -->
-                <div id="tt-widget" class="mb-2"></div>
-                <button id="dash-open-btn" onclick="openTraineeDashboard()" class="w-full border border-slate-700 text-slate-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-slate-900">📊 My Dashboard</button>
             </div>
             <div id="sb-trainer" class="sb-group">
                 <p class="sb-head">Trainer tools</p>
@@ -87,6 +58,39 @@
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- the strip over the case: announcements, and on the right Download Case Summary, My Dashboard and the Blueprint
+             (lsh-blueprint.js adds 🧭 Blueprint after My Dashboard: blueprint-content.js). It sits over the main area only,
+             so the sidebar (and its logo) runs to the top of the page. -->
+        <div id="classification-bar" class="no-print">
+            <div class="announcement-ticker" id="announcement-ticker">
+                <span class="announcement-tag" id="announcement-tag">ANNOUNCEMENT:</span>
+                <div class="ticker-viewport">
+                    <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
+                </div>
+            </div>
+            <div id="top-actions" class="cls-actions">
+                <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cls-btn" title="Download Case Summary (PDF)">📄 <span class="lbl">Download Case Summary</span></button>
+                <button id="dash-open-btn" type="button" onclick="openTraineeDashboard()" class="cls-btn" title="My Dashboard">📊 <span class="lbl">My Dashboard</span></button>
+            </div>
+        </div>
+        <!-- the date and time, right above the case's Case ID. Outside #capture-area on purpose: the time zone picker
+             isn't part of a case (a case's dropdowns are saved by position, counted from the top of the page). -->
+        <div id="case-clock-row" class="no-print">
+            <div class="clock-widget">
+                <span id="live-clock">--:--:--</span>
+                <select id="tz-select" onchange="refreshClock()" style="max-width:220px;">
+                    <option value="Asia/Manila">Manila (PHT)</option>
+                    <option value="UTC">UTC</option>
+                    <option value="America/New_York">New York (ET)</option>
+                    <option value="America/Chicago">Chicago (CT)</option>
+                    <option value="America/Denver">Denver (MT)</option>
+                    <option value="America/Los_Angeles">Los Angeles (PT)</option>
+                    <option value="Europe/London">London (GMT/BST)</option>
+                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    <option value="Australia/Sydney">Sydney (AEST)</option>
+                </select>
+            </div>
+        </div>
         <div class="flex-1 overflow-y-auto p-8 custom-scrollbar" id="capture-area">
 
             <div class="pdf-card header-card shadow-lg border-2 border-orange-500">
@@ -96,8 +100,8 @@
                     <!-- The client's demographics, labels above the boxes. The name, Contact and Target Settlement are saved by
                          their position on the page, so they keep this order (Target Settlement is the third: the SSN and DOB between
                          aren't positional). The SSN and the DOB here are second views of the Profile tab's SSN and DOB (data-mirror:
-                         not saved themselves; client-id.js keeps each pair the same). The Profile tab's DOB box is hidden: it's the one
-                         that's saved, so cases saved before keep their DOB. Row 1: Contact, SSN, DOB; row 2: Attorney, Case Manager,
+                         not saved themselves; client-id.js keeps each pair the same). The Profile tab's DOB and SSN boxes are hidden: they're
+                         the ones that are saved, so cases saved before keep their DOB and SSN; they're entered here. Row 1: Contact, SSN, DOB; row 2: Attorney, Case Manager,
                          Target Settlement. -->
                     <div class="hdr-client">
                         <div class="hdr-f hdr-name"><label for="client-name-field">Client's Name</label><div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div></div>
@@ -191,7 +195,7 @@
                 <div id="profile-grid" class="grid grid-cols-3 gap-8">
                     <div class="space-y-6">
                         <div class="pdf-card shadow-sm"><div class="section-head">Identity</div>
-                            <div class="grid grid-cols-2 gap-4 mb-4"><div style="display:none" aria-hidden="true"><label>DOB</label><div id="client-dob-field" contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div id="client-ssn-field" contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
+                            <div class="grid grid-cols-2 gap-4 mb-4" style="display:none" aria-hidden="true"><div><label>DOB</label><div id="client-dob-field" contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div id="client-ssn-field" contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
                             <div class="mb-4"><label>Email Address</label><div id="client-email-field" contenteditable="true" data-ph="name@example.com" data-fmt="email"></div></div><div><label>Home Address</label><div id="client-address-field" contenteditable="true" data-ph="Street, City, State, ZIP"></div></div>
                             <!-- Other pertinent info: the non-economic damages (saved by id, data-keyed) -->
                             <div id="kx-noneconomic" data-keyed class="kx-noneco">
@@ -601,7 +605,7 @@
             <button id="cab-close" type="button" class="cab-btn" onclick="closeCase()">✕ Close</button>
             <button id="cab-archive" type="button" class="cab-btn cab-archive" onclick="archiveCaseAsDraft()" title="Save as a draft, with no Case ID yet">🗄 Archive</button>
             <button id="cab-discard" type="button" class="cab-btn cab-discard" onclick="discardCase()">🗑 Discard Case</button>
-            <span id="autosave-indicator" class="cab-note">Autosave active — drafts only, not final</span>
+            <span id="autosave-indicator" class="cab-note" aria-live="polite"></span>
             <button id="cab-save" type="button" class="cab-btn cab-save" onclick="saveCase()">💾 Save Case</button>
             <button id="cab-update" type="button" class="cab-btn cab-update" onclick="updateCase()" title="Save the changes to the saved case you opened">⟳ Update Case</button>
         </div>
@@ -1032,6 +1036,8 @@
     <script src="intake-form.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>
+    <!-- ☁ Google Drive backup of the open case's files (the Doc Hub tab; /api/drive-backup) -->
+    <script src="drive-backup.js"></script>
     <!-- 🧭 the Blueprint: a trainee deck and (Admins) a trainer deck, with a PDF of each.
          blueprint-content.js is the CMS's slides; lsh-blueprint.js is the same file on every LSH platform. -->
     <script src="blueprint-content.js"></script>

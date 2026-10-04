@@ -30,7 +30,7 @@
     .serif { font-family: 'IBM Plex Sans', Arial, Helvetica, sans-serif; font-weight: 700; }
     .mono { font-family: 'IBM Plex Mono', 'Courier New', monospace; }
 
-    /* ===== CLASSIFICATION BANNER ===== */
+    /* ===== CLASSIFICATION BANNER: announcements and the clock, over the main area (the sidebar runs to the top) ===== */
     #classification-bar {
         height: 38px;
         flex-shrink: 0;
@@ -47,8 +47,6 @@
         letter-spacing: 1px;
         z-index: 200;
     }
-    .cls-left { display: flex; align-items: center; gap: 10px; flex-shrink: 0; white-space: nowrap; }
-    .cls-left #portal-title { font-size: 10px; color: #cbd5e1; letter-spacing: 0.5px; }
 
     .announcement-ticker { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; height: 100%; }
     .announcement-tag { flex-shrink: 0; font-weight: 900; font-size: 10px; letter-spacing: 1.5px; color: var(--orange); }
@@ -59,22 +57,20 @@
     .announcement-ticker.is-alert .ticker-track { color: #fecaca; font-weight: 800; }
     @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 
-    #classification-bar .clock-widget {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-shrink: 0;
-    }
-    #classification-bar select {
-        background: #0f172a;
-        color: #f97316;
-        border: 1px solid #334155;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 3px 6px;
-        outline: none;
-    }
+    /* the top right of the strip: Download Case Summary, My Dashboard, the Blueprint */
+    .cls-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .cls-btn { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+        color: #e2e8f0; background: #13284f; border: 1px solid #334155; border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; line-height: 1.2; }
+    .cls-btn:hover { border-color: var(--orange); color: #fdba74; }
+    @media (max-width: 1000px) { .cls-btn .lbl { display: none; } .cls-btn { padding: 5px 8px; font-size: 13px; } }
+
+    /* the date and time, right above the case's Case ID (outside the case) */
+    #case-clock-row { display: flex; justify-content: flex-end; flex-shrink: 0; padding: 8px 34px 0 32px; }
+    #case-clock-row .clock-widget { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 3px 4px 3px 10px; box-shadow: 0 1px 3px rgba(15,33,72,.06); }
+    #live-clock { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 11.5px; font-weight: 700; color: #0f2148; letter-spacing: .3px; white-space: nowrap; }
+    #case-clock-row select { background: #f8fafc; color: #c2410c; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 10.5px; font-weight: 700; padding: 3px 6px; outline: none; }
+    @media (max-width: 700px) { #case-clock-row { padding: 6px 12px 0; } }
+    #case-clock-row + #capture-area { padding-top: 20px; }   /* the clock sits right on top of the case */
 
     #app-shell { flex: 1; display: flex; overflow: hidden; }
 

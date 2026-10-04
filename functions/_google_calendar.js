@@ -115,7 +115,7 @@ export class GoogleError extends Error {
     constructor(message, status = 502, code = 'GOOGLE_ERROR') { super(message); this.status = status; this.code = code; }
 }
 
-async function tokenRequest(params) {
+export async function tokenRequest(params) {
     const r = await fetch(TOKEN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

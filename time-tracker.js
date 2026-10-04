@@ -147,12 +147,13 @@
     function payload(d) { return { caseRef: d.caseRef, caseLabel: d.caseLabel, billable: d.billable, activity: d.activity, description: d.description }; }
     window.ttStart = async function () {
         if (!signedIn()) { toast('Sign in to track time.', 'error'); return; }
-        const d = T.draft && !T.draft.auto ? T.draft : blankDetails();
+        let d = T.draft && !T.draft.auto ? T.draft : blankDetails();
+        if (T.billPick != null) d = Object.assign({}, d, { billable: T.billPick });
         let body = { action: 'start', details: payload(d), date: localToday() };
         try {
             T.busy = true;
             const data = await api('POST', API, body);
-            takeTimer(data); T.draft = null; announce();
+            takeTimer(data); T.draft = null; T.billPick = null; announce();
             toast(`Timer started${d.caseLabel ? ' on ' + d.caseLabel : ''} (${d.billable ? 'billable' : 'non-billable'}).`, 'success');
         } catch (e) {
             if (e.code !== 'RUNNING') { toast(e.message, 'error'); return; }
@@ -160,7 +161,7 @@
             if (!confirm(`A timer is already running on ${caseText(cur)} (${clock(cur.elapsedMs)}). Stop and save it, and start this one?`)) return;
             T.busy = false;
             const data = await run(Object.assign(body, { switch: true }));
-            if (data) { T.draft = null; toast(data.saved ? `Saved ${hrs(data.saved.hours)} on ${caseText(data.saved)}; new timer started.` : 'New timer started.', 'success'); }
+            if (data) { T.draft = null; T.billPick = null; toast(data.saved ? `Saved ${hrs(data.saved.hours)} on ${caseText(data.saved)}; new timer started.` : 'New timer started.', 'success'); }
         } finally { T.busy = false; renderWidget(); if (T.open) refresh(); }
     };
     window.ttPause = () => run({ action: 'pause' });
@@ -202,7 +203,7 @@
     window.ttLinkCase = function () { const oc = openCase(); if (!oc) return; ttSet('caseRef', oc.ref); ttSet('caseLabel', oc.label); };
     window.ttUnlink = function () { const d = details(); d.caseRef = ''; d.caseLabel = ''; d.auto = false; if (T.mode === 'timer' && T.timer) queueUpdate(true); renderTab(); renderWidget(); };
     window.ttTypedCase = function (v) { const d = details(); d.caseRef = ''; d.caseLabel = String(v || '').trim(); d.auto = false; if (T.mode === 'timer' && T.timer) queueUpdate(true); renderTab(); renderWidget(); };
-    // the sidebar's Billable / Non-billable switch: always the running timer's
+    // switch the running timer between billable and non-billable
     window.ttToggleBillable = function () {
         if (!T.timer) return;
         T.timer.billable = !T.timer.billable;
@@ -268,21 +269,25 @@
         const css = document.createElement('style');
         css.id = 'tt-css';
         css.textContent = `
-        #tt-widget .tt-w{border:1px solid #334155;border-radius:10px;padding:10px;background:#0b1220;color:#cbd5e1;font-size:11px}
-        #tt-widget .tt-w.run{border-color:#f97316;box-shadow:0 0 0 1px rgba(249,115,22,.35)}
-        #tt-widget .tt-w.paused{border-color:#eab308}
-        #tt-widget .tt-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
-        #tt-widget .tt-lbl{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
-        #tt-widget .tt-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;font-weight:800;color:#fff}
-        #tt-widget .tt-case{margin-top:4px;color:#e2e8f0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        #tt-widget .tt-sub{color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        #tt-widget .tt-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-        #tt-widget button{border:1px solid #475569;background:transparent;color:#e2e8f0;border-radius:6px;padding:4px 8px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer}
-        #tt-widget button:hover{border-color:#f97316;color:#fb923c}
+        /* the timer in the case header, under the search bars: the timer and the Billable / Non-billable dropdown, nothing else
+           (the timesheet is on the Time tab) */
+        #tt-widget{width:min(460px,100%);margin:6px 0 0 auto;display:flex;justify-content:flex-end}
+        #tt-widget .tt-w{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;border-radius:8px;padding:3px 4px 3px 8px;background:#f8fafc;color:#334155;font-size:11px;line-height:1.25}
+        #tt-widget .tt-w.run{border-color:#f97316;background:#fff7ed;box-shadow:0 0 0 1px rgba(249,115,22,.25)}
+        #tt-widget .tt-w.paused{border-color:#eab308;background:#fefce8}
+        #tt-widget .tt-lbl{font-size:12px}
+        #tt-widget .tt-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:800;color:#0f2148;min-width:66px}
+        #tt-widget button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+        #tt-widget button:hover{border-color:#f97316;color:#c2410c}
         #tt-widget button.go{background:#f97316;border-color:#f97316;color:#fff}
-        #tt-widget .tt-bill{border-radius:999px}
-        #tt-widget .tt-bill.yes{background:#065f46;border-color:#10b981;color:#d1fae5}
-        #tt-widget .tt-bill.no{background:#334155;border-color:#64748b;color:#e2e8f0}
+        #tt-widget button.go:hover{background:#ea580c;color:#fff}
+        #tt-widget .tt-dd{position:relative}
+        #tt-widget .tt-bill.yes{background:#ecfdf5;border-color:#10b981;color:#047857}
+        #tt-widget .tt-bill.no{background:#f1f5f9;border-color:#94a3b8;color:#475569}
+        #tt-widget .tt-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:2985;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 24px rgba(15,33,72,.18);padding:4px;min-width:150px}
+        #tt-widget .tt-menu.open{display:block}
+        #tt-widget .tt-menu button{display:block;width:100%;text-align:left;border:none;background:none;text-transform:none;font-size:12px;font-weight:700;padding:7px 9px;border-radius:6px}
+        #tt-widget .tt-menu button:hover,#tt-widget .tt-menu button[aria-checked="true"]{background:#fff7ed;color:#c2410c}
         #tt-root .tt-box{background:#fff;border-radius:10px;border-left:8px solid var(--orange,#f97316);box-shadow:0 4px 18px rgba(15,23,42,.08);padding:18px;color:#0f172a;font-size:13px}
         #tt-root h2{margin:0;font-size:20px}
         #tt-root .sub{font-size:11.5px;color:#64748b}
@@ -329,28 +334,54 @@
     }
 
     /* ---------- sidebar timer ---------- */
+    // The timer sits in the case header, under the search bars (case-library.js's #cl-bar, with the contacts bar in it).
+    // data-free-edit: the clock ticking there isn't an edit to the case, and its buttons work on a view-only case.
+    function widgetBox() {
+        let w = $id('tt-widget');
+        if (w) return w;
+        const bar = $id('cl-bar');
+        if (!bar) return null;
+        bar.insertAdjacentHTML('afterend', '<div id="tt-widget" class="no-print" data-free-edit></div>');
+        return $id('tt-widget');
+    }
+    // The billable choice for the next timer, picked in the header before starting (a new case opened: back to its default).
+    function nextBillable() { return T.billPick != null ? T.billPick : (T.draft && !T.draft.auto ? T.draft : blankDetails()).billable; }
+    function billDropdown(billable) {
+        return `<span class="tt-dd"><button type="button" class="tt-bill ${billable ? 'yes' : 'no'}" data-tt="bill" aria-haspopup="menu" aria-expanded="false" onclick="ttBillMenu(event)" title="Billable or non-billable">${billable ? '$ Billable' : 'Non-billable'} ▾</button>
+            <span class="tt-menu" role="menu"><button type="button" role="menuitemradio" aria-checked="${billable}" data-bill="1" onclick="ttSetBillable(true)">$ Billable</button><button type="button" role="menuitemradio" aria-checked="${!billable}" data-bill="0" onclick="ttSetBillable(false)">Non-billable</button></span></span>`;
+    }
     function renderWidget() {
-        const w = $id('tt-widget'); if (!w) return;
+        const w = widgetBox(); if (!w) return;
         if (!signedIn()) { w.innerHTML = ''; return; }
         ensureCss();
         const t = T.timer;
         if (!t) {
             const d = T.draft && !T.draft.auto ? T.draft : blankDetails();
-            w.innerHTML = `<div class="tt-w"><div class="tt-top"><span class="tt-lbl">⏱ Time</span><span class="tt-sub" style="margin:0">not running</span></div>
-                <div class="tt-sub">${esc(caseText(d))} · ${d.billable ? 'billable' : 'non-billable'}</div>
-                <div class="tt-row"><button class="go" data-tt="start" onclick="ttStart()">▶ Start timer</button><button onclick="ttOpen()">Timesheet</button></div></div>`;
+            w.innerHTML = `<div class="tt-w" title="Timer · ${esc(caseText(d))}"><span class="tt-lbl" aria-hidden="true">⏱</span>
+                <button type="button" class="go" data-tt="start" onclick="ttStart()">▶ Start timer</button>${billDropdown(nextBillable())}</div>`;
             return;
         }
-        w.innerHTML = `<div class="tt-w ${t.running ? 'run' : 'paused'}">
-            <div class="tt-top"><span class="tt-lbl">⏱ ${t.running ? 'Running' : 'Paused'}</span><span class="tt-clock">${clock(elapsed())}</span></div>
-            <div class="tt-case" title="${esc(caseText(t))}">${esc(caseText(t))}</div>
-            <div class="tt-sub" title="${esc(t.activity)}">${esc(t.activity)}</div>
-            <div class="tt-row">
-                <button class="tt-bill ${t.billable ? 'yes' : 'no'}" data-tt="bill" onclick="ttToggleBillable()" title="Click to switch">${t.billable ? '$ Billable' : 'Non-billable'}</button>
-                ${t.running ? '<button data-tt="pause" onclick="ttPause()">⏸ Pause</button>' : '<button data-tt="resume" onclick="ttResume()">▶ Resume</button>'}
-                <button class="go" data-tt="stop" onclick="ttStop()">■ Stop</button>
-                <button onclick="ttOpen()">Details</button></div></div>`;
+        w.innerHTML = `<div class="tt-w ${t.running ? 'run' : 'paused'}" title="${esc(caseText(t))}${t.activity ? ' · ' + esc(t.activity) : ''}">
+            <span class="tt-lbl" aria-hidden="true">⏱</span><span class="tt-clock" title="${t.running ? 'Running' : 'Paused'} · ${esc(caseText(t))}">${clock(elapsed())}</span>
+            ${t.running ? '<button type="button" data-tt="pause" onclick="ttPause()" title="Pause">⏸</button>' : '<button type="button" data-tt="resume" onclick="ttResume()" title="Resume">▶</button>'}
+            <button type="button" class="go" data-tt="stop" onclick="ttStop()">■ Stop</button>${billDropdown(t.billable)}</div>`;
     }
+    window.ttBillMenu = function (e) {
+        const b = e && e.currentTarget, m = b && b.parentElement.querySelector('.tt-menu'); if (!m) return;
+        const open = !m.classList.contains('open');
+        m.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
+        if (open) { const on = m.querySelector('[aria-checked="true"]'); if (on) on.focus(); }
+    };
+    const closeBillMenu = () => { const w = $id('tt-widget'); if (!w) return; w.querySelectorAll('.tt-menu.open').forEach(m => m.classList.remove('open')); w.querySelectorAll('[data-tt="bill"]').forEach(b => b.setAttribute('aria-expanded', 'false')); };
+    document.addEventListener('click', (e) => { if (!(e.target && e.target.closest && e.target.closest('#tt-widget .tt-dd'))) closeBillMenu(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeBillMenu(); });
+    // Billable or not: the running timer's, or the next one's
+    window.ttSetBillable = function (v) {
+        v = !!v;
+        if (T.timer) { if (T.timer.billable !== v) { T.timer.billable = v; queueUpdate(true); } }
+        else T.billPick = v;
+        renderWidget(); if (T.open) renderTab();
+    };
 
     /* ---------- the Time tab ---------- */
     function formHtml() {
@@ -471,7 +502,7 @@
         if (typeof fn !== 'function') return;
         window[name] = function () {
             const r = fn.apply(this, arguments);
-            setTimeout(() => { if (T.draft && T.draft.auto) T.draft = null; if (T.manual && T.manual.auto) T.manual = null; renderWidget(); if (T.open) refresh(); }, 80);
+            setTimeout(() => { if (T.draft && T.draft.auto) T.draft = null; if (T.manual && T.manual.auto) T.manual = null; T.billPick = null; renderWidget(); if (T.open) refresh(); }, 80);
             return r;
         };
     });
@@ -481,12 +512,14 @@
         window.applySessionUI = function () {
             const r = baseApply.apply(this, arguments);
             if (signedIn()) { if (!T.data) refresh(); else renderWidget(); }
-            else { T = Object.assign(T, { open: false, data: null, timer: null, entries: [], draft: null, manual: null, error: '' }); renderWidget(); }
+            else { T = Object.assign(T, { open: false, data: null, timer: null, entries: [], draft: null, manual: null, billPick: null, error: '' }); renderWidget(); }
             return r;
         };
     }
     document.addEventListener('visibilitychange', () => { if (!document.hidden && signedIn()) refresh(); });
     setInterval(() => { if (signedIn() && !document.hidden) refresh(); }, 60000);
     window.addEventListener('load', () => { if (signedIn()) refresh(); });
+    // case-library.js builds the search bars after this file loads: the timer goes in under them once they're there
+    const waitForBar = setInterval(() => { if ($id('tt-widget')) { clearInterval(waitForBar); return; } if ($id('cl-bar')) renderWidget(); }, 1000);
     window.timeTrackerState = () => T;   // for the tests and debugging
 })();

@@ -69,7 +69,7 @@ What the cases cover, from starter to advanced: every phase from Intake to Litig
 
 ## 📞 Front Desk calls: practice calls and the scored drill (measures the VA)
 
-Sidebar → **📞 Reception Simulator** (right before 📊 My Dashboard), for trainees and Admins alike. A course link with `?drill=1` opens it too. The panel offers two things: a **practice call** (below), taken in the trainee's own words, and the **scored drill**, a run of calls taken step by step.
+Sidebar → **📞 Reception Simulator** (after 📝 New Intake), for trainees and Admins alike. A course link with `?drill=1` opens it too. The panel offers two things: a **practice call** (below), taken in the trainee's own words, and the **scored drill**, a run of calls taken step by step.
 
 ### 📞 Practice calls (no script)
 
@@ -292,7 +292,7 @@ The top of the case is the client's demographics. Each box has its label above i
 - **Contact**, **SSN** and **DOB**;
 - **Attorney**, **Case Manager** and **Target Settlement**.
 
-The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in either changes both. Only the Profile tab's is saved, so cases saved before keep every field where it was (`data-mirror` in `app.js`).
+The **SSN** and the **DOB** are typed in the header. The Profile tab no longer shows them: its SSN and DOB boxes are kept, hidden, and they're the ones that are saved (the header's are second views of them, `data-mirror` in `app.js`), so cases saved before keep every field where it was.
 
 **Client's ID** is the card in the middle of the header (`client-id.js`). In a narrower window the right side (case number, status, search) gives up room first, then the ID card, and the client's boxes least; if the header still doesn't fit, the case is shown smaller (`case-fit.js` counts the header too).
 - **A Training Library client** has a **mock ID** made from their file: name, date of birth, address, and an ID number of its own. It's marked *SPECIMEN · for training only · not a government ID*, follows no real state's design, and has a drawn silhouette, not a photo. A trainee's saved work on a library file shows that client's mock ID too.
@@ -388,6 +388,8 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
 - **Doc Hub:**
   - Drag files onto the drop area to attach them. Each file becomes a document row, under the category picked there.
   - A file dropped on a row attaches to that row.
+  - Uploads are named by the firm's convention (below), and a row can hold a web link instead of a file (**🔗 Link**).
+  - **☁ Google Drive backup** copies the case's files to the person's own Google Drive (below).
 - **Tasks from an Admin:**
   - In Master Control → Ping, **Send as a task** makes the ping stay on the trainee's screen with an **Accept** button, until they accept or dismiss it.
   - **Accept** adds the task, with who assigned it, to the open case's **Tasks** list and opens that tab. On a Training Library case it's saved right away, and the trainee can edit it and change who it's assigned to like any task; on their own case, Save or Update keeps it.
@@ -478,15 +480,47 @@ A card lists the cases the contact is on: the client, the case number and what t
 - It's built from the library files as they ship. A trainer's edit to a library file (💾 Save to the library) doesn't change the cards.
 - Code: `contacts.js`; the data is `mock-cases.js`.
 
-## 🧭 The sidebar and the case's actions
+## 📎 Doc Hub: file names, links and Google Drive backup
 
-**The sidebar**, top to bottom (`index.html`, `#sidebar-actions`):
+**File names.** Every file uploaded to a case is named by the firm's convention, so it reads the same in the case, in a download and in a Drive backup:
+
+`<Case ID>_<Last-First>_<Type>_<YYYY-MM-DD>.<ext>`, e.g. `LSH-2024-PRL-900171_Garcia-Linda_Medical-Records_2026-10-04.pdf`
+
+- **Type** is the Doc Hub category of the row (Medical Records, Bills, Police Report…), **Demand-Letter** for ⬆ Upload Demand, **Client-ID** for ⬆ Upload ID. The date is the day it was uploaded.
+- The client's name is last name first; an all-capitals name is written normally, accents are dropped, and Jr./Sr./II/III are left off. A case with no Case ID yet (a new case, a draft) gets `NO-CASE-ID`.
+- Only letters, digits and `- _ .` are used, so the name survives every system it passes through. The file's own name is kept on the link (hover over it: *Original file: …*).
+- Files uploaded before this keep their names. Code: `caseFileName` in `app.js`.
+
+**Links.**
+- **🔗 Link** on a Doc Hub row attaches a web address instead of a file (a shared folder, a provider's portal, a website), with a name. `www.` is made `https://`; anything that isn't an `http(s)` address (`javascript:`, `data:`…) is refused.
+- **In any text field of the case** (notes, tasks, summaries…), a pasted web address becomes a link. Select some words and paste an address over them and the words become the link. Phone, date, email and money fields aren't linked.
+- A click on a link in a field shows where it goes, with **Open ↗** (a new tab) and **Remove link** (where the field can be edited); a plain click in an editable field only puts the cursor there. Links that open a new tab always get `rel="noopener noreferrer"`, also on cases saved before (`cleanCaseHtml`).
+- The case summary PDF lists a Doc Hub link as 🔗 with its address. Code: `case-sections.js` (Hyperlinks).
+
+**☁ Google Drive backup** (`drive-backup.js`, `/api/drive-backup`, `functions/_google_drive.js`):
+- In **Doc Hub**, the bar at the top: **Connect Google Drive** once (any Google account, a Gmail address included), then **☁ Back up this case's files**.
+- It copies the open case's uploaded files (the Doc Hub attachments, the demand letters, the client's ID) into the person's own Drive, under **LSH CMS Backups / <Case ID> <Client>**, with the names above. **Open in Drive ↗** goes to the folder.
+- Backing up again sends only what's new. A case folder deleted in Drive is made again, with its files. Links aren't copied. Files kept inside a case from before uploads went to storage can't be copied: the bar says how many, and uploading them again fixes it.
+- The CMS asks Google only for **drive.file**: it can see and change only the folders and files it made, nothing else in the person's Drive. The tokens are stored encrypted, like Google Calendar's. Only files the person may open themselves are copied (the same rule as opening them, `functions/_file_access.js`). **Disconnect** gives the access back; the copies stay in Drive.
+- The status is asked for the first time Doc Hub is opened, not on every page load. The bar isn't part of the case (it's `data-free-edit` and isn't printed).
+- **Setup (an admin, once):** it uses the same Google sign-in as the Firm Calendar's Google Calendar (`GOOGLE_CLIENT_ID`, plain variable; `GOOGLE_CLIENT_SECRET`, encrypted secret, on the Pages project). In that Google Cloud project: turn on the **Google Drive API**, add the `…/auth/drive.file` scope to the OAuth consent screen, and make sure the site's address is an **Authorized JavaScript origin** of the OAuth client. Until `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set, the bar says backing up isn't switched on.
+- **Data** (D1, created on first use): `drive_links` (the Google account and its tokens, encrypted with a key derived from `SESSION_SECRET`; the "LSH CMS Backups" folder), `drive_case_folders` (each case's folder) and `drive_backups` (each file copied).
+
+## 🧭 The sidebar, the top of the page and the case's actions
+
+**The sidebar** runs from the top of the page (the LSH logo is at its top), top to bottom (`index.html`, `#sidebar-actions`):
 1. **Training program** (All programs, or one program).
 2. **The cases:** a trainee's **My cases**, or an Admin's **Case Library** with **🔍 Open Case Library** and **🕑 Latest Updates**.
-3. **📝 New Intake**, **📄 Download Case Summary (PDF)**, the **⏱ Time** widget, **📞 Reception Simulator** (the Front Desk practice calls and drill), **📊 My Dashboard** and **🧭 Blueprint**.
+3. **📝 New Intake** and **📞 Reception Simulator** (the Front Desk practice calls and drill).
 4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar.
 
-Trainees see only the first three groups, so their sidebar is the program, their cases and their work. They still reach the Firm Calendar through the case's **📅 Calendar** tab, and the Intake folder through a course link (`?intake=1`). **👁 Trainee view** shows a trainer the same.
+**The strip at the top** (over the case, not the sidebar): the announcements, and at its right **📄 Download Case Summary**, **📊 My Dashboard** and **🧭 Blueprint** (`#top-actions`; in a narrow window they show just their icons). It no longer says "LEGAL SUPPORT HELP TRAINING INTERFACE - … PORTAL".
+
+**The date and time** (with the time zone picker) are right above the case's Case ID, outside the case (`#case-clock-row`). They stay outside `#capture-area` on purpose: a case's dropdowns are saved by position, counted from the top of the page, so the picker keeps its place in front of the case's.
+
+**The timer** is in the case header, under the search bars: ⏱ **▶ Start timer** and a **Billable / Non-billable** dropdown (the timesheet is on the case's ⏱ Time tab; below).
+
+Trainees see only the first three sidebar groups, so their sidebar is the program, their cases and their work. They still reach the Firm Calendar through the case's **📅 Calendar** tab, and the Intake folder through a course link (`?intake=1`). **👁 Trainee view** shows a trainer the same.
 
 **The open case's actions** are in the bar at the bottom of the screen, under the case:
 - **✕ Close** closes the case and leaves the editor blank. **✕** at the top right of the case does the same.
@@ -507,8 +541,8 @@ Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#captur
 
 ## 🧭 Blueprint (how the CMS works, for trainees, trainers and the Admin)
 
-Sidebar → **🧭 Blueprint** (after 📊 My Dashboard) opens a full-screen slide deck that explains the CMS, like the Orientation in EA / PA. There are three versions:
-- **Trainee blueprint** (12 slides and a cover): what the CMS is, signing in and the sidebar, finding a case, 📇 Contacts, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Reception Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
+Top right → **🧭 Blueprint** (after 📊 My Dashboard) opens a full-screen slide deck that explains the CMS, like the Orientation in EA / PA. There are three versions:
+- **Trainee blueprint** (12 slides and a cover): what the CMS is, signing in and finding your way (the sidebar and the top right), finding a case, 📇 Contacts, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Reception Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
 - **Trainer blueprint** (Admins only; 20 slides and a cover): signing in, before a batch starts, the program links, registrations and users, Monitoring and 👁 Watch live, Case Logs, Broadcast & Ping, access control, the Training Library, the case header (Client's Name, SSN, Client's ID), facilitated mock calls, the Reception Simulator and its RECEPTION MOCK CALL scorecard, grading and feedback, the Case Library and Latest Updates, the Intake folder, the Firm Calendar, time and drill results, a training day, Trainee view, and when something goes wrong.
 - **Admin blueprint** (the Master Account only; 15 slides and a cover): who does what, signing in and sessions, accounts and batches, Master Control, Pause and Database Maintenance, Cloudflare usage and billing (Workers Paid), the AI keys, updates, data and records, database upkeep, the settings (secrets; limits and bindings), the routine, when something breaks, and the known gaps.
 
@@ -592,7 +626,7 @@ Nothing is sent to the server while you work: no timer, and no save when you loo
 
 | What happens | What autosave does |
 |---|---|
-| **The network drops** | Nothing can be sent; the note under the case says *Offline: your work is kept on this computer…*. The moment the connection is back, it's sent (*Saved when the connection came back*). A save that failed is sent then too. |
+| **The network drops** | Nothing can be sent; the note in the case's action bar (empty until something happens) says *Offline: your work is kept on this computer…*. The moment the connection is back, it's sent (*Saved when the connection came back*). A save that failed is sent then too. |
 | **The tab or browser closes by accident** | Sent as the page closes, in a way that outlives the page. A case that was never saved waits in this browser instead (sending it then would make a second draft on the next visit). |
 | **The device** puts the page to sleep, or the tab has been away for 2 minutes | Sent. |
 | **A crash or power cut** (the page gets no warning) | The work comes back from this browser on the next visit and is sent then (*Unsaved work from your last visit saved*). |
@@ -701,7 +735,7 @@ Until the setup below is done, the rail says so, and the subscribe links and **A
 
 A timer for billable and non-billable hours, the way a firm's case management system tracks time.
 
-- **Sidebar timer** (under **📄 Download Case Summary**): **▶ Start timer** starts on the open case, billable, as *Case review & strategy*. With no case open, it starts non-billable, as *Filing & administrative*. The running time shows on every screen, with **⏸ Pause** / **▶ Resume**, **■ Stop**, and a **$ Billable / Non-billable** switch.
+- **The timer** (in the case header, under the search bars): just **⏱ ▶ Start timer** and a **Billable / Non-billable** dropdown. **▶ Start timer** starts on the open case, billable, as *Case review & strategy*; with no case open, non-billable, as *Filing & administrative*. The dropdown chooses before starting (opening another case goes back to that case's default) or switches the running timer. While it runs: the time, **⏸** / **▶**, **■ Stop** and the dropdown; the case and activity are on the clock's tooltip. The timesheet, the details and adding time by hand are on the **⏱ Time** tab only. The widget adds no `<select>`: the dropdown is a button and a menu, because the case header's dropdowns are saved by position.
 - **⏱ Time tab** (right after **📅 Calendar**):
   - **The timer's details:** the case (**Link to the open case**, **Unlink**, or type a client name), **$ Billable / Non-billable**, the activity and **What you did**. They can be changed while it runs. **Stop & save** saves it, and **Discard** throws it away.
   - **Add time by hand:** date, hours (e.g. `0.5`), and the same details. Use it for work done away from the timer.
@@ -740,6 +774,8 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
 - **No site lock:** Lock / Unlock is gone. It needed a password today's Admin accounts don't have, so it never worked. To keep someone out, suspend or revoke their account in Users. ⏸ Pause stays.
 - **Migrate D1** (the workflow) copies the live database (the one in `wrangler.toml`) into a new one, then points the site at it. It deletes the database it's given first, so it refuses the live database's name and a blank one.
 - **Time & Billing CSV:** a typed cell starting with `=`, `+`, `-` or `@` gets a leading `'` so Excel shows it as text instead of running it.
+- **Links in cases** are only `http(s)` addresses; a link that opens a new tab always gets `rel="noopener noreferrer"`, so the page it opens can't reach back into the CMS.
+- **Google Drive backup** asks only for `drive.file` (the app's own files), checks every file against the same rule as `/api/file` before copying it, and keeps Google's tokens encrypted.
 
 ### Known gaps
 
@@ -775,7 +811,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
     - a rate-limited or rejected key rests and the request moves to the next key at once; a busy key hands over; a missing model falls through; a refused region is explained, or, with the EA-PA relay bound, sent again from the US (and later requests go straight there);
     - `/api/call-ai`: sign-in required, bad and oversized bodies refused, the review's JSON mode, the per-user limit (and it doesn't limit anyone else), "busy" when every key is at its limit, the Admin-only status;
     - results are saved as `practice` or `drill`, including in a table made before the `mode` column.
-- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points on calls about a case and on same-name files, not on the others). On every call with a hard-to-say name it checks that the name is shown only the way it sounds until it's spelled, that the spelling and the NATO read-back appear, and that skipping them costs the identifier points. It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the wrap-up checks the authentication from the call with nothing to choose; the debrief is the 14-item scorecard, scored from the call and the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads, and that a trainee's sidebar is the program, their cases, then New Intake, Download Case Summary, the timer and My Dashboard (no Latest Updates, Intake Folder, Firm Calendar or other trainer tools), with Close, Archive, Discard Case, Save Case and Update Case in the bar at the bottom of the case and ✕ at its top right. An Admin's sidebar has Latest Updates and the Trainer tools; Trainee view hides them. It checks that trainees never see the Training Library: search results carry case numbers, not Training Library tags; the Case Library window has no Training Library filter; nothing on screen says "Training Library" on a library case or a practice copy; and `openTrainingLibrary()` doesn't open it. It checks the **Trainee view**: a trainer's screen switches to a trainee's (no Training Library, Master Control or Caller scenarios buttons, nothing saying "Training Library", no floating bar), and **Back to trainer view** in the sidebar restores it. It checks the **Intake folder**: a typed intake (from the intake form) saved from Intake mode (autosave and Save Case file it there, never as a case), reviewed, moved to the case files, and an uploaded intake document filed and reviewed. Finally, it checks that Caller scenarios are for trainers only: a trainee gets no Caller scenarios button and no panel, on a library case or a practice copy. For an Admin, the button opens the panel, which has one for every caller scenario on every file, and one for each of the file's simulator callers, with the caller's name, number and the right handling. Printing all of them renders every simulator caller.
+- **Smoke test in a browser:** opens every library case (each section filled, no duplicate element ids) and checks that view-only mode blocks saving. It saves a practice copy with its tags and plays every drill call with the answer key, each of which must score 100 (and checks that skipping the DOL costs points on calls about a case and on same-name files, not on the others). On every call with a hard-to-say name it checks that the name is shown only the way it sounds until it's spelled, that the spelling and the NATO read-back appear, and that skipping them costs the identifier points. It also checks the Case Library: no Training Library button and no case list for trainees, search by name, DOL and case number (typed four different ways, with the case number in the Case ID field), the same-name warning, opening results from the search bar by click and by keyboard, a drill pick from the search bar, and editing, reloading and resetting a library case's notes. It takes a **practice call on the standard voice**: it rings with an Answer button and no script; the greeting gets the caller's reply after one busy line is retried; the caller's instructions say who they are and never include the answer key; a file opened from the search bar counts as the call's file; the caller hangs up; the wrap-up checks the authentication from the call with nothing to choose; the debrief is the 14-item scorecard, scored from the call and the review, and the result is saved as a practice call with its transcript. It also checks the sidebar has no separate Training Calendar and no `.ics` downloads, and that a trainee's sidebar is the program, their cases, then New Intake and the Reception Simulator (no Latest Updates, Intake Folder, Firm Calendar or other trainer tools), with Close, Archive, Discard Case, Save Case and Update Case in the bar at the bottom of the case and ✕ at its top right. It checks the frame of the page: the sidebar and its logo run to the top; the strip is over the main area only, with no portal label, and Download Case Summary, My Dashboard and the Blueprint at its right (an Admin's too); the date and time are right above the Case ID, outside the case; the timer is in the case header under the search bars, just Start and the Billable dropdown; the action bar has no standing note; and the Profile tab shows no SSN or DOB. An Admin's sidebar has Latest Updates and the Trainer tools; Trainee view hides them. It checks that trainees never see the Training Library: search results carry case numbers, not Training Library tags; the Case Library window has no Training Library filter; nothing on screen says "Training Library" on a library case or a practice copy; and `openTrainingLibrary()` doesn't open it. It checks the **Trainee view**: a trainer's screen switches to a trainee's (no Training Library, Master Control or Caller scenarios buttons, nothing saying "Training Library", no floating bar), and **Back to trainer view** in the sidebar restores it. It checks the **Intake folder**: a typed intake (from the intake form) saved from Intake mode (autosave and Save Case file it there, never as a case), reviewed, moved to the case files, and an uploaded intake document filed and reviewed. Finally, it checks that Caller scenarios are for trainers only: a trainee gets no Caller scenarios button and no panel, on a library case or a practice copy. For an Admin, the button opens the panel, which has one for every caller scenario on every file, and one for each of the file's simulator callers, with the caller's name, number and the right handling. Printing all of them renders every simulator caller.
 
 - **Training Library edits** (`.github/scripts/library-edit.cjs`, in the same job): the real `mock-case-edits.js` on SQLite, with a trainer and a trainee in the browser. It checks that:
 - **Training Library by program** (`.github/scripts/library-rbac.cjs`, the real `/api/case-repository` on SQLite): one case per trainee per file, never a draft (a second save or tab updates the same case; an old draft is finalized); without a program and for the Front Desk the file is view only; Intake and Medical Summary & Demand can type only in their areas (locked tabs block typing and hide their buttons); Save Case, Archive, reopening, leaving with unsaved changes, ↺ Start over and closing the page all keep to that one case; a drill opens files view only; Admins still edit the library case itself.
@@ -898,7 +934,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - opening a Training Library case file as a trainee isn't an edit (leaving it sends nothing, and the library's locked dropdowns aren't saved); leaving one while it loads doesn't leave the editor shut;
   - a whole live drill (61 calls with transcripts) saves; editing a time entry's description keeps its time to the second (a 150 s entry, in the browser and on the server).
 - **Case file fields** (`.github/scripts/case-fields.cjs`, in the same job): the case editor in a browser. It checks that the DOB is in the header beside the SSN and Target Settlement beside Case Manager, the DOB isn't on the Profile tab, both are saved where they always were (no positional field moves; Target Settlement is still the third), and that a case saved before shows its DOB and its Target Settlement; that the Non-Economic Damages box on Identity is saved by id and loads back; that Opposing Counsel rows save and load back, and a library file in litigation shows its counsel; and that ⬆ Upload Demand uploads the letter and links it on the demand, saves it, lets it be removed, refuses files over 2 MB, adds the box to older demands, and is hidden on view-only files.
-- **Contacts** (`.github/scripts/contacts.cjs`, in the same job): 📇 Contacts in a browser. It checks that there's no Contacts button or Case Library tab, only the small search bar under Search cases; that every medical provider, adjuster (or carrier with none yet), opposing counsel, client, emergency contact and lien holder in the files has a card with its case on it, one card per contact (6 opposing counsel), the same client on two files is one card and two people who share a name are two; that typing lists matches (name matches first, 6 and "+N more"), Enter, ↓ Enter and a click pop up the card, Also matching switches it, a case on it opens the file, and Esc, ✕ and a click outside close it; search by name, company, phone in any format, email, claim number, client or case number; the bar's two Escs; typing in it isn't an edit (a view-only file too); a trainee never sees the Training Library; and the card fits a phone.
+- **Contacts** (`.github/scripts/contacts.cjs`, in the same job): 📇 Contacts in a browser. It checks that there's no Contacts button or Case Library tab, only the small search bar under Search cases; that every medical provider, adjuster (or carrier with none yet), opposing counsel, client, emergency contact and lien holder in the files has a card with its case on it, one card per contact (6 opposing counsel), the same client on two files is one card and two people who share a name are two; that typing lists matches (name matches first, 6 and "+N more"), Enter, ↓ Enter and a click pop up the card, Also matching switches it, a case on it opens the file, and Esc, ✕ and a click outside close it; search by name, company, phone in any format, email, claim number, client or case number; the bar's two Escs; typing in it isn't an edit (an editable file, with a real edit as the control, and a view-only one); a trainee never sees the Training Library; and the card fits a phone.
 - **Known gaps** (`.github/scripts/known-gaps.cjs`, in the same job): the server code on SQLite, then the page in a browser. It checks that:
   - Lock / Unlock is gone (no `/api/lock`, lock screen, confirm box or Lock button; `/api/state` reports no lock) and ⏸ Pause stays;
   - 🧹 Clear old data is for the Master Account only, clears old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts, keeps everything recent, counts what it cleared and is in the server logs; the vacuum endpoint and `vacuum-d1.yml` are gone;
@@ -913,7 +949,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - a case with markup that would run (an `<img onerror>`, a script, a frame, an SVG animation, `javascript:` and `data:` links, a `fetch()` button) runs nothing when opened, keeps its table row, its × button and its file links; every row the editor makes itself, and every handler in them, goes through the cleaner unchanged;
   - Download Case Summary and Case Versions show typed markup as text.
 - **Reception Simulator** (`.github/scripts/reception-mic.cjs`, in the same job): a practice call answered by microphone, with the browser's speech recognition and voice stood in by the test. It checks that:
-  - 📞 Reception Simulator is right before 📊 My Dashboard and opens the panel, and Trainee view shows it too (trainees have it);
+  - 📞 Reception Simulator is in the sidebar after 📝 New Intake and opens the panel, and Trainee view shows it too (trainees have it);
   - hands-free is on by default: the microphone listens from the greeting, what's said is sent when the trainee pauses, and it listens again after each of the caller's lines, never while the caller talks;
   - a silence is tried twice more, then it asks for 🎙 or typing; 🎙 listens and sends; typing takes over; hands-free off stops listening and is remembered;
   - a blocked microphone says so and the call goes on typed;
@@ -943,8 +979,17 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - tasks arrive reliably: two sent a moment apart both arrive, a wrong computer clock doesn't hide them, others' and old ones don't show, a reload doesn't offer an accepted one again, and the card stays clear of the Front Desk panel;
   - a request refused only because the session's heartbeat lapsed (a background tab, a computer that slept) is sent again once after a heartbeat, and one refused for a revoked account isn't;
   - *View Latest Saved* opens the case.
+- **Doc Hub** (`.github/scripts/docs-drive.cjs`, in the same job): the file naming, links and the Google Drive backup. The server part runs the real `/api/drive-backup` on an in-memory SQLite database, a stand-in R2 bucket and Google's token and Drive endpoints answered by the test. It checks:
+  - not set up: the bar and the API say so;
+  - a sign-in without the Drive permission is refused and given back; connecting stores Google's tokens sealed, never as typed;
+  - a backup makes LSH CMS Backups / <case> once and copies the files with their names and bytes; another trainee's file, a key outside the uploads, more than 5 at once and a backup with no case are refused;
+  - backing up again skips what's there; a case folder deleted in Drive is made again; an expired token is refreshed; connections are per person; a different Google account starts clean; Disconnect revokes and forgets;
+  - in the page: uploads on Doc Hub rows, demand letters and the client's ID are named `<Case ID>_<Last-First>_<Type>_<date>.<ext>` (the name sent to `/api/upload`, the original on the tooltip), with the naming rules (capitals, accents, Jr., no Case ID yet);
+  - 🔗 Link attaches a web address and refuses `javascript:`; old rows get the button; links survive saving and loading and get `rel="noopener noreferrer"`; `javascript:` links are dropped;
+  - a pasted address becomes a link, words selected with an address pasted over them become the link, the phone field isn't linked and pasted markup stays text; a click on a link shows Open ↗ and Remove link;
+  - the Drive bar: not set up, Connect, then the case's files listed and backed up in batches of 5 with the case's ID and name, Open in Drive going to the case's folder; the status is asked for only when Doc Hub opens; drawing the bar isn't an edit.
 - **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
-  - the tab's place and the sidebar timer;
+  - the tab's place and the header timer: just Start and the Billable / Non-billable dropdown, which picks the next timer's and switches the running one;
   - starting, counting, pausing, resuming, and surviving a reload;
   - billable time refused without a description;
   - 7 minutes billed as 0.2 h;

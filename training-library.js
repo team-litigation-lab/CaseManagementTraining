@@ -366,7 +366,8 @@
         }
         const main = $id('capture-area') && $id('capture-area').parentElement;
         if (main && !$id('mock-banner')) {
-            main.insertAdjacentHTML('afterbegin', `<div id="mock-banner" class="no-print"></div>`);
+            // under the announcements strip, above the date and time (which stays right on top of the case)
+            ($id('case-clock-row') || $id('capture-area')).insertAdjacentHTML('beforebegin', `<div id="mock-banner" class="no-print"></div>`);
         }
         if (!$id('library-modal')) {
             document.body.insertAdjacentHTML('beforeend', `
@@ -402,10 +403,6 @@
 
     function paintProgramUI() {
         const sel = $id('lib-program-select'); if (sel) sel.value = currentProgram();
-        const title = $id('portal-title'); if (!title) return;
-        const base = title.innerText.replace(/\s+·\s+.*TRAINING$/, '');
-        const p = programLabel(currentProgram());
-        title.innerText = p ? `${base} · ${p.toUpperCase()} TRAINING` : base;
     }
 
     /* ---------- library modal ---------- */

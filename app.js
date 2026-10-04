@@ -465,7 +465,7 @@
 
         function addDocument(label) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="150" class="no-print"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div style="font-size:8px;color:#94a3b8;margin-top:2px;">Max ${formatBytes(DOC_UPLOAD_MAX_BYTES)}</div><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
+            tr.innerHTML = `<td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">${label}</div></td><td><div contenteditable="true" class="multiline-field text-xs italic text-slate-500" data-ph="Enter summary"></div></td><td width="150" class="no-print"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label> <button type="button" class="hub-btn doc-link-btn" style="padding:6px 8px;" onclick="addDocLink(this)" title="Attach a web link instead (a shared folder, a provider portal, a website)">🔗 Link</button><div style="font-size:8px;color:#94a3b8;margin-top:2px;">Max ${formatBytes(DOC_UPLOAD_MAX_BYTES)}</div><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td><td width="40"><button onclick="this.parentElement.parentElement.remove()" class="text-red-300 font-bold">×</button></td>`;
             document.getElementById('doc-body').appendChild(tr);
             applyPlaceholders(tr);
         }
@@ -504,9 +504,9 @@
         // /api/files/<key> path this used to call. Everything downstream
         // (up.url / up.key / up.mime / up.name) is unchanged — this function
         // is the only place that needs to know the real contract.
-        async function uploadFileToR2(file, scope) {
+        async function uploadFileToR2(file, scope, name) {
             const fd = new FormData();
-            fd.append('file', file, file.name);
+            fd.append('file', file, name || file.name);   // name: the file's name in the case (caseFileName)
             if (scope) fd.append('scope', scope);
             const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: fd });
             if (!res.ok) {
@@ -520,10 +520,32 @@
                 key: data.key,
                 url: '/api/file?key=' + encodeURIComponent(data.key),
                 mime: file.type || '',
-                name: data.filename || file.name,
+                name: data.filename || name || file.name,
                 size: file.size
             };
         }
+        /* The firm's file naming for what's uploaded to a case:
+             <Case ID>_<Last-First>_<Type>_<YYYY-MM-DD>.<ext>
+             e.g. LSH-2024-PRL-900171_Garcia-Linda_Medical-Records_2026-10-04.pdf
+           The type is the Doc Hub category (or Demand-Letter, Client-ID); the date is the day it was uploaded. Only
+           letters, digits and - _ . are used, so the name is the same in the case, in the download and in a Drive backup.
+           The file's own name is kept on the link (its tooltip). */
+        function caseFileName(type, original) {
+            const part = (v, max) => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ')
+                .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max).replace(/-+$/, '');
+            const id = textOf('case-id-field');
+            // a real Case ID (LSH-2026-MVA-000041) has digits and no spaces; "LSH-----" or "Assigned on Save Case" isn't one yet
+            const caseId = /\d/.test(id) && /^[A-Za-z0-9-]+$/.test(id) ? part(id, 40) : 'NO-CASE-ID';
+            const raw = textOf('client-name-field').replace(/\s+/g, ' ').trim();
+            const proper = raw === raw.toUpperCase() ? raw.toLowerCase().replace(/(^|[\s'-])([a-z])/g, (m, a, b) => a + b.toUpperCase()) : raw;
+            const words = proper.split(' ').filter(Boolean);
+            while (words.length > 1 && /^(jr|sr|ii|iii|iv)\.?$/i.test(words[words.length - 1])) words.pop();
+            const client = words.length ? part([words[words.length - 1]].concat(words.slice(0, -1)).join(' '), 40) : '';
+            const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const ext = (/\.([A-Za-z0-9]{1,8})$/.exec(String(original || '')) || [])[1];
+            return [caseId, client || 'No-Client-Name', part(type, 40) || 'Document', day].join('_') + (ext ? '.' + ext.toLowerCase() : '');
+        }
+        window.caseFileName = caseFileName;
         async function handleDocUpload(input) {
             const file = input.files && input.files[0];
             if (!file) return;
@@ -536,11 +558,14 @@
             const holder = row ? row.querySelector('.doc-attachment') : null;
             if (holder) holder.innerHTML = '<span style="color:#64748b;font-style:italic;">Uploading…</span>';
             try {
-                const up = await uploadFileToR2(file, 'case-doc');
-                const safeName = (up.name || file.name).replace(/"/g, '&quot;');
-                const safeMime = (up.mime || file.type || '').replace(/"/g, '&quot;');
+                // named by the firm's convention (caseFileName), under the row's category
+                const cat = row && row.querySelector('td div') ? row.querySelector('td div').textContent.trim() : 'Document';
+                const named = caseFileName(cat, file.name);
+                const up = await uploadFileToR2(file, 'case-doc', named);
+                const q = (v) => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const safeName = q(named), safeMime = q(up.mime || file.type || '');
                 if (holder) {
-                    holder.innerHTML = `<a href="${up.url}" download="${safeName}" data-r2-key="${up.key}" data-r2-mime="${safeMime}" target="_blank" rel="noopener" class="doc-file-link" style="color:#2563eb;font-weight:700;">📎 ${safeName}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
+                    holder.innerHTML = `<a href="${up.url}" download="${safeName}" data-r2-key="${q(up.key)}" data-r2-mime="${safeMime}" data-orig-name="${q(file.name)}" title="Original file: ${q(file.name)}" target="_blank" rel="noopener" class="doc-file-link" style="color:#2563eb;font-weight:700;">📎 ${safeName}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
                 }
             } catch (err) {
                 if (holder) holder.innerHTML = '';
@@ -629,7 +654,7 @@
         const CASE_HANDLER_FNS = new Set(['handleDocUpload', 'handleOtherSystem', 'revertOther', 'addChronoDate', 'updateTotals', 'afterKeyedApplied',
             'window.afterKeyedApplied', 'applyReportKind', 'calcSettlement', 'calcWages', 'toggleDriverInsuredExtra', 'toggleOwnerExtra', 'updatePhaseDisplay',
             'generateCaseId', 'sortChronology', 'docDropCat', 'docDrop', 'docDragOver', 'docDragLeave', 'addRow', 'addBI', 'addPIPUM', 'addLien',
-            'addFacility', 'addChronology', 'addDocument', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'uploadDemandLetter', 'showTab',
+            'addFacility', 'addChronology', 'addDocument', 'addDocLink', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'uploadDemandLetter', 'showTab',
             'lshClientId.pick', 'lshClientId.open', 'lshClientId.remove']);
         const CASE_HANDLER_ARG = /^(?:'[\w .:#\-]*'|-?\d+(?:\.\d+)?|this|this\.(?:id|value|checked)|event|true|false|null)$/;
         function caseHandlerOk(code) {
@@ -662,6 +687,8 @@
                     const dataOk = (n === 'src' && el.localName === 'img' && picture) || (n === 'href' && (picture || el.hasAttribute('download')));
                     if (/^(?:javascript|vbscript|data):/i.test(url) && !dataOk) el.removeAttribute(a.name);
                 });
+                // a link that opens a new tab never gets a handle on this page
+                if (el.localName === 'a' && el.hasAttribute('target')) el.setAttribute('rel', 'noopener noreferrer');
             });
             const out = _cleanTpl.innerHTML;
             _cleanTpl.innerHTML = '';
@@ -1869,9 +1896,12 @@
                     const href = linkEl.getAttribute('href') || '';
                     const filename = e(linkEl.getAttribute('download') || linkEl.innerText.trim());
                     const mime = linkEl.getAttribute('data-r2-mime') || '';
+                    const isWebLink = linkEl.classList.contains('doc-web-link');
                     const isLegacyImage = /^data:image\//i.test(href);
                     const isR2Image = !!href && !/^data:/i.test(href) && /^image\//i.test(mime);
-                    if (isLegacyImage) {
+                    if (isWebLink) {
+                        attachmentHtml = `<div style="margin-top:6px;font-size:11px;font-weight:700;color:#2563eb;">🔗 Link: ${e(linkEl.innerText.replace(/^🔗\s*/, '').trim())} <span style="font-weight:400;color:#64748b;">(${e(href)})</span></div>`;
+                    } else if (isLegacyImage) {
                         // Pre-R2 row: the base64 is still sitting in the href.
                         attachmentHtml = `<div style="margin-top:8px;"><img src="${e(href)}" style="max-width:100%;max-height:320px;border:1px solid #e2e8f0;border-radius:6px;" /></div>`;
                     } else if (isR2Image) {
@@ -2046,14 +2076,12 @@
             const session = getSession();
             const gate = document.getElementById('auth-gate');
             const footer = document.getElementById('session-footer');
-            const portalTitle = document.getElementById('portal-title');
 
             markTraineeView();
             if (!session) {
                 gate.classList.add('open');
                 gate.style.setProperty('display', 'flex', 'important');
                 footer.innerHTML = '';
-                portalTitle.innerText = 'LEGAL SUPPORT HELP TRAINING INTERFACE';
                 blankCaseEditorContent();
                 renderRepo();
                 _draftRestoredFor = null;   // whoever signs in next gets their own work back (and only theirs)
@@ -2068,7 +2096,6 @@
             }
             gate.classList.remove('open');
             gate.style.removeProperty('display');
-            portalTitle.innerText = `LEGAL SUPPORT HELP TRAINING INTERFACE - ${session.userType.toUpperCase()} PORTAL`;
 
             // Restore in-progress editor content once each time someone signs in
             // on this page (covers both "logged in already, hit refresh" and "just
