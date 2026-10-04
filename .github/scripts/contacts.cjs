@@ -1,6 +1,9 @@
 // 📇 Contacts test (contacts.js) in a browser: static files, the API answered by the test.
 // Checks:
 //   - everyone signed in has 📇 Contacts in the sidebar (a trainee too); an Admin also gets a 📇 Contacts tab in the Case Library;
+//   - the small 📇 search bar under the case header's Search cases: matching contacts drop down as you type (↓ and Enter pick
+//     one), Enter opens Contacts searched for what was typed, a contact opens it on that name, Esc closes the list; typing in
+//     it doesn't count as editing the case (a view-only file too);
 //   - the directory has a card for every medical provider, adjuster (or carrier with none assigned yet), opposing counsel
 //     and client in the case files, and others (emergency contacts, parties at fault, lien holders, health plans, police
 //     agencies, employers), each with the cases it's on; one card per contact (a provider on 6 files: one card, 6 cases);
@@ -151,6 +154,36 @@ let base;
     await page.evaluate(() => openContacts('')); await page.waitForTimeout(150);
     await page.keyboard.press('Escape');
     if (await page.evaluate(() => document.getElementById('contacts-modal').classList.contains('open'))) fail('Esc didn\'t close Contacts');
+    await page.context().close();
+
+    // ---- the small search bar under Search cases ----
+    page = await openPage(browser, { width: 1366, height: 800 }, TRAINEE, '?program=reception');
+    await page.evaluate(() => openMockCase('MC-05', { silent: true })); await page.waitForTimeout(600);
+    const place = await page.evaluate(() => { const bar = document.getElementById('ct-bar'), cases = document.querySelector('#cl-bar .clb-wrap');
+        if (!bar || !cases) return null; const a = cases.getBoundingClientRect(), b = bar.getBoundingClientRect();
+        return { shown: !!bar.offsetParent, under: b.top >= a.bottom - 1 && b.top - a.bottom < 20, smaller: b.height < a.height, inHeader: !!bar.closest('.header-card') }; });
+    if (!place || !place.shown || !place.under || !place.smaller || !place.inHeader) fail(`the small contacts search bar should sit just under Search cases in the case header: ${JSON.stringify(place)}`);
+    await page.click('#ct-bar-input'); await page.keyboard.type('voss'); await page.waitForTimeout(150);
+    const drop = await page.evaluate(() => ({ open: document.getElementById('ct-bar-results').classList.contains('open'), names: [...document.querySelectorAll('#ct-bar-results button b')].map(b => b.textContent), all: (document.querySelector('#ct-bar-results .ctb-all') || {}).textContent || '' }));
+    if (!drop.open || !drop.names.includes('Richard Voss') || !/All \d+ match/.test(drop.all)) fail(`typing in the contacts bar should list matching contacts: ${JSON.stringify(drop)}`);
+    const edits = await page.evaluate(() => ({ dirty: typeof hasUnsyncedChanges === 'function' && hasUnsyncedChanges(), typed: document.getElementById('ct-bar-input').value }));
+    if (edits.typed !== 'voss') fail('the contacts bar can\'t be typed in on a view-only file');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+    if (await page.evaluate(() => document.getElementById('ct-bar-results').classList.contains('open'))) fail('Esc didn\'t close the contacts bar\'s list');
+    await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+    const byEnter = await page.evaluate(() => ({ open: document.getElementById('contacts-modal').classList.contains('open'), q: document.getElementById('ct-search').value, bar: document.getElementById('ct-bar-input').value,
+        cards: [...document.querySelectorAll('#ct-list .ct-card .ct-who b')].map(b => b.textContent) }));
+    if (!byEnter.open || byEnter.q !== 'voss' || !byEnter.cards.includes('Richard Voss') || byEnter.bar) fail(`Enter in the contacts bar should open Contacts searched for it: ${JSON.stringify(byEnter)}`);
+    await page.evaluate(() => closeContacts());
+    await page.click('#ct-bar-input'); await page.keyboard.type('dana whitfield'); await page.waitForTimeout(150);
+    await page.click('#ct-bar-results button:has(b:text-is("Dana Whitfield"))'); await page.waitForTimeout(300);
+    const byClick = await page.evaluate(() => ({ open: document.getElementById('contacts-modal').classList.contains('open'), q: document.getElementById('ct-search').value, n: document.querySelectorAll('#ct-list .ct-card').length }));
+    if (!byClick.open || byClick.q !== 'Dana Whitfield' || byClick.n < 1) fail(`a contact in the bar's list should open Contacts on that name: ${JSON.stringify(byClick)}`);
+    await page.evaluate(() => closeContacts());
+    await page.click('#ct-bar-input'); await page.keyboard.type('city spine'); await page.waitForTimeout(150);
+    await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+    if (await page.evaluate(() => document.getElementById('ct-search').value) !== 'City Spine & Rehab') fail('↓ and Enter in the contacts bar should open the first contact listed');
+    if (edits.dirty) fail('typing in the contacts bar counts as editing the case');
     await page.context().close();
 
     // ---- a trainee, on a phone: it fits ----

@@ -39,7 +39,7 @@
                 'Each card has the phone, email or address on file and the cases the contact is on. Click a case to open it.',
                 'Search by name, company, phone (any format), email, claim number or client.',
                 'Others: emergency contacts, the parties at fault, lien holders, health plans, police agencies and employers.'],
-              where: 'Sidebar → 📇 Contacts, under My cases.',
+              where: 'Sidebar → 📇 Contacts, under My cases · the small 📇 search bar under Search cases, at the top right of the case.',
               tip: 'A provider or an adjuster on the line? Search their number to see which cases they\'re on, then route the call.',
               shot: 'blueprint/trainee-contacts.jpg', shotAlt: '📇 Contacts: the cards for everyone on Linda Garcia\'s case, from her providers to the defense counsel' },
             { icon: '📝', title: 'New Intake', points: [

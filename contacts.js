@@ -13,7 +13,9 @@
    Each card has the contact details on file and the cases the contact is on (client, case number and what
    they are on that case); a case opens the file. Search by name, company, phone (any format), email,
    claim, report or file number, or a client's name or case number.
-   Open it from the sidebar (📇 Contacts, everyone) or the Case Library's 📇 Contacts tab (Admins).
+   Open it from the sidebar (📇 Contacts, everyone), the small 📇 search bar under the case header's Search cases
+   (everyone: matching contacts drop down as you type; Enter or a click opens their cards), or the Case Library's
+   📇 Contacts tab (Admins).
    Trainees never see the Training Library: a case is shown by its client and case number only.
    ========================================================= */
 (function () {
@@ -193,10 +195,25 @@
     .ct-more{display:flex;flex-direction:column;gap:4px}.ct-more[hidden]{display:none}
     .ct-cases .ct-all{background:none;border:1px dashed #cbd5e1;color:#1d4ed8;font-weight:700;text-align:center}
     .ct-empty{color:#64748b;font-size:13px;padding:18px 4px}
-    @media (max-width:640px){.ct-grid{grid-template-columns:1fr}}`;
+    @media (max-width:640px){.ct-grid{grid-template-columns:1fr}}
+    #ct-bar{position:relative;margin-top:6px}
+    #cl-bar.in-header #ct-bar{width:min(460px,100%);margin-left:auto}
+    .ctb-field{display:flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px;background:#f8fafc}
+    .ctb-field:focus-within{border-color:#f97316;background:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.12)}
+    .ctb-field span{font-size:12px}
+    #ct-bar-input{flex:1;min-width:0;border:none;outline:none;padding:5px 2px;font-size:12px;color:#0f2148;background:transparent}
+    .ctb-results{display:none;position:absolute;right:0;top:calc(100% + 5px);width:min(440px,78vw);z-index:2986;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 14px 34px rgba(15,33,72,.22);max-height:min(56vh,440px);overflow-y:auto;padding:6px;text-align:left}
+    .ctb-results.open{display:block}
+    .ctb-results button{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:7px 8px;cursor:pointer;font-family:inherit}
+    .ctb-results button:hover,.ctb-results button.on{background:#fff7ed}
+    .ctb-results b{display:block;font-size:12.5px;color:#0f172a}
+    .ctb-results small{display:block;font-size:11px;color:#64748b;line-height:1.35}
+    .ctb-results .ctb-all{justify-content:center;font-size:11.5px;font-weight:800;color:#1d4ed8;border-top:1px dashed #e2e8f0;border-radius:0;margin-top:4px}
+    .ctb-empty{font-size:12px;color:#64748b;padding:8px}`;
+    function addCss() { if (!$id('ct-css')) { const st = document.createElement('style'); st.id = 'ct-css'; st.textContent = CSS; document.head.appendChild(st); } }
     function buildUI() {
         if ($id('contacts-modal')) return;
-        const st = document.createElement('style'); st.id = 'ct-css'; st.textContent = CSS; document.head.appendChild(st);
+        addCss();
         document.body.insertAdjacentHTML('beforeend', `
         <div class="modal-overlay no-print" id="contacts-modal" style="z-index:2995;" role="dialog" aria-modal="true" aria-labelledby="ct-title">
             <div class="modal-box wide">
@@ -222,8 +239,51 @@
     window.closeContacts = function () { const m = $id('contacts-modal'); if (m) m.classList.remove('open'); };
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $id('contacts-modal') && $id('contacts-modal').classList.contains('open')) window.closeContacts(); });
 
+    // the small search bar under the case header's Search cases (case-library.js's #cl-bar): matching contacts drop
+    // down as you type; Enter (or 📇 All matches) opens the Contacts window searched for it, a contact opens it on that name
+    function mountBar() {
+        const bar = $id('cl-bar'), wrap = bar && bar.querySelector('.clb-wrap');
+        if (!wrap || $id('ct-bar')) return;
+        addCss();
+        wrap.insertAdjacentHTML('afterend', `<div id="ct-bar">
+            <div class="ctb-field"><span aria-hidden="true">📇</span><input type="search" id="ct-bar-input" name="ct-bar-q" placeholder="Search contacts: provider, adjuster, counsel, client…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search contacts" aria-controls="ct-bar-results" aria-expanded="false"></div>
+            <div id="ct-bar-results" class="ctb-results" role="listbox" aria-label="Matching contacts"></div>
+        </div>`);
+        const input = $id('ct-bar-input'), box = $id('ct-bar-results');
+        let hits = [], sel = -1;
+        const close = () => { box.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); sel = -1; };
+        const open = (q) => { input.value = ''; close(); input.blur(); window.openContacts(q); };
+        function paint() {
+            const q = input.value.trim();
+            if (q.length < 2) { close(); return; }
+            hits = book().filter(e => matches(e, q));
+            box.innerHTML = hits.length
+                ? hits.slice(0, 6).map((e, i) => `<button type="button" role="option" data-i="${i}" class="${i === sel ? 'on' : ''}"><span aria-hidden="true">${ICON[e.kind]}</span><span><b>${esc(e.name)}</b><small>${esc(e.title)}${e.phone ? ' · ' + esc(e.phone) : ''}</small><small>${e.links.length === 1 ? esc(e.links[0].client) : e.links.length + ' cases'}</small></span></button>`).join('')
+                  + `<button type="button" class="ctb-all" data-all="1">📇 All ${hits.length} match${hits.length === 1 ? '' : 'es'} in Contacts</button>`
+                : `<div class="ctb-empty">No contact matches “${esc(q)}”.</div>`;
+            box.classList.add('open'); input.setAttribute('aria-expanded', 'true');
+        }
+        input.addEventListener('input', () => { sel = -1; paint(); });
+        input.addEventListener('focus', paint);
+        input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 120));
+        input.addEventListener('keydown', (e) => {
+            const n = Math.min(hits.length, 6);
+            if (e.key === 'ArrowDown' && n) { e.preventDefault(); sel = (sel + 1) % n; paint(); }
+            else if (e.key === 'ArrowUp' && n) { e.preventDefault(); sel = (sel - 1 + n) % n; paint(); }
+            else if (e.key === 'Enter') { e.preventDefault(); const q = input.value.trim(); if (sel >= 0 && hits[sel]) open(hits[sel].name); else if (q) open(q); }
+            // (a search box clears itself on Esc: the first Esc only closes the list, the second clears it)
+            else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (box.classList.contains('open')) close(); else { input.value = ''; input.blur(); } }
+        });
+        box.addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the input while clicking the list
+        box.addEventListener('click', (e) => {
+            const b = e.target.closest('button'); if (!b) return;
+            if (b.dataset.all) open(input.value.trim()); else if (hits[+b.dataset.i]) open(hits[+b.dataset.i].name);
+        });
+    }
+
     // the sidebar button, for everyone signed in
     function mount() {
+        mountBar();
         const after = $id('cl-updates-btn') || $id('cl-open-btn');
         if (after && !$id('ct-open-btn')) after.insertAdjacentHTML('afterend', `<button id="ct-open-btn" type="button" onclick="openContacts()" class="${esc(after.className)}">📇 Contacts</button>`);
         const b = $id('ct-open-btn'); if (b) b.style.display = signedIn() ? '' : 'none';
