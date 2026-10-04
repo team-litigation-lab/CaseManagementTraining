@@ -10,7 +10,7 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
 
 - **Search bar in the case header:** type in the 🔍 search bar under the case status, at the right of the case header (or press **Ctrl/Cmd+K**) and matching files drop down under it; click one (or use the arrow keys and Enter) to open it. Trainees never need to open a library. Search by client name, **case number** (typed any way: `LSH-2026-MVA-901379`, `mva 901379` or just `901379`), date of the accident (DOL), date of birth, phone, claim/policy #, plate or library ID. Each result shows its DOL (and, for mock cases, the case number and DOB).
 - **The search bar starts empty.** Chrome used to put the trainer's own name into the search bar, shaded pale blue. Its autofill copied the name picked on the sign-in screen, and its password manager took the search bar for the username box of a saved sign-in. Now the sign-in views, every box with a password (the lock and unlock boxes too) and the search bar are forms of their own, and the search bar's hint no longer says "name". Any search box the browser still fills in by itself, while you aren't typing in it, is emptied at once, even when Chrome hides what it filled in from the page (`case-library.js`).
-- **Case Library window (Admins):** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**) and the ☎ firm directory. Trainees don't get the button. If the search bar is off screen, Ctrl/Cmd+K opens the window for them, with **All files** and **My cases** only. They find the firm directory and front-desk rules in the Front Desk practice panel.
+- **Case Library window (Admins):** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**), the **📇 Contacts** cards (below) and the ☎ firm directory. Trainees don't get the button. If the search bar is off screen, Ctrl/Cmd+K opens the window for them, with **All files** and **My cases** only. They find the firm directory and front-desk rules in the Front Desk practice panel.
 - **Same name, different file:** when several results share a client name, the Case Library (and the drill's search) says so and asks for the DOL and DOB before you open one.
 - **During a Front Desk Drill call**, a mock case opened from the search bar counts as the call's pick, so receptionists never need the Training Library.
 - A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). Admins browse all cases in Master Control → Case Logs.
@@ -441,6 +441,22 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
 - The server reads the notes only when this view asks (`/api/case-repository?updates=1&q=…`), never in the 15-second background refresh of the case list.
 - Code: "Latest updates" in `case-library.js` and in `functions/api/case-repository.js`.
 
+## 📇 Contacts (a card for everyone in the case files)
+
+Sidebar → **📇 Contacts** (everyone, under My cases; Admins also have a **📇 Contacts** tab in the Case Library window) shows a card for every contact in the case files, built in the browser from `mock-cases.js`:
+- **🩺 Medical providers:** the files' treating facilities, with their specialty, phone and email.
+- **🛡 Adjusters:** the BI and PIP / UM / MedPay adjusters, with their carrier; a carrier with no adjuster assigned yet gets its own card. Each case shows the claim number and the insured.
+- **⚖ Opposing counsel:** the defense counsel on every file in litigation (`counsel` on the file: name, firm, who they represent, phone, email). Three files already named them in their notes (Richard Voss, Paul Hendricks, Voss & Tate and Lang & Ortiz); the other litigated files were given fictional counsel in the same style. `check-data.mjs` checks every litigated file has one.
+- **👤 Clients:** phone, email and address. The same person on two files (same name and date of birth) is one card with both files; two people who share a name are two cards.
+- **👥 Others:** emergency contacts, the parties at fault (with their phone when the file has it), lien holders, health plans, police and other reporting agencies, and employers.
+
+Each card lists the cases the contact is on: the client, the case number and what they are on that case (dates and status, the claim, who they represent). The first 4 show; **Show all** shows the rest. **A click on a case opens that file** (as the trainee's program allows) and closes Contacts.
+- **Search** by name, company, phone in any format (`5550103345`, `555.010.3345`), email, claim, report or lien file number, a client's name or a case number. A search by client puts that client's case first on each card.
+- **The chips** filter by kind and show how many match.
+- Trainees never see the Training Library's name or its MC- numbers here: a case is its client and case number.
+- It's built from the library files as they ship. A trainer's edit to a library file (💾 Save to the library) doesn't change the cards.
+- Code: `contacts.js`; the data is `mock-cases.js`.
+
 ## 🧭 The sidebar and the case's actions
 
 **The sidebar**, top to bottom (`index.html`, `#sidebar-actions`):
@@ -471,14 +487,14 @@ Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#captur
 ## 🧭 Blueprint (how the CMS works, for trainees, trainers and the Admin)
 
 Sidebar → **🧭 Blueprint** (after 📊 My Dashboard) opens a full-screen slide deck that explains the CMS, like the Orientation in EA / PA. There are three versions:
-- **Trainee blueprint** (11 slides and a cover): what the CMS is, signing in and the sidebar, finding a case, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Reception Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
+- **Trainee blueprint** (12 slides and a cover): what the CMS is, signing in and the sidebar, finding a case, 📇 Contacts, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Reception Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
 - **Trainer blueprint** (Admins only; 20 slides and a cover): signing in, before a batch starts, the program links, registrations and users, Monitoring and 👁 Watch live, Case Logs, Broadcast & Ping, access control, the Training Library, the case header (Client's Name, SSN, Client's ID), facilitated mock calls, the Reception Simulator and its RECEPTION MOCK CALL scorecard, grading and feedback, the Case Library and Latest Updates, the Intake folder, the Firm Calendar, time and drill results, a training day, Trainee view, and when something goes wrong.
 - **Admin blueprint** (the Master Account only; 15 slides and a cover): who does what, signing in and sessions, accounts and batches, Master Control, Pause and Database Maintenance, Cloudflare usage and billing (Workers Paid), the AI keys, updates, data and records, database upkeep, the settings (secrets; limits and bindings), the routine, when something breaks, and the known gaps.
 
 Trainees, and Admins in 👁 Trainee view, get the Trainee blueprint only. Trainers get the Trainer and Trainee blueprints as tabs, so they can share the Trainee blueprint in Google Meet on day one. The Master Account gets all three, opening on the Admin blueprint (`canAdmin` in `blueprint-content.js`).
 
 - **Moving around:** ◀ ▶, the ← → keys, or the numbered contents strip under the slide. **Esc** or **✕ Close** closes it.
-- **Numbering:** the cover is ★ (the counter says *Cover · 11 slides*); the slides are 1 to 11 (1 to 20 for trainers), the same on the buttons, the counter, the slide's heading and footer, and the PDF's page footers.
+- **Numbering:** the cover is ★ (the counter says *Cover · 12 slides*); the slides are 1 to 12 (1 to 20 for trainers), the same on the buttons, the counter, the slide's heading and footer, and the PDF's page footers.
 - **Screenshots, for visual learners:** most trainee and trainer slides show the CMS screen they describe, beside the points, with *Where to find it* under it. A click shows it full size (a click or **Esc** closes it). On a phone it's a **🖼 See the screen** button. The PDFs carry them too. They're the `.jpg` files in `blueprint/`, taken from the CMS itself by `node .github/scripts/blueprint-shots.cjs` (a made-up class: trainees, saved cases, results; the case files are the real Training Library). Take them again after changing a screen a slide shows, and look at them before committing.
 - **The cover:** the LSH mark (`lsh-mark.png`) with *Legal Support Help* as real text under it, as in the sidebar, so it stays sharp at any size.
 - **Fits the screen:** the slide is laid out at 1280×720 (620×1000 in portrait on a phone) and scaled to the window.
@@ -860,6 +876,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - opening a case starts empty, asks before losing unsaved work, and a slow load overtaken by a newer click doesn't land; deleting the open case clears the editor and nothing is sent; a save that comes back after New doesn't attach to the new case;
   - opening a Training Library case file as a trainee isn't an edit (leaving it sends nothing, and the library's locked dropdowns aren't saved); leaving one while it loads doesn't leave the editor shut;
   - a whole live drill (61 calls with transcripts) saves; editing a time entry's description keeps its time to the second (a 150 s entry, in the browser and on the server).
+- **Contacts** (`.github/scripts/contacts.cjs`, in the same job): 📇 Contacts in a browser. It checks that everyone signed in has it in the sidebar and an Admin also in the Case Library; that every medical provider, adjuster (or carrier with none yet), opposing counsel, client, emergency contact and lien holder in the files has a card with its case on it, one card per contact (6 opposing counsel); the same client on two files is one card and two people who share a name are two; a busy card shows 4 cases and Show all; search by name, company, phone in any format, email, claim number, client or case number, with that client's case first; the chips; a case opens its file; Esc closes it; a trainee never sees the Training Library; and it fits a phone.
 - **Known gaps** (`.github/scripts/known-gaps.cjs`, in the same job): the server code on SQLite, then the page in a browser. It checks that:
   - Lock / Unlock is gone (no `/api/lock`, lock screen, confirm box or Lock button; `/api/state` reports no lock) and ⏸ Pause stays;
   - 🧹 Clear old data is for the Master Account only, clears old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts, keeps everything recent, counts what it cleared and is in the server logs; the vacuum endpoint and `vacuum-d1.yml` are gone;

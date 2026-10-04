@@ -27,6 +27,11 @@
    cases get 000001 and up) won't reach for a long time, and follow the order the files
    were opened. It's searchable and shows in the Case ID field.
 
+   `counsel` (files in litigation): the defense counsel on the lawsuit, { name, firm, represents, phone,
+   email }. contacts.js builds the 📇 Contacts directory from these files: medical providers (facilities),
+   adjusters (bi, pipum), opposing counsel (counsel), clients, and others (emergency contacts, the parties
+   at fault, lien holders, health plans, police agencies, employers).
+
    `injury` fills the Profile tab's Primary Injury card: primary, parts, type and
    surgery (each one of the card's options), prior and details. Only what the
    file says is filled in.
@@ -315,6 +320,8 @@ const MOCK_CASES = [
     chrono: [{ dos: ['08/28/2024'], facility: 'St. Mary\'s Hospital', next: '', notes: 'ORIF left ankle.' }],
     treatmentNotes: 'Medicare is primary; conditional-payment letter requested.',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Richard Voss', firm: 'Voss & Tate LLP', represents: 'Pine Ridge Property Management LLC', phone: '(555) 010-7990', email: 'rvoss@vosstate.example.com', assistant: 'Paula' }],
     lit: { sol: '08/27/2026', filed: '04/15/2026', cutoff: '01/15/2027', trial: '05/10/2027',
         rows: [
             { type: 'Deposition Notice', party: 'Plaintiff Linda Garcia: 10/06/2026, 10:00 AM, at defense counsel\'s office', due: '10/06/2026', status: 'Pending' },
@@ -663,6 +670,8 @@ const MOCK_CASES = [
     chrono: [],
     treatmentNotes: 'Permanent restrictions; cannot return to electrical work.',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Gregory Hale', firm: 'Hale Whitman LLP', represents: 'Redline Freight LLC', phone: '(555) 010-8130', email: 'ghale@halewhitman.example.com' }],
     lit: { sol: '02/11/2027', filed: '01/06/2026', cutoff: '11/30/2026', trial: '03/08/2027',
         rows: [
             { type: 'Deposition Notice', party: 'Defendant driver Mark Toller: 10/09/2026, 9:30 AM', due: '10/09/2026', status: 'Pending' },
@@ -1491,6 +1500,9 @@ const MOCK_CASES = [
     ],
     treatmentNotes: 'Billed to date $87,300, plus a life-care plan (planner retained 08/2026).',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Richard Voss', firm: 'Voss & Tate LLP', represents: 'Parkside Medical Plaza LLC', phone: '(555) 010-7990', email: 'rvoss@vosstate.example.com', assistant: 'Paula' },
+        { name: 'Teresa Lang', firm: 'Lang & Ortiz', represents: 'Apex Lift Services Inc.', phone: '(555) 010-8140', email: 'tlang@langortiz.example.com' }],
     lit: { sol: '01/27/2027', filed: '07/08/2026', cutoff: '03/15/2027', trial: '07/12/2027',
         rows: [
             { type: 'Interrogatories', party: 'Our responses to Apex Lift Services\' interrogatories', due: '10/09/2026', status: 'Pending' },
@@ -1738,6 +1750,8 @@ const MOCK_CASES = [
     ],
     treatmentNotes: 'Treatment complete (01/22/2025).',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Denise Albright', firm: 'Albright & Cole', represents: 'Kyle Mercer', phone: '(555) 010-8150', email: 'dalbright@albrightcole.example.com' }],
     lit: { sol: '09/15/2026', filed: '02/03/2025', cutoff: '08/29/2025', trial: '01/12/2026', rows: [{ type: 'Motion', party: 'Court-ordered mediation: 06/24/2025, 9:00 AM, Riverton Dispute Resolution Center', due: '06/24/2025', status: 'Pending' }] },
     finance: [],
     docs: [
@@ -1789,6 +1803,8 @@ const MOCK_CASES = [
     ],
     treatmentNotes: 'Treatment complete (06/15/2021).',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Martin Yoo', firm: 'Yoo Barrett LLP', represents: 'Centerpoint Parking LLC', phone: '(555) 010-8160', email: 'myoo@yoobarrett.example.com' }],
     lit: { sol: '11/29/2022', filed: '10/14/2022', cutoff: '06/30/2023', trial: '', rows: [{ type: 'Motion', party: 'Binding arbitration: 09/11/2023, 10:00 AM, Riverton Dispute Resolution Center', due: '09/11/2023', status: 'Pending' }] },
     finance: [],
     docs: [
@@ -2143,6 +2159,8 @@ const MOCK_CASES = [
     ],
     treatmentNotes: 'Treatment complete.',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Martin Yoo', firm: 'Yoo Barrett LLP', represents: 'FreshWay Grocers Inc.', phone: '(555) 010-8160', email: 'myoo@yoobarrett.example.com' }],
     lit: { sol: '09/29/2025', filed: '05/20/2024', cutoff: '01/15/2025', trial: '', rows: [{ type: 'Motion', party: 'Arbitration: 03/12/2025, 9:30 AM, Riverton Dispute Resolution Center', due: '03/12/2025', status: 'Pending' }] },
     finance: [],
     docs: [
@@ -2193,6 +2211,8 @@ const MOCK_CASES = [
     ],
     treatmentNotes: 'Treatment complete.',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Paul Hendricks', firm: 'Hendricks & Vale LLP', represents: 'Brian Kessler', phone: '(555) 010-8120', email: 'phendricks@hendricksvale.example.com' }],
     lit: { sol: '10/10/2025', filed: '11/18/2024', cutoff: '09/30/2025', trial: '02/09/2026', rows: [{ type: 'Deposition Notice', party: 'Plaintiff Niamh Cholmondeley: 06/20/2025, 10:00 AM, at Hendricks & Vale LLP (defense counsel)', due: '06/20/2025', status: 'Pending' }] },
     finance: [],
     docs: [
@@ -2395,6 +2415,8 @@ const MOCK_CASES = [
     ],
     treatmentNotes: 'Treatment complete (05/30/2025).',
     pd: null,
+    // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
+    counsel: [{ name: 'Gregory Hale', firm: 'Hale Whitman LLP', represents: 'Kestrel Logistics Inc.', phone: '(555) 010-8130', email: 'ghale@halewhitman.example.com' }],
     lit: { sol: '10/11/2026', filed: '04/07/2025', cutoff: '12/19/2025', trial: '', rows: [{ type: 'Interrogatories', party: 'Plaintiff\'s answers to the trucking company\'s interrogatories', due: '08/29/2025', status: 'Pending' }] },
     finance: [],
     docs: [

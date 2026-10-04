@@ -138,14 +138,14 @@ let base;
     if (await page.evaluate(() => document.getElementById('lbp-zoom').classList.contains('open'))) fail('the full-size screenshot stayed open on the next slide');
     const tw = await walk(page, 'trainee 1366px');
     tw.out.forEach(fail);
-    if (tw.total !== 12) fail(`the trainee deck has ${tw.total} slides (expected a cover and 11)`);
+    if (tw.total !== 13) fail(`the trainee deck has ${tw.total} slides (expected a cover and 12)`);
     const bad = tw.texts.filter(x => TRAINER_WORDS.test(x)).map(x => x.match(TRAINER_WORDS)[0]);
     if (bad.length) fail(`the trainee deck names trainer things: ${bad.join(', ')}`);
     // the PDF
     let [dl] = await Promise.all([page.waitForEvent('download'), page.click('#lbp-pdf-btn')]);
     let pdf = inspect(fs.readFileSync(await dl.path()));
-    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Trainee.pdf' || !pdf.pdf || pdf.pages !== 12) fail(`the trainee PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
-    // its numbers match the slides (Cover, 1 / 11 … 11 / 11, never 12 / 12), and it carries the logo and the screenshots
+    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Trainee.pdf' || !pdf.pdf || pdf.pages !== 13) fail(`the trainee PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
+    // its numbers match the slides (Cover, 1 / 12 … 12 / 12, never 13 / 13), and it carries the logo and the screenshots
     const shotCount = await page.evaluate(() => LSHBlueprint.decks().trainee.slides.filter(s => s.shot).length);
     if (!/\bCover\b/.test(pdf.text) || !pdf.text.includes(`${tn} / ${tn}`) || pdf.text.includes(`${tn + 1} / ${tn + 1}`)) fail('the trainee PDF\'s page numbers don\'t match the slides');
     if (shotCount < 8 || pdf.images < shotCount + 1) fail(`the trainee PDF has ${pdf.images} images (expected the logo and ${shotCount} screenshots)`);

@@ -67,6 +67,13 @@ for (const c of MOCK_CASES) {
     for (const f of c.facilities || []) if (!SPECIALTIES.includes(f.specialty)) bad(`${where}: facility specialty "${f.specialty}" isn't an option`);
     for (const k of ['dateOfLoss', 'sol']) if (c[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(c[k])) bad(`${where}: ${k} must be MM/DD/YYYY`);
     if (!c.reception || !c.reception.verify || !(c.reception.calls || []).length) bad(`${where}: needs reception.verify and at least one reception call`);
+    // a file in litigation names its defense counsel (the 📇 Contacts directory's opposing counsel)
+    if (c.lit && !(c.counsel || []).length) bad(`${where}: in litigation but no counsel (the defense counsel: name, firm, represents, phone, email)`);
+    for (const o of c.counsel || []) {
+        for (const k of ['name', 'firm', 'represents', 'phone']) if (!String(o[k] || '').trim()) bad(`${where}: counsel ${o.name || '(no name)'} has no ${k}`);
+        if (o.phone && !/^\(555\) 010-\d{4}$/.test(o.phone)) bad(`${where}: counsel ${o.name}'s phone must be a fictional (555) 010-xxxx number`);
+        if (o.email && !/@[\w-]+\.example\.com$/.test(o.email)) bad(`${where}: counsel ${o.name}'s email must be at an example.com address`);
+    }
 }
 const byName = {};
 for (const c of MOCK_CASES) {

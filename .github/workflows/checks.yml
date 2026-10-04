@@ -126,6 +126,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/known-gaps.cjs
+      - name: Contacts (a card for every provider, adjuster, opposing counsel, client and other contact in the case files)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/contacts.cjs
       - name: Live view (an Admin watches a trainee's screen live, mirrored as it is)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
