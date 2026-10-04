@@ -735,11 +735,6 @@
                         <div class="admin-stat-label">Pause / Resume from Access Control</div>
                     </div>
                     <div class="admin-tile">
-                        <h4>Access State</h4>
-                        <div class="admin-stat" id="ov-lock-state" style="font-size:16px;">Unlocked</div>
-                        <div class="admin-stat-label">Lock / Unlock from Access Control</div>
-                    </div>
-                    <div class="admin-tile">
                         <h4>Current Alert</h4>
                         <div class="admin-stat" id="ov-alert-state" style="font-size:16px;">None Active</div>
                         <div class="admin-stat-label">Manage from Broadcast &amp; Ping</div>
@@ -873,7 +868,7 @@
                 </div>
             </div>
 
-            <!-- ACCESS CONTROL (Pause vs Lock) -->
+            <!-- ACCESS CONTROL (Pause, database maintenance) -->
             <div class="mc-pane" id="admin-dash-access">
                 <div class="mc-section-title">⏸ Pause Activity (site-wide, no logout, resumable)</div>
                 <div class="admin-tile">
@@ -882,47 +877,16 @@
                     <button class="btn-primary" id="pause-toggle-btn" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="togglePause()">⏸ Pause All Activity</button>
                 </div>
 
-                <div class="mc-section-title">🔒 Lock Access (site-wide, forces logout, requires unlock)</div>
-                <div class="admin-tile">
-                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Locking immediately signs every user out and blocks the page entirely until an administrator unlocks it again. This requires Batch ID + password confirmation before it takes effect.</p>
-                    <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="lock-state-label" style="color:#166534;">Unlocked</span></div>
-                    <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="openLockConfirm()">🔒 Lock This Site</button>
-                </div>
-
                 <div id="db-maintenance-section" style="display:none;">
                     <div class="mc-section-title">🗄 Database Maintenance</div>
                     <div class="admin-tile">
-                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Deleting cases or registrations frees that space for reuse, but doesn't shrink the database file itself until it's compacted. Vacuuming rewrites the file and reclaims that freed space. This briefly locks the database, so it's restricted to the Master Account and best run when few people are active.</p>
-                        <div style="font-size:12px;font-weight:800;margin-bottom:10px;" id="vacuum-result-label">Not run this session</div>
-                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" id="vacuum-db-btn" onclick="runDbVacuum()">🗄 Run Database Vacuum</button>
+                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Clears data that's only needed for a while: pings over 7 days old, online status of people not seen for 30 days, live-view copies, sign-in attempt counts, live-call records over 90 days old and stopped alerts over 30 days old. Cases, results, intakes, time and the server logs are kept. D1 reuses the space; it can't shrink the database file itself (copying it into a fresh one with the Migrate D1 workflow does).</p>
+                        <div style="font-size:12px;font-weight:800;margin-bottom:10px;" id="db-cleanup-result">Not run this session</div>
+                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" id="db-cleanup-btn" onclick="runDbCleanup()">🧹 Clear old data</button>
                     </div>
                 </div>
             </div>
 
-        </div>
-    </div>
-
-    <!-- ===== LOCK CONFIRMATION MODAL (required to engage Lock) ===== -->
-    <div class="modal-overlay no-print" id="lock-confirm-modal" style="z-index:2900;">
-        <div class="modal-box">
-            <h2 class="serif">🔒 Confirm Site Lock</h2>
-            <div class="sub mono">Administrator Verification Required</div>
-            <p style="font-size:12px; color:#475569; margin-bottom:14px; line-height:1.5;">
-                Locking will immediately log out every user and block access until unlocked. Enter your admin Batch ID and password to confirm.
-            </p>
-            <div id="lock-confirm-error" style="display:none;color:var(--classified-red);font-size:11px;font-weight:700;margin-bottom:8px;">Batch ID / password did not match an administrator record.</div>
-            <!-- a form of its own (never submitted), like every box on the page with a password: so the browser never
-                 pairs a password with another box on the page, such as the case search bar -->
-            <form onsubmit="return false" autocomplete="off">
-            <label>Batch ID</label>
-            <input type="text" id="lock-confirm-batchid" autocomplete="off" placeholder="Your admin Batch ID, e.g. B300926" class="mono">
-            <label>Password</label>
-            <input type="password" id="lock-confirm-password" autocomplete="off" placeholder="Your password">
-            <div class="modal-btn-row">
-                <button type="button" class="btn-ghost" onclick="closeLockConfirm()">Cancel</button>
-                <button type="button" class="btn-primary" style="background:var(--classified-red);color:white;" onclick="confirmLock()">Confirm &amp; Lock</button>
-            </div>
-            </form>
         </div>
     </div>
 
@@ -941,20 +905,6 @@
             <div class="alert-text" id="alert-overlay-text"></div>
             <button class="alert-dismiss" onclick="dismissAlertLocally()">Dismiss</button>
         </div>
-    </div>
-
-    <!-- ===== LOCK SCREEN ===== -->
-    <div id="lock-overlay">
-        <div style="font-size:40px;">🔒</div>
-        <h2 class="serif" style="margin:14px 0 4px;">Page Locked by Administrator</h2>
-        <div id="lock-locked-by">Locked By: Batch ID —</div>
-        <p class="mono" style="font-size:11px; color:#94a3b8; margin-bottom:20px;">Enter administrator credentials to resume access.</p>
-        <form style="width:300px;" onsubmit="return false" autocomplete="off">
-            <input type="text" id="unlock-user" placeholder="Username" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;background:#ffffff;color:#0f172a;">
-            <input type="password" id="unlock-pass" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:none;font-family:'IBM Plex Mono', 'Courier New', monospace;background:#ffffff;color:#0f172a;">
-            <div id="unlock-error" style="display:none;color:#f87171;font-size:11px;margin-bottom:8px;">Invalid credentials.</div>
-            <button type="button" class="btn-primary" style="width:100%;padding:10px;border-radius:6px;" onclick="attemptUnlock()">Unlock Page</button>
-        </form>
     </div>
 
     <!-- ===== INACTIVITY REMINDER / AUTO-ARCHIVE MODAL ===== -->

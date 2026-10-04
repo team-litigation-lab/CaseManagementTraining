@@ -18,13 +18,8 @@
            never populated in the first place — so removing the
            overlay just reveals an empty shell instead of real data.
            ========================================================= */
-        let siteIsLocked = false;       // mirrors state.locked from /api/state
-        let siteLockedByAdmin = false;  // true if current session is Admin (Admins stay through a lock)
         function hasAuthorizedAccess() {
-            const session = getRealSession();   // a trainer in Trainee view still gets through a lock
-            if (!session) return false;
-            if (siteIsLocked && session.userType !== 'Admin') return false;
-            return true;
+            return !!getRealSession();
         }
         function blankCaseEditorContent() {
             _editorGen++;
@@ -72,7 +67,7 @@
         }
         /* ---------- Overlay integrity watchdog ----------
            DevTools lets someone disable a single CSS declaration (e.g.
-           uncheck "#lock-overlay.open { display:flex }") without
+           uncheck "#auth-gate.open { display:flex }") without
            touching the element's class at all, so a MutationObserver on
            class/attributes won't see it. This polls the *computed*
            style instead and re-asserts it via an inline !important
@@ -90,7 +85,6 @@
             const session = getSession();
             const authorized = hasAuthorizedAccess();
             enforceOverlayVisibility('auth-gate', !session);
-            enforceOverlayVisibility('lock-overlay', siteIsLocked && !siteLockedByAdmin);
             if (!authorized) {
                 blankCaseEditorContent();
                 renderRepo(); // re-checks hasAuthorizedAccess() itself and keeps the sidebar blank
@@ -1386,7 +1380,13 @@
                                     <div style="margin-top:6px; display:flex; justify-content:flex-end;">
                                         <button class="btn-primary" style="padding:6px 14px; font-size:10px; border-radius:5px;" onclick="saveTrainerComment(${e.id})">Save Note</button>
                                     </div>
-                                    ${e.trainerComment && e.commentUpdatedAt ? `<div class="review-comment-meta">— ${esc(e.trainerUsername || 'Trainer')}, ${new Date(e.commentUpdatedAt).toLocaleString()}</div>` : ''}
+                                    ${e.trainerComment && e.commentUpdatedAt ? `<div class="review-comment-meta">— ${esc(e.trainerName || e.trainerUsername || 'Trainer')}, ${new Date(e.commentUpdatedAt).toLocaleString()}</div>` : ''}
+                                </div>
+                            ` : e.trainerComment ? `
+                                <div class="review-comment-box">
+                                    <label>📝 Note from your trainer</label>
+                                    <div class="review-comment-readonly">${esc(e.trainerComment)}</div>
+                                    ${e.commentUpdatedAt ? `<div class="review-comment-meta">— ${esc(e.trainerName || 'Your trainer')}, ${new Date(e.commentUpdatedAt).toLocaleString()}</div>` : ''}
                                 </div>
                             ` : ''}
                         </div>
@@ -2197,9 +2197,10 @@
         }
 
         /* =========================================================
-           DATABASE MAINTENANCE — Master-only VACUUM trigger.
-           Deletes free space for reuse but don't shrink the D1 file;
-           this reclaims it. See /api/vacuum-db for the server side.
+           DATABASE MAINTENANCE — Master Account only: 🧹 Clear old data.
+           D1 can't VACUUM, so this clears data that's only needed for a while
+           (old pings, online status, live-view copies, sign-in counts…);
+           D1 reuses the space. See functions/api/db-cleanup.js.
            ========================================================= */
         function renderDbMaintenanceVisibility() {
             const section = document.getElementById('db-maintenance-section');
@@ -2208,30 +2209,30 @@
             const sessionIsMaster = !!(session && session.username === 'LSHADMIN123');
             section.style.display = sessionIsMaster ? 'block' : 'none';
         }
-        function runDbVacuum() {
-            const btn = document.getElementById('vacuum-db-btn');
-            const label = document.getElementById('vacuum-result-label');
-            if (!confirm('Vacuum the database now? This briefly locks the database and may take a moment.')) return;
+        function runDbCleanup() {
+            const btn = document.getElementById('db-cleanup-btn');
+            const label = document.getElementById('db-cleanup-result');
+            if (!confirm('Clear old data now? Old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts are removed. Cases, results, intakes, time and the server logs are kept.')) return;
             btn.disabled = true;
-            btn.innerText = 'Vacuuming…';
-            fetch('/api/vacuum-db', { method: 'POST', credentials: 'include' })
+            btn.innerText = 'Clearing…';
+            fetch('/api/db-cleanup', { method: 'POST', credentials: 'include' })
                 .then(r => r.json())
                 .then(data => {
                     btn.disabled = false;
-                    btn.innerText = '🗄 Run Database Vacuum';
+                    btn.innerText = '🧹 Clear old data';
                     if (data.success) {
-                        const kb = data.bytesReclaimed !== null ? (data.bytesReclaimed / 1024).toFixed(1) : '?';
-                        label.innerText = 'Last run: reclaimed ~' + kb + ' KB in ' + data.durationMs + 'ms';
-                        showToast('Vacuum complete — reclaimed ~' + kb + ' KB.', 'info');
+                        const parts = (data.cleared || []).filter(c => c.rows).map(c => c.rows + ' ' + c.what);
+                        label.innerText = 'Last run (' + new Date().toLocaleTimeString() + '): ' + (parts.length ? parts.join(' · ') : 'nothing old to clear') + '.';
+                        showToast(data.rows ? 'Cleared ' + data.rows + ' old row' + (data.rows === 1 ? '' : 's') + '.' : 'Nothing old to clear.', 'info');
                     } else {
-                        label.innerText = 'Last run failed: ' + (data.error || 'Unknown error') + (data.hint ? ' — ' + data.hint : '');
-                        showToast((data.error || 'Vacuum failed.') + (data.hint ? ' ' + data.hint : ''), 'error');
+                        label.innerText = 'Last run failed: ' + (data.error || 'Unknown error');
+                        showToast(data.error || 'Couldn\'t clear old data.', 'error');
                     }
                 })
                 .catch(() => {
                     btn.disabled = false;
-                    btn.innerText = '🗄 Run Database Vacuum';
-                    showToast('Network error running vacuum.', 'error');
+                    btn.innerText = '🧹 Clear old data';
+                    showToast('Network error clearing old data.', 'error');
                 });
         }
 
@@ -3264,7 +3265,7 @@
         }
 
         /* =========================================================
-           SITE STATE POLLING — pause / lock / announcement / alert,
+           SITE STATE POLLING — pause / announcement / alert / pings,
            shared across every connected browser via /api/state.
            ========================================================= */
         let lastAlertId = null;
@@ -3358,7 +3359,7 @@
             const pauseLabel = document.getElementById('pause-state-label');
             const pauseBtn = document.getElementById('pause-toggle-btn');
             const ovPause = document.getElementById('ov-pause-state');
-            const sessionForPause = getRealSession();   // Pause and Lock never stop a trainer, Trainee view or not
+            const sessionForPause = getRealSession();   // Pause never stops a trainer, Trainee view or not
             const isAdminSession = sessionForPause && sessionForPause.userType === 'Admin';
             if (state.paused) {
                 if (isAdminSession) {
@@ -3376,33 +3377,9 @@
                 if (ovPause) ovPause.innerText = 'Active';
             }
 
-            // Lock overlay (forces logout, requires unlock)
-            const lockOverlay = document.getElementById('lock-overlay');
-            const lockLabel = document.getElementById('lock-state-label');
-            const ovLock = document.getElementById('ov-lock-state');
-            const session = sessionForPause;
-            siteIsLocked = !!state.locked;
-            siteLockedByAdmin = !!(session && session.userType === 'Admin');
-            if (state.locked) {
-                document.getElementById('lock-locked-by').innerText = 'Locked By: Batch ID ' + (state.lockedBy || '\u2014');
-                lockOverlay.classList.add('open');
-                lockOverlay.style.setProperty('display', 'flex', 'important');
-                if (session && session.userType !== 'Admin') { clearSession(); }
-                if (lockLabel) { lockLabel.innerText = 'Locked'; lockLabel.style.color = 'var(--classified-red)'; }
-                if (ovLock) ovLock.innerText = 'Locked';
-                // Actively wipe any case content already sitting in the DOM —
-                // don't just rely on the overlay to cover it up.
-                if (!siteLockedByAdmin) { blankCaseEditorContent(); renderRepo(); }
-            } else {
-                lockOverlay.classList.remove('open');
-                lockOverlay.style.removeProperty('display');
-                if (lockLabel) { lockLabel.innerText = 'Unlocked'; lockLabel.style.color = '#166534'; }
-                if (ovLock) ovLock.innerText = 'Unlocked';
-                // Site-state fetch is async, so on a fresh page load the very
-                // first renderRepo() may have run before we knew the true
-                // lock state. Re-render now that it's authoritative.
-                renderRepo();
-            }
+            // (Site-state fetch is async: on a fresh page load the first renderRepo() may have run before the
+            // session was settled. Re-render now.)
+            renderRepo();
             runOverlayIntegrityCheck();
         }
         function hexToRgba(hex, alpha) {
@@ -3423,58 +3400,6 @@
                 .then(r => r.json())
                 .then(data => { showToast(data.paused ? 'Activity paused for all users.' : 'Activity resumed for all users.', 'info'); refreshSiteState(); })
                 .catch(() => showToast('Network error toggling pause.', 'error'));
-        }
-
-        /* =========================================================
-           LOCK — requires Batch ID + password confirmation, forces
-           logout for everyone, and stays locked until an admin
-           unlocks it again.
-           ========================================================= */
-        function openLockConfirm() {
-            document.getElementById('lock-confirm-batchid').value = '';
-            document.getElementById('lock-confirm-password').value = '';
-            document.getElementById('lock-confirm-error').style.display = 'none';
-            document.getElementById('lock-confirm-modal').classList.add('open');
-        }
-        function closeLockConfirm() {
-            document.getElementById('lock-confirm-modal').classList.remove('open');
-        }
-        function confirmLock() {
-            const batchId = document.getElementById('lock-confirm-batchid').value.trim();
-            const password = document.getElementById('lock-confirm-password').value;
-            if (!batchId || !password) { document.getElementById('lock-confirm-error').style.display = 'block'; return; }
-            fetch('/api/lock', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ action: 'lock', batchId, password })
-            }).then(r => r.json()).then(data => {
-                if (data.success) {
-                    closeLockConfirm();
-                    showToast('Site locked. All users will be signed out.', 'alert');
-                    refreshSiteState();
-                } else {
-                    document.getElementById('lock-confirm-error').innerText = data.error || 'Batch ID / password did not match an administrator record.';
-                    document.getElementById('lock-confirm-error').style.display = 'block';
-                }
-            }).catch(() => { document.getElementById('lock-confirm-error').innerText = 'Network error verifying credentials.'; document.getElementById('lock-confirm-error').style.display = 'block'; });
-        }
-        function attemptUnlock() {
-            const u = document.getElementById('unlock-user').value.trim();
-            const p = document.getElementById('unlock-pass').value.trim();
-            fetch('/api/lock', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ action: 'unlock', username: u, password: p })
-            }).then(r => r.json()).then(data => {
-                if (data.success) {
-                    document.getElementById('unlock-error').style.display = 'none';
-                    document.getElementById('unlock-user').value = '';
-                    document.getElementById('unlock-pass').value = '';
-                    if (data.user) { setSession(data.user); applySessionUI(); startHeartbeat(); startIdleTracking(); }
-                    refreshSiteState();
-                } else {
-                    document.getElementById('unlock-error').innerText = data.error || 'Invalid credentials.';
-                    document.getElementById('unlock-error').style.display = 'block';
-                }
-            }).catch(() => { document.getElementById('unlock-error').innerText = 'Network error.'; document.getElementById('unlock-error').style.display = 'block'; });
         }
 
         // Replaces the old admin-editable, localStorage-backed logo/background

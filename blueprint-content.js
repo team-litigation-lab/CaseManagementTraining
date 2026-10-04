@@ -84,7 +84,7 @@
             { icon: '✅', title: 'Good habits', points: [
                 'Save as you finish each part: Save once, then Update.',
                 'Read the announcements at the top of the screen, and answer your trainer\'s pings.',
-                'A Paused or Locked screen means your trainer has paused the CMS. Wait: your work is kept.',
+                'A Paused screen means your trainer has paused the CMS. Wait: your work is kept.',
                 'Use only the fictional details in the case files, never real client information.'],
               where: 'Announcements: the ticker at the top · pings pop up on your screen.',
               tip: 'Stuck? Ask your trainer. That\'s what the training is for.' }
@@ -146,10 +146,10 @@
               tip: 'Use a ping for one person, an announcement for the class, an alert for something urgent.' },
             { icon: '⏸', title: 'Access control', points: [
                 '⏸ Pause: trainees see a paused screen and can\'t work. Their work is kept. Trainers are never paused.',
-                '🔒 Lock: closes the CMS to trainees. It asks you to confirm.',
-                'Database Maintenance is for the Master Account only.'],
+                '⏵ Resume lifts it for everyone at once; nobody is signed out.',
+                'Database Maintenance (🧹 Clear old data) is for the Master Account only.'],
               where: 'Master Control → Access Control.',
-              tip: 'Pause for a break or a demo; Lock outside class hours.' },
+              tip: 'Pause for a break or a demo. To keep one trainee out, suspend their account in Users.' },
             { icon: '📚', title: 'Training Library', points: [
                 '📚 Training Library: 52 fictional case files (MC-01 to MC-52), by training program.',
                 'Trainees never see this name: to them these are ordinary case files with case numbers.',
@@ -192,10 +192,10 @@
             { icon: '🎓', title: 'Grading and feedback', points: [
                 'New Intake: key information 45%, questions answered 30%, facts of loss 25%; A from 90, B 80, C 70, D 60.',
                 'Saved cases: checks on each save, plus an AI review of uploaded documents (writing 1 to 5), in the trainer roster.',
-                'Trainer Notes: on each entry of a trainee\'s feed. Trainees don\'t see them yet: give the feedback in person or by ping.',
+                'Trainer Notes: on each entry of a trainee\'s feed. The trainee reads them on their own 📊 My Dashboard.',
                 'Ping → Send as a task, for something they should do on the case.'],
               where: 'Sidebar → 📊 My Dashboard → the trainee · Master Control → Broadcast & Ping.',
-              tip: 'Trainers can\'t open a saved practice call\'s transcript yet: watch the call live, or ask them to keep the debrief open.' },
+              tip: '📞 Reception Simulator → 🎧 Saved calls opens any trainee\'s call: the scorecard, the review and the whole transcript.' },
             { icon: '🔍', title: 'Case Library and Latest Updates', points: [
                 '🔍 Open Case Library: every file and every trainee\'s saved cases, with filters and the ☎ firm directory.',
                 '🕑 Latest Updates: cases by their latest update, with a search of the Case Notes ("Intake grade" finds graded intakes).',
@@ -266,19 +266,19 @@
               where: 'Master Control → Registrations · Users · Monitoring → Server Logs.',
               tip: 'Anyone who knows an approved trainee\'s username can sign in as them: suspend an account the moment it\'s misused.' },
             { icon: '⇄', title: 'Master Control', points: [
-                'Overview: saved cases, trainees online, pending registrations, pause and lock, the current alert.',
+                'Overview: saved cases, trainees online, pending registrations, pause, the current alert.',
                 'Registrations and Users: approve, revoke, fix Batch IDs. Monitoring: who\'s online, 👁 Watch live, Server Logs.',
                 'Case Logs: every saved case and its previous versions; delete one or several.',
                 'Broadcast & Ping: the announcement ticker, full-screen alerts, pings (optionally as a task).',
-                'Access Control: ⏸ Pause, 🔒 Lock, and Database Maintenance (Master Account only).'],
+                'Access Control: ⏸ Pause, and Database Maintenance (Master Account only).'],
               where: 'Sidebar footer → ⇄ Master Control.',
               tip: 'Open pages check for messages every 15 seconds (30 in a background tab).' },
-            { icon: '⏸', title: 'Pause and Lock', points: [
+            { icon: '⏸', title: 'Pause and Database Maintenance', points: [
                 'Pause freezes trainees\' screens under an overlay; Admins are never paused. The server still accepts saves.',
-                'Lock asks for a Batch ID and password, which today\'s Admin accounts don\'t have, so Lock and Unlock may not work.',
-                'A site stuck locked: in Cloudflare D1\'s console run UPDATE site_state SET locked=0, locked_by_batch=NULL WHERE id=1.'],
+                'There\'s no site lock: to keep someone out, suspend or revoke their account in Users.',
+                '🧹 Clear old data (Master Account): removes old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts. Cases, results and logs stay.'],
               where: 'Master Control → Access Control.',
-              tip: 'Use Pause for breaks and demos; avoid Lock until it has a password of its own.' },
+              tip: 'Use Pause for breaks and demos; clear old data now and then, outside class hours.' },
             { icon: '📉', title: 'Cloudflare usage and billing', points: [
                 'All LSH sites share one Cloudflare account, on the Workers Paid plan: there\'s no daily limit.',
                 '10 million requests a month are included; each extra million costs $0.30, and Cloudflare has no spending cap.',
@@ -306,11 +306,11 @@
                 'Deleting a case keeps its earlier versions and its files.',
                 'Backups: Cloudflare → D1 → the database → Time Travel restores any minute in the last 30 days.'],
               where: 'Cloudflare → Storage & Databases → D1 · R2.',
-              tip: 'An uploaded file opens for anyone signed in who has its link.' },
+              tip: 'An uploaded file opens for whoever uploaded it and Admins (anyone, for one an Admin uploaded), not for anyone with the link.' },
             { icon: '⚠', title: 'Database upkeep', points: [
                 'migrate-d1.yml copies the live database into a new one you name, then points the site at it. It refuses the live database\'s name, since it deletes the one it\'s given first.',
-                'vacuum-d1.yml points at the old database, not the live one; the Run Database Vacuum button always fails.',
-                'Neither is needed for normal running.',
+                'D1 has no VACUUM: deleted rows\' space is reused, but the file only gets smaller when migrate-d1.yml copies it into a fresh one.',
+                'Not needed for normal running; 🧹 Clear old data in Access Control does the routine clearing.',
                 'To undo a mistake, use D1 Time Travel.'],
               where: 'GitHub → CaseManagementTraining → Actions.',
               tip: 'Don\'t run a database workflow without a plan and a fresh Time Travel point.' },
@@ -325,7 +325,7 @@
                 'CALL_AI_LIMIT: AI requests per person per 10 minutes (150 if not set).',
                 'LIVE_MAX_MINUTES (6), LIVE_CALLS_PER_KEY, LIVE_DAILY_MINUTES and LIVE_MODEL: the live voice limits.',
                 'Bindings in wrangler.toml, nothing to set by hand: DB (the D1 database), DOCUMENTS (the R2 bucket), GEMINI_RELAY (EA-PA\'s relay).',
-                'CLOUDFLARE_API_TOKEN in the repository\'s GitHub secrets is used only by the two database workflows.'],
+                'CLOUDFLARE_API_TOKEN in the repository\'s GitHub secrets is used only by the Migrate D1 workflow.'],
               where: 'Cloudflare → the Pages project → Variables and Secrets · wrangler.toml.',
               tip: 'Set LIVE_DAILY_MINUTES to cap live voice minutes for the whole site.' },
             { icon: '🗓', title: 'Routine', points: [
@@ -345,10 +345,8 @@
               tip: 'Most problems are a missing setting or a limit reached, not the code.' },
             { icon: '📝', title: 'Known gaps', points: [
                 'One admin password for the Master Account and every trainer.',
-                'Lock and Unlock need a password today\'s Admin accounts don\'t have.',
-                'vacuum-d1.yml points at an old database, and Run Database Vacuum always fails.',
-                'An uploaded file opens for anyone signed in who has its link.',
-                'No screen yet for saved Reception Simulator transcripts, and Trainer Notes aren\'t shown to trainees.'],
+                'An older copy of a case kept in a browser can still overwrite newer changes made on the server.',
+                'The database file can\'t shrink in place (D1 has no VACUUM): Migrate D1 copies it into a fresh one.'],
               where: 'README → 🔒 Security → Known gaps.',
               tip: 'Plan around these until they\'re fixed.' }
         ]

@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
     const myName = me && me.username;
 
     let [state, announcement, alert, ping] = await Promise.all([
-        db.prepare(`SELECT paused, locked, locked_by_batch FROM site_state WHERE id = 1`).first(),
+        db.prepare(`SELECT paused FROM site_state WHERE id = 1`).first(),
         db.prepare(`SELECT text FROM announcements WHERE id = 1`).first(),
         db.prepare(`SELECT * FROM alerts WHERE stopped = 0 ORDER BY id DESC LIMIT 1`).first(),
         db.prepare(`SELECT id, text, target, by, fired_at FROM pings ORDER BY id DESC LIMIT 20`).all()
@@ -56,8 +56,6 @@ export async function onRequestGet({ request, env }) {
 
     return json({
         paused: !!(state && state.paused),
-        locked: !!(state && state.locked),
-        lockedBy: state ? state.locked_by_batch : null,
         announcement: { text: (announcement && announcement.text) || 'Welcome to the LSH Training Interface.' },
         alert: alertPayload,
         ping: pings[0] || null,

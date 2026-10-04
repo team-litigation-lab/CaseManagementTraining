@@ -5,7 +5,8 @@
 // Checks:
 //   - uploads: a PDF or a photo opens in the browser; an HTML page, an SVG or anything else is kept
 //     as a download (an old file stored as text/html is sent as a download too), and only keys under
-//     documents/ are served;
+//     documents/ are served; a file opens for whoever uploaded it and Admins, for anyone when an Admin uploaded
+//     it, and (from before uploads recorded who sent them) for whoever has a case it's in: not for anyone with the link;
 //   - Admin status changes: a trainer can approve a trainee, but can't change the Master Account or
 //     another Admin; the Master Account can change an Admin;
 //   - wrong admin passwords: after 20 from one network in an hour, sign-ins with a password from
@@ -79,6 +80,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     const addUser = (first, last, type, username, status) => sql.prepare(`INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status)
         VALUES (?, ?, ?, ?, 'B300926', ?, 'disabled:x', ?)`).run(first, last, `${username}@x.io`, type, username, status).lastInsertRowid;
     addUser('Tia', 'Trainee', 'Trainee', 'tia', 'Approved');
+    addUser('Bo', 'Other', 'Trainee', 'bo', 'Approved');
     const pendingTrainee = addUser('Pat', 'Pending', 'Trainee', 'pat', 'Pending');
     const otherAdmin = addUser('Ola', 'Admin', 'Admin', 'trainer-ola-admin', 'Approved');
     const bucket = r2();
@@ -107,13 +109,28 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         if (s.status !== 200 || s.type !== 'application/octet-stream' || !/^attachment/.test(s.disp) || s.nosniff !== 'nosniff') fail(`an uploaded ${k} file isn't sent as a download: ${JSON.stringify(s)}`);
     }
     // a file stored before the check, as text/html inline: sent as a download all the same
-    bucket.store.set('documents/old-page.html', { bytes: Buffer.from('<script>alert(1)</script>'), http: { contentType: 'text/html', contentDisposition: 'inline; filename="old-page.html"' }, custom: { originalName: 'old-page.html' } });
+    bucket.store.set('documents/old-page.html', { bytes: Buffer.from('<script>alert(1)</script>'), http: { contentType: 'text/html', contentDisposition: 'inline; filename="old-page.html"' }, custom: { originalName: 'old-page.html', uploadedBy: 'tia' } });
     let s = await served('documents/old-page.html');
     if (s.type !== 'application/octet-stream' || !/^attachment; filename="old-page.html"/.test(s.disp)) fail(`an old HTML file is still sent to open in the browser: ${JSON.stringify(s)}`);
     for (const bad of ['live/screen-1', '../documents/x', 'documents/../secret', 'documents/a\u0000b']) {
         s = await served(bad);
         if (s.status !== 400) fail(`the file key ${JSON.stringify(bad)} was looked up (${s.status})`);
     }
+
+    // ---- who may open an uploaded file: having its link isn't enough ----
+    const bo = await login({ username: 'bo', portalMode: 'Trainee' });
+    const servedTo = async (key, cookie) => (await call(fileApi.onRequestGet, '/api/file?key=' + encodeURIComponent(key), cookie)).status;
+    if (await servedTo(keys.pdf, bo.cookie) !== 403) fail('another trainee with the link could open a trainee\'s file');
+    const masterForFiles = await login({ portalMode: 'Admin', password: 'ci-master-pass' });
+    if (await servedTo(keys.pdf, masterForFiles.cookie) !== 200) fail('an Admin couldn\'t open a trainee\'s file');
+    bucket.store.set('documents/alert-pic.png', { bytes: Buffer.from('PNG'), http: { contentType: 'image/png', contentDisposition: 'inline; filename="alert-pic.png"' }, custom: { originalName: 'alert-pic.png', uploadedBy: 'LSHADMIN123' } });
+    if (await servedTo('documents/alert-pic.png', bo.cookie) !== 200) fail('a file an Admin uploaded (an alert picture) didn\'t open for a trainee');
+    const oldId = '0f8e2a4b-1c3d-4e5f-8a9b-0c1d2e3f4a5b';
+    bucket.store.set(`documents/${oldId}-scan.pdf`, { bytes: Buffer.from('%PDF'), http: { contentType: 'application/pdf' }, custom: { originalName: 'scan.pdf' } });   // from before uploads recorded who sent them
+    sql.exec(`CREATE TABLE case_repository (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_username TEXT, is_draft INTEGER, content TEXT NOT NULL)`);
+    sql.prepare('INSERT INTO case_repository (owner_username, is_draft, content) VALUES (?, 0, ?)').run('tia', JSON.stringify({ html: { docs: `<tr><td><a href="/api/file?key=documents%2F${oldId}-scan.pdf">scan.pdf</a></td></tr>` } }));
+    if (await servedTo(`documents/${oldId}-scan.pdf`, tia.cookie) !== 200) fail('an older file didn\'t open for the trainee whose case it\'s attached to');
+    if (await servedTo(`documents/${oldId}-scan.pdf`, bo.cookie) !== 403) fail('an older file opened for a trainee whose case it isn\'t in');
 
     // ---- who can change whose status ----
     const lei = await login({ portalMode: 'Admin', password: 'ci-master-pass', name: 'Lei Abut' });

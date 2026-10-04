@@ -122,6 +122,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/data-loss.cjs
+      - name: Known gaps (no Lock / Unlock, Clear old data, Trainer Notes for trainees, saved Reception Simulator calls)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/known-gaps.cjs
       - name: Live view (an Admin watches a trainee's screen live, mirrored as it is)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

@@ -43,6 +43,14 @@ export async function onRequestGet({ request, env }) {
     const { session } = auth;
     await ensureTable(env.DB);
     const isAdmin = session.userType === 'Admin';
+    // ?id=N: one saved call with everything in it (the scorecard, the review, the transcript): an Admin any, a trainee their own
+    const id = parseInt(new URL(request.url).searchParams.get('id'), 10);
+    if (id) {
+        const row = await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details, created_at
+                                          FROM front_desk_drills WHERE id = ?`).bind(id).first();
+        if (!row || (!isAdmin && row.username !== session.username)) return json({ success: false, error: 'That call wasn\'t found.' }, 404);
+        return json({ success: true, result: row });
+    }
     const { results } = isAdmin
         ? await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, created_at
                                 FROM front_desk_drills ORDER BY created_at DESC LIMIT 1000`).all()
