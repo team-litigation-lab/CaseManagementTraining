@@ -34,6 +34,14 @@
               where: 'Sidebar → My cases · the 🔍 search bar at the top right of the case.',
               tip: 'Case numbers look like LSH-2026-MVA-901379. Typing just 901379 finds it too.',
               shot: 'blueprint/trainee-search.jpg', shotAlt: 'The search bar showing four Maria Santos files, each with its case number, date of birth and date of loss' },
+            { icon: '📇', title: 'Contacts', points: [
+                'A card for everyone in the case files: medical providers, adjusters, opposing counsel, clients and others.',
+                'Each card has the phone, email or address on file and the cases the contact is on. Click a case to open it.',
+                'Search by name, company, phone (any format), email, claim number or client.',
+                'Others: emergency contacts, the parties at fault, lien holders, health plans, police agencies and employers.'],
+              where: 'Sidebar → 📇 Contacts, under My cases.',
+              tip: 'A provider or an adjuster on the line? Search their number to see which cases they\'re on, then route the call.',
+              shot: 'blueprint/trainee-contacts.jpg', shotAlt: '📇 Contacts: the cards for everyone on Linda Garcia\'s case, from her providers to the defense counsel' },
             { icon: '📝', title: 'New Intake', points: [
                 'Pick the case type: MVA, Slip and Fall, Premises Liability, Dog Bite or Medical Malpractice.',
                 'Fill in its intake form, which follows the firm\'s intake sheet for that type of case.',
@@ -223,6 +231,7 @@
             { icon: '🔍', title: 'Case Library and Latest Updates', points: [
                 '🔍 Open Case Library: every file and every trainee\'s saved cases, with filters and the ☎ firm directory.',
                 '🕑 Latest Updates: cases by their latest update, with a search of the Case Notes ("Intake grade" finds graded intakes).',
+                '📇 Contacts (sidebar, and a Case Library tab): a card for every provider, adjuster, opposing counsel, client and other contact in the case files.',
                 'Every trainee\'s saved cases and drafts are also in Master Control → Case Logs.'],
               where: 'Sidebar → Case Library · 🔍 Open Case Library · 🕑 Latest Updates.',
               tip: 'Latest Updates is the quickest way to see who worked on what today.',

@@ -220,7 +220,7 @@
     window.openCaseLibrary = function (tab, query) {
         if (!signedIn()) return;
         buildUI();
-        state.tab = tab === 'desk' || tab === 'intake' || tab === 'updates' ? tab : 'search';
+        state.tab = tab === 'desk' || tab === 'intake' || tab === 'updates' || tab === 'contacts' ? tab : 'search';
         if (typeof query === 'string') { state.q = query; state.scope = 'all'; }
         paintModal();
         $id('case-library-modal').classList.add('open');
@@ -239,13 +239,18 @@
 
     function paintModal() {
         const tabs = $id('cl-tabs'), filters = $id('cl-filters'), body = $id('cl-body'); if (!tabs) return;
-        tabs.innerHTML = [['search', '🔍 Search cases'], ['updates', '🕑 Latest updates'], ['intake', '📥 Intake folder'], ['desk', '☎ Firm directory & rules']]
-            .filter(([k]) => k !== 'intake' || window.paintIntakeFolder)
+        tabs.innerHTML = [['search', '🔍 Search cases'], ['updates', '🕑 Latest updates'], ['intake', '📥 Intake folder'], ['contacts', '📇 Contacts'], ['desk', '☎ Firm directory & rules']]
+            .filter(([k]) => (k !== 'intake' || window.paintIntakeFolder) && (k !== 'contacts' || window.LSHContacts))
             .map(([k, l]) => `<button class="${state.tab === k ? 'on' : ''}" onclick="clSetTab('${k}')">${l}</button>`).join('');
         if (state.tab === 'desk') { filters.innerHTML = ''; body.innerHTML = window.mockDeskHTML ? window.mockDeskHTML() : ''; return; }
         // The Intake folder (intake-folder.js): intake files kept apart from the case files.
         if (state.tab === 'intake' && window.paintIntakeFolder) { window.paintIntakeFolder(filters, body); return; }
         if (state.tab === 'updates') { paintUpdates(filters, body); return; }
+        // 📇 Contacts (contacts.js): everyone in the case files, as cards
+        if (state.tab === 'contacts' && window.LSHContacts) {
+            const sub = $id('cl-sub'); if (sub) sub.textContent = 'Everyone in the case files: medical providers, adjusters, opposing counsel, clients and others.';
+            window.LSHContacts.paint(filters, body); return;
+        }
         const sub = $id('cl-sub'); if (sub) sub.textContent = isAdmin() ? 'Saved cases and the Training Library in one place. Search it the way you would on a live call.' : 'Every case file in one place. Search it the way you would on a live call.';
         // Trainees never see the Training Library: its files are just case files to them.
         if (!isAdmin() && (state.scope === 'mock' || state.scope === 'saved')) state.scope = 'all';
