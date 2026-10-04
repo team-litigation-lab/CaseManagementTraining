@@ -610,30 +610,6 @@ export async function nextPrintSequence(db, caseId) {
     return row.value;
 }
 
-export async function verifyAdminCredentials(db, batchId, password) {
-    // Batch IDs are shared by everyone who started the same day, so check each Admin with it.
-    const { results } = await db.prepare(
-        `SELECT * FROM users WHERE batch_id = ? AND user_type = 'Admin' AND status = 'Approved'`
-    ).bind(canonicalBatch(batchId) || String(batchId || '').trim()).all();
-    for (const user of (results || [])) {
-        if (!(await verifyPassword(password, user.password))) continue;
-        if (isLegacyPlaintext(user.password)) await upgradePasswordHash(db, user.id, password);
-        return user;
-    }
-    return null;
-}
-
-export async function verifyUsernamePassword(db, username, password, userType) {
-    let query = `SELECT * FROM users WHERE username = ? AND status = 'Approved'`;
-    const binds = [username];
-    if (userType) { query += ` AND user_type = ?`; binds.push(userType); }
-    const user = await db.prepare(query).bind(...binds).first();
-    if (!user) return null;
-    if (!(await verifyPassword(password, user.password))) return null;
-    if (isLegacyPlaintext(user.password)) await upgradePasswordHash(db, user.id, password);
-    return user;
-}
-
 export async function logActivity(db, actorUsername, actorBatch, action, details) {
     try {
         await db.prepare(

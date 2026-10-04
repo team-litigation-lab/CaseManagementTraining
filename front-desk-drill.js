@@ -96,7 +96,7 @@
     let D = null;         // the running drill
     let P = null;         // the practice call
     let timer = null;
-    let screen = 'home';  // home | call | summary | practice | pcwrap | pcdebrief
+    let screen = 'home';  // home | call | summary | practice | pcwrap | pcdebrief | saved
     let pcLevel = 0;      // practice callers' level (0 = any)
     let pcRecent = [];    // the last few practice callers, so they don't repeat right away
     let pcLiveOff = 0, pcLiveWhy = '';   // live voice failed: practice calls use the standard voice until then
@@ -179,6 +179,8 @@
     #fdd-pc-status{font-size:12px;color:#475569;margin:0 0 6px;min-height:16px}
     #fdd-pc-status.warn{color:#b45309;font-weight:600}
     .fdd-tx{display:flex;flex-direction:column;gap:6px;max-height:34vh;min-height:80px;overflow-y:auto;padding:6px 2px 8px}
+    .fdd-saved-tx{white-space:pre-wrap;font-size:12px;line-height:1.55;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px}
+    .fdd-view{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer}
     .fdd-msg{max-width:86%;padding:8px 11px;border-radius:12px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
     .fdd-msg.c{align-self:flex-start;background:#0f2148;color:#fff;border-bottom-left-radius:3px}
     .fdd-msg.y{align-self:flex-end;background:#ffedd5;color:#7c2d12;border-bottom-right-radius:3px}
@@ -513,13 +515,13 @@
         const p = $id('fdd-panel'); if (!p) return;
         if (['practice', 'pcwrap', 'pcdebrief'].includes(screen) && !P) screen = 'home';
         const title = screen === 'call' ? `Call ${D.i + 1} of ${D.calls.length}` : screen === 'summary' ? 'Drill complete'
-            : screen === 'practice' ? 'Practice call' : screen === 'pcwrap' ? 'Wrap up the call' : screen === 'pcdebrief' ? 'Call debrief' : 'Front Desk Calls';
+            : screen === 'practice' ? 'Practice call' : screen === 'pcwrap' ? 'Wrap up the call' : screen === 'pcdebrief' ? 'Call debrief' : screen === 'saved' ? 'Saved call' : 'Front Desk Calls';
         const t0 = screen === 'call' ? D.cur.t0 : screen === 'practice' ? P.t0 : null;
         const clock = screen === 'call' || screen === 'practice' ? `<span class="t" id="fdd-timer">${t0 ? fmtSec(Math.round((Date.now() - t0) / 1000)) : '0:00'}</span>` : '';
         const hide = ['call', 'practice', 'pcwrap'].includes(screen) ? `<button onclick="fddMinimize()" title="Hide to read the case">▭ Case</button>` : '';
         p.innerHTML = `<div class="fdd-h"><b>📞 ${title}</b>${clock}${hide}<button onclick="fddClose()">✕</button></div>
             <div class="fdd-b">${screen === 'call' ? callHTML() : screen === 'summary' ? summaryHTML() : screen === 'practice' ? practiceHTML()
-                : screen === 'pcwrap' ? pcWrapHTML() : screen === 'pcdebrief' ? pcDebriefHTML() : homeHTML()}</div>`;
+                : screen === 'pcwrap' ? pcWrapHTML() : screen === 'pcdebrief' ? pcDebriefHTML() : screen === 'saved' ? savedCallHTML() : homeHTML()}</div>`;
         if (['call', 'practice', 'pcwrap'].includes(screen)) paintResults();
         if (screen === 'practice') { pcIdCard(); pcControls(); pcTr(); const box = $id('fdd-pc-in'); if (box) box.value = P.draft || ''; }
         if (screen === 'pcdebrief') paintSaved();
@@ -571,10 +573,54 @@
                 return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, practice: rs.filter(r => r.mode === 'practice').length, score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: avg('find_pct'), auth: avg('auth_pct'), act: avg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
             }).sort((a, b) => b.score - a.score);
             return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} drills and practice calls)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}%</td><td>${t.auth}%</td><td>${t.act}%</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>`;
+                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}%</td><td>${t.auth}%</td><td>${t.act}%</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>` + savedListHTML(rows, true);
         }
         return `<div class="fdd-sec"><h4>My results</h4>${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Type</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${r.mode === 'practice' ? '<span class="fdd-tag">Practice call</span>' : `Drill · ${r.calls}`}</td><td><b>${r.score}%</b></td><td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td><td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : 'No calls yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>`;
+            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${r.mode === 'practice' ? '<span class="fdd-tag">Practice call</span>' : `Drill · ${r.calls}`}</td><td><b>${r.score}%</b></td><td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td><td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : 'No calls yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>` + savedListHTML(rows, false);
+    }
+
+    // 🎧 Saved calls: the Reception Simulator's practice calls, newest first (an Admin's lists everyone's), each opening
+    // with its scorecard, the review and the whole transcript (fddSavedCall).
+    function savedListHTML(rows, team) {
+        const calls = rows.filter(r => r.mode === 'practice').slice(0, team ? 40 : 15);
+        if (!calls.length) return '';
+        return `<div class="fdd-sec"><h4>🎧 Saved calls</h4><table class="fdd-tbl"><thead><tr><th>Date</th>${team ? '<th>Trainee</th>' : ''}<th>Score</th><th></th></tr></thead><tbody>
+            ${calls.map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td>${team ? `<td><b>${esc(r.full_name || r.username)}</b><br><span style="color:#64748b">${esc(r.batch_id || '')}</span></td>` : ''}<td><b>${Number(r.score) || 0}%</b></td>
+                <td><button class="fdd-view" onclick="fddSavedCall(${Number(r.id)})">View</button></td></tr>`).join('')}</tbody></table></div>`;
+    }
+    let SAVED = null;   // the saved call being read
+    window.fddSavedCall = async function (id) {
+        SAVED = { id, loading: true }; screen = 'saved'; paint();
+        try {
+            const res = await fetch('/api/drill-results?id=' + encodeURIComponent(id), { credentials: 'include' });
+            const data = await res.json();
+            if (!data || !data.success || !data.result) throw new Error((data && data.error) || 'That call wasn\'t found.');
+            let d = null; try { d = (JSON.parse(data.result.details || '[]') || [])[0] || null; } catch (e) { d = null; }
+            SAVED = { id, row: data.result, d };
+        } catch (e) { SAVED = { id, error: e.message || 'Couldn\'t load that call.' }; }
+        if (screen === 'saved') { paint(); const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0; }
+    };
+    window.fddSavedBack = function () { SAVED = null; screen = 'home'; paint(); };
+    function savedCallHTML() {
+        const back = `<button class="fdd-go" onclick="fddSavedBack()">← Back to the results</button>`;
+        if (!SAVED || SAVED.loading) return `<p style="color:#64748b;font-size:12px">Loading the call…</p>${back}`;
+        if (SAVED.error || !SAVED.d) return `<div class="fdd-fb bad">${esc(SAVED.error || 'This call has no scorecard or transcript saved with it.')}</div>${back}`;
+        const row = SAVED.row, d = SAVED.d, rv = d.review || {}, k = d.mock && caseOf(d.mock);
+        const items = (d.items || []).map(i => { const r = RUBRIC.find(x => x[0] === i.k) || [i.k, i.k, 'auto']; return { key: i.k, label: r[1], how: r[2], s: i.s, note: i.n }; });
+        const li = (x) => Array.isArray(x) && x.filter(Boolean).length ? `<ul>${x.filter(Boolean).map(v => `<li>${esc(v)}</li>`).join('')}</ul>` : '';
+        const score = Number(row.score) || 0, cls = score >= 85 ? 'ok' : score >= 60 ? 'mid' : 'bad';
+        return `<div class="fdd-sec" style="text-align:center"><div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#64748b;text-transform:uppercase">Reception mock call · ${esc(row.full_name || row.username)}</div>
+                <div class="fdd-score">${score}/100</div>
+                <div style="color:#64748b">${esc(String(row.created_at || '').slice(0, 16))}${d.points != null ? ` · ${Number(d.points)}/${Number(d.outOf) || 0} points` : ''}${d.secs != null ? ` · ⏱ ${fmtSec(Number(d.secs) || 0)}` : ''}${d.voice === 'live' ? ' · live voice' : ''}</div></div>
+            ${rv.breach ? `<div class="fdd-fb bad"><div class="fdd-breach" style="margin:0">⚠ Disclosure: ${esc(rv.breachNote || 'information was shared that shouldn\'t have been')}.</div></div>` : ''}
+            ${items.length ? `<div class="fdd-sec"><h4>Scorecard</h4>${rubricHTML({ items })}</div>` : ''}
+            <div class="fdd-fb ${cls}"><div>${d.find ? '✓' : '✗'} <b>File:</b> ${k ? `${esc(k.id)} · ${esc(k.client.name)} (${esc(k.caseNumber || '')})` : esc(d.mock || 'not in the system')}</div>
+                ${d.auth && Array.isArray(d.auth.missing) && d.auth.missing.length ? `<div>✗ <b>Not asked:</b> ${esc(d.auth.missing.join(', '))}</div>` : ''}</div>
+            ${rv.verdict || li(rv.strengths) || li(rv.improve) ? `<div class="fdd-sec"><h4>Review</h4>${rv.verdict ? `<p style="margin:0 0 6px">${esc(rv.verdict)}</p>` : ''}
+                ${li(rv.strengths) ? `<b>Went well</b>${li(rv.strengths)}` : ''}${li(rv.improve) ? `<b>To work on</b>${li(rv.improve)}` : ''}${rv.betterLine ? `<p style="margin:6px 0 0"><b>A better line:</b> ${esc(rv.betterLine)}</p>` : ''}</div>` : ''}
+            ${d.note ? `<div class="fdd-sec"><h4>The receptionist's note</h4><p style="margin:0;white-space:pre-wrap">${esc(d.note)}</p></div>` : ''}
+            <div class="fdd-sec"><h4>Transcript</h4><div class="fdd-saved-tx">${esc(d.transcript || 'No transcript was saved with this call.')}</div></div>
+            ${back}`;
     }
 
     function answerFor(c, k) {

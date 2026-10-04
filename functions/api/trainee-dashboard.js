@@ -1,4 +1,4 @@
-import { json, requireSession } from '../_utils.js';
+import { json, requireSession, buildFullName } from '../_utils.js';
 
 // GET /api/trainee-dashboard?username=<optional>
 //
@@ -26,12 +26,13 @@ export async function onRequestGet({ request, env }) {
     }
 
     const { results } = await db.prepare(
-        `SELECT id, case_repository_id, case_id, client_name, training_day,
-                automated_findings, changed_sections, ai_review, ai_review_status, ai_reviewed_at,
-                trainer_comment, trainer_username, comment_updated_at, created_at
-         FROM case_reviews
-         WHERE trainee_username = ?
-         ORDER BY created_at DESC`
+        `SELECT r.id, r.case_repository_id, r.case_id, r.client_name, r.training_day,
+                r.automated_findings, r.changed_sections, r.ai_review, r.ai_review_status, r.ai_reviewed_at,
+                r.trainer_comment, r.trainer_username, r.comment_updated_at, r.created_at,
+                t.first_name AS t_first, t.mi AS t_mi, t.last_name AS t_last, t.suffix AS t_suffix
+         FROM case_reviews r LEFT JOIN users t ON t.username = r.trainer_username
+         WHERE r.trainee_username = ?
+         ORDER BY r.created_at DESC`
     ).bind(targetUsername).all();
 
     const entries = (results || []).map(row => {
@@ -54,15 +55,12 @@ export async function onRequestGet({ request, env }) {
             aiReviewedAt: row.ai_reviewed_at,
             createdAt: row.created_at,
         };
-        // Trainer notes are admin/trainer-only — a trainee reading their
-        // own dashboard never receives these fields at all, not just a
-        // UI that hides them. Restricted here, server-side, rather than
-        // relying on the frontend not to render what it was given.
-        if (session.userType === 'Admin') {
-            entry.trainerComment = row.trainer_comment;
-            entry.trainerUsername = row.trainer_username;
-            entry.commentUpdatedAt = row.comment_updated_at;
-        }
+        // Trainer Notes: the trainee reads their trainer's note on each entry (My Dashboard, read only);
+        // only an Admin can write one (review-comment.js). The trainer is shown by name.
+        entry.trainerComment = row.trainer_comment;
+        entry.trainerUsername = row.trainer_username;
+        entry.trainerName = buildFullName({ first_name: row.t_first, mi: row.t_mi, last_name: row.t_last, suffix: row.t_suffix }) || null;
+        entry.commentUpdatedAt = row.comment_updated_at;
         return entry;
     });
 

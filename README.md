@@ -97,6 +97,8 @@ Like the Training Portal's Call Simulator. A random caller from `DRILL_CALLS` ph
 
 **Heavy use (a whole class at once).** Live voice spreads its calls over the keys itself (below). On the standard voice, every Gemini key on the project is used and the keys take turns (`functions/_ai.js`): each caller line and review starts on the next key, so the load is spread across all of them. A key that hits its limit rests (a minute, or an hour when its daily quota is used up; a rejected key 10 minutes) and the request moves to the next key at once, so later requests don't pay for a failed try. Caller lines start on Flash-Lite, which has the biggest free quota; reviews start on Flash. When every key is busy, the page retries the line three times (after 1.5, 3 and 6 seconds) and then puts the trainee's line back in the box to send again. Each user gets up to `CALL_AI_LIMIT` caller lines and reviews per 10 minutes (default 150; a call uses about 10 to 30), so one runaway page can't use up the class's quota. The more keys from separate Google Cloud projects, the more trainees can call at once. Admins can see how many keys are set up and which are resting at `/api/call-ai` (GET).
 
+**🎧 Saved calls.** Every saved practice call can be opened again from the Reception Simulator's results: an Admin's list has every trainee's calls, and a trainee's has their own. **View** shows the call's score, the 14-item scorecard with its notes, the review (what went well, what to work on, a better line), the receptionist's note and the whole transcript (`/api/drill-results?id=`, an Admin any call, a trainee only their own).
+
 ### 📋 The scored drill
 
 A drill is 5, 8, 12 or all 61 incoming calls, picked at random from `DRILL_CALLS` in `mock-cases.js`. For each call the trainee:
@@ -205,7 +207,7 @@ A signed-in trainer clicks **👁 Trainee view** at the bottom of the sidebar. T
 - mock cases shown as ordinary case files, by case number;
 - a trainee's Case Library, time sheet and calendar, with no "All trainees" views and no other trainees' drafts.
 
-To go back, click **⇦ Back to trainer view** at the bottom of the sidebar (there's no bar over the page). The server still knows the trainer as an Admin, so Pause and Lock never stop them. Saving works as usual. The view lasts for the browser tab and ends at sign-out.
+To go back, click **⇦ Back to trainer view** at the bottom of the sidebar (there's no bar over the page). The server still knows the trainer as an Admin, so Pause never stops them. Saving works as usual. The view lasts for the browser tab and ends at sign-out.
 
 ## 📝 Registering and signing in (trainees)
 
@@ -325,6 +327,7 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
   - Any demand status on: the attorney, case manager and documents are expected.
   - Litigation statuses: the litigation dates are expected.
   - The saved phase is matched regardless of case (it's stored in capitals), which the earlier list's check didn't do.
+- **Trainer Notes:** a trainer writes them on each entry of a trainee's review feed (📊 My Dashboard → the trainee). The trainee sees each note, read only, as **📝 Note from your trainer** with the trainer's name on their own My Dashboard (`functions/api/trainee-dashboard.js`). Only an Admin can write one (`review-comment.js`).
 
 **Primary Injury** (Profile, beside the Case Narrative)
 - The client's primary injury, the body parts involved, the injury type (soft tissue, fracture, head injury / concussion, spine / disc, joint / ligament / tendon tear, laceration / bite / scarring, burn, multiple injuries, wrongful death, other), and surgery (no, recommended, scheduled, completed).
@@ -470,7 +473,7 @@ Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#captur
 Sidebar → **🧭 Blueprint** (after 📊 My Dashboard) opens a full-screen slide deck that explains the CMS, like the Orientation in EA / PA. There are three versions:
 - **Trainee blueprint** (11 slides and a cover): what the CMS is, signing in and the sidebar, finding a case, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Reception Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
 - **Trainer blueprint** (Admins only; 20 slides and a cover): signing in, before a batch starts, the program links, registrations and users, Monitoring and 👁 Watch live, Case Logs, Broadcast & Ping, access control, the Training Library, the case header (Client's Name, SSN, Client's ID), facilitated mock calls, the Reception Simulator and its RECEPTION MOCK CALL scorecard, grading and feedback, the Case Library and Latest Updates, the Intake folder, the Firm Calendar, time and drill results, a training day, Trainee view, and when something goes wrong.
-- **Admin blueprint** (the Master Account only; 15 slides and a cover): who does what, signing in and sessions, accounts and batches, Master Control, Pause and Lock, Cloudflare usage and billing (Workers Paid), the AI keys, updates, data and records, database upkeep, the settings (secrets; limits and bindings), the routine, when something breaks, and the known gaps.
+- **Admin blueprint** (the Master Account only; 15 slides and a cover): who does what, signing in and sessions, accounts and batches, Master Control, Pause and Database Maintenance, Cloudflare usage and billing (Workers Paid), the AI keys, updates, data and records, database upkeep, the settings (secrets; limits and bindings), the routine, when something breaks, and the known gaps.
 
 Trainees, and Admins in 👁 Trainee view, get the Trainee blueprint only. Trainers get the Trainer and Trainee blueprints as tabs, so they can share the Trainee blueprint in Google Meet on day one. The Master Account gets all three, opening on the Admin blueprint (`canAdmin` in `blueprint-content.js`).
 
@@ -535,7 +538,7 @@ To keep requests (and the bill) down:
   |---|---|---|
   | Heartbeat (keeps the session alive; the server allows 120 s between them; a trainee's waits at the server for a trainer to start watching) | every 30 s | every 45 s |
   | 👁 Live view, only while a trainer watches (see **👁 Live view**) | the trainee's page: right after each change, at most once a second, else every 1.5 s; the live view: every second | nothing |
-  | Site state (announcements, alerts, pings, pause and lock) | every 15 s | every 30 s (a ping stays up for a minute) |
+  | Site state (announcements, alerts, pings and pause) | every 15 s | every 30 s (a ping stays up for a minute) |
   | The case list | every minute, and after each save | paused; refreshed when the tab comes back |
   | Timer | every minute | paused |
   | Autosave | never while you work: only when something interrupts it (see **💾 Autosave** below) | the same |
@@ -688,22 +691,27 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
 
 ## 🔒 Security
 
-- **Uploaded files** (Doc Hub, Intake folder, Client's ID, alert pictures) are served from this site, so a file a browser would run could run as whoever opened it. Only a PDF, a photo (PNG, JPG, GIF, WebP) or plain text opens in the browser. Anything else, an HTML page or an SVG included, is kept and sent as a download, and so is any older file stored as one of those (`fileTypeIsInline` in `functions/_utils.js`; `upload.js`, `file.js`). `/api/file` serves only keys under `documents/`.
+- **Uploaded files** (Doc Hub, Intake folder, Client's ID, alert pictures) are served from this site, so a file a browser would run could run as whoever opened it. Only a PDF, a photo (PNG, JPG, GIF, WebP) or plain text opens in the browser. Anything else, an HTML page or an SVG included, is kept and sent as a download, and so is any older file stored as one of those (`fileTypeIsInline` in `functions/_utils.js`; `upload.js`, `file.js`). `/api/file` serves only keys under `documents/`, and only to someone who may see the file: whoever uploaded it and Admins, and anyone for a file an Admin uploaded (alert pictures, Training Library attachments). A file from before uploads recorded who sent them opens for whoever has a saved case it's attached to. Having the link isn't enough.
 - **Opening someone else's case.** An Admin opens trainees' cases, and every trainee opens an Admin's library edits. Saved case content is markup (table rows, line breaks, the rows' × buttons), so before it goes back on the page it's cleaned (`cleanCaseHtml` in `app.js`). It's read in an inert template, then scripts, frames, `javascript:` and `data:` links and every `on…` handler are dropped, except the app's own row buttons, which only call the case editor's helpers with plain values. The case summary (Download Case Summary), Case Versions, the drill feedback and the intake grade show typed text as text.
 - **Pings** (`/api/state`) go only to the person they were sent to: the page gets its own and the ones to everyone, never who else a ping went to, and none signed out. It reads who's asking from the signed session cookie, with no extra database read.
 - **Who can change whom:** only the Master Account changes another Admin's status (approve, reject, suspend, reinstate, revoke), and nobody can change the Master Account's.
 - **Admin password:** after 20 wrong passwords from one network in an hour, sign-ins with a password from there wait until the next hour (`login.js`). Trainees signing in with the username aren't affected.
 - **Logging out ends that session:** the session can't be brought back by a heartbeat from the old cookie (`logout.js` records which sign-in ended; `heartbeat.js`).
+- **No site lock:** Lock / Unlock is gone. It needed a password today's Admin accounts don't have, so it never worked. To keep someone out, suspend or revoke their account in Users. ⏸ Pause stays.
 - **Migrate D1** (the workflow) copies the live database (the one in `wrangler.toml`) into a new one, then points the site at it. It deletes the database it's given first, so it refuses the live database's name and a blank one.
 - **Time & Billing CSV:** a typed cell starting with `=`, `+`, `-` or `@` gets a leading `'` so Excel shows it as text instead of running it.
 
 ### Known gaps
 
 - One admin password for the Master Account and every trainer.
-- Lock and Unlock need a password today's Admin accounts don't have.
-- `vacuum-d1.yml` points at an old database, and **Run Database Vacuum** always fails.
-- An uploaded file opens for anyone signed in who has its link.
-- No screen yet for saved Reception Simulator transcripts, and Trainer Notes aren't shown to trainees.
+- An older copy of a case kept in a browser can still overwrite newer changes made on the server.
+- The database file can't shrink in place: D1 has no VACUUM (see 🗄 Database maintenance).
+
+### 🗄 Database maintenance
+
+Master Control → Access Control → **🧹 Clear old data** (Master Account only; `functions/api/db-cleanup.js`) removes data that's only needed for a while: pings over 7 days old, the online status of people not seen for 30 days, live-view screen copies over a day old and snapshots untouched for 7 days, sign-in attempt counts of earlier hours, live-call records over 90 days old and stopped alerts over 30 days old. Cases, versions, results, intakes, time, the calendar and the server logs are kept. It says how many rows it cleared from each.
+
+D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so the old **Run Database Vacuum** button and `vacuum-d1.yml` never worked and are gone. D1 reuses the space rows leave behind. The file itself only gets smaller by copying the database into a fresh one: the **Migrate D1** workflow.
 
 ## Checks (GitHub Actions)
 
@@ -849,8 +857,14 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
   - opening a case starts empty, asks before losing unsaved work, and a slow load overtaken by a newer click doesn't land; deleting the open case clears the editor and nothing is sent; a save that comes back after New doesn't attach to the new case;
   - opening a Training Library case file as a trainee isn't an edit (leaving it sends nothing, and the library's locked dropdowns aren't saved); leaving one while it loads doesn't leave the editor shut;
   - a whole live drill (61 calls with transcripts) saves; editing a time entry's description keeps its time to the second (a 150 s entry, in the browser and on the server).
+- **Known gaps** (`.github/scripts/known-gaps.cjs`, in the same job): the server code on SQLite, then the page in a browser. It checks that:
+  - Lock / Unlock is gone (no `/api/lock`, lock screen, confirm box or Lock button; `/api/state` reports no lock) and ⏸ Pause stays;
+  - 🧹 Clear old data is for the Master Account only, clears old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts, keeps everything recent, counts what it cleared and is in the server logs; the vacuum endpoint and `vacuum-d1.yml` are gone;
+  - a trainee's dashboard gets their trainer's note with the trainer's name and shows it read only (no box to type in), and another trainee can't read it;
+  - `/api/drill-results?id=` gives a saved practice call to its trainee and to Admins, not to another trainee; 🎧 Saved calls lists them (an Admin's with every trainee's) and View shows the score, the scorecard, the review, the note and the whole transcript, with ← Back to the results.
 - **Security** (`.github/scripts/security.cjs`, in the same job): the real server code on SQLite with a stand-in for R2, then the case editor in a browser. It checks that:
   - an uploaded PDF or photo opens in the browser, while an HTML page, an SVG, XML or a file with no type is stored and sent as a download, an old HTML file too; a key outside `documents/` or with `..` isn't looked up;
+  - a trainee's file doesn't open for another trainee who has the link, but does for an Admin; a file an Admin uploaded opens for trainees; an older file (no uploader recorded) opens for the trainee whose case it's in, not another;
   - a trainer approves a trainee but can't change the Master Account or another Admin; the Master Account can change an Admin but not itself;
   - after 20 wrong admin passwords from one network, even the right one waits there; another network and a trainee's username sign-in aren't affected;
   - a heartbeat takes the signed-in name, not the page's; after logging out, a heartbeat with the old cookie doesn't bring the session back; signing in again works;
