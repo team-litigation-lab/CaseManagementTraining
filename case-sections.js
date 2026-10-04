@@ -374,6 +374,21 @@
         text.replace(URL_RE, (m, off) => { const h = safeWeb(m); out += line(text.slice(last, off)) + (h ? linkTag(h, m) : esc(m)); last = off + m.length; return m; });
         return out + line(text.slice(last));
     }
+    // The web addresses in an element's text become links (text kept as text, e.g. a library case's Notes and Tasks,
+    // which are saved as text: training-library.js keeps a link there as its address).
+    window.lshLinkify = function (el) {
+        if (!el) return;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement && n.parentElement.closest('a') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+        const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(n => {
+            URL_RE.lastIndex = 0;
+            if (!URL_RE.test(n.nodeValue)) return;
+            URL_RE.lastIndex = 0;
+            const tpl = document.createElement('template');
+            tpl.innerHTML = linkedHtml(n.nodeValue, false);
+            n.replaceWith(tpl.content);
+        });
+    };
     window.addDocLink = function (btn) {
         const row = btn && btn.closest('tr'), holder = row && row.querySelector('.doc-attachment'); if (!holder || viewOnly()) return;
         const typed = (prompt('Paste the web address (link) for this document:', 'https://') || '').trim();

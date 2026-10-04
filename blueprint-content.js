@@ -417,7 +417,9 @@
             const dash = document.getElementById('dash-open-btn');
             if (!dash) return;
             dash.insertAdjacentHTML('afterend', html);
-            document.getElementById('lbp-open-btn').className = dash.className;
+            const b = document.getElementById('lbp-open-btn');
+            b.className = dash.className;
+            b.innerHTML = '🧭 <span class="lbl">Blueprint</span>';   // (in a narrow window the label hides, as the other two's do)
         }
     };
 })();

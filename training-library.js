@@ -753,9 +753,17 @@
     const upd = { id: null, base: '', seq: 0, timer: null, pending: false, saved: false, chain: Promise.resolve() };
     // A contenteditable cell's text with its line breaks, even when its tab is hidden
     // (innerText drops <br> on elements that aren't rendered).
+    // A link in it is kept as its address: "the words (https://…)", or just the address when that's what it shows
+    // (lshLinkify in case-sections.js makes the addresses links again when the text is put back).
     function cellText(el) {
         if (!el) return '';
         const c = el.cloneNode(true);
+        c.querySelectorAll('a[href]').forEach(a => {
+            const h = a.getAttribute('href') || '', t = a.textContent;
+            if (!/^https?:\/\//i.test(h)) return;
+            const same = [t, 'https://' + t, 'http://' + t, t + '/', 'https://' + t + '/', 'http://' + t + '/'].includes(h);
+            a.replaceWith(same ? t : `${t} (${h})`);
+        });
         c.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
         c.querySelectorAll('div, p').forEach(d => d.prepend('\n'));
         return c.textContent.replace(/\u00a0/g, ' ').replace(/^\n+/, '').trimEnd();
@@ -774,6 +782,7 @@
             const td = cells(tr);
             const date = editIn(td[0]); if (date) date.innerText = n.date || '';
             setVal(selIn(td[1]), n.staff); setVal(editIn(td[2]), n.text);
+            if (window.lshLinkify) window.lshLinkify(editIn(td[2]));   // the web addresses in it are links again
         });
     }
     const updatesPending = () => !!(mockId && mockViewOnly && upd.id === mockId && updatesOpen() && snapshotRows() !== upd.base);

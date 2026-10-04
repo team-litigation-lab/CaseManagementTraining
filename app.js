@@ -536,16 +536,57 @@
             const id = textOf('case-id-field');
             // a real Case ID (LSH-2026-MVA-000041) has digits and no spaces; "LSH-----" or "Assigned on Save Case" isn't one yet
             const caseId = /\d/.test(id) && /^[A-Za-z0-9-]+$/.test(id) ? part(id, 40) : 'NO-CASE-ID';
-            const raw = textOf('client-name-field').replace(/\s+/g, ' ').trim();
+            let raw = textOf('client-name-field').replace(/\s+/g, ' ').trim();
+            if (raw.includes(',')) { const at = raw.indexOf(','); raw = (raw.slice(at + 1) + ' ' + raw.slice(0, at)).replace(/,/g, ' ').replace(/\s+/g, ' ').trim(); }   // "Garcia, Linda"
             const proper = raw === raw.toUpperCase() ? raw.toLowerCase().replace(/(^|[\s'-])([a-z])/g, (m, a, b) => a + b.toUpperCase()) : raw;
             const words = proper.split(' ').filter(Boolean);
             while (words.length > 1 && /^(jr|sr|ii|iii|iv)\.?$/i.test(words[words.length - 1])) words.pop();
             const client = words.length ? part([words[words.length - 1]].concat(words.slice(0, -1)).join(' '), 40) : '';
             const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const ext = (/\.([A-Za-z0-9]{1,8})$/.exec(String(original || '')) || [])[1];
-            return [caseId, client || 'No-Client-Name', part(type, 40) || 'Document', day].join('_') + (ext ? '.' + ext.toLowerCase() : '');
+            return uniqueCaseFileName([caseId, client || 'No-Client-Name', part(type, 40) || 'Document', day].join('_') + (ext ? '.' + ext.toLowerCase() : ''));
         }
         window.caseFileName = caseFileName;
+        // The names of the files already on the case (Doc Hub, demand letters, the client's ID)
+        function caseFileNames() {
+            const names = new Set();
+            document.querySelectorAll('#doc-body .doc-attachment a[download], #kx-demand a.kx-dl-link[download]').forEach(a => names.add(a.getAttribute('download')));
+            const f = document.querySelector('#kx-client-id [data-k="file"]');
+            if (f) { try { const o = JSON.parse(f.textContent); if (o && o.name) names.add(o.name); } catch (e) { /* no ID file */ } }
+            return names;
+        }
+        // Two files of the same type uploaded the same day: the second is …-2, the third …-3 (before the extension)
+        function uniqueCaseFileName(name) {
+            const taken = caseFileNames();
+            if (!taken.has(name)) return name;
+            const dot = name.lastIndexOf('.'), stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+            for (let n = 2; ; n++) { const next = `${stem}-${n}${ext}`; if (!taken.has(next)) return next; }
+        }
+        // Files uploaded before the case had its Case ID are named NO-CASE-ID_…: when the case gets its ID, they take it.
+        // (The link asks /api/file for the new name, so a download is named the same.) Returns how many were renamed.
+        function renameNoCaseIdFiles(caseId) {
+            const id = String(caseId || '').trim();
+            if (!/\d/.test(id) || !/^[A-Za-z0-9-]+$/.test(id)) return 0;
+            const fresh = (old) => uniqueCaseFileName(id + old.slice('NO-CASE-ID'.length));
+            let n = 0;
+            document.querySelectorAll('#doc-body .doc-attachment a[data-r2-key], #kx-demand a.kx-dl-link[data-r2-key]').forEach(a => {
+                const old = a.getAttribute('download') || '';
+                if (!old.startsWith('NO-CASE-ID_')) return;
+                const name = fresh(old);
+                a.setAttribute('download', name);
+                a.textContent = a.textContent.replace(old, name);
+                a.setAttribute('href', '/api/file?key=' + encodeURIComponent(a.getAttribute('data-r2-key')) + '&name=' + encodeURIComponent(name));
+                n++;
+            });
+            const f = document.querySelector('#kx-client-id [data-k="file"]');
+            if (f) {
+                try {
+                    const o = JSON.parse(f.textContent);
+                    if (o && typeof o.name === 'string' && o.name.startsWith('NO-CASE-ID_')) { o.name = fresh(o.name); f.textContent = JSON.stringify(o); n++; }
+                } catch (e) { /* no ID file */ }
+            }
+            return n;
+        }
         async function handleDocUpload(input) {
             const file = input.files && input.files[0];
             if (!file) return;
@@ -1468,6 +1509,8 @@
                 noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
+                // files uploaded before the case had its ID take it now, and that's saved too (once)
+                if (renameNoCaseIdFiles(data.caseId)) await saveCase({ quiet: true });
                 if (quiet) return { ok: true, caseId: data.caseId };
                 alert(wasAlreadyFinal ? 'Case saved.' : `Case saved. Case ID ${data.caseId} has been permanently assigned.`);
             } catch (e) {
@@ -1713,6 +1756,7 @@
                 currentCaseCanEdit = !!c.canEdit;
                 if (!c.isDraft && c.caseId) {
                     document.getElementById('case-id-field').innerText = c.caseId;
+                    if (c.canEdit) renameNoCaseIdFiles(c.caseId);   // (saved before the ID reached them: kept with the next save)
                 } else {
                     generateCaseId();
                 }

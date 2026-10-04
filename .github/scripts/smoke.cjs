@@ -417,6 +417,13 @@ const SAVED = [
     if (!frame.clockAbove.aboveCard || Math.abs(frame.clockAbove.rightEdge) > 40 || !frame.clockAbove.overId || frame.clockAbove.inCase) fail(`the date and time should be right above the Case ID, outside the case: ${JSON.stringify(frame.clockAbove)}`);
     if (frame.ttButtons !== 'start,bill' || /timesheet|details/i.test(frame.ttText)) fail(`the header timer should be just Start timer and the Billable dropdown: ${frame.ttButtons} "${frame.ttText}"`);
     if (String(frame.autosave || '').trim()) fail(`the case actions bar still shows a standing note: "${frame.autosave}"`);
+    // in a narrow window the top-right buttons show just their icons and stay in view, and the date and time stay over the case
+    await page.setViewportSize({ width: 600, height: 800 }); await page.waitForTimeout(300);
+    const narrow = await page.evaluate(() => { const main = document.querySelector('#app-shell > main').getBoundingClientRect(), clock = document.querySelector('#case-clock-row .clock-widget').getBoundingClientRect();
+        const btns = ['download-summary-btn', 'dash-open-btn', 'lbp-open-btn'].map(id => document.getElementById(id).getBoundingClientRect());
+        return { inView: btns.every(b => b.left >= main.left && b.right <= innerWidth), labels: [...document.querySelectorAll('#top-actions .lbl')].filter(l => l.offsetParent).length, clock: clock.left >= main.left && clock.right <= main.right }; });
+    if (!narrow.inView || narrow.labels || !narrow.clock) fail(`a narrow window: the top-right buttons and the date and time should stay in view: ${JSON.stringify(narrow)}`);
+    await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(300);
     if (frame.sideTop !== 0 || frame.logoTop > 40 || frame.stripLeft < frame.sideRight - 1 || frame.stripTop !== 0 || frame.label || !frame.bannerUnderStrip) fail(`the sidebar and its logo should run to the top, the strip over the main area only with no portal label: ${JSON.stringify(frame)}`);
     if (!frame.ttInHeader || !frame.ttUnderBar || frame.ttInSidebar || !frame.ttStart) fail(`the timer should be in the case header, right under the search bars: ${JSON.stringify(frame)}`);
     if (frame.profileSsn || frame.profileDob || !frame.headSsn) fail(`the Profile tab shouldn't show the SSN or DOB (the header does): ${JSON.stringify(frame)}`);

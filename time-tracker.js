@@ -84,7 +84,8 @@
     function details() {
         if (T.mode === 'manual') return T.manual || (T.manual = Object.assign(blankDetails(), { date: localToday(), hours: '' }));
         if (T.timer) return T.timer;
-        if (!T.draft || T.draft.auto) T.draft = blankDetails();
+        // (an automatic draft follows the open case; one where Billable / Non-billable was picked in the header is kept)
+        if (!T.draft || (T.draft.auto && !T.draft.billPicked)) T.draft = blankDetails();
         return T.draft;
     }
     const elapsed = () => !T.timer ? 0 : T.timer.accumulated + (T.timer.running ? Date.now() + T.offset - T.timer.resumedAt : 0);
@@ -148,12 +149,12 @@
     window.ttStart = async function () {
         if (!signedIn()) { toast('Sign in to track time.', 'error'); return; }
         let d = T.draft && !T.draft.auto ? T.draft : blankDetails();
-        if (T.billPick != null) d = Object.assign({}, d, { billable: T.billPick });
+        if (T.draft && T.draft.auto && T.draft.billPicked) d.billable = T.draft.billable;   // picked in the header
         let body = { action: 'start', details: payload(d), date: localToday() };
         try {
             T.busy = true;
             const data = await api('POST', API, body);
-            takeTimer(data); T.draft = null; T.billPick = null; announce();
+            takeTimer(data); T.draft = null; announce();
             toast(`Timer started${d.caseLabel ? ' on ' + d.caseLabel : ''} (${d.billable ? 'billable' : 'non-billable'}).`, 'success');
         } catch (e) {
             if (e.code !== 'RUNNING') { toast(e.message, 'error'); return; }
@@ -161,7 +162,7 @@
             if (!confirm(`A timer is already running on ${caseText(cur)} (${clock(cur.elapsedMs)}). Stop and save it, and start this one?`)) return;
             T.busy = false;
             const data = await run(Object.assign(body, { switch: true }));
-            if (data) { T.draft = null; T.billPick = null; toast(data.saved ? `Saved ${hrs(data.saved.hours)} on ${caseText(data.saved)}; new timer started.` : 'New timer started.', 'success'); }
+            if (data) { T.draft = null; toast(data.saved ? `Saved ${hrs(data.saved.hours)} on ${caseText(data.saved)}; new timer started.` : 'New timer started.', 'success'); }
         } finally { T.busy = false; renderWidget(); if (T.open) refresh(); }
     };
     window.ttPause = () => run({ action: 'pause' });
@@ -344,8 +345,9 @@
         bar.insertAdjacentHTML('afterend', '<div id="tt-widget" class="no-print" data-free-edit></div>');
         return $id('tt-widget');
     }
-    // The billable choice for the next timer, picked in the header before starting (a new case opened: back to its default).
-    function nextBillable() { return T.billPick != null ? T.billPick : (T.draft && !T.draft.auto ? T.draft : blankDetails()).billable; }
+    // The next timer's Billable / Non-billable: the same draft the Time tab shows and changes, so the header and the tab
+    // always agree (a new case opened: back to that case's default, as its automatic draft is dropped).
+    function nextBillable() { const d = T.draft; return d && (!d.auto || d.billPicked) ? d.billable : blankDetails().billable; }
     function billDropdown(billable) {
         return `<span class="tt-dd"><button type="button" class="tt-bill ${billable ? 'yes' : 'no'}" data-tt="bill" aria-haspopup="menu" aria-expanded="false" onclick="ttBillMenu(event)" title="Billable or non-billable">${billable ? '$ Billable' : 'Non-billable'} ▾</button>
             <span class="tt-menu" role="menu"><button type="button" role="menuitemradio" aria-checked="${billable}" data-bill="1" onclick="ttSetBillable(true)">$ Billable</button><button type="button" role="menuitemradio" aria-checked="${!billable}" data-bill="0" onclick="ttSetBillable(false)">Non-billable</button></span></span>`;
@@ -372,15 +374,37 @@
         m.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
         if (open) { const on = m.querySelector('[aria-checked="true"]'); if (on) on.focus(); }
     };
-    const closeBillMenu = () => { const w = $id('tt-widget'); if (!w) return; w.querySelectorAll('.tt-menu.open').forEach(m => m.classList.remove('open')); w.querySelectorAll('[data-tt="bill"]').forEach(b => b.setAttribute('aria-expanded', 'false')); };
-    document.addEventListener('click', (e) => { if (!(e.target && e.target.closest && e.target.closest('#tt-widget .tt-dd'))) closeBillMenu(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeBillMenu(); });
+    const billButton = () => document.querySelector('#tt-widget [data-tt="bill"]');
+    function closeBillMenu(refocus) {
+        const w = $id('tt-widget'); if (!w) return;
+        const wasOpen = !!w.querySelector('.tt-menu.open');
+        w.querySelectorAll('.tt-menu.open').forEach(m => m.classList.remove('open'));
+        w.querySelectorAll('[data-tt="bill"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+        if (wasOpen && refocus) { const b = billButton(); if (b) b.focus(); }
+    }
+    document.addEventListener('click', (e) => { if (!(e.target && e.target.closest && e.target.closest('#tt-widget .tt-dd'))) closeBillMenu(false); });
+    // the keyboard: ↑ ↓ (Home End) move between the two choices, Esc closes and goes back to the button
+    document.addEventListener('keydown', (e) => {
+        const menu = document.querySelector('#tt-widget .tt-menu.open'); if (!menu) return;
+        if (e.key === 'Escape') { e.preventDefault(); closeBillMenu(true); return; }
+        const items = [...menu.querySelectorAll('button')], i = items.indexOf(document.activeElement);
+        const to = e.key === 'ArrowDown' ? (i + 1) % items.length : e.key === 'ArrowUp' ? (i - 1 + items.length) % items.length
+            : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1;
+        if (to >= 0) { e.preventDefault(); items[to].focus(); }
+    });
+    // the focus leaving the dropdown (Tab away) closes it
+    document.addEventListener('focusout', (e) => {
+        const dd = e.target && e.target.closest && e.target.closest('#tt-widget .tt-dd');
+        if (dd && !(e.relatedTarget && dd.contains(e.relatedTarget))) setTimeout(() => { if (!dd.contains(document.activeElement)) closeBillMenu(false); }, 0);
+    });
     // Billable or not: the running timer's, or the next one's
     window.ttSetBillable = function (v) {
         v = !!v;
         if (T.timer) { if (T.timer.billable !== v) { T.timer.billable = v; queueUpdate(true); } }
-        else T.billPick = v;
+        else { if (!T.draft || (T.draft.auto && !T.draft.billPicked)) T.draft = blankDetails(); T.draft.billable = v; if (T.draft.auto) T.draft.billPicked = true; }
+        const fromMenu = !!(document.activeElement && document.activeElement.closest && document.activeElement.closest('#tt-widget .tt-dd'));
         renderWidget(); if (T.open) renderTab();
+        if (fromMenu) { const b = billButton(); if (b) b.focus(); }   // (the widget was redrawn: the focus goes back to the button)
     };
 
     /* ---------- the Time tab ---------- */
@@ -502,7 +526,7 @@
         if (typeof fn !== 'function') return;
         window[name] = function () {
             const r = fn.apply(this, arguments);
-            setTimeout(() => { if (T.draft && T.draft.auto) T.draft = null; if (T.manual && T.manual.auto) T.manual = null; T.billPick = null; renderWidget(); if (T.open) refresh(); }, 80);
+            setTimeout(() => { if (T.draft && T.draft.auto) T.draft = null; if (T.manual && T.manual.auto) T.manual = null; renderWidget(); if (T.open) refresh(); }, 80);
             return r;
         };
     });
@@ -512,7 +536,7 @@
         window.applySessionUI = function () {
             const r = baseApply.apply(this, arguments);
             if (signedIn()) { if (!T.data) refresh(); else renderWidget(); }
-            else { T = Object.assign(T, { open: false, data: null, timer: null, entries: [], draft: null, manual: null, billPick: null, error: '' }); renderWidget(); }
+            else { T = Object.assign(T, { open: false, data: null, timer: null, entries: [], draft: null, manual: null, error: '' }); renderWidget(); }
             return r;
         };
     }

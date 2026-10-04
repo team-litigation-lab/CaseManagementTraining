@@ -29,6 +29,7 @@
     css.textContent = `
     #drive-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:9px 12px;border:1px solid #dbeafe;background:#f8fbff;border-radius:10px;font-size:12px;color:#334155}
     #drive-bar .db-t{font-weight:800;color:#0f2148;white-space:nowrap}
+    #drive-bar .db-t svg{display:inline-block}
     #drive-bar .db-s{flex:1;min-width:180px;color:#475569}
     #drive-bar .db-s b{color:#0f2148}
     #drive-bar button,#drive-bar a.db-btn{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer;text-decoration:none;white-space:nowrap}

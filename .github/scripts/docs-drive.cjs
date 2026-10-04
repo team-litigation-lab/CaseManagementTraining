@@ -12,7 +12,10 @@
 // Part 2, the page (a trainee on an editable library file, /api answered by the test):
 //   - uploads are named by the firm's convention (caseFileName in app.js): <Case ID>_<Last-First>_<Type>_<YYYY-MM-DD>.<ext>,
 //     on Doc Hub rows (the row's category), demand letters and the client's ID; the file's own name is on the link's tooltip,
-//     and the name is the one sent to /api/upload; the naming rules (upper-case names, accents, Jr., no case ID yet);
+//     and the name is the one sent to /api/upload; the naming rules (upper-case names, accents, Jr., "Last, First", no case ID
+//     yet); a second file of a type the same day is …-2; Save Case gives files named NO-CASE-ID_… the Case ID and saves again;
+//   - /api/file?name= (the server): the name a renamed file downloads under; bad names ignored; nothing opened it wouldn't;
+//   - a library case's Notes (saved as text) keep their links' addresses and show them as links again;
 //   - Doc Hub's 🔗 Link attaches a web address (www. is made https://); javascript: and the like are refused; rows saved
 //     before the button get it; the link survives saving and loading (cleanCaseHtml) and is in the case summary PDF's list;
 //   - a web address pasted into a case field becomes a link; words selected and an address pasted over them become the
@@ -59,11 +62,15 @@ async function serverPart() {
         INSERT INTO users VALUES ('ci', 'Trainee', 'Approved'), ('other', 'Trainee', 'Approved'), ('trainer', 'Admin', 'Approved');`);
     // the uploads bucket
     const objects = new Map();
-    const put = (key, by, type, text) => objects.set(key, { customMetadata: { uploadedBy: by }, httpMetadata: { contentType: type }, bytes: Buffer.from(text) });
+    const put = (key, by, type, text) => objects.set(key, { customMetadata: { uploadedBy: by, originalName: key.split('/').pop() }, httpMetadata: { contentType: type, contentDisposition: `inline; filename="${key.split('/').pop()}"` }, bytes: Buffer.from(text) });
     put('documents/11111111-1111-1111-1111-111111111111-a.pdf', 'ci', 'application/pdf', '%PDF-1.4 records');
     put('documents/22222222-2222-2222-2222-222222222222-b.jpg', 'trainer', 'image/jpeg', 'JPEGDATA');
     put('documents/33333333-3333-3333-3333-333333333333-c.pdf', 'other', 'application/pdf', '%PDF-1.4 not yours');
-    const DOCUMENTS = { async get(key) { const o = objects.get(key); return o ? { customMetadata: o.customMetadata, httpMetadata: o.httpMetadata, arrayBuffer: async () => o.bytes.buffer.slice(o.bytes.byteOffset, o.bytes.byteOffset + o.bytes.length) } : null; } };
+    put('other-bucket/../documents/x.pdf', 'ci', 'application/pdf', 'outside the uploads');
+    put('avatars/ci.png', 'ci', 'image/png', 'not an upload');
+    const DOCUMENTS = { async get(key) { const o = objects.get(key); return o ? { customMetadata: o.customMetadata, httpMetadata: o.httpMetadata, httpEtag: '"e"', body: o.bytes,
+        writeHttpMetadata(h) { h.set('Content-Type', o.httpMetadata.contentType); h.set('Content-Disposition', o.httpMetadata.contentDisposition); },
+        arrayBuffer: async () => o.bytes.buffer.slice(o.bytes.byteOffset, o.bytes.byteOffset + o.bytes.length) } : null; } };
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret', DOCUMENTS };
     const tokens = {};
     for (const [u, t] of [['ci', 'Trainee'], ['other', 'Trainee']]) tokens[u] = await utils.createSessionToken({ username: u, userType: t, fullName: u, batchId: 'B1' }, env.SESSION_SECRET);
@@ -83,11 +90,11 @@ async function serverPart() {
         if (u.href.startsWith('https://oauth2.googleapis.com/token')) {
             const p = new URLSearchParams(opts.body);
             if (p.get('grant_type') === 'authorization_code') {
-                const idt = 'x.' + Buffer.from(JSON.stringify({ email: p.get('code') === 'code-2' ? 'second@gmail.com' : 'ci.trainee@gmail.com' })).toString('base64url') + '.y';
+                const idt = 'x.' + Buffer.from(JSON.stringify({ email: p.get('code') === 'code-2' ? 'second@gmail.com' : 'ci.trainee@gmail.com' })).toString('base64url') + '.y';   // (code-1b: the same account as code-1)
                 return out(200, { access_token: 'AT-' + p.get('code'), refresh_token: p.get('code') === 'no-refresh' ? undefined : 'RT-' + p.get('code'), expires_in: 3600, scope: G.grantScope, id_token: idt });
             }
             // (a refresh says which permissions the grant has: Calendar and Drive share one Google sign-in)
-            if (p.get('grant_type') === 'refresh_token') { G.refreshes++; return out(200, { access_token: 'AT-refreshed', expires_in: 3600, scope: G.refreshScope || G.grantScope }); }
+            if (p.get('grant_type') === 'refresh_token') { G.refreshes++; if (G.refreshFail) return out(400, { error: G.refreshFail }); return out(200, { access_token: 'AT-refreshed', expires_in: 3600, scope: G.refreshScope || G.grantScope }); }
         }
         if (u.href.startsWith('https://oauth2.googleapis.com/revoke')) { G.revoked.push(new URLSearchParams(opts.body).get('token')); return out(200, {}); }
         if (u.host === 'www.googleapis.com') {
@@ -101,6 +108,7 @@ async function serverPart() {
             }
             const m = /^\/drive\/v3\/files\/([^/]+)$/.exec(u.pathname);
             if (m && method === 'GET') { const f = G.folders.get(decodeURIComponent(m[1])); return f ? out(200, { id: m[1], trashed: f.trashed }) : out(404, { error: { message: 'File not found' } }); }
+            if (u.pathname === '/upload/drive/v3/files' && method === 'POST' && G.failUpload) { const once = G.failUpload; G.failUpload = null; return out(403, { error: { message: `The user's Drive storage ${once} has been exceeded.` } }); }
             if (u.pathname === '/upload/drive/v3/files' && method === 'POST') {
                 const raw = Buffer.from(opts.body); const text = raw.toString('latin1');
                 const boundary = /boundary=(\S+)/.exec(opts.headers['Content-Type'])[1];
@@ -146,6 +154,7 @@ async function serverPart() {
             { key: 'documents/22222222-2222-2222-2222-222222222222-b.jpg', name: 'LSH-2026-MVA-000007_Santos-Maria_Client-ID_2026-10-04.jpg' },
             { key: 'documents/33333333-3333-3333-3333-333333333333-c.pdf', name: 'not mine.pdf' },
             { key: 'other-bucket/../documents/x.pdf', name: 'sneaky.pdf' },
+            { key: 'avatars/ci.png', name: 'not-an-upload.png' },
         ];
         r = await call('POST', { action: 'backup', caseKey: 'LSH-2026-MVA-000007', caseName: 'LSH-2026-MVA-000007 Maria Santos', files });
         const res = (r.data.results || []);
@@ -154,7 +163,8 @@ async function serverPart() {
         if (r.status !== 200 || !root || !folder || folder[1].parents[0] !== root[0]) fail(`the backup should make LSH CMS Backups / <case>: ${JSON.stringify([...G.folders])} ${JSON.stringify(r.data)}`);
         if (!res[0] || !res[0].ok || !res[1] || !res[1].ok) fail(`the trainee's own file and an Admin's should be copied: ${JSON.stringify(res)}`);
         if (!res[2] || res[2].ok || !/another trainee/.test(res[2].error)) fail(`another trainee's file was copied: ${JSON.stringify(res[2])}`);
-        if (!res[3] || res[3].ok) fail(`a key outside the uploads was accepted: ${JSON.stringify(res[3])}`);
+        // (these exist in the bucket: only the key check keeps them out)
+        if (!res[3] || res[3].ok || res[3].error !== 'Not a file from this case.' || !res[4] || res[4].ok || res[4].error !== 'Not a file from this case.') fail(`keys outside the uploads were accepted: ${JSON.stringify(res.slice(3))}`);
         const up = G.files.find(f => f.name === files[0].name);
         if (G.files.length !== 2 || !up || up.parents[0] !== folder[0] || up.body !== '%PDF-1.4 records' || up.type !== 'application/pdf') fail(`the files reached Drive wrong: ${JSON.stringify(G.files)}`);
         if (r.data.folderUrl !== `https://drive.google.com/drive/folders/${folder[0]}`) fail(`the folder link is wrong: ${r.data.folderUrl}`);
@@ -167,6 +177,11 @@ async function serverPart() {
         r = await call('POST', { action: 'backup', caseKey: 'LSH-2026-MVA-000007', caseName: 'LSH-2026-MVA-000007 Maria Santos', files: files.slice(0, 2) });
         if (G.files.length !== 4 || G.folders.size !== 3 || !(r.data.results || []).every(x => x.ok && !x.skipped)) fail(`a case folder deleted in Drive should be made again with its files: ${JSON.stringify(r.data)}`);
         // limits
+        // a file Drive refuses: that one fails, the others are still copied
+        G.failUpload = 'quota';
+        r = await call('POST', { action: 'backup', caseKey: 'LSH-2026-MVA-000009', caseName: 'LSH-2026-MVA-000009 Third Case', files: files.slice(0, 2) });
+        G.failUpload = null;
+        if (!r.data.results || r.data.results[0].ok || !/quota/i.test(r.data.results[0].error || '') || !r.data.results[1].ok) fail(`a file Drive refuses should fail alone: ${JSON.stringify(r.data.results)}`);
         r = await call('POST', { action: 'backup', caseKey: 'K', caseName: 'K', files: new Array(6).fill(files[0]) });
         if (r.status !== 400) fail(`more than 5 files at once should be refused, got ${r.status}`);
         r = await call('POST', { action: 'backup', caseKey: '', files: files.slice(0, 1) });
@@ -175,6 +190,30 @@ async function serverPart() {
         sql.prepare('UPDATE drive_links SET access_expires = 1 WHERE username = ?').run('ci');
         r = await call('POST', { action: 'backup', caseKey: 'LSH-2026-MVA-000008', caseName: 'LSH-2026-MVA-000008 Second Case', files: files.slice(0, 1) });
         if (G.refreshes !== 1 || G.lastToken !== 'Bearer AT-refreshed' || !(r.data.results || [])[0] || !r.data.results[0].ok) fail(`an expired token should be refreshed: ${G.refreshes} ${G.lastToken} ${JSON.stringify(r.data)}`);
+        // connecting the same Google account again keeps its folders and gives nothing back
+        G.revoked.length = 0;
+        const foldersBefore = sql.prepare('SELECT COUNT(*) AS n FROM drive_case_folders WHERE username = ?').get('ci').n;
+        r = await call('POST', { action: 'connect', code: 'code-1b' });
+        if (r.status !== 200 || G.revoked.length || sql.prepare('SELECT COUNT(*) AS n FROM drive_case_folders WHERE username = ?').get('ci').n !== foldersBefore) fail(`connecting the same Google account again: ${JSON.stringify(r)} revoked ${G.revoked}`);
+        // the access removed on Google's side: the link is forgotten and the page is told to connect again
+        G.refreshFail = 'invalid_grant'; sql.prepare('UPDATE drive_links SET access_expires = 1 WHERE username = ?').run('ci');
+        r = await call('POST', { action: 'backup', caseKey: 'LSH-2026-MVA-000008', caseName: 'x', files: files.slice(0, 1) });
+        G.refreshFail = null;
+        if (r.status !== 401 || r.data.code !== 'DRIVE_RECONNECT' || sql.prepare('SELECT COUNT(*) AS n FROM drive_links WHERE username = ?').get('ci').n) fail(`access removed on Google's side should ask to connect again: ${JSON.stringify(r)}`);
+        r = await call('POST', { action: 'connect', code: 'code-1' });
+
+        // /api/file: ?name= serves the file under the name the case shows now (a renamed file); anything else is ignored
+        const fileApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/file.js')).href);
+        const fileGet = async (q) => { const request = new Request('https://cms.example/api/file?' + q, { headers: { cookie: `lsh_session=${tokens.ci}` } }); const res = await fileApi.onRequestGet({ request, env }); return { status: res.status, cd: res.headers.get('Content-Disposition') }; };
+        const k1 = encodeURIComponent('documents/11111111-1111-1111-1111-111111111111-a.pdf');
+        let f = await fileGet(`key=${k1}&name=LSH-2026-MVA-000007_Santos-Maria_Medical-Records_2026-10-04.pdf`);
+        if (f.status !== 200 || f.cd !== 'inline; filename="LSH-2026-MVA-000007_Santos-Maria_Medical-Records_2026-10-04.pdf"') fail(`/api/file with a name: ${JSON.stringify(f)}`);
+        for (const bad of ['a b.pdf', '..%2Fx.pdf', '.hidden', 'x%22.pdf']) {
+            f = await fileGet(`key=${k1}&name=${bad}`);
+            if (f.cd !== 'inline; filename="11111111-1111-1111-1111-111111111111-a.pdf"') fail(`/api/file took a bad name (${bad}): ${f.cd}`);
+        }
+        f = await fileGet(`key=${encodeURIComponent('documents/33333333-3333-3333-3333-333333333333-c.pdf')}&name=mine.pdf`);
+        if (f.status !== 403) fail(`a name doesn't open another trainee's file: ${f.status}`);
         // another trainee can't back up before connecting
         r = await call('POST', { action: 'backup', caseKey: 'X', caseName: 'X', files: files.slice(0, 1) }, 'other');
         if (r.status !== 409 || r.data.code !== 'DRIVE_NOT_CONNECTED') fail(`backing up without connecting should be refused: ${JSON.stringify(r)}`);
@@ -228,13 +267,20 @@ async function pagePart() {
     const answers = [];   // what prompt() is answered with, in order
     page.on('dialog', d => { if (d.type() === 'prompt') { const a = answers.shift(); return a == null ? d.dismiss() : d.accept(a); } return d.accept(); });
     await page.route(/cdn\.tailwindcss\.com|html2pdf|accounts\.google\.com/, r => r.fulfill({ contentType: 'text/javascript', body: '' }));
-    const uploads = [], drivePosts = []; let driveGets = 0;
+    const uploads = [], drivePosts = [], saves = [], updatePosts = []; let driveGets = 0, savedUpdates = null;
     let drive = { configured: false, connected: false };
     await page.route('**/api/**', async route => {
         const u = new URL(route.request().url());
         const j = (o, s = 200) => route.fulfill({ status: s, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/state') return j({ paused: false, announcement: { text: '' }, alert: { active: false }, ping: null });
-        if (u.pathname === '/api/case-repository') return j({ success: true, cases: [] });
+        if (u.pathname === '/api/case-repository') {
+            if (route.request().method() === 'POST') { const b = JSON.parse(route.request().postData()); saves.push(b); return j({ success: true, id: 55, caseId: 'LSH-2026-MVA-000555', isDraft: false }); }
+            return j({ success: true, cases: [] });
+        }
+        if (u.pathname === '/api/mock-case-updates') {
+            if (route.request().method() === 'POST') { updatePosts.push(JSON.parse(route.request().postData())); return j({ success: true }); }
+            return j({ success: true, updates: savedUpdates && u.searchParams.get('mock') === savedUpdates.mock ? { notes: savedUpdates.notes, tasks: savedUpdates.tasks } : null });
+        }
         if (u.pathname === '/api/upload') {
             const body = route.request().postDataBuffer().toString('latin1');
             const name = (/filename="([^"]*)"/.exec(body) || [])[1];
@@ -260,12 +306,13 @@ async function pagePart() {
         set('case-id-field', 'LSH-2026-MVA-000123'); set('client-name-field', 'LINDA GARCIA'); out.upper = caseFileName('Medical Records', 'Scan 001.PDF');
         set('client-name-field', 'José Núñez Jr.'); out.accents = caseFileName('Property Damage', 'photo.jpeg');
         set('client-name-field', "Mary-Kate O'Brien"); out.mixed = caseFileName('Bills & Invoices', 'ledger');
+        set('client-name-field', 'Garcia, Linda'); out.comma = caseFileName('Bills', 'b.PDF');
         set('case-id-field', 'LSH-----'); set('client-name-field', ''); out.blank = caseFileName('', 'a.pdf');
         return out;
     });
     const today = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
     const want = { upper: `LSH-2026-MVA-000123_Garcia-Linda_Medical-Records_${today}.pdf`, accents: `LSH-2026-MVA-000123_Nunez-Jose_Property-Damage_${today}.jpeg`,
-        mixed: `LSH-2026-MVA-000123_O-Brien-Mary-Kate_Bills-and-Invoices_${today}`, blank: `NO-CASE-ID_No-Client-Name_Document_${today}.pdf` };
+        mixed: `LSH-2026-MVA-000123_O-Brien-Mary-Kate_Bills-and-Invoices_${today}`, comma: `LSH-2026-MVA-000123_Garcia-Linda_Bills_${today}.pdf`, blank: `NO-CASE-ID_No-Client-Name_Document_${today}.pdf` };
     for (const k of Object.keys(want)) if (names[k] !== want[k]) fail(`file naming (${k}): ${names[k]} (expected ${want[k]})`);
 
     // an editable library file (Case Management): Doc Hub upload, named by the convention
@@ -284,6 +331,12 @@ async function pagePart() {
     const docName = `${prefix}_Medical-Records_${today}.pdf`;
     if (!att || att.text !== '📎 ' + docName || att.download !== docName || !/Original file: Scan 001\.PDF/.test(att.title) || att.orig !== 'Scan 001.PDF') fail(`a Doc Hub upload should show the convention name (${docName}): ${JSON.stringify(att)}`);
     if (uploads[uploads.length - 1] !== docName) fail(`the name sent to /api/upload should be the convention name: ${uploads[uploads.length - 1]}`);
+    // a second file of the same type the same day: …-2
+    await page.click('#pane-docs button.hub-btn:has-text("Medical")');
+    await page.locator('#doc-body tr').last().locator('input[type=file]').setInputFiles({ name: 'MRI.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 mri') });
+    await page.waitForTimeout(500);
+    const second = await page.locator('#doc-body tr').last().evaluate(tr => (tr.querySelector('.doc-attachment a') || {}).textContent);
+    if (second !== `📎 ${prefix}_Medical-Records_${today}-2.pdf`) fail(`a second file of the same type the same day should be …-2: ${second}`);
     // the demand letter
     await page.evaluate(() => { showTab('demand'); addDemand(); }); await page.waitForTimeout(200);
     await page.setInputFiles('#kx-demand .kx-row:last-child input[type=file]', { name: 'Demand to Keystone.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('PK docx') });
@@ -323,8 +376,6 @@ async function pagePart() {
     if (!/See the <a href="https:\/\/police\.example\.gov\/report\/26-1188" target="_blank" rel="noopener noreferrer">police report<\/a> online\./.test(html)) fail(`words selected with an address pasted over them should become the link: ${html}`);
     const phone = await paste('#client-phone-field', 'https://example.com');
     if (/<a /.test(phone)) fail('a web address pasted into the phone field became a link');
-    const plain = await paste(noteSel, ' <b>no link</b> here');
-    if (/<b>/.test(plain)) fail('pasted text with markup in it was inserted as markup');
     // a click on a link: where it goes, Open ↗, Remove link
     await page.click(`${noteSel} a`); await page.waitForTimeout(150);
     const pop = await page.evaluate(() => { const p = document.getElementById('lnk-pop'); return p && { open: p.classList.contains('open'), href: (p.querySelector('a.lp-open') || {}).href, target: (p.querySelector('a.lp-open') || {}).target, rm: !!p.querySelector('[data-lp="unlink"]'), text: p.textContent }; });
@@ -332,6 +383,8 @@ async function pagePart() {
     await page.click('#lnk-pop [data-lp="unlink"]'); await page.waitForTimeout(100);
     const unlinked = await page.evaluate((s) => document.querySelector(s).innerHTML.replace(/&nbsp;/g, ' '), noteSel);
     if (unlinked !== 'See the police report online.') fail(`Remove link should leave the words: ${unlinked}`);
+    const plain = await paste(noteSel, ' see <b>bold</b> at https://x.example/a');
+    if (/<b>/.test(plain) || !/&lt;b&gt;bold&lt;\/b&gt;/.test(plain) || !/href="https:\/\/x\.example\/a"/.test(plain)) fail(`pasted text with markup and an address: the markup should stay text, the address a link: ${plain}`);
     await page.mouse.click(700, 120);
     if (await page.evaluate(() => document.getElementById('lnk-pop').classList.contains('open'))) fail('the link pop-up stays open after a click elsewhere');
 
@@ -373,11 +426,13 @@ async function pagePart() {
     await page.evaluate(() => lshDriveBackup.refresh()); await page.waitForTimeout(300);
     const listed = await page.evaluate(() => lshDriveBackup.files());
     const shown = await page.evaluate(() => document.getElementById('drive-bar').innerText);
-    if (listed.length !== 2 || !listed.some(f => f.name === docName) || !listed.some(f => /_Demand-Letter_/.test(f.name)) || !/2 files/.test(shown) || !/ci\.trainee@gmail\.com/.test(shown)) fail(`the bar should list the case's 2 uploaded files: ${JSON.stringify(listed)} ${shown}`);
+    if (listed.length !== 3 || !listed.some(f => f.name === docName) || !listed.some(f => /_Demand-Letter_/.test(f.name)) || !/3 files/.test(shown) || !/ci\.trainee@gmail\.com/.test(shown)) fail(`the bar should list the case's 3 uploaded files: ${JSON.stringify(listed)} ${shown}`);
+    const posBefore = await page.evaluate(() => [posEdits().length, posSels().length, document.querySelectorAll('#drive-bar select, #drive-bar [contenteditable], #tt-widget select, #tt-widget [contenteditable]').length]);
+    if (posBefore[2]) fail('the Drive bar or the timer added a select or contenteditable (the case saves those by position)');
     const sig0 = await page.evaluate(() => hasUnsyncedChanges());
     await page.click('#drive-bar [data-db="backup"]'); await page.waitForTimeout(600);
     const post = drivePosts.find(p => p.action === 'backup');
-    if (!post || post.caseKey !== who.id || !post.caseName.startsWith(who.id) || post.files.length !== 2 || !post.files.every(f => /^documents\//.test(f.key))) fail(`the backup should send the case's files with its ID and name: ${JSON.stringify(post)}`);
+    if (!post || post.caseKey !== who.id || !post.caseName.startsWith(who.id) || post.files.length !== 3 || !post.files.every(f => /^documents\//.test(f.key))) fail(`the backup should send the case's files with its ID and name: ${JSON.stringify(post)}`);
     const after = await page.evaluate(() => ({ open: (document.querySelector('#drive-bar [data-db="open"]') || {}).href, text: document.getElementById('drive-bar').innerText }));
     if (after.open !== 'https://drive.google.com/drive/folders/fold9') fail(`after a backup, Open in Drive should go to the case's folder: ${JSON.stringify(after)}`);
     if ((await page.evaluate(() => hasUnsyncedChanges())) !== sig0) fail('drawing the Drive bar counted as an edit to the case');
@@ -387,7 +442,11 @@ async function pagePart() {
     await page.waitForTimeout(300);
     await page.click('#drive-bar [data-db="backup"]'); await page.waitForTimeout(800);
     const sizes = drivePosts.filter(p => p.action === 'backup').map(p => p.files.length);
-    if (sizes.join() !== '5,2') fail(`7 files should go in batches of 5 and 2: ${sizes.join()}`);
+    if (sizes.join() !== '5,3') fail(`8 files should go in batches of 5 and 3: ${sizes.join()}`);
+    const posAfter = await page.evaluate(() => [posEdits().length - document.querySelectorAll('#doc-body [contenteditable="true"]').length, posSels().length]);
+    const posBase = await page.evaluate(() => 0);
+    if (posAfter[1] !== posBefore[1]) fail(`the Drive bar changed the number of dropdowns the case is saved by: ${posBefore[1]} → ${posAfter[1]}`);
+    if (!(await page.evaluate(() => !!document.getElementById('drive-bar').closest('[data-free-edit]') && !!document.getElementById('tt-widget').closest('[data-free-edit]')))) fail('the Drive bar and the timer must be data-free-edit (their redraws aren\'t edits)');
 
     // the client's ID on a new case: named by the convention too (no case ID yet)
     await page.evaluate(() => { newCase(); }); await page.waitForTimeout(500);
@@ -400,7 +459,38 @@ async function pagePart() {
         const idName = `NO-CASE-ID_Doe-Jane_Client-ID_${today}.jpg`;
         const saved = await page.evaluate(() => { const t = document.querySelector('#kx-client-id [data-k="file"]').textContent; try { return JSON.parse(t); } catch (e) { return t; } });
         if (!saved || saved.name !== idName || saved.orig !== 'IMG_2231.png' || uploads[uploads.length - 1] !== idName) fail(`the client's ID should be named ${idName}: ${JSON.stringify(saved)} (sent as ${uploads[uploads.length - 1]})`);
+        // the client's ID is one of the files a Drive backup copies
+        await page.evaluate(() => { showTab('docs'); addDocument('Medical Records'); });
+        await page.locator('#doc-body tr').last().locator('input[type=file]').setInputFiles({ name: 'ER.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 er') });
+        await page.waitForTimeout(500);
+        const files2 = await page.evaluate(() => lshDriveBackup.files());
+        if (!files2.some(x => x.name === idName)) fail(`the Drive backup doesn't include the client's ID: ${JSON.stringify(files2)}`);
+        // Save Case gives the case its ID: the files named NO-CASE-ID_… take it (and the download asks for that name), saved once more
+        const before = saves.length;
+        await page.evaluate(() => saveCase()); await page.waitForTimeout(1500);
+        const renamed = await page.evaluate(() => ({ doc: (document.querySelector('#doc-body .doc-attachment a[data-r2-key]') || {}).textContent, href: (document.querySelector('#doc-body .doc-attachment a[data-r2-key]') || {}).getAttribute && document.querySelector('#doc-body .doc-attachment a[data-r2-key]').getAttribute('href'),
+            id: JSON.parse(document.querySelector('#kx-client-id [data-k="file"]').textContent).name, unsynced: hasUnsyncedChanges() }));
+        const want = `LSH-2026-MVA-000555_Doe-Jane_Medical-Records_${today}.pdf`;
+        if (renamed.doc !== '📎 ' + want || !/&name=LSH-2026-MVA-000555_Doe-Jane_Medical-Records_/.test(renamed.href || '') || renamed.id !== `LSH-2026-MVA-000555_Doe-Jane_Client-ID_${today}.jpg`) fail(`files named before the case had its ID should take it on Save Case: ${JSON.stringify(renamed)}`);
+        if (saves.length - before !== 2 || !/LSH-2026-MVA-000555_Doe-Jane_Medical-Records/.test(JSON.stringify(saves[saves.length - 1].content.html.docs)) || renamed.unsynced) fail(`the renamed files should be saved once more, leaving nothing unsaved: ${saves.length - before} saves, unsynced ${renamed.unsynced}`);
     }
+
+    // a library case's Notes (saved as text): a link is kept as its address and comes back a link
+    await page.goto(base + '?program=reception', { waitUntil: 'load' }); await page.waitForTimeout(1200);
+    await page.evaluate(() => openMockCase('MC-01', { silent: true })); await page.waitForTimeout(1200);
+    await page.evaluate(() => { showTab('notes'); addRow('note-body'); });
+    const libNote = '#note-body tr:last-child td:nth-child(3) [contenteditable="true"]';
+    await page.evaluate((s) => { document.querySelector(s).innerText = 'See the police report online.'; }, libNote);
+    await paste(libNote, 'https://police.example.gov/report/26-1188', 'police report');
+    await paste(libNote, ' Portal: https://portal.example.org/x');
+    await page.evaluate(() => mockFlushUpdates()); await page.waitForTimeout(800);
+    const sentNote = updatePosts.length ? updatePosts[updatePosts.length - 1].notes.slice(-1)[0].text : '';
+    if (!/police report \(https:\/\/police\.example\.gov\/report\/26-1188\)/.test(sentNote) || !/Portal: https:\/\/portal\.example\.org\/x/.test(sentNote)) fail(`a library case's note should keep its links' addresses when saved: ${JSON.stringify(sentNote)}`);
+    savedUpdates = updatePosts[updatePosts.length - 1];
+    await page.evaluate(() => { closeCase(); }); await page.waitForTimeout(400);
+    await page.evaluate(() => openMockCase('MC-01', { silent: true })); await page.waitForTimeout(1500);
+    const back2 = await page.evaluate(() => { const rows = [...document.querySelectorAll('#note-body tr')]; const cell = rows[rows.length - 1].querySelector('td:nth-child(3) [contenteditable]'); return { links: [...cell.querySelectorAll('a[href]')].map(a => a.getAttribute('href')), pending: false }; });
+    if (back2.links.join() !== 'https://police.example.gov/report/26-1188,https://portal.example.org/x') fail(`the library note's links should come back as links: ${JSON.stringify(back2)}`);
 
     await browser.close(); server.close();
 }

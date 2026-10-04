@@ -487,14 +487,17 @@ A card lists the cases the contact is on: the client, the case number and what t
 `<Case ID>_<Last-First>_<Type>_<YYYY-MM-DD>.<ext>`, e.g. `LSH-2024-PRL-900171_Garcia-Linda_Medical-Records_2026-10-04.pdf`
 
 - **Type** is the Doc Hub category of the row (Medical Records, Bills, Police Report…), **Demand-Letter** for ⬆ Upload Demand, **Client-ID** for ⬆ Upload ID. The date is the day it was uploaded.
-- The client's name is last name first; an all-capitals name is written normally, accents are dropped, and Jr./Sr./II/III are left off. A case with no Case ID yet (a new case, a draft) gets `NO-CASE-ID`.
+- The client's name is last name first (typed as "Garcia, Linda" too); an all-capitals name is written normally, accents are dropped, and Jr./Sr./II/III are left off.
+- Two files of the same type uploaded the same day are told apart: the second is `…-2`, the third `…-3`.
+- A case with no Case ID yet (a new case, a draft) names its files `NO-CASE-ID_…`. When **Save Case** gives it its Case ID, those files take it (the links, the downloads and the client's ID), and the case is saved once more with the new names. A case saved before this takes it when it's opened. A download asks `/api/file` for the name the case shows (`?name=`, letters, digits and `- _ .` only), so a renamed file downloads under its new name.
 - Only letters, digits and `- _ .` are used, so the name survives every system it passes through. The file's own name is kept on the link (hover over it: *Original file: …*).
 - Files uploaded before this keep their names. Code: `caseFileName` in `app.js`.
 
 **Links.**
 - **🔗 Link** on a Doc Hub row attaches a web address instead of a file (a shared folder, a provider's portal, a website), with a name. `www.` is made `https://`; anything that isn't an `http(s)` address (`javascript:`, `data:`…) is refused.
 - **In any text field of the case** (notes, tasks, summaries…), a pasted web address becomes a link. Select some words and paste an address over them and the words become the link. Phone, date, email and money fields aren't linked.
-- A click on a link in a field shows where it goes, with **Open ↗** (a new tab) and **Remove link** (where the field can be edited); a plain click in an editable field only puts the cursor there. Links that open a new tab always get `rel="noopener noreferrer"`, also on cases saved before (`cleanCaseHtml`).
+- A click on a link in a field shows where it goes, with **Open ↗** (a new tab) and **Remove link** (where the field can be edited); a plain click in an editable field only puts the cursor there.
+- A library case's Notes and Tasks are saved as text (per trainee), so a link there is kept as its address ("the words (https://…)", or just the address) and becomes a link again when the case opens (`lshLinkify`). Links that open a new tab always get `rel="noopener noreferrer"`, also on cases saved before (`cleanCaseHtml`).
 - The case summary PDF lists a Doc Hub link as 🔗 with its address. Code: `case-sections.js` (Hyperlinks).
 
 **☁ Google Drive backup** (`drive-backup.js`, `/api/drive-backup`, `functions/_google_drive.js`):
@@ -735,7 +738,7 @@ Until the setup below is done, the rail says so, and the subscribe links and **A
 
 A timer for billable and non-billable hours, the way a firm's case management system tracks time.
 
-- **The timer** (in the case header, under the search bars): just **⏱ ▶ Start timer** and a **Billable / Non-billable** dropdown. **▶ Start timer** starts on the open case, billable, as *Case review & strategy*; with no case open, non-billable, as *Filing & administrative*. The dropdown chooses before starting (opening another case goes back to that case's default) or switches the running timer. While it runs: the time, **⏸** / **▶**, **■ Stop** and the dropdown; the case and activity are on the clock's tooltip. The timesheet, the details and adding time by hand are on the **⏱ Time** tab only. The widget adds no `<select>`: the dropdown is a button and a menu, because the case header's dropdowns are saved by position.
+- **The timer** (in the case header, under the search bars): just **⏱ ▶ Start timer** and a **Billable / Non-billable** dropdown. **▶ Start timer** starts on the open case, billable, as *Case review & strategy*; with no case open, non-billable, as *Filing & administrative*. The dropdown chooses before starting (opening another case goes back to that case's default) or switches the running timer. While it runs: the time, **⏸** / **▶**, **■ Stop** and the dropdown; the case and activity are on the clock's tooltip. The timesheet, the details and adding time by hand are on the **⏱ Time** tab only. The widget adds no `<select>`: the dropdown is a button and a menu, because the case header's dropdowns are saved by position. It works by keyboard (Enter opens it, ↑ ↓ move, Enter picks, Esc closes; the focus goes back to the button). It and the ⏱ Time tab show and change the same choice (the next timer's draft), so they always agree.
 - **⏱ Time tab** (right after **📅 Calendar**):
   - **The timer's details:** the case (**Link to the open case**, **Unlink**, or type a client name), **$ Billable / Non-billable**, the activity and **What you did**. They can be changed while it runs. **Stop & save** saves it, and **Discard** throws it away.
   - **Add time by hand:** date, hours (e.g. `0.5`), and the same details. Use it for work done away from the timer.
@@ -982,14 +985,16 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
 - **Doc Hub** (`.github/scripts/docs-drive.cjs`, in the same job): the file naming, links and the Google Drive backup. The server part runs the real `/api/drive-backup` on an in-memory SQLite database, a stand-in R2 bucket and Google's token and Drive endpoints answered by the test. It checks:
   - not set up: the bar and the API say so;
   - a sign-in without the Drive permission is refused and given back; connecting stores Google's tokens sealed, never as typed;
-  - a backup makes LSH CMS Backups / <case> once and copies the files with their names and bytes; another trainee's file, a key outside the uploads, more than 5 at once and a backup with no case are refused;
-  - backing up again skips what's there; a case folder deleted in Drive is made again; an expired token is refreshed; connections are per person; a different Google account starts clean; Disconnect revokes and forgets;
-  - in the page: uploads on Doc Hub rows, demand letters and the client's ID are named `<Case ID>_<Last-First>_<Type>_<date>.<ext>` (the name sent to `/api/upload`, the original on the tooltip), with the naming rules (capitals, accents, Jr., no Case ID yet);
+  - a backup makes LSH CMS Backups / <case> once and copies the files with their names and bytes; another trainee's file, keys outside the uploads (even ones in the bucket), more than 5 at once and a backup with no case are refused; a file Drive refuses fails alone;
+  - backing up again skips what's there; a case folder deleted in Drive is made again; an expired token is refreshed; access removed on Google's side asks to connect again; connections are per person; the same Google account connected again keeps its folders; a different one starts clean; Disconnect revokes and forgets;
+  - Google Calendar on the same account: neither side gives back the grant the other uses, and a sign-in with no refresh token uses the other side's when it covers Drive;
+  - `/api/file?name=` serves the file under the name the case shows, ignores bad names and opens nothing it wouldn't otherwise;
+  - in the page: uploads on Doc Hub rows, demand letters and the client's ID are named `<Case ID>_<Last-First>_<Type>_<date>.<ext>` (the name sent to `/api/upload`, the original on the tooltip), with the naming rules (capitals, accents, Jr., "Last, First", no Case ID yet); a second file of a type the same day is `…-2`; Save Case gives files named `NO-CASE-ID_…` the new Case ID and saves them once more, leaving nothing unsaved;
   - 🔗 Link attaches a web address and refuses `javascript:`; old rows get the button; links survive saving and loading and get `rel="noopener noreferrer"`; `javascript:` links are dropped;
-  - a pasted address becomes a link, words selected with an address pasted over them become the link, the phone field isn't linked and pasted markup stays text; a click on a link shows Open ↗ and Remove link;
-  - the Drive bar: not set up, Connect, then the case's files listed and backed up in batches of 5 with the case's ID and name, Open in Drive going to the case's folder; the status is asked for only when Doc Hub opens; drawing the bar isn't an edit.
+  - a pasted address becomes a link, words selected with an address pasted over them become the link, the phone field isn't linked and pasted markup stays text; a click on a link shows Open ↗ and Remove link; a library case's note keeps its links' addresses when saved and shows them as links again;
+  - the Drive bar: not set up, Connect, then the case's files (the client's ID too) listed and backed up in batches of 5 with the case's ID and name, Open in Drive going to the case's folder; the status is asked for only when Doc Hub opens; drawing the bar isn't an edit, and neither it nor the timer adds a select or contenteditable (both are data-free-edit).
 - **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
-  - the tab's place and the header timer: just Start and the Billable / Non-billable dropdown, which picks the next timer's and switches the running one;
+  - the tab's place and the header timer: just Start and the Billable / Non-billable dropdown; the dropdown and the Time tab show and change the same choice, a timer started with Non-billable picked is non-billable, another case opened goes back to its default, it works by keyboard, and it switches the running timer;
   - starting, counting, pausing, resuming, and surviving a reload;
   - billable time refused without a description;
   - 7 minutes billed as 0.2 h;
