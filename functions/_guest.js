@@ -15,7 +15,7 @@
 //
 // Tables (created on first use, like drill-results.js):
 //   guest_accounts    which users rows are name-only accounts, where they came from
-//   guest_login_rate  new name-only accounts per connection per hour
+//   guest_login_rate  failed name look-ups per connection per hour (guest-login.js)
 export const GUEST_SOURCES = {
     portal: 'LSH Training Portal',
     pd: 'Property Damage Claims Training',
@@ -29,8 +29,6 @@ export const GUEST_SOURCES = {
 // so a registered account can never be reached by typing a name.
 export const GUEST_PREFIX = 'guest-';
 export const isGuestUsername = (u) => String(u || '').toLowerCase().startsWith(GUEST_PREFIX);
-
-export const NEW_GUESTS_PER_HOUR = 10;
 
 // Trainers sign in to the Admin Portal with their name and the admin password
 // (functions/api/login.js): each name gets its own Admin account, made on first
