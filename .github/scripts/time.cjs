@@ -2,7 +2,7 @@
 // in-memory SQLite database that stands in for D1, driven through the real page
 // in a browser. Other /api/ calls are answered by the test, as in smoke.cjs.
 //
-// Checks: the ⏱ Time tab comes right after 📅 Calendar and the sidebar has the
+// Checks: the ⏱ Time tab comes right after 📅 Calendar and the case header has the
 // timer; one click starts a billable timer on the open (view-only library) case;
 // it counts, pauses, resumes and survives a reload; billable time can't be saved
 // without saying what was done; stopping saves it, billed in tenths of an hour
@@ -86,10 +86,47 @@ const failures = []; const fail = (m) => failures.push(m);
     const timer = () => sql.prepare(`SELECT * FROM time_timers WHERE username = 'ci'`).get();
     const entries = () => sql.prepare(`SELECT * FROM time_entries WHERE owner_username = 'ci' ORDER BY created_at, rowid`).all();
 
-    // 1. the tab and the sidebar timer
+    // 1. the tab and the timer (in the case header, under the search bars)
     const tabOrder = await page.evaluate(() => [...document.querySelectorAll('.tab-btn')].map(t => t.id).slice(-2).join(','));
     if (tabOrder !== 'tab-calendar,tab-time') fail(`the Time tab isn't right after Calendar (${tabOrder})`);
-    if (!(await page.isVisible('#tt-widget [data-tt="start"]'))) fail('the sidebar has no Start timer button');
+    if (!(await page.isVisible('#tt-widget [data-tt="start"]'))) fail('the case header has no Start timer button');
+    // the header timer is just the timer and the Billable / Non-billable dropdown: the timesheet is on the Time tab
+    const hdr = await page.evaluate(() => ({ buttons: [...document.querySelectorAll('#tt-widget button')].filter(b => b.offsetParent).map(b => b.dataset.tt).join(), text: document.getElementById('tt-widget').innerText }));
+    if (hdr.buttons !== 'start,bill' || /timesheet|details/i.test(hdr.text)) fail(`the header timer should be just Start and the Billable dropdown: ${JSON.stringify(hdr)}`);
+    // the dropdown before starting: Non-billable, then back to Billable (the next timer's; a timer started with it is that)
+    const pick = async (v) => { await page.click('#tt-widget [data-tt="bill"]'); await page.click(`#tt-widget .tt-menu [data-bill="${v}"]`); await page.waitForTimeout(150); };
+    await page.evaluate(() => openMockCase('MC-14', { silent: true })); await page.waitForTimeout(300);
+    await pick('0');
+    if (!/Non-billable/.test(await page.textContent('#tt-widget [data-tt="bill"]'))) fail('picking Non-billable in the header dropdown did not show it');
+    if (await page.isVisible('#tt-widget .tt-menu')) fail('the dropdown stays open after a pick');
+    // the header and the Time tab show, and change, the same choice
+    await page.evaluate(() => ttOpen()); await page.waitForTimeout(400);
+    if (!(await page.locator('#tt-form .bill button.no').count())) fail('the Time tab doesn\'t show the Non-billable picked in the header');
+    await page.click('#tt-form [data-tt="billable"]'); await page.waitForTimeout(200);
+    if (!/\$ Billable/.test(await page.textContent('#tt-widget [data-tt="bill"]'))) fail('$ Billable picked on the Time tab doesn\'t show in the header');
+    await pick('0');
+    if (!(await page.locator('#tt-form .bill button.no').count())) fail('Non-billable picked in the header again doesn\'t show on the Time tab');
+    // a timer started with Non-billable picked is non-billable
+    await page.click('#tt-widget [data-tt="start"]'); await page.waitForTimeout(800);
+    if (!timer() || timer().billable) fail(`a timer started with Non-billable picked in the header wasn't non-billable: ${JSON.stringify(timer())}`);
+    await page.evaluate(() => ttDiscard()); await page.waitForTimeout(600);
+    if (timer()) fail('Discard didn\'t discard the timer');
+    // a pick is for the case it was made on: another case opened goes back to its default
+    await pick('0');
+    await page.evaluate(() => openMockCase('MC-01', { silent: true })); await page.waitForTimeout(400);
+    if (!/\$ Billable/.test(await page.textContent('#tt-widget [data-tt="bill"]'))) fail('opening another case kept the Non-billable picked for the last one');
+    await page.evaluate(() => showTab('profile'));
+    // the dropdown by keyboard: Enter opens it on the current choice, ↓ moves, Esc closes back to the button, Enter picks
+    const kb = () => page.evaluate(() => ({ open: !!document.querySelector('#tt-widget .tt-menu.open'), bill: document.activeElement && document.activeElement.dataset.bill, onButton: document.activeElement && document.activeElement.dataset.tt === 'bill' }));
+    await page.focus('#tt-widget [data-tt="bill"]'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);
+    let k = await kb();
+    if (!k.open || k.bill !== '1') fail(`Enter on the dropdown should open it on the current choice: ${JSON.stringify(k)}`);
+    await page.keyboard.press('ArrowDown'); k = await kb();
+    if (k.bill !== '0') fail(`↓ should move to Non-billable: ${JSON.stringify(k)}`);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100); k = await kb();
+    if (k.open || !k.onButton) fail(`Esc should close the dropdown and go back to its button: ${JSON.stringify(k)}`);
+    await page.keyboard.press('Enter'); await page.waitForTimeout(100); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter'); await page.waitForTimeout(200); k = await kb();
+    if (k.open || !k.onButton || !/Non-billable/.test(await page.textContent('#tt-widget [data-tt="bill"]'))) fail(`↓ Enter should pick Non-billable and go back to the button: ${JSON.stringify(k)}`);
 
     // 2. one click: a billable timer on the open case (Carlos Mendoza, MC-14, a view-only library case)
     await page.evaluate(() => openMockCase('MC-14', { silent: true }));
@@ -108,7 +145,12 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!timer().resumed_at) fail('Resume did not resume the timer');
     // it survives a reload
     await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(1500);
-    if (!(await page.isVisible('#tt-widget .tt-clock')) || !/Carlos Mendoza/.test(await page.textContent('#tt-widget'))) fail('after a reload the running timer is not in the sidebar');
+    if (!(await page.isVisible('#tt-widget .tt-clock')) || !/Carlos Mendoza/.test(await page.getAttribute('#tt-widget .tt-clock', 'title'))) fail('after a reload the running timer (its case on the clock\'s tooltip) is not in the case header');
+    // the dropdown while it runs: switches the running timer
+    await pick('0'); await page.waitForTimeout(400);
+    if (timer().billable) fail('Non-billable in the header dropdown did not reach the running timer');
+    await pick('1'); await page.waitForTimeout(400);
+    if (!timer().billable) fail('Billable in the header dropdown did not reach the running timer');
     await page.evaluate(() => openMockCase('MC-14', { silent: true })); await page.waitForTimeout(300);
 
     // 3. Stop without saying what was done: refused, the Time tab opens on the description
@@ -208,7 +250,7 @@ const failures = []; const fail = (m) => failures.push(m);
 
     // 8. the case editor: no new selects/contenteditables, and typing in the tab isn't a case edit
     const added = await page.evaluate(() => document.querySelectorAll('#pane-time select, #pane-time [contenteditable], #tt-widget select, #tt-widget [contenteditable]').length);
-    if (added) fail(`the Time tab or the sidebar timer added ${added} select/contenteditable elements to the page`);
+    if (added) fail(`the Time tab or the header timer added ${added} select/contenteditable elements to the page`);
     await page.waitForTimeout(900);
     const content = (snap) => { const o = JSON.parse(snap || '{}'); delete o.savedAt; return JSON.stringify(o); };
     const snapBefore = await page.evaluate(() => localStorage.getItem('LSH_CURRENT_EDITOR_DRAFT_V1'));

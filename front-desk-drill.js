@@ -239,10 +239,10 @@
     document.head.appendChild(css);
 
     function buildUI() {
-        // 📞 Reception Simulator: in the sidebar right before 📊 My Dashboard (index.html, #sb-work).
-        const dash = $id('dash-open-btn');
-        if (dash && !$id('fdd-open-btn')) {
-            dash.insertAdjacentHTML('beforebegin', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Reception Simulator</button>`);
+        // 📞 Reception Simulator: in the sidebar after 📝 New Intake (index.html, #sb-work)
+        const work = $id('sb-work');
+        if (work && !$id('fdd-open-btn')) {
+            work.insertAdjacentHTML('beforeend', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Reception Simulator</button>`);
         }
         // Everyone signed in gets it, trainees too (their calls and scores are saved for their trainer);
         // a course link with ?drill=1 opens it as well.

@@ -374,7 +374,8 @@ const SAVED = [
     if (await page.locator('#sidebar-actions button:has-text(".ics")').count()) fail('the sidebar still offers .ics downloads');
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
     if (!(await page.locator('#tab-calendar').count())) fail('the Calendar tab is missing');
-    // A trainee's sidebar: the program, their cases, then New Intake, Download Case Summary, the timer, My Dashboard and the Blueprint.
+    // A trainee's sidebar: the program, their cases, then New Intake and the Reception Simulator. Download Case Summary, My Dashboard
+    // and the Blueprint are at the top right.
     // No Latest Updates, Intake Folder, Firm Calendar or other trainer tools; the case's own actions are at the bottom of the case.
     const side = await page.evaluate(() => ({
         groups: [...document.querySelectorAll('#sidebar-actions > .sb-group')].filter(g => g.offsetParent).map(g => g.id),
@@ -383,9 +384,49 @@ const SAVED = [
         oldButtons: [...document.querySelectorAll('#sidebar-actions button')].filter(b => /save case|archive|update saved|close case/i.test(b.textContent)).length,
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
-    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn,lbp-open-btn' || side.hidden.length || side.oldButtons
+    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,fdd-open-btn' || side.hidden.length || side.oldButtons
         // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
         || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
+    // The page's frame: the sidebar (and its logo) runs to the top, the announcements strip is over the main area only and has no
+    // "LEGAL SUPPORT HELP TRAINING INTERFACE - TRAINEE PORTAL" label; Download Case Summary, My Dashboard and the Blueprint are at
+    // its right; the date and time are right above the case's Case ID, outside the case; the timer is in the case header under the
+    // search bars, just the timer and a Billable / Non-billable dropdown (the timesheet is on the Time tab); no standing
+    // "Autosave active" note; the Profile tab has no SSN or DOB box (the header has them).
+    const frame = await page.evaluate(() => {
+        const r = (el) => el ? el.getBoundingClientRect() : null;
+        const side = r(document.getElementById('sidebar')), logo = r(document.getElementById('sidebar-logo')), strip = r(document.getElementById('classification-bar'));
+        const tt = document.getElementById('tt-widget'), bar = document.getElementById('cl-bar'), banner = document.getElementById('mock-banner');
+        return { sideTop: side.top, logoTop: logo.top, stripLeft: strip.left, sideRight: side.right, stripTop: strip.top,
+            label: !!document.getElementById('portal-title') || /TRAINING INTERFACE|PORTAL/.test(document.getElementById('classification-bar').textContent),
+            bannerUnderStrip: !banner || !banner.offsetParent || r(banner).top >= strip.bottom - 1,
+            ttInHeader: !!(tt && tt.closest('.header-card') && tt.offsetParent), ttUnderBar: !!(tt && bar && r(tt).top >= r(bar).bottom - 1 && r(tt).top - r(bar).bottom < 20),
+            ttInSidebar: !!(tt && tt.closest('#sidebar')), ttStart: !!(tt && tt.querySelector('[data-tt="start"]')),
+            profileSsn: !!document.getElementById('client-ssn-field').offsetParent, profileDob: !!document.getElementById('client-dob-field').offsetParent,
+            headSsn: !!document.getElementById('head-ssn-field').offsetParent,
+            top: [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id),
+            topInStrip: !!(document.getElementById('top-actions') && document.getElementById('top-actions').closest('#classification-bar')),
+            topRight: (() => { const a = document.getElementById('lbp-open-btn'); return a ? Math.round(innerWidth - a.getBoundingClientRect().right) : null; })(),
+            clockAbove: (() => { document.getElementById('capture-area').scrollTop = 0;
+                const c = r(document.querySelector('#case-clock-row .clock-widget')), id = r(document.getElementById('case-id-field')), card = r(document.querySelector('.header-card'));
+                return { aboveCard: c.bottom <= card.top + 1, rightEdge: Math.round(card.right - c.right), overId: c.left < id.right && c.right > id.left, inCase: !!document.getElementById('live-clock').closest('#capture-area') }; })(),
+            ttButtons: tt ? [...tt.querySelectorAll('button')].filter(b => b.offsetParent).map(b => b.dataset.tt || '').join() : '',
+            ttText: tt ? tt.innerText.replace(/\s+/g, ' ').trim() : '',
+            autosave: (document.getElementById('autosave-indicator') || {}).textContent };
+    });
+    if (frame.top.join() !== 'download-summary-btn,dash-open-btn,lbp-open-btn' || !frame.topInStrip || frame.topRight > 40) fail(`Download Case Summary, My Dashboard and the Blueprint should be at the top right: ${JSON.stringify(frame)}`);
+    if (!frame.clockAbove.aboveCard || Math.abs(frame.clockAbove.rightEdge) > 40 || !frame.clockAbove.overId || frame.clockAbove.inCase) fail(`the date and time should be right above the Case ID, outside the case: ${JSON.stringify(frame.clockAbove)}`);
+    if (frame.ttButtons !== 'start,bill' || /timesheet|details/i.test(frame.ttText)) fail(`the header timer should be just Start timer and the Billable dropdown: ${frame.ttButtons} "${frame.ttText}"`);
+    if (String(frame.autosave || '').trim()) fail(`the case actions bar still shows a standing note: "${frame.autosave}"`);
+    // in a narrow window the top-right buttons show just their icons and stay in view, and the date and time stay over the case
+    await page.setViewportSize({ width: 600, height: 800 }); await page.waitForTimeout(300);
+    const narrow = await page.evaluate(() => { const main = document.querySelector('#app-shell > main').getBoundingClientRect(), clock = document.querySelector('#case-clock-row .clock-widget').getBoundingClientRect();
+        const btns = ['download-summary-btn', 'dash-open-btn', 'lbp-open-btn'].map(id => document.getElementById(id).getBoundingClientRect());
+        return { inView: btns.every(b => b.left >= main.left && b.right <= innerWidth), labels: [...document.querySelectorAll('#top-actions .lbl')].filter(l => l.offsetParent).length, clock: clock.left >= main.left && clock.right <= main.right }; });
+    if (!narrow.inView || narrow.labels || !narrow.clock) fail(`a narrow window: the top-right buttons and the date and time should stay in view: ${JSON.stringify(narrow)}`);
+    await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(300);
+    if (frame.sideTop !== 0 || frame.logoTop > 40 || frame.stripLeft < frame.sideRight - 1 || frame.stripTop !== 0 || frame.label || !frame.bannerUnderStrip) fail(`the sidebar and its logo should run to the top, the strip over the main area only with no portal label: ${JSON.stringify(frame)}`);
+    if (!frame.ttInHeader || !frame.ttUnderBar || frame.ttInSidebar || !frame.ttStart) fail(`the timer should be in the case header, right under the search bars: ${JSON.stringify(frame)}`);
+    if (frame.profileSsn || frame.profileDob || !frame.headSsn) fail(`the Profile tab shouldn't show the SSN or DOB (the header does): ${JSON.stringify(frame)}`);
 
     // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files
     await page.evaluate(() => openIntakeFolder()); await page.waitForTimeout(400);   // trainees: from a course link (?intake=1); the sidebar button is for Admins
@@ -455,7 +496,9 @@ const SAVED = [
         tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
     const work = await admin.evaluate(() => [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id));
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
-    if (work.join() !== 'nm-open-btn,download-summary-btn,tt-widget,fdd-open-btn,dash-open-btn,lbp-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's 📞 Reception Simulator isn't right before My Dashboard: ${work.join()}`);
+    if (work.join() !== 'nm-open-btn,fdd-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's sidebar should have New Intake then 📞 Reception Simulator: ${work.join()}`);
+    const adminTop = await admin.evaluate(() => [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id));
+    if (adminTop.join() !== 'download-summary-btn,dash-open-btn,lbp-open-btn') fail(`an Admin's top right should be Download Case Summary, My Dashboard, Blueprint: ${adminTop.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');

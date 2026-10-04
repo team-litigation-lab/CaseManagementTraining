@@ -18,12 +18,12 @@
               where: 'Open it from your training platform, or go to the CMS sign-in page.',
               tip: 'Use the username you registered with, so your trainer can follow your work.',
               shot: 'blueprint/trainee-case-file.jpg', shotAlt: 'A case file open in the CMS: the client\'s name, contact, ID card, the case bar and the tabs' },
-            { icon: '🔑', title: 'Signing in and the sidebar', points: [
+            { icon: '🔑', title: 'Signing in and finding your way', points: [
                 'Register once with your full name, Batch ID and a username. Your trainer approves you.',
                 'Then sign in with just your username, or straight from your training platform by name.',
-                'The sidebar, top to bottom: your training program, My cases, then your work buttons.',
-                'Work buttons: 📝 New Intake, 📄 Download Case Summary, ⏱ the timer, 📞 Reception Simulator, 📊 My Dashboard and 🧭 Blueprint.'],
-              where: 'The sidebar on the left. Log Out is at the bottom of it.',
+                'The sidebar, top to bottom: your training program, My cases, 📝 New Intake and 📞 Reception Simulator.',
+                'Top right: 📄 Download Case Summary, 📊 My Dashboard and 🧭 Blueprint. The date and time are right above the case.'],
+              where: 'The sidebar on the left (Log Out at the bottom) · the buttons at the top right.',
               tip: 'Your trainer gives you the Batch ID: B and the day your batch started (DDMMYY), e.g. B300926.',
               shot: 'blueprint/trainee-sign-in.jpg', shotAlt: 'The CMS sign-in screen: Trainee Portal, username, Log In' },
             { icon: '🔍', title: 'Finding a case', points: [
@@ -62,8 +62,8 @@
             { icon: '📂', title: 'The case file: the rest of the tabs', points: [
                 'Settlement (BI / UM) and Litigation: offers, negotiations, the lawsuit, the opposing counsel and court dates.',
                 'Finance: the case\'s costs and the settlement breakdown.',
-                'Doc Hub: the case\'s documents. Drop files on it to add them.',
-                'Notes and Tasks: log every call and action, and set the follow-ups.',
+                'Doc Hub: the case\'s documents, renamed Case ID_Client_Type_Date as they\'re uploaded. Drop files on it, or 🔗 Link a web address; ☁ back them up to your Google Drive.',
+                'Notes and Tasks: log every call and action, and set the follow-ups. A web address pasted in becomes a link.',
                 '📅 Calendar and ⏱ Time: the attorneys\' calendars, and your time on the case.'],
               where: 'The second row of tabs on the open case.',
               tip: 'A note says who, what, when and the next step.',
@@ -80,8 +80,8 @@
                 '📅 Calendar tab: each attorney\'s calendar and the Firm / Staff calendar, already busy, as at a real firm.',
                 'An event scheduled from the case is linked to it and goes on the case\'s attorney\'s calendar.',
                 'It shows conflicts and the next free times, and flags weekends and times outside business hours.',
-                '⏱ The sidebar timer: start, pause and stop, billable or non-billable. The ⏱ Time tab has your timesheet.'],
-              where: 'The case\'s 📅 Calendar and ⏱ Time tabs · the timer in the sidebar.',
+                '⏱ The timer, under the search bars: ▶ Start timer and Billable / Non-billable. The ⏱ Time tab has your timesheet.'],
+              where: 'The case\'s 📅 Calendar and ⏱ Time tabs · the timer under the search bars at the top right of the case.',
               tip: 'Start the timer when you open a case, and say what you did when you stop it.',
               shot: 'blueprint/trainee-calendar.jpg', shotAlt: 'The case\'s Calendar tab: the attorneys\' week, already busy' },
             { icon: '📞', title: 'Reception Simulator', points: [
@@ -97,7 +97,7 @@
                 'Your trends over time, for completeness and for the writing in your notes.',
                 '📄 Download Case Summary: a PDF of the case that\'s open.',
                 'Your trainer sees the same reviews, so you can go through them together.'],
-              where: 'Sidebar → 📊 My Dashboard · 📄 Download Case Summary (PDF).',
+              where: 'Top right → 📊 My Dashboard · 📄 Download Case Summary.',
               tip: 'Open My Dashboard at the end of each day and fix what it flags.',
               shot: 'blueprint/trainee-dashboard.jpg', shotAlt: 'My Dashboard: the checks on a saved case, what was updated, and a note from the trainer' },
             { icon: '✅', title: 'Good habits', points: [
@@ -151,7 +151,7 @@
                 '👁 Watch live on a trainee: their actual screen, about a second behind: the case, the tab, what they type, the windows they open.',
                 'Click a trainee\'s row for their latest saved case, read only.',
                 '📊 My Dashboard opens the trainer roster: every trainee\'s case reviews and trends.'],
-              where: 'Master Control → Monitoring · sidebar → 📊 My Dashboard.',
+              where: 'Master Control → Monitoring · top right → 📊 My Dashboard.',
               tip: 'Nothing on their screen shows you\'re watching: tell the class trainers may look in. Ask them to keep the CMS in its own window.',
               shot: 'blueprint/trainer-monitoring.jpg', shotAlt: 'Master Control, Monitoring: trainees online, each with Watch live' },
             { icon: '📋', title: 'Case Logs', points: [
@@ -188,7 +188,7 @@
               shot: 'blueprint/trainer-library.jpg', shotAlt: 'The Training Library: the case files by program, with the PDF buttons' },
             { icon: '🪪', title: 'The case header', points: [
                 'The client\'s details at the top of every case: Client\'s Name, Contact, SSN, DOB, Attorney, Case Manager and Target Settlement.',
-                'The SSN is the Profile tab\'s too (typing in either changes both). The DOB is typed in the header only.',
+                'The SSN and the DOB are typed in the header only: the Profile tab no longer shows them.',
                 'Client\'s ID: a library client has a mock ID (marked SPECIMEN); any other client gets ⬆ Upload ID.',
                 'Click the ID to see it larger. An uploaded ID can be replaced or removed, and is kept with the case once it\'s saved.'],
               where: 'The top of the open case.',
@@ -225,7 +225,7 @@
                 'Saved cases: checks on each save, plus an AI review of uploaded documents (writing 1 to 5), in the trainer roster.',
                 'Trainer Notes: on each entry of a trainee\'s feed. The trainee reads them on their own 📊 My Dashboard.',
                 'Ping → Send as a task, for something they should do on the case.'],
-              where: 'Sidebar → 📊 My Dashboard → the trainee · Master Control → Broadcast & Ping.',
+              where: 'Top right → 📊 My Dashboard → the trainee · Master Control → Broadcast & Ping.',
               tip: '📞 Reception Simulator → 🎧 Saved calls opens any trainee\'s call: the scorecard, the review and the whole transcript.',
               shot: 'blueprint/trainer-roster.jpg', shotAlt: 'The Trainer Roster: each trainee\'s cases, last day and trends' },
             { icon: '🔍', title: 'Case Library and Latest Updates', points: [
@@ -263,7 +263,7 @@
                 '🧭 Blueprint → Trainee blueprint is the deck to share in Google Meet on day one.',
                 '⬇ Download PDF gives any blueprint as a handout. A slide\'s screenshot opens full size with a click.',
                 'Trainees only ever see the Trainee blueprint.'],
-              where: 'Sidebar footer → 👁 Trainee view · sidebar → 🧭 Blueprint.',
+              where: 'Sidebar footer → 👁 Trainee view · top right → 🧭 Blueprint.',
               tip: 'Walk the class through the Trainee blueprint, then let them open their first case.' },
             { icon: '🛠', title: 'When something goes wrong', points: [
                 'Can\'t sign in: approve them in Registrations, or lift a suspension in Users. Trainees sign in with just their username.',
@@ -412,12 +412,14 @@
         // getSession() answers as a trainee in Trainee view, so an Admin there gets the trainee deck only
         role: () => { const s = typeof getSession === 'function' ? getSession() : null; return !s ? null : s.userType === 'Admin' ? 'trainer' : 'trainee'; },
         version,
-        // the sidebar, right after 📊 My Dashboard, styled like it
+        // the top right, right after 📊 My Dashboard, styled like it
         mount: (html) => {
             const dash = document.getElementById('dash-open-btn');
             if (!dash) return;
             dash.insertAdjacentHTML('afterend', html);
-            document.getElementById('lbp-open-btn').className = dash.className;
+            const b = document.getElementById('lbp-open-btn');
+            b.className = dash.className;
+            b.innerHTML = '🧭 <span class="lbl">Blueprint</span>';   // (in a narrow window the label hides, as the other two's do)
         }
     };
 })();

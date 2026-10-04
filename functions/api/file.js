@@ -1,31 +1,17 @@
 import { json, requireSession, fileTypeIsInline } from '../_utils.js';
+import { mayOpen, validFileKey } from '../_file_access.js';
 
-// Who may open an uploaded file (having its link isn't enough), as saved cases are only their owner's and Admins':
-//   - Admins, and whoever uploaded it;
-//   - anyone, for a file an Admin uploaded (alert pictures, Training Library attachments are for everyone);
-//   - a file from before uploads recorded who sent them: whoever has a saved case it's attached to.
-async function mayOpen(db, session, object, key) {
-    if (session.userType === 'Admin') return true;
-    const by = object.customMetadata && object.customMetadata.uploadedBy;
-    if (by) {
-        if (by === session.username) return true;
-        const u = await db.prepare(`SELECT user_type FROM users WHERE username = ?`).bind(by).first();
-        return !!(u && u.user_type === 'Admin');
-    }
-    const id = (/^documents\/([0-9a-f-]{36})/i.exec(key) || [])[1];
-    if (!id) return false;
-    const row = await db.prepare(`SELECT 1 AS ok FROM case_repository WHERE owner_username = ? AND content LIKE ? LIMIT 1`).bind(session.username, '%' + id + '%').first();
-    return !!row;
-}
-
+// Opens or downloads an uploaded file, for whoever may open it (_file_access.js).
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
     if (!env.DOCUMENTS) return json({ success: false, error: 'Document storage is not configured.' }, 503);
 
-    const key = new URL(request.url).searchParams.get('key');
-    // Only uploaded documents (upload.js), never another part of the bucket.
-    if (!key || key.length > 1024 || key.includes('\0') || !key.startsWith('documents/') || key.includes('..')) {
+    const params = new URL(request.url).searchParams;
+    const key = params.get('key');
+    // ?name=: the name the case shows for the file now (a file uploaded before its case had a Case ID is renamed when it gets one)
+    const asName = /^[A-Za-z0-9._-]{1,200}$/.test(params.get('name') || '') && !/^\./.test(params.get('name')) ? params.get('name') : '';
+    if (!validFileKey(key)) {
         return json({ success: false, error: 'Invalid file key.' }, 400);
     }
 
@@ -43,6 +29,7 @@ export async function onRequestGet({ request, env }) {
         headers.set('Content-Type', 'application/octet-stream');
         headers.set('Content-Disposition', `attachment; filename="${name}"`);
     }
+    if (asName) headers.set('Content-Disposition', `${/^\s*inline/i.test(headers.get('Content-Disposition') || '') ? 'inline' : 'attachment'}; filename="${asName}"`);
     headers.set('etag', object.httpEtag);
     headers.set('Cache-Control', 'private, no-store');
     headers.set('X-Content-Type-Options', 'nosniff');

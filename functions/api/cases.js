@@ -1,12 +1,8 @@
-import { json, requireSession, getSiteState } from '../_utils.js';
+import { json, requireSession } from '../_utils.js';
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
     const { session } = auth;
-    const state = await getSiteState(env.DB);
-    if (state.locked && session.userType !== 'Admin') {
-        return json({ success: false, error: 'Site is currently locked.' }, 403);
-    }
     const url = new URL(request.url);
     let query = `SELECT * FROM cases`;
     const conditions = [];
@@ -34,10 +30,6 @@ export async function onRequestPost({ request, env }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
     const { session } = auth;
-    const state = await getSiteState(env.DB);
-    if (state.locked && session.userType !== 'Admin') {
-        return json({ success: false, error: 'Site is currently locked. Changes are disabled.' }, 403);
-    }
     const db = env.DB;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }

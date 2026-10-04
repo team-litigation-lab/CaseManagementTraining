@@ -113,7 +113,7 @@ ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2,
         if (!mc && !f) return;
         const body = mc ? `<div class="cid-big">${mockIdSvg(mc)}</div><p class="cid-note">A mock ID made from the Training Library file, for practice. It's a specimen, not a real ID.</p>`
             : `<div class="cid-big"><img src="${esc(fileUrl(f.key))}" alt="Client's ID"></div>
-               <p class="cid-note">Uploaded${f.at ? ' ' + esc(new Date(f.at).toLocaleDateString()) : ''}${f.by ? ' by ' + esc(f.by) : ''}. It's kept with the case once the case is saved.</p>
+               <p class="cid-note">${f.name ? `<b title="${f.orig ? 'Original file: ' + esc(f.orig) : ''}">${esc(f.name)}</b><br>` : ''}Uploaded${f.at ? ' ' + esc(new Date(f.at).toLocaleDateString()) : ''}${f.by ? ' by ' + esc(f.by) : ''}. It's kept with the case once the case is saved.</p>
                ${canUpload() ? '<div class="cid-actions"><button type="button" onclick="lshClientId.pick()">⬆ Replace</button><button type="button" class="cid-remove" onclick="lshClientId.remove()">🗑 Remove</button></div>' : ''}`;
         document.body.insertAdjacentHTML('beforeend', `<div id="cid-modal" class="cid-modal no-print" role="dialog" aria-label="Client's ID" onclick="if(event.target===this)lshClientId.close()">
             <div class="cid-box"><div class="cid-head"><b>🪪 Client's ID</b><button type="button" class="cid-x" onclick="lshClientId.close()" aria-label="Close">✕</button></div>${body}</div></div>`);
@@ -153,10 +153,11 @@ ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2,
         busy = true;
         const box = $id('client-id-card'); if (box) { box.dataset.sig = ''; box.innerHTML = '<div class="cid-empty"><span>Uploading…</span></div>'; }
         try {
-            const up = await uploadFileToR2(await shrink(file), 'client-id');
+            const named = typeof caseFileName === 'function' ? caseFileName('Client ID', 'id.jpg') : file.name;   // (shrink makes a JPG)
+            const up = await uploadFileToR2(await shrink(file), 'client-id', named);
             const who = typeof getSession === 'function' && getSession();
             closeView();
-            setFile({ key: up.key, name: file.name, at: new Date().toISOString(), by: (who && (who.fullName || who.username)) || '' });
+            setFile({ key: up.key, name: named, orig: file.name, at: new Date().toISOString(), by: (who && (who.fullName || who.username)) || '' });
             toast('Client\'s ID uploaded. Save the case to keep it with the case.', 'success');
         } catch (e) {
             toast(e && e.message ? e.message : 'The ID couldn\'t be uploaded. Please try again.', 'error');

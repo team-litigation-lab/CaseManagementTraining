@@ -47,6 +47,8 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         CREATE TABLE heartbeats (username TEXT PRIMARY KEY, full_name TEXT, batch_id TEXT, user_type TEXT, current_case TEXT, last_seen TEXT);
         CREATE TABLE activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_username TEXT, actor_batch TEXT, action TEXT, details TEXT, created_at TEXT DEFAULT (datetime('now')));
         CREATE TABLE site_state (id INTEGER PRIMARY KEY, paused INTEGER, locked INTEGER, locked_by_batch TEXT);
+        CREATE TABLE cases (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, batch_id TEXT, case_id TEXT, client_name TEXT, phase TEXT, med_total TEXT, reason TEXT, updated_at TEXT);
+        CREATE TABLE case_id_counter (id INTEGER PRIMARY KEY, value INTEGER NOT NULL); INSERT INTO case_id_counter (id, value) VALUES (1, 0);
         INSERT INTO site_state VALUES (1, 0, 1, 'B300926');
         CREATE TABLE announcements (id INTEGER PRIMARY KEY, text TEXT);
         CREATE TABLE alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, bg_color TEXT, image TEXT, duration_seconds INTEGER, start_at TEXT, stopped INTEGER DEFAULT 0);
@@ -70,6 +72,13 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     // ---- no lock in the site state ----
     const st = await (await state.onRequestGet({ request: req('/api/state', 'tia'), env })).json();
     if ('locked' in st || 'lockedBy' in st) fail(`/api/state still reports a lock: ${JSON.stringify(st)}`);
+    // and a lock left set in the database (nothing can clear it any more) no longer refuses trainees anywhere
+    for (const [path, method] of [['functions/api/cases.js', 'Get'], ['functions/api/cases.js', 'Post'], ['functions/api/case-id.js', 'Post']]) {
+        const mod = await imp(path);
+        const res = await mod['onRequest' + method]({ request: req('/api/x', 'tia', method === 'Post' ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' } : {}), env }).catch(e => ({ status: 500, json: async () => ({ error: e.message }) }));
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 403 && /locked/i.test(body.error || '')) fail(`${path} (${method}) still refuses trainees because of the old site lock`);
+    }
 
     // ---- 🧹 Clear old data ----
     const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();

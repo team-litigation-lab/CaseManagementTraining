@@ -122,8 +122,9 @@
         if (holder) holder.innerHTML = '<span class="kx-hint" style="margin:0;font-style:italic;">Uploading…</span>';
         try {
             if (typeof uploadFileToR2 !== 'function') throw new Error('Uploads aren\'t available on this page.');
-            const up = await uploadFileToR2(file, 'case-doc');
-            if (holder) holder.innerHTML = `<a href="${esc(up.url)}" download="${esc(up.name)}" data-r2-key="${esc(up.key)}" data-r2-mime="${esc(up.mime)}" target="_blank" rel="noopener" class="doc-file-link kx-dl-link">📄 ${esc(up.name)}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="kx-dl-x no-print" title="Remove the letter">×</button>`;
+            const named = typeof caseFileName === 'function' ? caseFileName('Demand Letter', file.name) : file.name;
+            const up = await uploadFileToR2(file, 'case-doc', named);
+            if (holder) holder.innerHTML = `<a href="${esc(up.url)}" download="${esc(named)}" data-r2-key="${esc(up.key)}" data-r2-mime="${esc(up.mime)}" data-orig-name="${esc(file.name)}" title="Original file: ${esc(file.name)}" target="_blank" rel="noopener" class="doc-file-link kx-dl-link">📄 ${esc(named)}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="kx-dl-x no-print" title="Remove the letter">×</button>`;
             toast('Demand letter attached. Save the case to keep it.', 'info');
         } catch (err) {
             if (holder) holder.innerHTML = '';
@@ -215,7 +216,7 @@
 
     // After a case loads (or the editor is cleared): redraw what depends on the saved sections.
     window.afterKeyedApplied = function () {
-        window.applyReportKind(); window.calcWages(); window.calcSettlement(); partiesSummary(); window.addDemandLetterBoxes();
+        window.applyReportKind(); window.calcWages(); window.calcSettlement(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
         ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
     };
 
@@ -355,6 +356,129 @@
         toast(viewOnly() ? 'Task added to this case\'s Tasks and saved. You can edit it and change who it\'s assigned to.' : 'Task added to this case\'s Tasks. Save the case to keep it.', 'success', 4500);
     };
     window.dismissTask = function (id) { savePending(pending().filter(x => String(x.id) !== String(id))); renderTaskCards(); };
+
+    /* ---------- Hyperlinks ----------
+       - Doc Hub: a row's 🔗 Link attaches a web address instead of a file (a shared folder, a provider portal, a website).
+       - Case fields: a web address pasted into a text field becomes a link; select some words and paste an address
+         over them and the words become the link.
+       - A click on a link in a field shows where it goes, with Open ↗ (a new tab) and, where the field can be
+         edited, Remove link. (A plain click in an editable field only puts the cursor there.)
+       Only http(s) addresses are linked; cleanCaseHtml (app.js) keeps links safe when a case opens. */
+    const URL_RE = /(?:https?:\/\/|www\.)[^\s<>"']+[^\s<>"'.,;:!?)\]]/gi;
+    const webHref = (u) => (/^www\./i.test(u) ? 'https://' + u : u);
+    const safeWeb = (u) => { try { const x = new URL(webHref(String(u || '').trim())); return /^https?:$/.test(x.protocol) ? x.href : ''; } catch (e) { return ''; } };
+    const linkTag = (href, text) => `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
+    function linkedHtml(text, multiline) {
+        const line = (t) => esc(t).replace(/\r?\n/g, multiline ? '<br>' : ' ');
+        let out = '', last = 0;
+        text.replace(URL_RE, (m, off) => { const h = safeWeb(m); out += line(text.slice(last, off)) + (h ? linkTag(h, m) : esc(m)); last = off + m.length; return m; });
+        return out + line(text.slice(last));
+    }
+    // The web addresses in an element's text become links (text kept as text, e.g. a library case's Notes and Tasks,
+    // which are saved as text: training-library.js keeps a link there as its address).
+    window.lshLinkify = function (el) {
+        if (!el) return;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement && n.parentElement.closest('a') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+        const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(n => {
+            URL_RE.lastIndex = 0;
+            if (!URL_RE.test(n.nodeValue)) return;
+            URL_RE.lastIndex = 0;
+            const tpl = document.createElement('template');
+            tpl.innerHTML = linkedHtml(n.nodeValue, false);
+            n.replaceWith(tpl.content);
+        });
+    };
+    window.addDocLink = function (btn) {
+        const row = btn && btn.closest('tr'), holder = row && row.querySelector('.doc-attachment'); if (!holder || viewOnly()) return;
+        const typed = (prompt('Paste the web address (link) for this document:', 'https://') || '').trim();
+        if (!typed || typed === 'https://') return;
+        const href = safeWeb(typed);
+        if (!href) { toast('That isn\'t a web address. It should start with https:// (or www.).', 'error', 5000); return; }
+        const u = new URL(href);
+        const name = (prompt('A name for the link (optional):', '') || '').trim() || (u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? u.pathname : '')).slice(0, 80);
+        holder.innerHTML = `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" class="doc-file-link doc-web-link" title="${esc(href)}" style="color:#2563eb;font-weight:700;">🔗 ${esc(name)}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="text-red-300 no-print" style="margin-left:4px;">×</button>`;
+        holder.dispatchEvent(new Event('input', { bubbles: true }));
+        toast('Link added. Save the case to keep it.', 'info');
+    };
+    // Doc Hub rows saved before the 🔗 Link button get one
+    window.addDocLinkButtons = function () {
+        document.querySelectorAll('#doc-body tr').forEach(tr => {
+            if (tr.querySelector('.doc-link-btn')) return;
+            const up = tr.querySelector('label.hub-btn'); if (!up) return;
+            up.insertAdjacentHTML('afterend', ' <button type="button" class="hub-btn doc-link-btn" style="padding:6px 8px;" onclick="addDocLink(this)" title="Attach a web link instead (a shared folder, a provider portal, a website)">🔗 Link</button>');
+        });
+    };
+    // (bubbling: a field's own paste handler, and the view-only guard, come first and can stop it)
+    document.addEventListener('paste', (e) => {
+        if (e.defaultPrevented) return;
+        const el = e.target && e.target.closest && e.target.closest('#capture-area [contenteditable="true"]');
+        if (!el || el.hasAttribute('data-fmt') || el.closest('[data-free-edit]')) return;
+        const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+        URL_RE.lastIndex = 0;
+        if (!text || !URL_RE.test(text)) return;
+        URL_RE.lastIndex = 0;
+        e.preventDefault();
+        const one = text.trim(), sel = window.getSelection();
+        const h = /^\S+$/.test(one) ? safeWeb(one) : '';
+        if (h && sel && !sel.isCollapsed && el.contains(sel.anchorNode) && sel.toString().trim()) {
+            document.execCommand('insertHTML', false, linkTag(h, sel.toString()));   // the selected words become the link
+            return;
+        }
+        document.execCommand('insertHTML', false, linkedHtml(text, el.classList.contains('multiline-field')));
+    });
+    // a click on a link in a field: where it goes, Open ↗, Remove link
+    function linkPop() {
+        let p = $id('lnk-pop');
+        if (!p) {
+            document.body.insertAdjacentHTML('beforeend', '<div id="lnk-pop" class="no-print" role="dialog" aria-label="Link"></div>');
+            p = $id('lnk-pop');
+            const st = document.createElement('style');
+            st.textContent = `#lnk-pop{position:fixed;z-index:2980;display:none;align-items:center;gap:8px;max-width:min(460px,92vw);background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 10px 26px rgba(15,33,72,.2);padding:6px 8px;font-size:12px}
+                #lnk-pop.open{display:flex}
+                #lnk-pop .lp-url{flex:1;min-width:0;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                #lnk-pop a.lp-open,#lnk-pop button{flex-shrink:0;border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:6px;padding:3px 8px;font-weight:700;font-size:11px;cursor:pointer;text-decoration:none}
+                #lnk-pop a.lp-open{background:#2563eb;border-color:#2563eb;color:#fff}
+                #lnk-pop button:hover{border-color:#f97316;color:#c2410c}
+                #capture-area [contenteditable] a[href]{color:#2563eb;text-decoration:underline;cursor:pointer}`;
+            document.head.appendChild(st);
+        }
+        return p;
+    }
+    let popFor = null;   // the link the pop-up is showing
+    const hideLinkPop = () => { const p = $id('lnk-pop'); if (p) p.classList.remove('open'); popFor = null; };
+    function placeLinkPop() {
+        const pop = $id('lnk-pop'); if (!pop || !popFor) return;
+        if (!document.contains(popFor)) { hideLinkPop(); return; }
+        const r = popFor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+        if (r.bottom < 0 || r.top > innerHeight) { hideLinkPop(); return; }   // scrolled out of sight
+        pop.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+        pop.style.top = (r.bottom + 6 + h > innerHeight ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+    }
+    function canEditLink(a) {
+        const area = $id('capture-area'); if (!area || !area.classList.contains('mock-ro')) return true;
+        return !!((a.closest('.mock-open') && area.classList.contains('mock-areas-ready')) || (a.closest('.mock-upd') && area.classList.contains('mock-upd-ready')));
+    }
+    document.addEventListener('click', (e) => {
+        const p = $id('lnk-pop');
+        if (p && p.contains(e.target)) return;
+        const a = e.target && e.target.closest && e.target.closest('#capture-area [contenteditable] a[href]');
+        if (!a) { hideLinkPop(); return; }
+        e.preventDefault();
+        const href = safeWeb(a.getAttribute('href'));
+        const pop = linkPop();
+        pop.innerHTML = `<span class="lp-url" title="${esc(href || a.getAttribute('href'))}">🔗 ${esc(href || 'not a web address')}</span>`
+            + (href ? `<a class="lp-open" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Open ↗</a>` : '')
+            + (canEditLink(a) ? '<button type="button" data-lp="unlink">Remove link</button>' : '');
+        const b = pop.querySelector('[data-lp="unlink"]');
+        if (b) b.addEventListener('click', () => { const field = a.closest('[contenteditable]'); a.replaceWith(document.createTextNode(a.textContent)); hideLinkPop(); if (field) field.dispatchEvent(new Event('input', { bubbles: true })); });
+        const o = pop.querySelector('.lp-open'); if (o) o.addEventListener('click', () => setTimeout(hideLinkPop, 0));
+        pop.classList.add('open');
+        popFor = a; placeLinkPop();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideLinkPop(); });
+    document.addEventListener('scroll', placeLinkPop, true);   // the pop-up stays by its link
+    window.addEventListener('resize', placeLinkPop);
 
     /* ---------- Location of Incident: one line ---------- */
     // Enter already finishes the field (app.js); a pasted address comes in as one line of plain text.

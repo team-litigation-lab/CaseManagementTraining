@@ -1,6 +1,6 @@
 // CMS Blueprint test (lsh-blueprint.js with the CMS's blueprint-content.js) in a browser: static files, the API answered by the test,
 // jsPDF served from node_modules in place of cdnjs.
-// Checks: a trainee has 🧭 Blueprint in the sidebar, after 📊 My Dashboard; it opens the Trainee
+// Checks: a trainee has 🧭 Blueprint at the top right, after 📊 My Dashboard; it opens the Trainee
 // blueprint only (no Trainer tab), the trainee deck never names the Training Library or the
 // trainer tools, ◀ ▶, the ← → keys and the contents strip go through every slide, Esc closes it,
 // and ⬇ Download PDF saves the trainee PDF (one page a slide, with the slides' titles and the version stamp). An Admin
@@ -105,7 +105,7 @@ let base;
     // ---- a trainee, on a laptop ----
     let page = await openPage(browser, { width: 1366, height: 768 }, TRAINEE);
     const side = await page.evaluate(() => { const b = document.getElementById('lbp-open-btn'); return { shown: !!(b && b.offsetParent), text: b && b.textContent.trim(), prev: b && b.previousElementSibling && b.previousElementSibling.id }; });
-    if (!side.shown || side.text !== '🧭 Blueprint' || side.prev !== 'dash-open-btn') fail(`the sidebar's Blueprint button: ${JSON.stringify(side)}`);
+    if (!side.shown || side.text !== '🧭 Blueprint' || side.prev !== 'dash-open-btn') fail(`the Blueprint button (top right, after My Dashboard): ${JSON.stringify(side)}`);
     await page.click('#lbp-open-btn'); await page.waitForTimeout(300);
     const t = await page.evaluate(() => ({ open: LSHBlueprint.isOpen(), deck: document.getElementById('lbp-slide').dataset.deck,
         tabs: !!document.getElementById('lbp-tabs').offsetParent, count: document.getElementById('lbp-count').textContent }));

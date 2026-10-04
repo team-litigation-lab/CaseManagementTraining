@@ -117,7 +117,7 @@
     function buildUI() {
         const main = $id('capture-area') && $id('capture-area').parentElement;
         if (main && !$id('intake-bar')) {
-            $id('capture-area').insertAdjacentHTML('beforebegin', `
+            ($id('case-clock-row') || $id('capture-area')).insertAdjacentHTML('beforebegin', `
             <div id="intake-bar" class="no-print" role="region" aria-label="Intake file">
                 <span class="ib-tag">📥 INTAKE FILE</span>
                 <span class="ib-state" id="ib-state"></span>

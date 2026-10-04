@@ -115,7 +115,7 @@ export class GoogleError extends Error {
     constructor(message, status = 502, code = 'GOOGLE_ERROR') { super(message); this.status = status; this.code = code; }
 }
 
-async function tokenRequest(params) {
+export async function tokenRequest(params) {
     const r = await fetch(TOKEN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -141,6 +141,33 @@ export async function revokeToken(token) {
     try {
         await fetch(REVOKE_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token }).toString() });
     } catch (e) { /* best effort */ }
+}
+
+/* Google Calendar and Google Drive backup (_google_drive.js) use the same Google sign-in (one OAuth client), so one
+   person's Google account gives the CMS one grant covering both, and revoking any token of it revokes the whole grant.
+   Before revoking, each side checks the other isn't connected to the same Google account (otherGoogleLink); a sign-in
+   that comes back without a refresh token (the account had already said yes) can use the other side's, whose grant now
+   includes the new permission (sharedRefresh). */
+export async function otherGoogleLink(db, table, username, email) {
+    if (!email) return null;
+    try { return await db.prepare(`SELECT * FROM ${table} WHERE username = ? AND google_email = ?`).bind(username, email).first(); }
+    catch (e) { return null; }   // (the other side's table isn't made until it's first used)
+}
+export async function sharedRefresh(env, link, scopes) {
+    if (!link || !link.refresh_token) return null;
+    try {
+        const refreshToken = await unseal(env, link.refresh_token);
+        const { ok, data } = await tokenRequest({ client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, refresh_token: refreshToken, grant_type: 'refresh_token' });
+        const granted = String((data && data.scope) || '').split(/\s+/);
+        if (!ok || !scopes.every(s => granted.includes(s))) return null;
+        return { refreshToken, accessToken: data.access_token, expiresIn: Number(data.expires_in) || 3600 };
+    } catch (e) { return null; }
+}
+// Give Google access back, unless the other side still uses the same Google account's grant.
+export async function revokeUnlessShared(db, otherTable, username, email, token) {
+    if (await otherGoogleLink(db, otherTable, username, email)) return false;
+    await revokeToken(token);
+    return true;
 }
 
 export async function readLink(db, username) {
