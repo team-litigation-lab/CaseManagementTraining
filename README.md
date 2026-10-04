@@ -289,8 +289,8 @@ With the admin password set (and `PORTAL_ONLY` not `off`), trainees sign in only
 
 The top of the case is the client's demographics. Each box has its label above it and a border you can see, empty or filled:
 - **Client's Name**;
-- **Contact**, **SSN** and **Target Settlement**;
-- **Attorney** and **Case Manager**.
+- **Contact**, **SSN** and **DOB**;
+- **Attorney**, **Case Manager** and **Target Settlement**.
 
 The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in either changes both. Only the Profile tab's is saved, so cases saved before keep every field where it was (`data-mirror` in `app.js`).
 

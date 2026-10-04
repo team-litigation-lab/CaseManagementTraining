@@ -11,7 +11,7 @@
 //     Show all), "Also matching" switches to another; search by name, company, phone in any format, email, claim number,
 //     client or case number; no match says so;
 //   - a case on the card opens that case file and closes the card; Esc, ✕ and a click outside close it; the bar's first Esc
-//     closes its list, the second clears it; typing in the bar isn't an edit to the case (a view-only file too);
+//     closes its list, the second clears it; typing in the bar isn't an edit to the case (an editable file, and a view-only one);
 //   - a trainee never sees the Training Library's name or its MC- numbers; the card fits a phone; no page errors.
 // Usage: node .github/scripts/contacts.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -165,12 +165,14 @@ let base;
     if (!/No contact matches/.test(l.text)) fail('a search with no match should say so');
     await type(page, 'st'); l = await list(page);
     if (l.names.length !== 6 || !/\+\d+ more/.test(l.text)) fail(`a long list shows 6 and "+N more": ${l.names.length} ${l.text.slice(-60)}`);
-    // ↓ to the last one: it is scrolled into view before Enter pops it up
+    // ↓ to the last one: on a short window it is scrolled into view before Enter pops it up
+    await page.setViewportSize({ width: 1366, height: 600 }); await type(page, 'st');
     for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowDown');
     await page.waitForTimeout(100);
     const seen = await page.evaluate(() => { const on = document.querySelector('#ct-bar-results button.on'), r = on.getBoundingClientRect();
         const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { name: on.querySelector('b').textContent, visible: !!(at && on.contains(at)) }; });
     if (!seen.visible) fail(`the highlighted contact (${seen.name}) is off screen`);
+    await page.setViewportSize({ width: 1366, height: 800 });
     // Tab goes on past the list (its rows are reached with the arrows), and the focus is not lost
     await page.keyboard.press('Tab'); await page.waitForTimeout(250);
     const tabbed = await page.evaluate(() => ({ inList: document.getElementById('ct-bar-results').contains(document.activeElement), body: document.activeElement === document.body }));
@@ -206,6 +208,20 @@ let base;
     // the drop-down never names the Training Library either
     await type(page, 'santos'); l = await list(page);
     if (/training library|\bMC-\d{2}\b/i.test(l.text)) fail('a trainee sees the Training Library in the contacts list');
+    await page.context().close();
+
+    // ---- a trainee on a file they can edit (Case Management): typing in the contacts bar isn't an edit to the case ----
+    page = await openPage(browser, { width: 1366, height: 800 }, TRAINEE, '?program=cm');
+    await page.evaluate(() => openMockCase('MC-05', { silent: true })); await page.waitForTimeout(900);
+    const sig = () => page.evaluate(() => ({ unsynced: hasUnsyncedChanges(), draft: JSON.stringify(Object.keys(localStorage).filter(k => /draft/i.test(k)).map(k => localStorage.getItem(k))) }));
+    const s0 = await sig();
+    await type(page, 'hendricks'); await page.keyboard.press('Enter'); await page.waitForTimeout(200); await page.keyboard.press('Escape'); await page.waitForTimeout(1500);
+    const s1 = await sig();
+    if (s1.unsynced !== s0.unsynced || s1.draft !== s0.draft) fail(`searching contacts on an editable file counted as an edit: ${JSON.stringify({ before: s0.unsynced, after: s1.unsynced, draftChanged: s1.draft !== s0.draft })}`);
+    // (the check can fail: a real edit on the same file shows up)
+    await page.evaluate(() => { const f = document.getElementById('client-name-field'); f.focus(); document.execCommand('insertText', false, ' X'); }); await page.waitForTimeout(1500);
+    const s2 = await sig();
+    if (!s2.unsynced && s2.draft === s0.draft) fail('an edit to the client\'s name didn\'t count as an edit (so the check above proves nothing)');
     await page.context().close();
 
     // ---- a trainee on a Front Desk Drill call: a case opened from a card is the call's pick, view only ----
