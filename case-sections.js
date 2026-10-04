@@ -3,7 +3,9 @@
    ---------------------------------------------------------
      - Parties Involved (passengers, at-fault party, witnesses…)
      - Authorized to Access Case (Profile)
-     - Lost Wages, Demand and Settlement tabs, with their math
+     - Lost Wages, Demand and Settlement tabs, with their math; each
+       demand can carry its demand letter (⬆ Upload Demand)
+     - Opposing Counsel (Litigation): the defense attorneys
      - Report Type on the Police Report tab (Incident Report for
        premises cases with no police report)
      - Medical Chronology: drag rows to reorder, or sort by date
@@ -98,10 +100,61 @@
                 <div><label>Offer / Response</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency"></div></div>
             </div>
             <label style="margin-top:10px;">Enclosures &amp; Notes</label>
-            <div contenteditable="true" data-ph="Records and bills enclosed, wage loss, photos, follow-up dates…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>`;
+            <div contenteditable="true" data-ph="Records and bills enclosed, wage loss, photos, follow-up dates…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>
+            ${demandLetterHTML()}`;
         box.appendChild(div);
         placeholders(div);
         div.querySelector('[contenteditable="true"]').focus();
+    };
+
+    // The demand letter on a demand: uploaded to the case's file storage (/api/upload, as Doc Hub files are) and linked
+    // here, so it's saved with the demand. A demand saved before this has no letter box: it gets one when the case opens.
+    function demandLetterHTML() {
+        return `<div class="kx-dl"><label>Demand Letter</label>
+                <div class="kx-dl-row"><span class="kx-dl-file"></span>
+                <label class="kx-dl-btn no-print" title="Attach the demand letter (PDF, Word or a scan, up to 2 MB)">⬆ Upload Demand<input type="file" accept=".pdf,.doc,.docx,image/*" style="display:none" onchange="uploadDemandLetter(this)"></label></div></div>`;
+    }
+    window.uploadDemandLetter = async function (input) {
+        const file = input.files && input.files[0]; if (!file) return;
+        const row = input.closest('.kx-row'), holder = row && row.querySelector('.kx-dl-file');
+        const max = typeof DOC_UPLOAD_MAX_BYTES === 'number' ? DOC_UPLOAD_MAX_BYTES : 2 * 1024 * 1024;
+        if (file.size > max) { toast(`That file is too large to attach (max ${Math.round(max / 1048576)} MB). Try a smaller file or a compressed copy.`, 'error', 6000); input.value = ''; return; }
+        if (holder) holder.innerHTML = '<span class="kx-hint" style="margin:0;font-style:italic;">Uploading…</span>';
+        try {
+            if (typeof uploadFileToR2 !== 'function') throw new Error('Uploads aren\'t available on this page.');
+            const up = await uploadFileToR2(file, 'case-doc');
+            if (holder) holder.innerHTML = `<a href="${esc(up.url)}" download="${esc(up.name)}" data-r2-key="${esc(up.key)}" data-r2-mime="${esc(up.mime)}" target="_blank" rel="noopener" class="doc-file-link kx-dl-link">📄 ${esc(up.name)}</a> <button type="button" onclick="this.parentElement.innerHTML=''" class="kx-dl-x no-print" title="Remove the letter">×</button>`;
+            toast('Demand letter attached. Save the case to keep it.', 'info');
+        } catch (err) {
+            if (holder) holder.innerHTML = '';
+            toast('Could not attach that file: ' + (err && err.message ? err.message : 'unknown error'), 'error', 6000);
+        }
+        input.value = '';
+    };
+    // demands saved before the letter box existed get one
+    window.addDemandLetterBoxes = function () {
+        document.querySelectorAll('#kx-demand > .kx-row').forEach(r => { if (!r.querySelector('.kx-dl')) r.insertAdjacentHTML('beforeend', demandLetterHTML()); });
+    };
+
+    /* ---------- Opposing Counsel (Litigation) ---------- */
+    window.addCounsel = function () {
+        const box = $id('kx-counsel'); if (!box) return;
+        const div = document.createElement('div');
+        div.className = 'kx-row pdf-card border-l-4 border-red-700 relative bg-white p-5 shadow-sm';
+        div.innerHTML = `${removeBtn}
+            <div class="grid grid-cols-3 gap-5">
+                <div><label>Attorney</label><div contenteditable="true" data-ph="Defense attorney's name" data-fmt="name"></div></div>
+                <div><label>Law Firm</label><div contenteditable="true" data-ph="e.g. Voss & Tate LLP"></div></div>
+                <div><label>Represents</label><div contenteditable="true" data-ph="The defendant they represent"></div></div>
+                <div><label>Phone</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div>
+                <div><label>Email</label><div contenteditable="true" data-ph="name@firm.com" data-fmt="email"></div></div>
+                <div><label>Assistant / Paralegal</label><div contenteditable="true" data-ph="Name and extension"></div></div>
+            </div>
+            <label style="margin-top:10px;">Address &amp; Notes</label>
+            <div contenteditable="true" data-ph="Mailing address, service preferences, deposition and discovery contacts…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>`;
+        box.appendChild(div);
+        placeholders(div);
+        const first = div.querySelector('[contenteditable="true"]'); if (first) first.focus();
     };
 
     /* ---------- Lost Wages ---------- */
@@ -162,8 +215,8 @@
 
     // After a case loads (or the editor is cleared): redraw what depends on the saved sections.
     window.afterKeyedApplied = function () {
-        window.applyReportKind(); window.calcWages(); window.calcSettlement(); partiesSummary();
-        ['kx-parties', 'kx-authorized', 'kx-demand'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
+        window.applyReportKind(); window.calcWages(); window.calcSettlement(); partiesSummary(); window.addDemandLetterBoxes();
+        ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
     };
 
     /* ---------- Medical Chronology: reorder ---------- */

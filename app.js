@@ -629,7 +629,7 @@
         const CASE_HANDLER_FNS = new Set(['handleDocUpload', 'handleOtherSystem', 'revertOther', 'addChronoDate', 'updateTotals', 'afterKeyedApplied',
             'window.afterKeyedApplied', 'applyReportKind', 'calcSettlement', 'calcWages', 'toggleDriverInsuredExtra', 'toggleOwnerExtra', 'updatePhaseDisplay',
             'generateCaseId', 'sortChronology', 'docDropCat', 'docDrop', 'docDragOver', 'docDragLeave', 'addRow', 'addBI', 'addPIPUM', 'addLien',
-            'addFacility', 'addChronology', 'addDocument', 'addParty', 'addAuthorized', 'addDemand', 'showTab',
+            'addFacility', 'addChronology', 'addDocument', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'uploadDemandLetter', 'showTab',
             'lshClientId.pick', 'lshClientId.open', 'lshClientId.remove']);
         const CASE_HANDLER_ARG = /^(?:'[\w .:#\-]*'|-?\d+(?:\.\d+)?|this|this\.(?:id|value|checked)|event|true|false|null)$/;
         function caseHandlerOk(code) {
@@ -790,6 +790,7 @@
             applyKeyed(content.keyed, root);
             // the header's SSN shows the Profile tab's (client-id.js keeps them the same as you type)
             if ($('head-ssn-field') && $('client-ssn-field')) $('head-ssn-field').innerHTML = $('client-ssn-field').innerHTML;
+            if ($('head-dob-field') && $('client-dob-field')) $('head-dob-field').innerHTML = $('client-dob-field').innerHTML;
 
             const mainType = $('main-case-type'), mainOther = $('main-case-other'), mainRevert = $('main-revert');
             if (content.caseTypeOtherVisible && mainType && mainOther) {

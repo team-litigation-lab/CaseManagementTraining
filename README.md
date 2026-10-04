@@ -329,6 +329,21 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
   - The saved phase is matched regardless of case (it's stored in capitals), which the earlier list's check didn't do.
 - **Trainer Notes:** a trainer writes them on each entry of a trainee's review feed (📊 My Dashboard → the trainee). The trainee sees each note, read only, as **📝 Note from your trainer** with the trainer's name on their own My Dashboard (`functions/api/trainee-dashboard.js`). Only an Admin can write one (`review-comment.js`).
 
+**DOB in the case header** (beside Case Manager)
+- The client's date of birth is typed in the header, under Target Settlement. The Profile tab's Identity card no longer shows it.
+- The header's DOB is a second view of the DOB the case has always saved (`data-mirror`, kept the same by `client-id.js`, like the header's SSN). The positional fields don't move, so every case saved before opens with its DOB in the header.
+
+**Other Pertinent Info · Non-Economic Damages** (Profile → Identity)
+- A box for how the injury changed the client's life: pain and suffering, emotional distress, loss of enjoyment, scarring, family and relationships, help needed at home. It's saved by id (`kx-noneconomic`).
+
+**Opposing Counsel** (Litigation)
+- **+ Add Opposing Counsel**: the defense attorney, their law firm, who they represent, phone, email, assistant or paralegal, and address and notes. Saved by id (`kx-counsel`).
+- A library file in litigation shows its defense counsel there (`counsel` in `mock-cases.js`), and so does the Training Library PDF. 📇 Contacts lists them too.
+
+**⬆ Upload Demand** (Demand → each demand)
+- Attaches the demand letter (PDF, Word or a scan, up to 2 MB) to that demand. It's uploaded to the case's file storage, as Doc Hub files are, and linked on the demand (📄 name, × to remove). It's saved with the case.
+- A demand saved before this gets the upload box when the case opens. On a view-only file, the upload and remove buttons are hidden.
+
 **Primary Injury** (Profile, beside the Case Narrative)
 - The client's primary injury, the body parts involved, the injury type (soft tissue, fracture, head injury / concussion, spine / disc, joint / ligament / tendon tear, laceration / bite / scarring, burn, multiple injuries, wrongful death, other), and surgery (no, recommended, scheduled, completed).
 - Also any prior injury to the same area, and the diagnosis and details (imaging, restrictions, future care).
@@ -876,6 +891,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - opening a case starts empty, asks before losing unsaved work, and a slow load overtaken by a newer click doesn't land; deleting the open case clears the editor and nothing is sent; a save that comes back after New doesn't attach to the new case;
   - opening a Training Library case file as a trainee isn't an edit (leaving it sends nothing, and the library's locked dropdowns aren't saved); leaving one while it loads doesn't leave the editor shut;
   - a whole live drill (61 calls with transcripts) saves; editing a time entry's description keeps its time to the second (a 150 s entry, in the browser and on the server).
+- **Case file fields** (`.github/scripts/case-fields.cjs`, in the same job): the case editor in a browser. It checks that the DOB is in the header beside Case Manager and not on the Profile tab, saved where it always was (no positional field moves), and that a case saved before shows its DOB in the header; that the Non-Economic Damages box on Identity is saved by id and loads back; that Opposing Counsel rows save and load back, and a library file in litigation shows its counsel; and that ⬆ Upload Demand uploads the letter and links it on the demand, saves it, lets it be removed, refuses files over 2 MB, adds the box to older demands, and is hidden on view-only files.
 - **Contacts** (`.github/scripts/contacts.cjs`, in the same job): 📇 Contacts in a browser. It checks that everyone signed in has it in the sidebar and an Admin also in the Case Library; that every medical provider, adjuster (or carrier with none yet), opposing counsel, client, emergency contact and lien holder in the files has a card with its case on it, one card per contact (6 opposing counsel); the same client on two files is one card and two people who share a name are two; a busy card shows 4 cases and Show all; search by name, company, phone in any format, email, claim number, client or case number, with that client's case first; the chips; a case opens its file; Esc closes it; a trainee never sees the Training Library; and it fits a phone.
 - **Known gaps** (`.github/scripts/known-gaps.cjs`, in the same job): the server code on SQLite, then the page in a browser. It checks that:
   - Lock / Unlock is gone (no `/api/lock`, lock screen, confirm box or Lock button; `/api/state` reports no lock) and ⏸ Pause stays;

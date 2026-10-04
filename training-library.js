@@ -284,7 +284,7 @@
     .lib-row .ed{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:800;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:4px;padding:1px 5px;text-transform:uppercase;letter-spacing:.3px}
     #mock-banner button:hover{border-color:#f97316}
     /* a trainee's program's open areas (.mock-open) keep their buttons; :where() keeps these rules' specificity as it was */
-    #capture-area.mock-ro .add-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .hub-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .revert-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro td button:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .pdf-card > button:where(:not(.mock-areas-ready .mock-open *)){display:none !important}
+    #capture-area.mock-ro .add-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .hub-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .revert-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro td button:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .pdf-card > button:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .kx-dl-btn:where(:not(.mock-areas-ready .mock-open *)),#capture-area.mock-ro .kx-dl-x:where(:not(.mock-areas-ready .mock-open *)){display:none !important}
     #capture-area.mock-ro.mock-areas-ready .mock-open [contenteditable]{cursor:text;caret-color:auto}
     .tab-btn.mock-tab-open::after{content:' ✎';color:#10b981}
     #capture-area.mock-areas-ready .mock-upd-bar{display:none !important}
@@ -647,7 +647,13 @@
             }
         }
 
-        // Litigation
+        // Litigation: opposing counsel (the defense attorneys), then the dates and the tracker
+        (c.counsel || []).forEach(o => {
+            if (typeof addCounsel !== 'function') return;
+            addCounsel(); const card = added('kx-counsel'); if (!card) return;
+            set(card, 'Attorney', o.name); set(card, 'Law Firm', o.firm); set(card, 'Represents', o.represents);
+            set(card, 'Phone', o.phone); set(card, 'Email', o.email); set(card, 'Assistant / Paralegal', o.assistant || '');
+        });
         if (c.lit) {
             setVal($id('sol-litigation-field'), c.lit.sol); setVal($id('complaint-filed-field'), c.lit.filed);
             setVal($id('discovery-cutoff-field'), c.lit.cutoff); setVal($id('trial-date-field'), c.lit.trial);
