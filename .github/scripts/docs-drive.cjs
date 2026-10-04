@@ -67,10 +67,10 @@ async function serverPart() {
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret', DOCUMENTS };
     const tokens = {};
     for (const [u, t] of [['ci', 'Trainee'], ['other', 'Trainee']]) tokens[u] = await utils.createSessionToken({ username: u, userType: t, fullName: u, batchId: 'B1' }, env.SESSION_SECRET);
-    async function call(method, body, who = 'ci') {
+    async function call(method, body, who = 'ci', mod = api) {
         sql.prepare(`INSERT INTO heartbeats (username, last_seen) VALUES (?, datetime('now')) ON CONFLICT(username) DO UPDATE SET last_seen = datetime('now')`).run(who);
-        const request = new Request('https://cms.example/api/drive-backup', { method, headers: { cookie: `lsh_session=${tokens[who]}`, 'content-type': 'application/json' }, body: body == null ? undefined : JSON.stringify(body) });
-        const res = await api['onRequest' + method[0] + method.slice(1).toLowerCase()]({ request, env });
+        const request = new Request('https://cms.example/api/x', { method, headers: { cookie: `lsh_session=${tokens[who]}`, 'content-type': 'application/json' }, body: body == null ? undefined : JSON.stringify(body) });
+        const res = await mod['onRequest' + method[0] + method.slice(1).toLowerCase()]({ request, env });
         return { status: res.status, data: await res.json() };
     }
 
@@ -86,7 +86,8 @@ async function serverPart() {
                 const idt = 'x.' + Buffer.from(JSON.stringify({ email: p.get('code') === 'code-2' ? 'second@gmail.com' : 'ci.trainee@gmail.com' })).toString('base64url') + '.y';
                 return out(200, { access_token: 'AT-' + p.get('code'), refresh_token: p.get('code') === 'no-refresh' ? undefined : 'RT-' + p.get('code'), expires_in: 3600, scope: G.grantScope, id_token: idt });
             }
-            if (p.get('grant_type') === 'refresh_token') { G.refreshes++; return out(200, { access_token: 'AT-refreshed', expires_in: 3600 }); }
+            // (a refresh says which permissions the grant has: Calendar and Drive share one Google sign-in)
+            if (p.get('grant_type') === 'refresh_token') { G.refreshes++; return out(200, { access_token: 'AT-refreshed', expires_in: 3600, scope: G.refreshScope || G.grantScope }); }
         }
         if (u.href.startsWith('https://oauth2.googleapis.com/revoke')) { G.revoked.push(new URLSearchParams(opts.body).get('token')); return out(200, {}); }
         if (u.host === 'www.googleapis.com') {
@@ -184,6 +185,36 @@ async function serverPart() {
         // disconnect
         r = await call('POST', { action: 'disconnect' });
         if (r.status !== 200 || r.data.drive.connected || !G.revoked.includes('RT-code-2') || sql.prepare('SELECT COUNT(*) AS n FROM drive_links').get().n) fail(`disconnecting should revoke and forget: ${JSON.stringify(r)} ${G.revoked}`);
+
+        // Google Calendar on the same Google account: one Google sign-in, one grant, so neither side gives it back
+        // while the other uses it, and a Drive sign-in with no refresh token uses the Calendar's (its grant now has Drive)
+        const gcal = await import(pathToFileURL(path.join(ROOT, 'functions/_google_calendar.js')).href);
+        const calApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/calendar-google.js')).href);
+        await gcal.ensureGoogleTables(env.DB);
+        sql.prepare(`INSERT INTO calendar_google_links (username, google_email, refresh_token) VALUES ('ci', 'ci.trainee@gmail.com', ?)`).run(await gcal.seal(env, 'RT-calendar'));
+        G.revoked.length = 0;
+        G.refreshScope = 'openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file';
+        r = await call('POST', { action: 'connect', code: 'no-refresh' });
+        const shared = sql.prepare('SELECT * FROM drive_links WHERE username = ?').get('ci');
+        if (r.status !== 200 || !shared || (await gcal.unseal(env, shared.refresh_token)) !== 'RT-calendar' || G.revoked.length) fail(`a Drive sign-in with no refresh token should use the Calendar's (same Google account), revoking nothing: ${JSON.stringify(r)} ${G.revoked}`);
+        r = await call('POST', { action: 'disconnect' });
+        if (r.status !== 200 || G.revoked.length || !sql.prepare('SELECT COUNT(*) AS n FROM calendar_google_links').get().n) fail(`disconnecting Drive revoked the grant Google Calendar uses: ${G.revoked}`);
+        G.grantScope = 'openid email';
+        r = await call('POST', { action: 'connect', code: 'noscope2' });
+        if (r.status !== 400 || G.revoked.length) fail(`a Drive sign-in without the permission revoked the grant Google Calendar uses: ${G.revoked}`);
+        G.grantScope = 'openid email https://www.googleapis.com/auth/drive.file';
+        // the grant doesn't cover Drive: no reuse, nothing revoked, and it says how to get a fresh grant
+        G.refreshScope = 'openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly';
+        r = await call('POST', { action: 'connect', code: 'no-refresh' });
+        if (r.status !== 409 || G.revoked.length || !/Disconnect Google Calendar/.test(r.data.error)) fail(`with the Calendar's grant not covering Drive, connecting Drive should ask for a fresh grant without revoking: ${JSON.stringify(r)} ${G.revoked}`);
+        G.refreshScope = null;
+        // and the other way: disconnecting Google Calendar while Drive uses the account gives nothing back
+        r = await call('POST', { action: 'connect', code: 'code-1' });
+        G.revoked.length = 0;
+        r = await call('POST', { action: 'disconnect' }, 'ci', calApi);
+        if (r.status !== 200 || G.revoked.length || sql.prepare('SELECT COUNT(*) AS n FROM calendar_google_links').get().n) fail(`disconnecting Google Calendar while Drive uses the account: ${JSON.stringify(r)} revoked ${G.revoked}`);
+        r = await call('POST', { action: 'disconnect' });
+        if (!G.revoked.includes('RT-code-1')) fail('disconnecting Drive, with Google Calendar no longer connected, should give the access back');
     } finally { globalThis.fetch = realFetch; }
 }
 
@@ -309,7 +340,7 @@ async function pagePart() {
     const round = await page.evaluate(() => {
         const c = JSON.parse(JSON.stringify(buildCaseContentPayload()));
         const holder = Object.keys(c).find(k => c[k] && typeof c[k] === 'object' && typeof c[k].docs === 'string');
-        const old = '<tr><td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">Bills</div></td><td><div contenteditable="true" class="multiline-field">Old row</div></td><td width="150" class="no-print"><label class="hub-btn">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div class="doc-attachment"><a href="https://x.example" target="_blank">x</a><a id="bad" href="javascript:alert(1)">bad</a></div></td><td></td></tr>';
+        const old = '<tr><td width="200"><div class="bg-slate-100 p-2 rounded text-[10px] font-black border text-center uppercase">Bills</div></td><td><div contenteditable="true" class="multiline-field">Old row</div></td><td width="150" class="no-print"><label class="hub-btn">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label><div class="doc-attachment"><a href="https://x.example" target="_blank">x</a><a id="bad" href="javascript:alert(1)">bad</a><map name="m"><area id="ar" href="https://y.example" target="_blank"></map><form id="fm" target="_blank"></form><button id="ft" formtarget="_blank">f</button></div></td><td></td></tr>';
         if (holder) c[holder].docs += old;
         applyCaseContentToDOM(c);
         const rows = [...document.querySelectorAll('#doc-body tr')];
@@ -317,7 +348,8 @@ async function pagePart() {
         const web = document.querySelector('#doc-body a.doc-web-link'), oldRow = rows.find(r => r.querySelector('a[href="https://x.example"]'));
         return { holder, web: web && web.getAttribute('href'), linkBtn: web && !!web.closest('tr').querySelector('.doc-link-btn[onclick="addDocLink(this)"]'),
             oldBtn: !!(oldRow && oldRow.querySelector('.doc-link-btn')), oldRel: oldRow && (oldRow.querySelector('a[href="https://x.example"]') || {}).rel,
-            bad: oldRow && (oldRow.querySelector('#bad') || {}).getAttribute && oldRow.querySelector('#bad').getAttribute('href'), named: !!document.querySelector(`#doc-body a[download^="${'LSH'}"]`) };
+            bad: oldRow && (oldRow.querySelector('#bad') || {}).getAttribute && oldRow.querySelector('#bad').getAttribute('href'),
+            area: oldRow && (oldRow.querySelector('#ar') || {}).rel, formTarget: !!(oldRow && oldRow.querySelector('#fm[target], #ft[formtarget]')), named: !!document.querySelector(`#doc-body a[download^="${'LSH'}"]`) };
     });
     if (!round.holder) fail('couldn\'t find where the doc rows are saved (content.html.docs)');
     else {
@@ -325,6 +357,7 @@ async function pagePart() {
         if (!round.oldBtn) fail('a Doc Hub row saved before 🔗 Link should get the button');
         if (round.oldRel !== 'noopener noreferrer') fail(`a saved link that opens a new tab should get rel="noopener noreferrer": ${round.oldRel}`);
         if (round.bad) fail(`a javascript: link survived loading: ${round.bad}`);
+        if (round.area !== 'noopener noreferrer' || round.formTarget) fail(`saved <area>/<form> new-tab targets should be made safe: ${JSON.stringify({ area: round.area, formTarget: round.formTarget })}`);
     }
 
     // the Drive bar: not set up

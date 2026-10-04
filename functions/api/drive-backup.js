@@ -1,5 +1,5 @@
 import { json, requireSession } from '../_utils.js';
-import { exchangeCode, revokeToken, seal, unseal, GoogleError } from '../_google_calendar.js';
+import { exchangeCode, seal, unseal, GoogleError, revokeUnlessShared, otherGoogleLink, sharedRefresh } from '../_google_calendar.js';
 import { mayOpen, validFileKey } from '../_file_access.js';
 import {
     ensureDriveTables, readDriveLink, driveStatus, caseFolder, uploadFile, folderUrl, DRIVE_SCOPE,
@@ -47,16 +47,25 @@ export async function onRequestPost({ request, env }) {
             if (!code || code.length > 2048) return fail('Missing sign-in code.');
             const t = await exchangeCode(env, code);
             if (!t.scope.split(/\s+/).includes(DRIVE_SCOPE)) {
-                await revokeToken(t.accessToken);
+                await revokeUnlessShared(db, 'calendar_google_links', username, t.email, t.accessToken);   // (not when Google Calendar uses this account)
                 return fail('Google didn\'t give access to Drive. Connect again and tick the Google Drive permission when Google asks.', 400, 'GOOGLE_SCOPES');
             }
             if (!t.refreshToken) {
-                // Google only hands out a refresh token on a fresh grant; revoking clears the old one for the next try.
-                await revokeToken(t.accessToken);
-                return fail('Google didn\'t return long-term access. Click Connect Google Drive once more.', 409, 'GOOGLE_RETRY');
+                // Google only hands out a refresh token on a fresh grant. When Google Calendar is connected to the same
+                // account, its grant now covers Drive too: use it. Otherwise revoking clears the old grant, so the next
+                // Connect gets one.
+                const cal = await otherGoogleLink(db, 'calendar_google_links', username, t.email);
+                const shared = await sharedRefresh(env, cal, [DRIVE_SCOPE]);
+                if (shared) Object.assign(t, { refreshToken: shared.refreshToken, accessToken: shared.accessToken, expiresIn: shared.expiresIn });
+                else if (cal) return fail('Google didn\'t return long-term access for Drive. Disconnect Google Calendar (the Calendar tab), connect Google Drive, then connect Google Calendar again.', 409, 'GOOGLE_RETRY');
+                else {
+                    await revokeUnlessShared(db, 'calendar_google_links', username, t.email, t.accessToken);
+                    return fail('Google didn\'t return long-term access. Click Connect Google Drive once more.', 409, 'GOOGLE_RETRY');
+                }
             }
             const old = await readDriveLink(db, username);
-            if (old) { try { await revokeToken(await unseal(env, old.refresh_token)); } catch (e) { /* old token unreadable */ } }
+            // the old account's access is given back (unless it's the same account, or Google Calendar still uses it)
+            if (old && !(old.google_email && old.google_email === t.email)) { try { await revokeUnlessShared(db, 'calendar_google_links', username, old.google_email, await unseal(env, old.refresh_token)); } catch (e) { /* old token unreadable */ } }
             const expires = Date.now() + t.expiresIn * 1000;
             // A different Google account has its own Drive: the folders and copies recorded for the old one don't apply.
             const sameAccount = old && old.google_email && t.email && old.google_email === t.email;
@@ -80,7 +89,7 @@ export async function onRequestPost({ request, env }) {
         if (!link) return fail('Connect Google Drive first.', 409, 'DRIVE_NOT_CONNECTED');
 
         if (body.action === 'disconnect') {
-            try { await revokeToken(await unseal(env, link.refresh_token)); } catch (e) { /* forget it anyway */ }
+            try { await revokeUnlessShared(db, 'calendar_google_links', username, link.google_email, await unseal(env, link.refresh_token)); } catch (e) { /* forget it anyway */ }
             await db.batch([
                 db.prepare(`DELETE FROM drive_links WHERE username = ?`).bind(username),
                 db.prepare(`DELETE FROM drive_case_folders WHERE username = ?`).bind(username),

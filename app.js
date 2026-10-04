@@ -687,8 +687,13 @@
                     const dataOk = (n === 'src' && el.localName === 'img' && picture) || (n === 'href' && (picture || el.hasAttribute('download')));
                     if (/^(?:javascript|vbscript|data):/i.test(url) && !dataOk) el.removeAttribute(a.name);
                 });
-                // a link that opens a new tab never gets a handle on this page
-                if (el.localName === 'a' && el.hasAttribute('target')) el.setAttribute('rel', 'noopener noreferrer');
+                // nothing opened in a new tab gets a handle on this page: links get rel="noopener noreferrer";
+                // forms and form buttons don't open new tabs at all (a case never has forms)
+                if (el.hasAttribute('target')) {
+                    if (el.localName === 'a' || el.localName === 'area') el.setAttribute('rel', 'noopener noreferrer');
+                    else el.removeAttribute('target');
+                }
+                if (el.hasAttribute('formtarget')) el.removeAttribute('formtarget');
             });
             const out = _cleanTpl.innerHTML;
             _cleanTpl.innerHTML = '';

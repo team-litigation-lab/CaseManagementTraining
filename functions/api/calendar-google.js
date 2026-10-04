@@ -1,6 +1,6 @@
 import { json, requireSession } from '../_utils.js';
 import {
-    ensureGoogleTables, googleConfigured, googleStatus, readLink, exchangeCode, revokeToken, seal, unseal,
+    ensureGoogleTables, googleConfigured, googleStatus, readLink, exchangeCode, seal, unseal, revokeUnlessShared, otherGoogleLink, sharedRefresh,
     gcal, googleMessage, googleEventId, contentHash, GoogleError, GOOGLE_SCOPES, WRITE_ROLES,
     WALL_RE, DATE_RE, validTimeZone, addDays,
 } from '../_google_calendar.js';
@@ -139,17 +139,25 @@ export async function onRequestPost({ request, env }) {
             const granted = t.scope.split(/\s+/);
             const missing = GOOGLE_SCOPES.filter(s => s.startsWith('https://') && !granted.includes(s));
             if (missing.length) {
-                await revokeToken(t.accessToken);
+                await revokeUnlessShared(db, 'drive_links', username, t.email, t.accessToken);   // (not when Drive backup uses this account)
                 return fail('Google didn\'t give access to the calendar. Connect again and tick both calendar permissions when Google asks.', 400, 'GOOGLE_SCOPES');
             }
             if (!t.refreshToken) {
-                // Google only hands out a refresh token on a fresh grant. Revoking clears the old
-                // grant, so the next Connect gets one.
-                await revokeToken(t.accessToken);
-                return fail('Google didn\'t return long-term access. Click Connect Google Calendar once more.', 409, 'GOOGLE_RETRY');
+                // Google only hands out a refresh token on a fresh grant. When Drive backup is connected to the same
+                // account, its grant now covers the calendar too: use it. Otherwise revoking clears the old grant, so
+                // the next Connect gets one.
+                const drive = await otherGoogleLink(db, 'drive_links', username, t.email);
+                const shared = await sharedRefresh(env, drive, GOOGLE_SCOPES.filter(s => s.startsWith('https://')));
+                if (shared) Object.assign(t, { refreshToken: shared.refreshToken, accessToken: shared.accessToken, expiresIn: shared.expiresIn });
+                else if (drive) return fail('Google didn\'t return long-term access for the calendar. Disconnect Google Drive (Doc Hub), connect Google Calendar, then connect Google Drive again.', 409, 'GOOGLE_RETRY');
+                else {
+                    await revokeUnlessShared(db, 'drive_links', username, t.email, t.accessToken);
+                    return fail('Google didn\'t return long-term access. Click Connect Google Calendar once more.', 409, 'GOOGLE_RETRY');
+                }
             }
             const old = await readLink(db, username);
-            if (old) { try { await revokeToken(await unseal(env, old.refresh_token)); } catch (e) { /* old token unreadable */ } }
+            // the old account's access is given back (unless it's the same account, or Drive backup still uses it)
+            if (old && !(old.google_email && old.google_email === t.email)) { try { await revokeUnlessShared(db, 'drive_links', username, old.google_email, await unseal(env, old.refresh_token)); } catch (e) { /* old token unreadable */ } }
             const expires = Date.now() + t.expiresIn * 1000;
             await db.prepare(
                 `INSERT INTO calendar_google_links (username, google_email, refresh_token, access_token, access_expires, scope, calendar_id, calendar_name, calendar_tz, can_write, connected_at, last_sync_at)
@@ -166,7 +174,7 @@ export async function onRequestPost({ request, env }) {
         if (!link) return fail('Connect Google Calendar first.', 409, 'GOOGLE_NOT_CONNECTED');
 
         if (body.action === 'disconnect') {
-            try { await revokeToken(await unseal(env, link.refresh_token)); } catch (e) { /* forget it anyway */ }
+            try { await revokeUnlessShared(db, 'drive_links', username, link.google_email, await unseal(env, link.refresh_token)); } catch (e) { /* forget it anyway */ }
             await db.batch([
                 db.prepare(`DELETE FROM calendar_google_links WHERE username = ?`).bind(username),
                 db.prepare(`DELETE FROM calendar_google_sync WHERE username = ?`).bind(username),
