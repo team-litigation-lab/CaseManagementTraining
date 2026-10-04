@@ -6,6 +6,8 @@
 // - the device suspends the page ('freeze') or the page closes ('pagehide'): sent;
 // - a case never saved isn't sent while the page closes (it would make a second draft on the next visit);
 // - a save that never got through (the page "crashed"): sent on the next visit, from this browser's copy;
+// - a copy kept by an older version of the CMS that was in step with the server isn't sent when a newer one loads
+//   (it draws the case a little differently); one with unsaved work still is;
 // - after 5 idle minutes the inactivity prompt still archives, but only work the server doesn't have.
 // Fails on any page error.
 // Usage: node .github/scripts/autosave.cjs   (from the repository root; needs `npm i playwright`)
@@ -115,6 +117,34 @@ const server = http.createServer((req, res) => {
     if (!/last visit saved/.test(await page.textContent('#autosave-indicator').catch(() => ''))) fail('the note doesn\'t say the unsaved work from the last visit was saved');
     t0 = Date.now(); await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(3000);
     if (since(t0).length) fail(`a visit with nothing unsaved sent the case again: ${JSON.stringify(since(t0))}`);
+
+    // a new version of the CMS draws the same case a little differently (old Doc Hub rows get a 🔗 Link button): a copy
+    // kept by the older version that was in step with the server isn't "unsaved work", so nothing is sent; one that
+    // wasn't in step still is
+    // (the older version's copy is put in place as the page starts, before the CMS reads it)
+    await page.addInitScript(() => { const d = sessionStorage.getItem('LSH_TEST_OLD_DRAFT'); if (d) { localStorage.setItem('LSH_CURRENT_EDITOR_DRAFT_V1', d); sessionStorage.removeItem('LSH_TEST_OLD_DRAFT'); } });
+    const oldVersion = async (inStep) => {
+        const made = await page.evaluate((inStep) => {
+            addDocument('Medical Records');   // a Doc Hub row as the older version kept it: no 🔗 Link button
+            const d = JSON.parse(JSON.stringify(Object.assign(buildCaseContentPayload(), { owner: getRealSession().username, currentCaseId, currentCaseIsDraft,
+                phase: document.getElementById('display-phase').innerText, currentCaseCanEdit, caseIdFieldText: document.getElementById('case-id-field').innerText, mock: null })));
+            document.getElementById('doc-body').lastElementChild.remove();   // (the page itself stays as the server has it)
+            d.html.docs = d.html.docs.replace(/ <button[^>]*doc-link-btn[^>]*>[^<]*<\/button>/g, '');
+            d.syncedSig = inStep ? draftSig(d, document.getElementById('client-name-field').innerText) : 'old.1';
+            d.savedAt = new Date().toISOString();
+            sessionStorage.setItem('LSH_TEST_OLD_DRAFT', JSON.stringify(d));
+            return !/doc-link-btn/.test(d.html.docs) && /Medical Records/.test(d.html.docs);
+        }, inStep);
+        await page.waitForTimeout(900);
+        return made;
+    };
+    if (!(await oldVersion(true))) fail('the test couldn\'t make an older version\'s copy');
+    t0 = Date.now(); await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(3500);
+    if (since(t0).length) fail(`a copy an older version kept in step with the server was sent after the new version loaded: ${JSON.stringify(since(t0))}`);
+    if (!(await page.evaluate(() => document.querySelectorAll('#doc-body .doc-link-btn').length))) fail('the older copy\'s Doc Hub row didn\'t get its 🔗 Link button');
+    await oldVersion(false);
+    t0 = Date.now(); await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(3500);
+    if (since(t0).length !== 1) fail(`unsaved work in an older version's copy should still be sent once: ${since(t0).length}`);
 
     // a case never saved isn't sent while the page closes; it waits for the next visit
     await page.evaluate(() => { document.getElementById('client-name-field').innerText = ''; window.newCase(); });

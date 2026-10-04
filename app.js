@@ -925,6 +925,8 @@
                     syncedSig: _syncedSig,   // what the server has: differs from this case = unsaved work (sent on the next visit)
                     savedAt: new Date().toISOString()
                 });
+                // said outright, so the next visit doesn't have to work it out (whatever version of the CMS it is)
+                snapshot.unsynced = hasCaseContent() && caseSig() !== _syncedSig;
                 localStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(snapshot));
             } catch (e) { console.warn('Could not persist in-progress case:', e); }
         }
@@ -984,6 +986,11 @@
                     generateCaseId();
                 }
                 if (data.phase) updatePhaseDisplay(data.phase);
+                // A draft that was in step with the server when it was kept has nothing to send: what's on the page now
+                // is the server's copy (drawn by this version of the CMS). Only work the server never got is sent.
+                const nameText = (document.getElementById('client-name-field') || {}).innerText || '';
+                const inStep = data.unsynced === false || (data.unsynced === undefined && !!data.syncedSig && draftSig(data, nameText) === data.syncedSig);
+                if (inStep) { noteServerCopy(); return true; }
                 // Work the server never got (the page closed, crashed or lost power first): send it now.
                 _syncedSig = data.syncedSig || null;
                 const recover = () => setTimeout(() => saveOnInterruption('recovered'), 1500);
@@ -1614,14 +1621,28 @@
         // What the server has for the case in the editor: a fingerprint of it (_syncedSig, declared with
         // currentCaseId), taken whenever the case is saved to or opened from the server. Autosave sends the
         // case only when it differs (unsaved work).
+        function sigOf(payload, nameText, phaseText) {
+            // the case's own dropdowns only: the clock's time zone or the program picker changing isn't an edit
+            const own = savedSelects(document);
+            const p = Object.assign({}, payload, { sels: (payload.sels || []).map((v, i) => (own[i] ? v : null)) });
+            const t = JSON.stringify([p, nameText || '', phaseText || '']);
+            let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return (h >>> 0).toString(16) + '.' + t.length;
+        }
         function caseSig() {
             try {
-                // the case's own dropdowns only: the clock's time zone or the program picker changing isn't an edit
-                const p = buildCaseContentPayload(), own = savedSelects(document);
-                p.sels = p.sels.map((v, i) => (own[i] ? v : null));
-                const t = JSON.stringify([p, (document.getElementById('client-name-field') || {}).innerText || '', (document.getElementById('display-phase') || {}).innerText || '']);
-                let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-                return (h >>> 0).toString(16) + '.' + t.length;
+                return sigOf(buildCaseContentPayload(), (document.getElementById('client-name-field') || {}).innerText || '', (document.getElementById('display-phase') || {}).innerText || '');
+            } catch (e) { return null; }
+        }
+        // The fingerprint of a kept draft as it was kept: its own content, not the page a newer version of the CMS draws
+        // from it (a new version may draw the same case a little differently: a button added to old rows, a link made
+        // safer). So "was this draft in step with the server when it was kept?" doesn't depend on the version.
+        const DRAFT_EXTRAS = new Set(['owner', 'currentCaseId', 'currentCaseIsDraft', 'phase', 'currentCaseCanEdit', 'caseIdFieldText', 'mock', 'syncedSig', 'unsynced', 'savedAt']);
+        function draftSig(data, nameText) {
+            try {
+                const p = {};
+                Object.keys(data).forEach(k => { if (!DRAFT_EXTRAS.has(k)) p[k] = data[k]; });
+                return sigOf(p, nameText, data.phase || '');
             } catch (e) { return null; }
         }
         function noteServerCopy(sig) { _syncedSig = sig || caseSig(); }
