@@ -2058,11 +2058,12 @@
                 renderRepo();
                 _draftRestoredFor = null;   // whoever signs in next gets their own work back (and only theirs)
                 // Nothing of the last person's stays open over the sign-in screen: the live view of a trainee
-                // (and this page's own screen going to one), the Client's ID view, the Blueprint.
+                // (and this page's own screen going to one), the Client's ID view, the Blueprint, a contact card.
                 if (window.lshLiveWatched) window.lshLiveWatched(false);
                 if (window.closeLiveView) window.closeLiveView();
                 if (window.lshClientId) window.lshClientId.close();
                 if (window.LSHBlueprint && document.getElementById('lbp-page')) window.LSHBlueprint.close();
+                if (window.closeContacts) window.closeContacts(false);
                 return;
             }
             gate.classList.remove('open');

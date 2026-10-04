@@ -10,7 +10,7 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
 
 - **Search bar in the case header:** type in the 🔍 search bar under the case status, at the right of the case header (or press **Ctrl/Cmd+K**) and matching files drop down under it; click one (or use the arrow keys and Enter) to open it. Trainees never need to open a library. Search by client name, **case number** (typed any way: `LSH-2026-MVA-901379`, `mva 901379` or just `901379`), date of the accident (DOL), date of birth, phone, claim/policy #, plate or library ID. Each result shows its DOL (and, for mock cases, the case number and DOB).
 - **The search bar starts empty.** Chrome used to put the trainer's own name into the search bar, shaded pale blue. Its autofill copied the name picked on the sign-in screen, and its password manager took the search bar for the username box of a saved sign-in. Now the sign-in views, every box with a password (the lock and unlock boxes too) and the search bar are forms of their own, and the search bar's hint no longer says "name". Any search box the browser still fills in by itself, while you aren't typing in it, is emptied at once, even when Chrome hides what it filled in from the page (`case-library.js`).
-- **Case Library window (Admins):** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**), the **📇 Contacts** cards (below) and the ☎ firm directory. Trainees don't get the button. If the search bar is off screen, Ctrl/Cmd+K opens the window for them, with **All files** and **My cases** only. They find the firm directory and front-desk rules in the Front Desk practice panel.
+- **Case Library window (Admins):** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**) and the ☎ firm directory. Trainees don't get the button. If the search bar is off screen, Ctrl/Cmd+K opens the window for them, with **All files** and **My cases** only. They find the firm directory and front-desk rules in the Front Desk practice panel.
 - **Same name, different file:** when several results share a client name, the Case Library (and the drill's search) says so and asks for the DOL and DOB before you open one.
 - **During a Front Desk Drill call**, a mock case opened from the search bar counts as the call's pick, so receptionists never need the Training Library.
 - A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). Admins browse all cases in Master Control → Case Logs.
@@ -289,8 +289,8 @@ With the admin password set (and `PORTAL_ONLY` not `off`), trainees sign in only
 
 The top of the case is the client's demographics. Each box has its label above it and a border you can see, empty or filled:
 - **Client's Name**;
-- **Contact**, **SSN** and **Target Settlement**;
-- **Attorney** and **Case Manager**.
+- **Contact**, **SSN** and **DOB**;
+- **Attorney**, **Case Manager** and **Target Settlement**.
 
 The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in either changes both. Only the Profile tab's is saved, so cases saved before keep every field where it was (`data-mirror` in `app.js`).
 
@@ -329,8 +329,9 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
   - The saved phase is matched regardless of case (it's stored in capitals), which the earlier list's check didn't do.
 - **Trainer Notes:** a trainer writes them on each entry of a trainee's review feed (📊 My Dashboard → the trainee). The trainee sees each note, read only, as **📝 Note from your trainer** with the trainer's name on their own My Dashboard (`functions/api/trainee-dashboard.js`). Only an Admin can write one (`review-comment.js`).
 
-**DOB in the case header** (beside Case Manager)
-- The client's date of birth is typed in the header, under Target Settlement. The Profile tab's Identity card no longer shows it.
+**DOB in the case header** (beside the SSN)
+- The header's rows: Contact, SSN, DOB; then Attorney, Case Manager, Target Settlement. The client's date of birth is typed in the header; the Profile tab's Identity card no longer shows it.
+- Target Settlement is still the third field cases are saved by (the SSN and DOB between aren't positional), so moving it beside Case Manager doesn't change where a saved settlement goes.
 - The header's DOB is a second view of the DOB the case has always saved (`data-mirror`, kept the same by `client-id.js`, like the header's SSN). The positional fields don't move, so every case saved before opens with its DOB in the header.
 
 **Other Pertinent Info · Non-Economic Damages** (Profile → Identity)
@@ -338,7 +339,7 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
 
 **Opposing Counsel** (Litigation)
 - **+ Add Opposing Counsel**: the defense attorney, their law firm, who they represent, phone, email, assistant or paralegal, and address and notes. Saved by id (`kx-counsel`).
-- A library file in litigation shows its defense counsel there (`counsel` in `mock-cases.js`), and so does the Training Library PDF. 📇 Contacts lists them too.
+- A library file in litigation shows its defense counsel there (`counsel` in `mock-cases.js`), and so does the Training Library PDF. The 📇 Search contacts bar finds them too.
 
 **⬆ Upload Demand** (Demand → each demand)
 - Attaches the demand letter (PDF, Word or a scan, up to 2 MB) to that demand. It's uploaded to the case's file storage, as Doc Hub files are, and linked on the demand (📄 name, × to remove). It's saved with the case.
@@ -458,16 +459,21 @@ The **SSN** beside Contact is the Profile tab's SSN shown again, and typing in e
 
 ## 📇 Contacts (a card for everyone in the case files)
 
-Sidebar → **📇 Contacts** (everyone, under My cases; Admins also have a **📇 Contacts** tab in the Case Library window) shows a card for every contact in the case files, built in the browser from `mock-cases.js`:
+There's no list to browse: the small **📇 Search contacts** bar right under the case header's Search cases (everyone signed in) finds a contact and **pops up their card**.
+- As you type, matching contacts drop down: whose name matches first, then by company or role, then the rest (a client, a case number, a phone). Up to 6 show, with "+N more: keep typing".
+- **Enter** pops up the top one's card (↓ ↑ pick another first); **a click** pops up that one. The card shows the others that matched (**Also matching**) to switch to.
+- **Esc**, **✕** or a click outside closes the card. In the bar, the first Esc closes its list and the second clears it.
+- Typing in the bar is never an edit to the case, on a view-only file too.
+
+The cards, built in the browser from `mock-cases.js`:
 - **🩺 Medical providers:** the files' treating facilities, with their specialty, phone and email.
 - **🛡 Adjusters:** the BI and PIP / UM / MedPay adjusters, with their carrier; a carrier with no adjuster assigned yet gets its own card. Each case shows the claim number and the insured.
 - **⚖ Opposing counsel:** the defense counsel on every file in litigation (`counsel` on the file: name, firm, who they represent, phone, email). Three files already named them in their notes (Richard Voss, Paul Hendricks, Voss & Tate and Lang & Ortiz); the other litigated files were given fictional counsel in the same style. `check-data.mjs` checks every litigated file has one.
 - **👤 Clients:** phone, email and address. The same person on two files (same name and date of birth) is one card with both files; two people who share a name are two cards.
 - **👥 Others:** emergency contacts, the parties at fault (with their phone when the file has it), lien holders, health plans, police and other reporting agencies, and employers.
 
-Each card lists the cases the contact is on: the client, the case number and what they are on that case (dates and status, the claim, who they represent). The first 4 show; **Show all** shows the rest. **A click on a case opens that file** (as the trainee's program allows) and closes Contacts.
-- **Search** by name, company, phone in any format (`5550103345`, `555.010.3345`), email, claim, report or lien file number, a client's name or a case number. A search by client puts that client's case first on each card.
-- **The chips** filter by kind and show how many match.
+A card lists the cases the contact is on: the client, the case number and what they are on that case (dates and status, the claim, who they represent). The first 4 show; **Show all** shows the rest. **A click on a case opens that file** (as the trainee's program allows) and closes the card.
+- **Search** by name, company, phone in any format (`5550103345`, `555.010.3345`), email, claim, report or lien file number, a client's name or a case number. A search by client puts that client's case first on the card.
 - Trainees never see the Training Library's name or its MC- numbers here: a case is its client and case number.
 - It's built from the library files as they ship. A trainer's edit to a library file (💾 Save to the library) doesn't change the cards.
 - Code: `contacts.js`; the data is `mock-cases.js`.
@@ -891,8 +897,8 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - opening a case starts empty, asks before losing unsaved work, and a slow load overtaken by a newer click doesn't land; deleting the open case clears the editor and nothing is sent; a save that comes back after New doesn't attach to the new case;
   - opening a Training Library case file as a trainee isn't an edit (leaving it sends nothing, and the library's locked dropdowns aren't saved); leaving one while it loads doesn't leave the editor shut;
   - a whole live drill (61 calls with transcripts) saves; editing a time entry's description keeps its time to the second (a 150 s entry, in the browser and on the server).
-- **Case file fields** (`.github/scripts/case-fields.cjs`, in the same job): the case editor in a browser. It checks that the DOB is in the header beside Case Manager and not on the Profile tab, saved where it always was (no positional field moves), and that a case saved before shows its DOB in the header; that the Non-Economic Damages box on Identity is saved by id and loads back; that Opposing Counsel rows save and load back, and a library file in litigation shows its counsel; and that ⬆ Upload Demand uploads the letter and links it on the demand, saves it, lets it be removed, refuses files over 2 MB, adds the box to older demands, and is hidden on view-only files.
-- **Contacts** (`.github/scripts/contacts.cjs`, in the same job): 📇 Contacts in a browser. It checks that everyone signed in has it in the sidebar and an Admin also in the Case Library; that every medical provider, adjuster (or carrier with none yet), opposing counsel, client, emergency contact and lien holder in the files has a card with its case on it, one card per contact (6 opposing counsel); the same client on two files is one card and two people who share a name are two; a busy card shows 4 cases and Show all; search by name, company, phone in any format, email, claim number, client or case number, with that client's case first; the chips; a case opens its file; Esc closes it; a trainee never sees the Training Library; and it fits a phone.
+- **Case file fields** (`.github/scripts/case-fields.cjs`, in the same job): the case editor in a browser. It checks that the DOB is in the header beside the SSN and Target Settlement beside Case Manager, the DOB isn't on the Profile tab, both are saved where they always were (no positional field moves; Target Settlement is still the third), and that a case saved before shows its DOB and its Target Settlement; that the Non-Economic Damages box on Identity is saved by id and loads back; that Opposing Counsel rows save and load back, and a library file in litigation shows its counsel; and that ⬆ Upload Demand uploads the letter and links it on the demand, saves it, lets it be removed, refuses files over 2 MB, adds the box to older demands, and is hidden on view-only files.
+- **Contacts** (`.github/scripts/contacts.cjs`, in the same job): 📇 Contacts in a browser. It checks that there's no Contacts button or Case Library tab, only the small search bar under Search cases; that every medical provider, adjuster (or carrier with none yet), opposing counsel, client, emergency contact and lien holder in the files has a card with its case on it, one card per contact (6 opposing counsel), the same client on two files is one card and two people who share a name are two; that typing lists matches (name matches first, 6 and "+N more"), Enter, ↓ Enter and a click pop up the card, Also matching switches it, a case on it opens the file, and Esc, ✕ and a click outside close it; search by name, company, phone in any format, email, claim number, client or case number; the bar's two Escs; typing in it isn't an edit (a view-only file too); a trainee never sees the Training Library; and the card fits a phone.
 - **Known gaps** (`.github/scripts/known-gaps.cjs`, in the same job): the server code on SQLite, then the page in a browser. It checks that:
   - Lock / Unlock is gone (no `/api/lock`, lock screen, confirm box or Lock button; `/api/state` reports no lock) and ⏸ Pause stays;
   - 🧹 Clear old data is for the Master Account only, clears old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts, keeps everything recent, counts what it cleared and is in the server logs; the vacuum endpoint and `vacuum-d1.yml` are gone;

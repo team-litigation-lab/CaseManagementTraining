@@ -1,9 +1,10 @@
 // Case file fields test (index.html, case-sections.js, client-id.js, training-library.js) in a browser, with /api answered by the test.
 // Checks:
-//   - DOB is in the case header, beside Case Manager; the Profile tab's Identity card no longer shows it. The header's DOB is a
-//     second view of the saved one (data-mirror), so the positional fields cases are saved by don't move: a DOB typed in the
-//     header is saved, comes back when the case loads, a case saved before this shows its DOB in the header, and a library
-//     file's client shows theirs;
+//   - DOB is in the case header, beside the SSN (row 1: Contact, SSN, DOB; row 2: Attorney, Case Manager, Target Settlement);
+//     the Profile tab's Identity card no longer shows it. The header's DOB is a second view of the saved one (data-mirror), so
+//     the positional fields cases are saved by don't move (Target Settlement is still the third): a DOB typed in the header is
+//     saved, comes back when the case loads, a case saved before this shows its DOB and its Target Settlement where they
+//     were, and a library file's client shows their DOB;
 //   - Identity has "Other Pertinent Info · Non-Economic Damages", saved by id (keyed) and loaded back; a new case starts it empty;
 //   - Litigation has an Opposing Counsel section: + Add Opposing Counsel adds an attorney (name, firm, who they represent,
 //     phone, email, assistant, notes), saved and loaded back; a library file in litigation shows its defense counsel;
@@ -53,14 +54,19 @@ let base;
     // ---- DOB in the header, not on the Profile tab; the positional fields don't move ----
     const layout = await page.evaluate(() => {
         const head = document.getElementById('head-dob-field'), prof = document.getElementById('client-dob-field');
-        const people = document.getElementById('attorney-cm-container');
+        const target = document.querySelector('.header-card .target-settlement-display'), top = (el) => Math.round(el.getBoundingClientRect().top);
+        const ssn = document.getElementById('head-ssn-field'), cm = document.getElementById('case-manager-field');
         showTab('profile');
         return { pos: { edits: posEdits().length, selects: posSels().length }, head: !!head && !!head.offsetParent, mirror: head && head.hasAttribute('data-mirror'),
-            inHeader: !!head && !!head.closest('.header-card'), besideCm: !!head && !!people && people.contains(head) && head.closest('.hdr-f').previousElementSibling.contains(document.getElementById('case-manager-field')),
+            inHeader: !!head && !!head.closest('.header-card'), besideSsn: !!head && top(head) === top(ssn) && head.getBoundingClientRect().left > ssn.getBoundingClientRect().left,
+            targetBesideCm: !!target && top(target) === top(cm) && target.getBoundingClientRect().left > cm.getBoundingClientRect().left,
+            targetSlot: posEdits().indexOf(target),
             profShown: !!prof && !!prof.offsetParent, idLabels: [...document.querySelectorAll('#pane-profile .pdf-card')].find(c => /Identity/.test(c.textContent)).innerText };
     });
     if (layout.pos.edits !== POSITIONAL.edits || layout.pos.selects !== POSITIONAL.selects) fail(`the positional fields moved (${JSON.stringify(layout.pos)}, expected ${JSON.stringify(POSITIONAL)}): saved cases would load into the wrong fields`);
-    if (!layout.head || !layout.mirror || !layout.inHeader || !layout.besideCm) fail(`DOB should be in the case header, beside Case Manager, as a mirror: ${JSON.stringify(layout)}`);
+    if (!layout.head || !layout.mirror || !layout.inHeader || !layout.besideSsn) fail(`DOB should be in the case header, beside the SSN, as a mirror: ${JSON.stringify(layout)}`);
+    if (!layout.targetBesideCm) fail('Target Settlement should be beside Case Manager (DOB and Target Settlement swapped)');
+    if (layout.targetSlot !== 2) fail(`Target Settlement moved in the positional fields (slot ${layout.targetSlot}, was 2): saved cases would load their settlement into another field`);
     if (layout.profShown || /\bDOB\b/.test(layout.idLabels)) fail('the Profile tab\'s Identity card still shows the DOB');
     await page.click('#head-dob-field'); await page.keyboard.type('04/12/1990');
     const dob = await page.evaluate(() => {
@@ -78,10 +84,13 @@ let base;
         blankCaseEditorContent();
         const at = posEdits().indexOf(document.getElementById('client-dob-field'));
         const old = JSON.parse(JSON.stringify(content)); old.inputs = (old.inputs || []).slice(); old.inputs[at] = '07/04/1955';
+        old.inputs[2] = '$ 42,000.00';   // (slot 2: Target Settlement, as cases have always saved it)
         applyCaseContentToDOM(old);
-        return { at, head: document.getElementById('head-dob-field').textContent, prof: document.getElementById('client-dob-field').textContent, name: document.getElementById('client-name-field').textContent };
+        return { at, head: document.getElementById('head-dob-field').textContent, prof: document.getElementById('client-dob-field').textContent, name: document.getElementById('client-name-field').textContent,
+            target: document.querySelector('.header-card .target-settlement-display').textContent };
     }, OLD);
     if (oldDob.prof !== '07/04/1955' || oldDob.head !== '07/04/1955' || oldDob.name !== 'Olive Oldcase') fail(`a case saved before shows no DOB in the header: ${JSON.stringify(oldDob)}`);
+    if (oldDob.target !== '$ 42,000.00') fail(`a case saved before doesn't show its Target Settlement (${oldDob.target})`);
 
     // ---- Other pertinent info: non-economic damages ----
     await page.evaluate(() => { blankCaseEditorContent(); showTab('profile'); });
@@ -169,5 +178,5 @@ let base;
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log('Case file fields test passed (DOB in the header, off the Profile tab, saved where it was; Non-Economic Damages on Identity; Opposing Counsel on Litigation, and the library files\' defense counsel; ⬆ Upload Demand on each demand, saved, removable, 2 MB limit, older demands get the box, hidden on view-only files).');
+    console.log('Case file fields test passed (DOB in the header beside the SSN and Target Settlement beside Case Manager, DOB off the Profile tab, both saved where they were; Non-Economic Damages on Identity; Opposing Counsel on Litigation, and the library files\' defense counsel; ⬆ Upload Demand on each demand, saved, removable, 2 MB limit, older demands get the box, hidden on view-only files).');
 })().catch(e => { console.error(e); process.exit(1); });

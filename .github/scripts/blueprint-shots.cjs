@@ -114,7 +114,7 @@ const SHOTS = {
     'trainee-case-file': { who: TRAINEE, q: '?program=cm', go: caseTab('MC-01', 'profile') },
     'trainee-sign-in': { who: null, go: async (p) => { await p.evaluate(() => { if (window.showLoginView) showLoginView(); }); } },
     'trainee-search': { who: TRAINEE, q: '?program=cm', go: async (p) => { await caseTab('MC-01', 'profile')(p); await p.fill('#cl-bar-input', 'santos'); await p.waitForTimeout(500); } },
-    'trainee-contacts': { who: TRAINEE, q: '?program=cm', go: async (p) => { await p.evaluate(() => { openContacts('Linda Garcia'); document.activeElement.blur(); }); } },
+    'trainee-contacts': { who: TRAINEE, q: '?program=cm', go: async (p) => { await caseTab('MC-05', 'profile')(p); await p.click('#ct-bar-input'); await p.keyboard.type('voss'); await p.waitForTimeout(200); await p.keyboard.press('Enter'); } },
     'trainee-new-intake': { who: TRAINEE, q: '?program=intake', go: async (p) => { await p.evaluate(() => openNewIntake()); await p.click('.nm-card[data-form]'); } },
     'trainee-insurance': { who: TRAINEE, q: '?program=cm', go: caseTab('MC-01', 'matrix') },
     'trainee-notes': { who: TRAINEE, q: '?program=cm', go: caseTab('MC-01', 'notes') },
