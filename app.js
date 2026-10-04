@@ -1076,41 +1076,6 @@
             }
         }
 
-        /* ---------- Training Simulation Calendar (.ics) ----------
-           A CURATED, MOCK attorney schedule for the training exercise —
-           not real case data (that's exportMyCalendar() above). Dated
-           relative to the logged-in trainee's own registration
-           training_start_date server-side, so the same fixed template
-           keeps landing on the right days for every future batch without
-           ever being touched again. See functions/api/export-training-calendar.js. */
-        async function downloadTrainingCalendar() {
-            try {
-                const res = await fetch('/api/export-training-calendar', { credentials: 'include' });
-                if (!res.ok) {
-                    let msg = 'Could not generate training calendar (' + res.status + ')';
-                    try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
-                    showToast(msg, 'error');
-                    return;
-                }
-                const usedFallback = res.headers.get('X-Used-Fallback-Date') === 'true';
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'training-simulation-calendar.ics';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-                showToast(
-                    'Training calendar downloaded' + (usedFallback ? ' (no training start date on file — dated from today instead)' : '') + ' — import it into Google Calendar via Settings > Import & export.',
-                    'info'
-                );
-            } catch (e) {
-                showToast('Network error generating training calendar.', 'error');
-            }
-        }
-
         /* ---------- Trainee Dashboard (Phase 1: rule-based automated review) ----------
            Same full-page overlay pattern as Master Control
            (#trainee-dashboard-page + .open, mirroring #master-control-page).
@@ -2181,8 +2146,6 @@
             document.getElementById('master-control-page').classList.remove('open');
             document.body.classList.remove('mc-active');
         }
-        // Kept for backward compatibility with older markup/links.
-        function closeAdminDashboard() { exitMasterControl(); }
 
         const MC_TABS = ['overview', 'registrations', 'users', 'monitoring', 'case-logs', 'announce', 'access'];
         function showAdminDashTab(tab) {
