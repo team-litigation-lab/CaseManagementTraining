@@ -172,11 +172,6 @@ export function fileTypeIsInline(type) {
     return INLINE_FILE_TYPES.has(String(type || '').split(';')[0].trim().toLowerCase());
 }
 
-export async function getSiteState(db) {
-    const row = await db.prepare(`SELECT locked, locked_by_batch FROM site_state WHERE id = 1`).first();
-    return { locked: !!(row && row.locked), lockedBy: row ? row.locked_by_batch : null };
-}
-
 /* =====================================================================
    MASTER ACCOUNT
    There is exactly one Master Account, identified by username. It has two

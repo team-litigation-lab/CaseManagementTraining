@@ -129,7 +129,7 @@ const ADMIN = { username: 'trainer-ci', fullName: 'Ci Trainer', batchId: 'B30092
     // a draft kept before drafts held them: the server's copy fills them in before recovered work is sent
     await page.evaluate(() => {
         const d = JSON.parse(localStorage.getItem('LSH_CURRENT_EDITOR_DRAFT_V1'));
-        ['attorney', 'caseManager', 'owner'].forEach(k => delete d[k]); d.syncedSig = 'older';
+        ['attorney', 'caseManager', 'owner', 'unsynced'].forEach(k => delete d[k]); d.syncedSig = 'older';   // (drafts that old didn't say "unsynced" either)
         d.inputs = d.inputs.map(v => v);   // (as it was)
         localStorage.setItem('LSH_CURRENT_EDITOR_DRAFT_V1', JSON.stringify(d));
     });

@@ -774,7 +774,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
 - **Who can change whom:** only the Master Account changes another Admin's status (approve, reject, suspend, reinstate, revoke), and nobody can change the Master Account's.
 - **Admin password:** after 20 wrong passwords from one network in an hour, sign-ins with a password from there wait until the next hour (`login.js`). Trainees signing in with the username aren't affected.
 - **Logging out ends that session:** the session can't be brought back by a heartbeat from the old cookie (`logout.js` records which sign-in ended; `heartbeat.js`).
-- **No site lock:** Lock / Unlock is gone. It needed a password today's Admin accounts don't have, so it never worked. To keep someone out, suspend or revoke their account in Users. ⏸ Pause stays.
+- **No site lock:** Lock / Unlock is gone, and nothing on the server refuses anyone because of a lock left set in the database (`/api/cases`, `/api/case-id` no longer read it). It needed a password today's Admin accounts don't have, so it never worked. To keep someone out, suspend or revoke their account in Users. ⏸ Pause stays.
 - **Migrate D1** (the workflow) copies the live database (the one in `wrangler.toml`) into a new one, then points the site at it. It deletes the database it's given first, so it refuses the live database's name and a blank one.
 - **Time & Billing CSV:** a typed cell starting with `=`, `+`, `-` or `@` gets a leading `'` so Excel shows it as text instead of running it.
 - **Links in cases** are only `http(s)` addresses; a link (`<a>`, `<area>`) that opens a new tab always gets `rel="noopener noreferrer"`, so the page it opens can't reach back into the CMS, and saved forms or form buttons lose any new-tab target.

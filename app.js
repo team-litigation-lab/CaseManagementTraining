@@ -167,7 +167,6 @@
         let currentCaseIsDraft = false; // true = loaded/created case has NO permanent Case ID yet
         let currentCaseCanEdit = true; // false when viewing a foreign case read-only (not owner/admin)
         let _emptyCaptureAreaTemplate = null; // pristine clone of #capture-area, captured once at load, used to render read-only previews of OTHER users' cases without touching the live editor
-        const LOCK_KEY = 'LSH_PAGE_LOCKED';
         const SESSION_KEY = 'LSH_SESSION_V1';
         // Heartbeats keep the session alive (the server allows 120 s between them) and show who's
         // online. Every 30 s, every 45 s in a background tab. Sparing on purpose: every /api/ request
@@ -618,9 +617,10 @@
         /* ---------- Totals ---------- */
         function updateTotals() {
             let med = 0; document.querySelectorAll('.med-field').forEach(el => med += parseFloat(el.innerText.replace(/[^0-9.-]/g, '')) || 0);
-            document.getElementById('med-total').innerText = '$ ' + med.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            const put = (el, v) => { if (el && el.innerText !== v) el.innerText = v; };   // only a change is written: the page watches the case for edits
+            put(document.getElementById('med-total'), '$ ' + med.toLocaleString(undefined, { minimumFractionDigits: 2 }));
             let exp = 0; document.querySelectorAll('.exp-field').forEach(el => exp += parseFloat(el.innerText.replace(/[^0-9.-]/g, '')) || 0);
-            if (document.getElementById('exp-total')) document.getElementById('exp-total').innerText = '$ ' + exp.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            put(document.getElementById('exp-total'), '$ ' + exp.toLocaleString(undefined, { minimumFractionDigits: 2 }));
         }
         // Recalculate on input instead of aggressive polling — avoids flicker/lag.
         document.addEventListener('input', (e) => {

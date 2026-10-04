@@ -213,7 +213,7 @@ let base;
     // ---- a trainee on a file they can edit (Case Management): typing in the contacts bar isn't an edit to the case ----
     page = await openPage(browser, { width: 1366, height: 800 }, TRAINEE, '?program=cm');
     await page.evaluate(() => openMockCase('MC-05', { silent: true })); await page.waitForTimeout(900);
-    const sig = () => page.evaluate(() => ({ unsynced: hasUnsyncedChanges(), draft: JSON.stringify(Object.keys(localStorage).filter(k => /draft/i.test(k)).map(k => localStorage.getItem(k))) }));
+    const sig = () => page.evaluate(() => ({ unsynced: hasUnsyncedChanges(), draft: JSON.stringify(Object.keys(localStorage).filter(k => /draft/i.test(k)).map(k => { try { const d = JSON.parse(localStorage.getItem(k)); if (d && typeof d === 'object') delete d.savedAt; return d; } catch (e) { return localStorage.getItem(k); } })) }));   // (what the case is, not when it was last written)
     const s0 = await sig();
     await type(page, 'hendricks'); await page.keyboard.press('Enter'); await page.waitForTimeout(200); await page.keyboard.press('Escape'); await page.waitForTimeout(1500);
     const s1 = await sig();
