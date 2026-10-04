@@ -761,7 +761,7 @@
                 <div id="monitoring-online-list"></div>
 
                 <div class="mc-section-title">🗄 Server Logs</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Log-ins, log-outs, pauses, pings, locks, and revocations, with duration where applicable.</p>
+                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Log-ins, log-outs, pauses, pings and revocations, with duration where applicable.</p>
                 <div class="admin-tile" style="cursor:pointer;" onclick="openServerLogs()" onkeydown="if(event.key==='Enter')openServerLogs()" tabindex="0" role="button">
                     <h4>Server Logs</h4>
                     <p style="font-size:12px;color:var(--navy);font-weight:700;margin:0;">Click to view the full activity record &rarr;</p>
@@ -943,7 +943,7 @@
     <div class="modal-overlay no-print" id="server-logs-modal" style="z-index:2960;">
         <div class="modal-box wide" style="max-height:80vh; display:flex; flex-direction:column;">
             <h2 class="serif">Server Logs</h2>
-            <div class="sub mono">Log-ins, log-outs, pauses, pings, locks &amp; revocations</div>
+            <div class="sub mono">Log-ins, log-outs, pauses, pings &amp; revocations</div>
             <div id="server-logs-list" style="overflow-y:auto; flex:1;"></div>
             <div class="modal-btn-row">
                 <button class="btn-ghost" onclick="closeServerLogs()">Close</button>
