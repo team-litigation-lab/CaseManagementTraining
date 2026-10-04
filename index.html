@@ -94,8 +94,9 @@
                 <button id="case-close-x" type="button" class="case-close-x no-print" onclick="closeCase()" title="Close this case" aria-label="Close this case">✕</button>
                 <div class="flex justify-between items-start">
                     <!-- The client's demographics, labels above the boxes. The name, Contact and Target Settlement are saved by
-                         their position on the page, so they keep this order. The SSN here is a second view of the Profile tab's
-                         SSN (data-mirror: not saved itself; client-id.js keeps the two the same). -->
+                         their position on the page, so they keep this order. The SSN and the DOB here are second views of the Profile
+                         tab's SSN and DOB (data-mirror: not saved themselves; client-id.js keeps each pair the same). The Profile tab's
+                         DOB box is hidden: it's the one that's saved, so cases saved before keep their DOB. -->
                     <div class="hdr-client">
                         <div class="hdr-f hdr-name"><label for="client-name-field">Client's Name</label><div id="client-name-field" contenteditable="true" data-ph="CLIENT NAME"></div></div>
                         <div class="hdr-f"><label class="contact-label">Contact:</label><div id="client-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone" class="text-xs font-bold text-slate-700"></div></div>
@@ -104,6 +105,7 @@
                         <div id="attorney-cm-container" class="hdr-people">
                             <div class="hdr-f"><label class="contact-label" for="attorney-field">Attorney:</label><input type="text" id="attorney-field" placeholder="Attorney name" class="hdr-input"></div>
                             <div class="hdr-f"><label class="contact-label" for="case-manager-field">Case Manager:</label><input type="text" id="case-manager-field" placeholder="Case manager name" class="hdr-input"></div>
+                            <div class="hdr-f"><label class="contact-label" for="head-dob-field">DOB:</label><div id="head-dob-field" data-mirror contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date" class="text-xs font-bold text-slate-700"></div></div>
                         </div>
                     </div>
                     <!-- The client's ID (client-id.js): a mock ID for a Training Library client; for any other client, a photo of
@@ -187,8 +189,14 @@
                 <div id="profile-grid" class="grid grid-cols-3 gap-8">
                     <div class="space-y-6">
                         <div class="pdf-card shadow-sm"><div class="section-head">Identity</div>
-                            <div class="grid grid-cols-2 gap-4 mb-4"><div><label>DOB</label><div id="client-dob-field" contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div id="client-ssn-field" contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
+                            <div class="grid grid-cols-2 gap-4 mb-4"><div style="display:none" aria-hidden="true"><label>DOB</label><div id="client-dob-field" contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div><div><label>SSN</label><div id="client-ssn-field" contenteditable="true" data-ph="XXX-XX-XXXX" data-fmt="ssn"></div></div></div>
                             <div class="mb-4"><label>Email Address</label><div id="client-email-field" contenteditable="true" data-ph="name@example.com" data-fmt="email"></div></div><div><label>Home Address</label><div id="client-address-field" contenteditable="true" data-ph="Street, City, State, ZIP"></div></div>
+                            <!-- Other pertinent info: the non-economic damages (saved by id, data-keyed) -->
+                            <div id="kx-noneconomic" data-keyed class="kx-noneco">
+                                <label>Other Pertinent Info · Non-Economic Damages</label>
+                                <p class="kx-hint no-print">How the injury changed the client's life: pain and suffering, emotional distress (anxiety, sleep, fear of driving), loss of enjoyment (hobbies, sports, events missed), scarring, family and relationships, help needed at home.</p>
+                                <div contenteditable="true" data-k="text" data-ph="e.g. Can't pick up her toddler; stopped coaching soccer; nightmares since the crash; needs help with groceries…" class="multiline-field text-sm text-slate-700 min-h-[90px]"></div>
+                            </div>
                         </div>
                         <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><div class="section-head" style="background:#fff7ed;color:#c2410c;">Emergency Contact</div>
                             <div class="mb-4"><label>Full Name</label><div id="emergency-name-field" contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
@@ -404,6 +412,15 @@
                         <div><label>Discovery Cut-off</label><div id="discovery-cutoff-field" contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
                         <div><label>Trial Date</label><div id="trial-date-field" contenteditable="true" class="sol-font-fix text-orange-600" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
                     </div>
+                </div>
+                <!-- Opposing counsel: the defense attorneys on the lawsuit (saved by id, data-keyed rows; 📇 Contacts lists the library files' counsel) -->
+                <div class="pdf-card shadow-lg border-l-4 border-red-700 mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="section-head" style="margin-bottom:0;background:#fef2f2;color:#b91c1c;">Opposing Counsel</div>
+                        <button onclick="addCounsel()" class="add-btn no-print">+ Add Opposing Counsel</button>
+                    </div>
+                    <p class="kx-hint no-print">The defense attorney for each defendant: who they represent, their firm and how to reach them. Calls from opposing counsel go to the attorney or paralegal on the file; the front desk confirms nothing.</p>
+                    <div id="kx-counsel" data-keyed="rows" class="space-y-3"></div>
                 </div>
                 <div class="pdf-card shadow-lg">
                     <div class="flex justify-between items-center mb-6">

@@ -794,6 +794,16 @@
     .kx-x { position: absolute; top: 6px; right: 10px; color: #cbd5e1; font-weight: 900; font-size: 16px; background: none; border: 0; cursor: pointer; }
     .kx-x:hover { color: #ef4444; }
     .kx-row-title { font-size: 10.5px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: #1d4ed8; margin-bottom: 10px; }
+    /* a demand's letter (⬆ Upload Demand) */
+    .kx-dl { margin-top: 10px; }
+    .kx-dl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 34px; }
+    .kx-dl-file:empty::before { content: 'No letter attached yet'; color: #94a3b8; font-size: 12px; font-style: italic; }
+    .kx-dl-link { color: #2563eb; font-weight: 700; font-size: 13px; }
+    .kx-dl-x { color: #fca5a5; margin-left: 4px; background: none; border: 0; cursor: pointer; font-weight: 900; }
+    .kx-dl-btn { display: inline-flex; align-items: center; gap: 6px; background: #1d4ed8; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 7px 12px; border-radius: 7px; cursor: pointer; margin: 0 !important; }
+    .kx-dl-btn:hover { background: #1e40af; }
+    /* Identity: other pertinent info, the non-economic damages */
+    .kx-noneco { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #e2e8f0; }
     .kx-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
     .kx-chip { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; border-radius: 999px; padding: 3px 10px; font-size: 11px; }
     .kx-calc { margin-top: 14px; font-size: 13px; color: #065f46; background: #ecfdf5; border-radius: 8px; padding: 10px 14px; }

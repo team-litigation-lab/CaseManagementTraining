@@ -170,6 +170,7 @@
             if (c.lit) {
                 heading('Litigation');
                 pairs([['Statute (SOL)', c.lit.sol], ['Complaint filed', c.lit.filed], ['Discovery cutoff', c.lit.cutoff], ['Trial date', c.lit.trial]], 4);
+                if ((c.counsel || []).length) { sub('Opposing counsel'); grid(['Attorney', 'Law firm', 'Represents', 'Phone', 'Email'], c.counsel.map(o => [o.name, o.firm, o.represents, o.phone, o.email])); }
                 grid(['Type', 'Party / detail', 'Due', 'Status'], (c.lit.rows || []).map(r => [r.type, r.party, r.due, r.status]));
             }
             if ((c.finance || []).length) { heading('Finance'); grid(['Date', 'Staff', 'Description', 'Amount'], c.finance.map(f => [f.date, f.staff, f.desc, f.amount])); }

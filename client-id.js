@@ -11,9 +11,11 @@
        case by its key, in the hidden field in #kx-client-id. Replace or remove
        it from the larger view.
      Click the card for the larger view.
-   SSN (#head-ssn-field, beside Contact): the Profile tab's SSN
-   (#client-ssn-field) shown again; typing in either changes both. Only the
-   Profile tab's is saved (app.js: data-mirror).
+   SSN (#head-ssn-field, beside Contact) and DOB (#head-dob-field, beside
+   Case Manager): the Profile tab's SSN and DOB (#client-ssn-field,
+   #client-dob-field) shown again; typing in either changes both. Only the
+   Profile tab's are saved (app.js: data-mirror); its DOB box is hidden, so the
+   DOB is typed in the header.
    ========================================================= */
 (function () {
     'use strict';
@@ -21,9 +23,10 @@
     const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t || 'info'); };
 
-    /* ---------- the SSN beside Contact ---------- */
-    function linkSsn() {
-        const prof = $id('client-ssn-field'), head = $id('head-ssn-field');
+    /* ---------- the SSN beside Contact, the DOB beside Case Manager ---------- */
+    function linkSsn() { link('client-ssn-field', 'head-ssn-field'); link('client-dob-field', 'head-dob-field'); }
+    function link(profId, headId) {
+        const prof = $id(profId), head = $id(headId);
         if (!prof || !head) return;
         // Whichever changed is copied to the other; when both changed at once (a case loading), the Profile tab's wins.
         const mo = new MutationObserver((recs) => {

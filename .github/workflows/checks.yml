@@ -126,6 +126,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/known-gaps.cjs
+      - name: Case file fields (DOB in the header, Non-Economic Damages, Opposing Counsel, Upload Demand)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/case-fields.cjs
       - name: Contacts (a card for every provider, adjuster, opposing counsel, client and other contact in the case files)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
