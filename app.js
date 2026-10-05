@@ -573,6 +573,7 @@
             document.querySelectorAll('#doc-body .doc-attachment a[download], #kx-demand a.kx-dl-link[download]').forEach(a => names.add(a.getAttribute('download')));
             const f = document.querySelector('#kx-client-id [data-k="file"]');
             if (f) { try { const o = JSON.parse(f.textContent); if (o && o.name) names.add(o.name); } catch (e) { /* no ID file */ } }
+            if (window.lshPdPhotos) window.lshPdPhotos.list().forEach(p => { if (p.name) names.add(p.name); });   // property damage photos (pd-photos.js)
             return names;
         }
         // Two files of the same type uploaded the same day: the second is …-2, the third …-3 (before the extension)
@@ -605,6 +606,7 @@
                     if (o && typeof o.name === 'string' && o.name.startsWith('NO-CASE-ID_')) { o.name = fresh(o.name); f.textContent = JSON.stringify(o); n++; }
                 } catch (e) { /* no ID file */ }
             }
+            if (window.lshPdPhotos) n += window.lshPdPhotos.rename((old) => (old.startsWith('NO-CASE-ID_') ? fresh(old) : null));
             return n;
         }
         async function handleDocUpload(input) {
@@ -716,8 +718,8 @@
         const CASE_HANDLER_FNS = new Set(['handleDocUpload', 'handleOtherSystem', 'revertOther', 'addChronoDate', 'updateTotals', 'afterKeyedApplied',
             'window.afterKeyedApplied', 'applyReportKind', 'calcSettlement', 'calcWages', 'toggleDriverInsuredExtra', 'toggleOwnerExtra', 'updatePhaseDisplay',
             'generateCaseId', 'sortChronology', 'docDropCat', 'docDrop', 'docDragOver', 'docDragLeave', 'addRow', 'addBI', 'addPIPUM', 'addLien',
-            'addFacility', 'addChronology', 'addDocument', 'addDocLink', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'addAdr', 'uploadDemandLetter', 'showTab',
-            'lshClientId.pick', 'lshClientId.open', 'lshClientId.remove']);
+            'addFacility', 'addChronology', 'addDocument', 'addDocLink', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'addAdr', 'addInsurance', 'uploadDemandLetter', 'showTab',
+            'lshClientId.pick', 'lshClientId.open', 'lshClientId.remove', 'lshPdPhotos.add']);
         const CASE_HANDLER_ARG = /^(?:'[\w .:#\-]*'|-?\d+(?:\.\d+)?|this|this\.(?:id|value|checked)|event|true|false|null)$/;
         function caseHandlerOk(code) {
             return String(code).split(';').map(x => x.trim()).filter(Boolean).every(st => {

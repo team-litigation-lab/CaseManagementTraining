@@ -134,6 +134,12 @@ const MOCK_CASES = [
     treatmentNotes: 'Treating consistently, no gaps. Client asked about mileage: mileage to and from treatment is tracked for the demand (client keeps her log; firm does not reimburse mileage now).',
     pd: { client: { year: '2021', make: 'Honda', model: 'Civic', plate: 'GA-RKT4412', owner: 'Maria Santos', driver: 'Maria Santos' },
         tp: { year: '2019', make: 'Ford', model: 'Escape', plate: 'GA-BDX2290', owner: 'Kyle Brandt', driver: 'Kyle Brandt', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-4471902', driverPhone: '(555) 010-7715', driverInsurer: 'Keystone Mutual Insurance' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KM-26-118834-PD', adjuster: 'Renee Castellano', phone: '(555) 010-7401', email: 'rcastellano@keystonemutual.example.com', liability: 'Accepted', limit: '$ 50,000.00', deductible: '', rental: 'Covered: $40/day; Enterprise, 06/11/2026 to 07/02/2026', estimate: '$ 6,385.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Riverton Collision Center, (555) 010-6602', notes: 'Keystone accepted liability on 06/16/2026 and paid the shop and Enterprise directly. The Civic was repaired and back with the client on 07/02/2026.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear', caption: 'Rear bumper and trunk lid pushed in' },
+        { vehicle: 'client', area: 'rear right', caption: 'Right taillight cracked, bumper cover torn loose' },
+        { vehicle: 'other', area: 'front', caption: 'Escape\'s grille and hood crumpled' }
+    ],
     lit: null,
     finance: [{ date: '06/20/2026', staff: 'Records Specialist', desc: 'Police report fee (RPD-26-061902)', amount: '$ 15.00' }],
     docs: [
@@ -285,6 +291,12 @@ const MOCK_CASES = [
     treatmentNotes: 'Total medical specials $44,170. Permanent restriction documented.',
     pd: { client: { year: '2020', make: 'Toyota', model: 'Tacoma', plate: 'GA-CHN1969', owner: 'Chen & Sons Hardware', driver: 'Robert Chen' },
         tp: { year: '2016', make: 'Nissan', model: 'Altima', plate: 'GA-MLS5521', owner: 'Tanya Mills', driver: 'Tanya Mills', insured: 'Yes', carrierPolicy: 'Liberty Crest · LC-8810456', driverPhone: '(555) 010-7760', driverInsurer: 'Liberty Crest Insurance' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Liberty Crest Insurance', claim: 'LC-25-99812-PD', adjuster: 'Owen Pryor', phone: '(555) 010-7403', email: 'opryor@libertycrest.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Covered: $45/day (pickup); Hertz, 11/20/2025 to 12/19/2025', estimate: '$ 11,720.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Crossroads Collision, (555) 010-6612', notes: 'The Tacoma is titled to Chen & Sons Hardware, so Liberty Crest made the repair payment out to the business and the shop. Repairs finished 12/18/2025; nothing open on the property damage.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'right side', caption: 'Passenger doors and bed side caved in' },
+        { vehicle: 'client', area: 'front right', caption: 'Right front fender and wheel pushed back' },
+        { vehicle: 'other', area: 'front', caption: 'Altima\'s front end crushed, airbags deployed' }
+    ],
     lit: null,
     finance: [{ date: '09/08/2026', staff: 'Demand Specialist', desc: 'Certified mail, demand package', amount: '$ 18.40' }],
     docs: [
@@ -381,7 +393,13 @@ const MOCK_CASES = [
     ],
     chrono: [],
     treatmentNotes: 'Treatment complete 06/10/2025.',
-    pd: null, lit: null,
+    pd: { client: { year: '2019', make: 'Nissan', model: 'Rogue', plate: 'GA-WLS1783', owner: 'James Wilson', driver: 'James Wilson' }, tp: { year: '2021', make: 'Isuzu', model: 'NPR box truck', plate: 'GA-QKL5540', owner: 'Quickline Logistics Inc.', driver: 'Dwight Albers', insured: 'Yes', carrierPolicy: 'TransAmerica Freight · TFI-AU-554019' } }, lit: null,
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'TransAmerica Freight Insurance', claim: 'TFI-25-18820-PD', adjuster: 'Marisol Fenwick', phone: '(555) 010-7405', email: 'mfenwick@transamericafreight.example.com', liability: 'Accepted', limit: '$ 1,000,000.00', deductible: '', rental: 'Covered: $38/day; Enterprise, 01/14/2025 to 02/07/2025', estimate: '$ 4,980.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Brookside Auto Body, (555) 010-6604', notes: 'TransAmerica accepted liability once the trooper\'s report came in (the truck driver was cited for the lane change). The Rogue was repaired and paid in full by 02/07/2025.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'left side', caption: 'Driver\'s side scraped and dented from the front fender to the rear door' },
+        { vehicle: 'client', area: 'front left', caption: 'Left mirror torn off' },
+        { vehicle: 'other', area: 'front right', caption: 'Truck\'s right front bumper corner scuffed with the Rogue\'s paint' }
+    ],
     finance: [
         { date: '09/03/2026', staff: 'Lien Negotiator', desc: 'Settlement check $42,000 deposited to trust (cleared 09/10/2026)', amount: '$ 0.00' },
         { date: '09/22/2026', staff: 'Lien Negotiator', desc: 'DWHF reduced to $4,320 (letter in file). Align Chiropractic reduction still pending.', amount: '$ 0.00' }
@@ -468,6 +486,12 @@ const MOCK_CASES = [
     treatmentNotes: 'Surgery 10/14/2026. Needs a ride; daughter is driving.',
     pd: { client: { year: '2018', make: 'Harley-Davidson', model: 'Street Glide', plate: 'GA-MC4471', owner: 'Tomás Rivera', driver: 'Tomás Rivera' },
         tp: { year: '2022', make: 'Chevrolet', model: 'Tahoe', plate: 'GA-KLR8820', owner: 'Brian Keller', driver: 'Brian Keller', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-9901442', driverPhone: '(555) 010-7719', driverInsurer: 'Keystone Mutual Insurance' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KM-26-121150-PD', adjuster: 'Owen Pruett', phone: '(555) 010-7438', email: 'opruett@keystonemutual.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Loss of use: a rental motorcycle isn\'t available; loss-of-use payment requested 08/12/2026', estimate: '$ 9,480.00', outcome: 'Repairable', status: 'In repair', shop: 'Riverton V-Twin Service, (555) 010-6618', notes: 'Keystone accepted liability on the property damage; the Street Glide\'s repair estimate ($9,480.00) was approved 08/20/2026 and the bike is at the shop. Loss of use still open.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'front', caption: 'Front fork and fender bent, headlight smashed' },
+        { vehicle: 'client', area: 'right side', caption: 'Right crash bar and saddlebag scraped' },
+        { vehicle: 'other', area: 'right side', caption: 'Tahoe\'s passenger doors dented where the bike hit' }
+    ],
     lit: null, finance: [],
     docs: [{ cat: 'Case Files', summary: 'Retainer (Spanish version) and communication authorization naming Daniela Rivera (07/24/2026).' }],
     notes: [
@@ -578,7 +602,13 @@ const MOCK_CASES = [
     facilities: [{ name: 'Riverton General Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3130', email: 'liens@rgh.example.com', dates: '04/02/2025 – 04/04/2025', status: 'Discharged', charges: '$ 14,600.00' }],
     chrono: [],
     treatmentNotes: '',
-    pd: null, lit: null,
+    pd: { client: { year: '2014', make: 'Mazda', model: 'CX-5', plate: 'GA-OKW4102', owner: 'Ngozi Okonkwo', driver: 'Ngozi Okonkwo' }, tp: { year: '2018', make: 'Dodge', model: 'Durango', plate: 'GA-LNG2618', owner: 'Victor Lang', driver: 'Victor Lang', insured: 'Yes', carrierPolicy: 'Liberty Crest · LC-4410988' } }, lit: null,
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Liberty Crest Insurance', claim: 'LC-25-66019-PD', adjuster: 'Bianca Ferrell', phone: '(555) 010-7407', email: 'bferrell@libertycrest.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Covered: $40/day; Enterprise, 04/04/2025 to 05/09/2025 (3 days after the total-loss payment)', estimate: '$ 11,350.00', outcome: 'Total loss', status: 'Total loss paid', shop: 'Riverton Collision Center, (555) 010-6602', notes: 'Liberty Crest declared the CX-5 a total loss and paid its actual cash value ($11,350.00) on 05/06/2025; the client signed the title over. Property damage closed.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'left side', caption: 'Driver\'s doors crushed inward, B-pillar bent' },
+        { vehicle: 'client', area: 'front left', caption: 'Left front wheel knocked out of line' },
+        { vehicle: 'other', area: 'front', caption: 'Durango\'s bumper and hood crumpled' }
+    ],
     finance: [{ date: '09/12/2026', staff: 'Lien Negotiator', desc: 'Settlement check $90,000 deposited to trust', amount: '$ 0.00' }],
     docs: [{ cat: 'Case Files', summary: 'Release signed 09/05/2026. Reduction request to Riverton General sent 09/15/2026 (asked for $9,000).' }],
     notes: [{ date: '09/15/2026', staff: 'Lien Negotiator', text: 'Requested hospital lien reduction to $9,000 (from $14,600). Awaiting response. ERISA plan documents requested.' }],
@@ -612,6 +642,12 @@ const MOCK_CASES = [
     treatmentNotes: '',
     pd: { client: { year: '2017', make: 'Buick', model: 'LaCrosse', plate: 'GA-HRS0808', owner: 'William Harris', driver: 'William Harris' },
         tp: { year: '2023', make: 'Kia', model: 'Sorento', plate: 'GA-OWN3321', owner: 'Stacy Owens', driver: 'Stacy Owens', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-5520881', driverPhone: '(555) 010-7725', driverInsurer: 'Keystone Mutual Insurance' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KM-26-133002-PD', adjuster: 'Not yet assigned', phone: '(555) 010-7700', email: 'pdclaims@keystonemutual.example.com', liability: 'Pending', limit: '', deductible: '', rental: 'Not set up yet: waiting for Keystone to assign a PD adjuster and accept liability', estimate: '', outcome: 'Not inspected yet', status: 'Open', shop: 'Parkway Collision, (555) 010-6610', notes: 'PD claim opened with Keystone on 09/16/2026; no PD adjuster assigned yet (phone is the claims line). The Buick was towed to Parkway Collision and storage runs $45/day from 09/21/2026, so Kevin Lam is pushing for an inspection and a move.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear left', caption: 'Left rear quarter panel and taillight crushed; car not drivable (towed)' },
+        { vehicle: 'client', area: 'left side', caption: 'Rear door creased where the Sorento backed into it' },
+        { vehicle: 'other', area: 'rear', caption: 'Sorento\'s rear bumper cracked' }
+    ],
     lit: null, finance: [],
     docs: [{ cat: 'Property Damage', summary: 'Tow receipt: Parkway Collision, (555) 010-6610. Storage $45/day from 09/21/2026.' }],
     notes: [
@@ -677,7 +713,13 @@ const MOCK_CASES = [
     ],
     chrono: [],
     treatmentNotes: 'Permanent restrictions; cannot return to electrical work.',
-    pd: null,
+    pd: { client: { year: '2020', make: 'Ram', model: 'ProMaster 2500', plate: 'GA-SEC2210', owner: 'Summit Electrical Contractors', driver: 'Carlos Mendoza' }, tp: { year: '2019', make: 'Freightliner', model: 'Cascadia (tractor-trailer)', plate: 'GA-RDL7720', owner: 'Redline Freight LLC', driver: 'Mark Toller', insured: 'Yes', carrierPolicy: 'TransAmerica Freight · TFI-AU-771020' } },
+    pdClaim: { against: 'Client\'s own carrier (collision)', carrier: 'Pinnacle Commercial Auto', claim: 'PCA-25-70388', adjuster: 'Gordon Pell', phone: '(555) 010-7409', email: 'gpell@pinnaclecommercial.example.com', liability: 'Denied', limit: '$ 2,000,000.00', deductible: '$ 1,000.00', rental: 'None claimed: the employer replaced the van from its own fleet', estimate: '$ 31,400.00', outcome: 'Total loss', status: 'Total loss paid', shop: 'Fleet Truck Repair of Riverton, (555) 010-6608', notes: 'The van belongs to his employer, Summit Electrical Contractors. TransAmerica denied liability, so the employer\'s fleet carrier paid it as a total loss (ACV $31,400.00 less the $1,000.00 deductible) on 03/14/2025 and is subrogating against Redline Freight.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear', caption: 'Rear doors and back wall crushed into the cargo area' },
+        { vehicle: 'client', area: 'rear left', caption: 'Left rear corner and taillight torn away' },
+        { vehicle: 'other', area: 'front', caption: 'Tractor\'s front bumper and grille damaged' }
+    ],
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Gregory Hale', firm: 'Hale Whitman LLP', represents: 'Redline Freight LLC', phone: '(555) 010-8130', email: 'ghale@halewhitman.example.com' }],
     lit: { sol: '02/11/2027', filed: '01/06/2026', cutoff: '11/30/2026', trial: '03/08/2027',
@@ -757,7 +799,12 @@ const MOCK_CASES = [
     liens: [{ type: 'HI Subro', entity: 'Fitness Industry Health Plan', file: 'FIHP-S-2210', amount: '$ 12,330.00', status: 'Confirmed (lien letter received)' }],
     facilities: [{ name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '12/15/2025 – 08/20/2026', status: 'Discharged', charges: '$ 16,780.00' }],
     chrono: [], treatmentNotes: '',
-    pd: null, lit: null,
+    pd: { client: { year: '2022', make: 'Hyundai', model: 'Tucson', plate: 'GA-PRC2587', owner: 'Hannah Pierce', driver: 'Hannah Pierce' }, tp: { year: '2016', make: 'Jeep', model: 'Grand Cherokee', plate: 'GA-FOX1209', owner: 'Jared Fox', driver: 'Jared Fox', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-7710340' } }, lit: null,
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KM-25-140882-PD', adjuster: 'Alana Mercado', phone: '(555) 010-7411', email: 'amercado@keystonemutual.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Covered: $45/day; Enterprise, 12/11/2025 to 01/09/2026', estimate: '$ 8,915.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Oakline Auto Body, (555) 010-6606', notes: 'Keystone accepted liability on 12/15/2025 and approved a $1,240.00 supplement for hidden damage (included in the total). Repaired and paid; the Tucson went back to the client on 01/09/2026.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear', caption: 'Liftgate and rear bumper crushed' },
+        { vehicle: 'other', area: 'front', caption: 'Grand Cherokee\'s front bumper and hood pushed in' }
+    ],
     finance: [{ date: '03/02/2026', staff: 'Records Specialist', desc: 'Records fees', amount: '$ 64.00' }],
     docs: [{ cat: 'Case Files', summary: 'Client email 09/23/2026 (unhappy with communication). Attorney called her back 09/24; no decision yet.' }],
     notes: [
@@ -872,7 +919,13 @@ const MOCK_CASES = [
     liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 26-0328-9920', amount: '$ 18,406.00', status: 'Confirmed (lien letter received)' }],
     facilities: [{ name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '03/28/2026 – 03/29/2026', status: 'Discharged', charges: '$ 64,200.00' }],
     chrono: [], treatmentNotes: '',
-    pd: null, lit: null, finance: [{ date: '05/20/2026', staff: 'Paralegal', desc: 'Probate filing fee (letters of administration)', amount: '$ 145.00' }],
+    pd: { client: { year: '2019', make: 'Toyota', model: 'Avalon', plate: 'GA-HMD3817', owner: 'George Hammond', driver: 'George Hammond' }, tp: { year: '2016', make: 'Chevrolet', model: 'Silverado 1500', plate: 'GA-KEN8813', owner: 'Travis Keene', driver: 'Travis Keene', insured: 'Yes', carrierPolicy: 'Liberty Crest · LC-2231887' } }, lit: null, finance: [{ date: '05/20/2026', staff: 'Paralegal', desc: 'Probate filing fee (letters of administration)', amount: '$ 145.00' }],
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Liberty Crest Insurance', claim: 'LC-26-10277-PD', adjuster: 'Desmond Yates', phone: '(555) 010-7413', email: 'dyates@libertycrest.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'None: no rental needed', estimate: '$ 24,600.00', outcome: 'Total loss', status: 'Total loss paid', shop: '', notes: 'Liberty Crest declared the Avalon a total loss. The ACV check ($24,600.00) was made out to the Estate of George Hammond and issued 06/12/2026, after the letters of administration; Carol Hammond signed the title as administrator.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'front', caption: 'Front end destroyed in the head-on impact, airbags deployed' },
+        { vehicle: 'client', area: 'front left', caption: 'Driver\'s side front pushed back into the cabin' },
+        { vehicle: 'other', area: 'front', caption: 'Silverado\'s front end crushed' }
+    ],
     docs: [{ cat: 'Case Files', summary: 'Letters of administration naming Carol Hammond (05/20/2026). Death certificate. Retainer signed by Carol as administrator.' }],
     notes: [
         { date: '05/21/2026', staff: 'Case Manager', text: 'Only Carol Hammond (administrator) may receive case information. Her brother Daniel Hammond has called twice; told him to speak with Carol.' },
@@ -1101,6 +1154,12 @@ const MOCK_CASES = [
     treatmentNotes: 'Father and son see the same orthopedic office on different days. Don\'t mix up their appointments.',
     pd: { client: { year: '2015', make: 'Toyota', model: 'Camry', plate: 'GA-HRN6230', owner: 'Jose Hernandez', driver: 'Jose Hernandez' },
         tp: { year: '2022', make: 'Ford', model: 'Transit', plate: 'GA-SWF4410', owner: 'Swift Parcel Co.', driver: 'Dwayne Pratt', insured: 'Yes', carrierPolicy: 'TransAmerica Freight · TFI-AU-771240', driverPhone: '(555) 010-7728', driverInsurer: 'TransAmerica Freight Insurance', ownerPhone: '(555) 010-7729', ownerPolicy: 'TransAmerica Freight · TFI-AU-771240' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'TransAmerica Freight Insurance', claim: 'TFI-26-40219-PD', adjuster: 'Lorena Quintero', phone: '(555) 010-7415', email: 'lquintero@transamericafreight.example.com', liability: 'Accepted', limit: '$ 1,000,000.00', deductible: '', rental: 'Covered: $40/day; Enterprise, started 09/02/2026; ends 3 days after the total-loss payment', estimate: '$ 9,850.00', outcome: 'Total loss', status: 'Estimate done', shop: 'Brookside Auto Body, (555) 010-6604', notes: 'TransAmerica valued the Camry as a total loss at $9,850.00 (ACV) on 09/18/2026. Kevin Lam is going over the valuation with the client in Spanish (with Luis Ortega) before he signs the title over; not paid yet.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'left side', caption: 'Driver\'s side caved in at both doors' },
+        { vehicle: 'client', area: 'front left', caption: 'Left front fender and wheel pushed in' },
+        { vehicle: 'other', area: 'front', caption: 'Delivery van\'s front bumper and hood pushed in' }
+    ],
     lit: null,
     finance: [{ date: '09/03/2026', staff: 'Records Specialist', desc: 'Police report fee (RPD-26-083044)', amount: '$ 15.00' }],
     docs: [
@@ -1280,7 +1339,13 @@ const MOCK_CASES = [
         { dos: ['10/30/2025'], facility: 'Motion Physical Therapy', next: '', notes: 'Discharged from PT; full duty.' }
     ],
     treatmentNotes: 'Treatment complete 10/30/2025. Specials $44,550.',
-    pd: null, lit: null,
+    pd: { client: { year: '2018', make: 'Ford', model: 'Fusion', plate: 'GA-CRT5562', owner: 'Denise Carter', driver: 'Denise Carter' }, tp: { year: '2013', make: 'Dodge', model: 'Avenger', plate: 'GA-VSS3306', owner: 'Brandon Voss', driver: 'Brandon Voss', insured: 'Yes', carrierPolicy: 'Budget Auto · BAI-6632190' } }, lit: null,
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Budget Auto Insurance', claim: 'BAI-25-22019-PD', adjuster: 'Felix Ambrose', phone: '(555) 010-7417', email: 'fambrose@budgetauto.example.com', liability: 'Accepted', limit: '$ 25,000.00', deductible: '', rental: 'Covered: $35/day; Enterprise, 02/19/2025 to 03/21/2025', estimate: '$ 13,200.00', outcome: 'Total loss', status: 'Total loss paid', shop: '', notes: 'Budget Auto paid the Fusion as a total loss ($13,200.00 ACV) on 03/18/2025, within Voss\'s separate $25,000.00 property damage limit; it did not reduce the $25,000 BI tender.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'front', caption: 'Front end crushed back to the windshield' },
+        { vehicle: 'client', area: 'front left', caption: 'Left front wheel torn back' },
+        { vehicle: 'other', area: 'front', caption: 'Avenger\'s front end crushed' }
+    ],
     finance: [{ date: '07/02/2026', staff: 'Lien Negotiator', desc: 'BI tender $25,000 (Budget Auto) deposited to trust', amount: '$ 0.00' }],
     docs: [
         { cat: 'Case Files', summary: 'UM carrier\'s consent to settle with the BI carrier (06/12/2026). UM settlement agreed at $60,000 (09/15/2026); release not signed yet.' }
@@ -1414,7 +1479,13 @@ const MOCK_CASES = [
         { dos: ['08/19/2025', '11/18/2025', '02/24/2026'], facility: 'Riverton Pain Institute', next: '', notes: 'Three epidural steroid injections. Released 06/02/2026.' }
     ],
     treatmentNotes: 'Treatment complete 06/2026. The prior firm\'s file was missing bills; all bills were requested again (05/2026).',
-    pd: null, lit: null,
+    pd: { client: { year: '2019', make: 'Honda', model: 'Accord', plate: 'GA-RHM2049', owner: 'Ahmed Rahman', driver: 'Ahmed Rahman' }, tp: { year: '2020', make: 'Ram', model: '1500', plate: 'GA-KRR6031', owner: 'Scott Kerr', driver: 'Scott Kerr', insured: 'Yes', carrierPolicy: 'Liberty Crest · LC-7700315' } }, lit: null,
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Liberty Crest Insurance', claim: 'LC-25-60418-PD', adjuster: 'Paige Lindqvist', phone: '(555) 010-7419', email: 'plindqvist@libertycrest.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Covered: $40/day; Enterprise, 05/05/2025 to 06/13/2025', estimate: '$ 19,750.00', outcome: 'Total loss', status: 'Total loss paid', shop: '', notes: 'Liberty Crest paid the Accord as a total loss ($19,750.00 ACV) on 06/10/2025, long before this firm took the case (04/10/2026). Nothing is open on the property damage.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear', caption: 'Rear end crushed into the back seat' },
+        { vehicle: 'client', area: 'front', caption: 'Front bumper and hood pushed in from hitting the car ahead' },
+        { vehicle: 'other', area: 'front', caption: 'Ram\'s front bumper and grille damaged' }
+    ],
     finance: [{ date: '09/01/2026', staff: 'Demand Specialist', desc: 'Certified mail, demand package', amount: '$ 18.40' }],
     docs: [
         { cat: 'Case Files', summary: 'Substitution of counsel and the client\'s letter ending Hartley & Moss\'s representation (04/10/2026). Hartley & Moss lien letter (04/22/2026): costs $3,850 plus a claim for fees for their work.' },
@@ -1463,7 +1534,12 @@ const MOCK_CASES = [
         { dos: ['07/22/2025'], facility: 'Riverton Orthopedic Associates', next: '', notes: 'Released; permanent lifting restrictions (no patient transfers).' }
     ],
     treatmentNotes: 'Treatment complete 07/2025.',
-    pd: null, lit: null,
+    pd: { client: { year: '2015', make: 'Nissan', model: 'Sentra', plate: 'GA-JKN7731', owner: 'Latoya Jackson', driver: 'Latoya Jackson' }, tp: { year: '2019', make: 'Kia', model: 'Optima', plate: 'GA-FLD5578', owner: 'Nora Fields', driver: 'Nora Fields', insured: 'Yes', carrierPolicy: 'Budget Auto · BAI-2208840' } }, lit: null,
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Budget Auto Insurance', claim: 'BAI-24-33107-PD', adjuster: 'Corey Baptiste', phone: '(555) 010-7421', email: 'cbaptiste@budgetauto.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Covered: $35/day; Enterprise, 10/17/2024 to 11/22/2024', estimate: '$ 7,900.00', outcome: 'Total loss', status: 'Total loss paid', shop: '', notes: 'Budget Auto paid the Sentra as a total loss ($7,900.00 ACV) on 11/19/2024; the rental ended 11/22/2024. Property damage closed long before the injury settlement.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'left side', caption: 'Driver\'s door and B-pillar pushed into the cabin' },
+        { vehicle: 'other', area: 'front', caption: 'Optima\'s front end crushed' }
+    ],
     finance: [{ date: '09/04/2026', staff: 'Lien Negotiator', desc: 'Settlement check $95,000 deposited to trust (cleared 09/11/2026)', amount: '$ 0.00' }],
     docs: [
         { cat: 'Case Files', summary: 'Release signed 08/28/2026. Bridgeway Legal Funding contract (03/2026): $6,000 advance; the payoff grows each month. The client signed an authorization letting Bridgeway be told the case STATUS only (no amounts, no medical details).' },
@@ -1657,7 +1733,13 @@ const MOCK_CASES = [
         { dos: ['07/08/2025', '10/14/2025'], facility: 'Align Chiropractic', next: '', notes: 'Released from care 10/14/2025.' }
     ],
     treatmentNotes: 'Treatment finished 10/14/2025. All bills and records are in.',
-    pd: null,
+    pd: { client: { year: '2022', make: 'Toyota', model: 'Corolla', plate: 'GA-BCH6408', owner: 'Schuyler Beauchamp', driver: 'Schuyler Beauchamp' }, tp: { year: '2017', make: 'Ford', model: 'F-150', plate: 'GA-PRT2214', owner: 'Dale Pruitt', driver: 'Dale Pruitt', insured: 'Yes', carrierPolicy: 'Summit Casualty · SCI-AU-5518203' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Summit Casualty Insurance', claim: 'SCI-25-40672-PD', adjuster: 'Monica Ferraro', phone: '(555) 010-7423', email: 'mferraro@summitcasualty.example.com', liability: 'Accepted', limit: '$ 50,000.00', deductible: '', rental: 'Covered: $40/day; Enterprise, 07/03/2025 to 08/01/2025', estimate: '$ 7,460.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Crossroads Collision, (555) 010-6612', notes: 'Summit Casualty accepted liability on 07/09/2025 and paid the shop directly; repairs finished 07/31/2025. Only the BI demand is still open.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'right side', caption: 'Passenger doors pushed in' },
+        { vehicle: 'client', area: 'front right', caption: 'Right front fender and mirror damaged' },
+        { vehicle: 'other', area: 'front', caption: 'F-150\'s front bumper bent' }
+    ],
     lit: null,
     finance: [],
     docs: [
@@ -1763,7 +1845,12 @@ const MOCK_CASES = [
         { dos: ['09/18/2024', '01/22/2025'], facility: 'Align Chiropractic', next: '', notes: 'Released from care 01/22/2025.' }
     ],
     treatmentNotes: 'Treatment complete (01/22/2025).',
-    pd: null,
+    pd: { client: { year: '2020', make: 'Honda', model: 'CR-V', plate: 'GA-FTH3195', owner: 'Mireille Featherstonhaugh', driver: 'Mireille Featherstonhaugh' }, tp: { year: '2015', make: 'Nissan', model: 'Altima', plate: 'GA-MRC9150', owner: 'Kyle Mercer', driver: 'Kyle Mercer', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-5580214' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KM-24-77310-PD', adjuster: 'Jasper Kwan', phone: '(555) 010-7425', email: 'jkwan@keystonemutual.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Covered: $40/day; Enterprise, 09/17/2024 to 10/18/2024', estimate: '$ 9,460.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Riverton Collision Center, (555) 010-6602', notes: 'Keystone paid the CR-V repair in full in 10/2024, before the suit. The lawsuit is over her injury damages, not the car.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear', caption: 'Liftgate and rear bumper pushed in' },
+        { vehicle: 'other', area: 'front', caption: 'Altima\'s hood buckled and headlights broken' }
+    ],
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Denise Albright', firm: 'Albright & Cole', represents: 'Kyle Mercer', phone: '(555) 010-8150', email: 'dalbright@albrightcole.example.com' }],
     adr: [{ type: 'Mediation', setBy: 'Court-ordered', status: 'Scheduled', attend: 'In person', provider: 'Riverton Dispute Resolution Center', date: '06/24/2025', time: '9:00 AM', where: 'Riverton Dispute Resolution Center', brief: '06/20/2025', notes: 'Order setting mediation. Prepare the mediation summary by 06/20/2025.' }],
@@ -2074,7 +2161,12 @@ const MOCK_CASES = [
         { dos: ['09/02/2025'], facility: 'Riverside Physical Therapy', next: '', notes: 'Last visit; released.' }
     ],
     treatmentNotes: 'Client just finished treatment. In the process of collecting bills and records.',
-    pd: null,
+    pd: { client: { year: '2016', make: 'Chevrolet', model: 'Impala', plate: 'GA-BMT4826', owner: 'Rhys Beaumont', driver: 'Rhys Beaumont' }, tp: { year: '2019', make: 'Ford', model: 'Transit Connect', plate: 'GA-QDC7316', owner: 'QuickDrop Couriers LLC', driver: 'Ray Delacroix', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-7740088' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KM-25-80155-PD', adjuster: 'Erin Galloway', phone: '(555) 010-7427', email: 'egalloway@keystonemutual.example.com', liability: 'Accepted', limit: '$ 100,000.00', deductible: '', rental: 'Covered: $40/day; Enterprise, 03/12/2025 to 04/04/2025', estimate: '$ 5,270.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Brookside Auto Body, (555) 010-6604', notes: 'Keystone (QuickDrop\'s carrier) accepted liability and paid the Impala repair in full; the car was back with the client on 04/04/2025.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear', caption: 'Trunk lid and rear bumper crushed' },
+        { vehicle: 'other', area: 'front', caption: 'Courier van\'s front bumper cracked' }
+    ],
     lit: null,
     finance: [],
     docs: [
@@ -2124,7 +2216,12 @@ const MOCK_CASES = [
         { dos: ['03/17/2025', '06/20/2025'], facility: 'Riverside Physical Therapy', next: '', notes: 'Should have been finished with physical therapy last week.' }
     ],
     treatmentNotes: 'Should have been finished with physical therapy last week.',
-    pd: null,
+    pd: { client: { year: '2019', make: 'Hyundai', model: 'Elantra', plate: 'GA-KRK2370', owner: 'Brittany Kirkcudbright', driver: 'Brittany Kirkcudbright' }, tp: { year: '2018', make: 'Toyota', model: 'Tacoma', plate: 'GA-TLY6604', owner: 'Mason Tully', driver: 'Mason Tully', insured: 'Yes', carrierPolicy: 'Summit Casualty · SCI-AU-7719032' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Summit Casualty Insurance', claim: 'SCI-25-60117-PD', adjuster: 'Rafael Ostrander', phone: '(555) 010-7429', email: 'rostrander@summitcasualty.example.com', liability: 'Accepted', limit: '$ 50,000.00', deductible: '', rental: 'Covered: $35/day; Enterprise, 03/10/2025 to 03/28/2025', estimate: '$ 3,840.00', outcome: 'Repairable', status: 'Repaired and paid', shop: 'Oakline Auto Body, (555) 010-6606', notes: 'Summit Casualty accepted liability and paid the Elantra repair in full on 03/28/2025.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'left side', caption: 'Driver\'s side doors scraped and dented' },
+        { vehicle: 'other', area: 'right side', caption: 'Tacoma\'s right side and mirror scraped' }
+    ],
     lit: null,
     finance: [],
     docs: [
@@ -2227,7 +2324,12 @@ const MOCK_CASES = [
         { dos: ['10/10/2023'], facility: 'St. Mary\'s Hospital', next: '', notes: 'Rib fractures; concussion.' }
     ],
     treatmentNotes: 'Treatment complete.',
-    pd: null,
+    pd: { client: { year: '2017', make: 'Mazda', model: '3', plate: 'GA-CHM5914', owner: 'Niamh Cholmondeley', driver: 'Niamh Cholmondeley' }, tp: { year: '2015', make: 'Jeep', model: 'Wrangler', plate: 'GA-KSL1019', owner: 'Brian Kessler', driver: 'Brian Kessler', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-9913304' } },
+    pdClaim: { against: 'Client\'s own carrier (collision)', carrier: 'Harbor Point Insurance', claim: 'HP-23-6612', adjuster: 'Celeste Varga', phone: '(555) 010-7431', email: 'cvarga@harborpoint.example.com', liability: 'Pending', limit: '$ 100,000.00', deductible: '$ 500.00', rental: 'Covered under her policy: $30/day up to 30 days; Enterprise, 10/12/2023 to 11/10/2023', estimate: '$ 12,800.00', outcome: 'Total loss', status: 'Total loss paid', shop: '', notes: 'Keystone never accepted liability, so the Mazda went through her own collision coverage: Harbor Point paid it as a total loss ($12,800.00 ACV less the $500.00 deductible) on 11/16/2023. Harbor Point is subrogating against Keystone; the deductible comes back to her if it recovers.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'front', caption: 'Front end crushed, airbags deployed' },
+        { vehicle: 'other', area: 'front', caption: 'Wrangler\'s front bumper and grille pushed in' }
+    ],
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Paul Hendricks', firm: 'Hendricks & Vale LLP', represents: 'Brian Kessler', phone: '(555) 010-8120', email: 'phendricks@hendricksvale.example.com' }],
     lit: { sol: '10/10/2025', filed: '11/18/2024', cutoff: '09/30/2025', trial: '02/09/2026', rows: [{ type: 'Deposition Notice', party: 'Plaintiff Niamh Cholmondeley: 06/20/2025, 10:00 AM, at Hendricks & Vale LLP (defense counsel)', due: '06/20/2025', status: 'Pending' }] },
@@ -2329,7 +2431,13 @@ const MOCK_CASES = [
         { dos: [], facility: 'Align Chiropractic', next: '', notes: 'Client hasn\'t started treating yet according to providers.' }
     ],
     treatmentNotes: 'Client hasn\'t started treating yet according to providers.',
-    pd: null,
+    pd: { client: { year: '2019', make: 'Ford', model: 'Transit', plate: 'GA-CTH8052', owner: 'Courthope Mobile Detailing', driver: 'Bjorn Courthope' }, tp: { year: '2020', make: 'Subaru', model: 'Outback', plate: 'GA-VGT2735', owner: 'Sandra Voight', driver: 'Sandra Voight', insured: 'Yes', carrierPolicy: 'Keystone Mutual · KM-4410987' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KM-22-31986-PD', adjuster: 'Bernard Ashby', phone: '(555) 010-7433', email: 'bashby@keystonemutual.example.com', liability: 'Pending', limit: '$ 50,000.00', deductible: '', rental: 'Requested, not approved: liability pending (business van, loss of use to follow)', estimate: '$ 6,215.00', outcome: 'Repairable', status: 'Estimate done', shop: 'Parkway Collision, (555) 010-6610', notes: 'Keystone\'s appraiser wrote a $6,215.00 estimate on 05/03/2022, but liability is still pending even though Voight was cited. The van belongs to his detailing business, so its loss of use goes on the claim once liability is accepted.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'left side', caption: 'Driver\'s door and left side panel pushed in' },
+        { vehicle: 'client', area: 'front left', caption: 'Left front wheel and fender damaged' },
+        { vehicle: 'other', area: 'front', caption: 'Outback\'s bumper and hood crumpled' }
+    ],
     lit: null,
     finance: [],
     docs: [
@@ -2381,7 +2489,12 @@ const MOCK_CASES = [
         { dos: ['12/11/2023', '07/08/2024'], facility: 'Peachtree Pain & Spine', next: '', notes: 'Last treatment 07/08/2024.' }
     ],
     treatmentNotes: 'Client last treatment was from a month ago.',
-    pd: null,
+    pd: { client: { year: '2012', make: 'Toyota', model: 'Corolla', plate: 'GA-BCH5120', owner: 'Schuyler Beauchamp', driver: 'Schuyler Beauchamp' }, tp: { year: '2004', make: 'Chevrolet', model: 'Cavalier', plate: 'GA-LYL8034', owner: 'Curtis Lyle', driver: 'Curtis Lyle', insured: 'No', carrierPolicy: 'None (uninsured)' } },
+    pdClaim: { against: 'Client\'s own carrier (UMPD)', carrier: 'Geico', claim: 'GC-23-0092477', adjuster: 'Tamsin Rourke', phone: '(555) 010-7435', email: 'trourke@geico.example.com', liability: 'Accepted', limit: '$ 25,000.00', deductible: '$ 250.00', rental: 'Not covered: no rental coverage on his policy', estimate: '$ 6,900.00', outcome: 'Total loss', status: 'Total loss paid', shop: '', notes: 'Lyle had no insurance, so the Corolla went under the client\'s own uninsured motorist property damage coverage ($25,000.00 UMPD limit). Geico paid it as a total loss ($6,900.00 ACV less the $250.00 UMPD deductible) on 01/10/2024.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'right side', caption: 'Passenger doors pushed in where the Cavalier backed into them' },
+        { vehicle: 'other', area: 'rear', caption: 'Cavalier\'s rear bumper crushed' }
+    ],
     lit: null,
     finance: [],
     docs: [
@@ -2431,7 +2544,13 @@ const MOCK_CASES = [
         { dos: ['05/30/2025'], facility: 'Peachtree Pain & Spine', next: '', notes: 'Last injection; released.' }
     ],
     treatmentNotes: 'Treatment complete (05/30/2025).',
-    pd: null,
+    pd: { client: { year: '2018', make: 'Ford', model: 'F-150', plate: 'GA-MSR6197', owner: 'Cian Masserene', driver: 'Cian Masserene' }, tp: { year: '2020', make: 'Volvo', model: 'VNL (tractor-trailer)', plate: 'GA-KST5106', owner: 'Kestrel Logistics Inc.', driver: 'Wade Kittredge', insured: 'Yes', carrierPolicy: 'TransAmerica Freight · TFI-AU-880412' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'TransAmerica Freight Insurance', claim: 'TFI-24-80233-PD', adjuster: 'Glenn Abernathy', phone: '(555) 010-7437', email: 'gabernathy@transamericafreight.example.com', liability: 'Accepted', limit: '$ 1,000,000.00', deductible: '', rental: 'Covered: $55/day (full-size pickup); Enterprise, 10/14/2024 to 11/25/2024', estimate: '$ 26,300.00', outcome: 'Total loss', status: 'Total loss paid', shop: '', notes: 'TransAmerica paid the F-150 as a total loss ($26,300.00 ACV) on 11/22/2024, before the suit was filed. The property damage is closed; the lawsuit is over his injuries only.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'rear', caption: 'Tailgate and bed crushed forward' },
+        { vehicle: 'client', area: 'rear right', caption: 'Right rear wheel pushed in' },
+        { vehicle: 'other', area: 'front', caption: 'Tractor\'s front bumper scraped and bent' }
+    ],
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Gregory Hale', firm: 'Hale Whitman LLP', represents: 'Kestrel Logistics Inc.', phone: '(555) 010-8130', email: 'ghale@halewhitman.example.com' }],
     lit: { sol: '10/11/2026', filed: '04/07/2025', cutoff: '12/19/2025', trial: '', rows: [{ type: 'Interrogatories', party: 'Plaintiff\'s answers to the trucking company\'s interrogatories', due: '08/29/2025', status: 'Pending' }] },

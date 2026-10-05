@@ -4,7 +4,8 @@
    Built in the browser from the library case files (mock-cases.js, MOCK_CASES), so it's the same for
    everyone and always matches the files:
      🩺 Medical providers   the files' treating facilities (facilities)
-     🛡 Adjusters           the BI and PIP / UM / MedPay adjusters (bi, pipum); a carrier with no adjuster
+     🛡 Adjusters           the BI and PIP / UM / MedPay adjusters (bi, pipum) and the property damage adjusters
+                            (pdClaim); a carrier with no adjuster
                             assigned yet gets a card of its own
      ⚖ Opposing counsel    the defense counsel on the files in litigation (counsel)
      👤 Clients             the firm's clients (the same person on two files: one card, both files)
@@ -68,6 +69,10 @@
                 if (real(b.adjuster)) add('adjuster', b.adjuster + '|' + b.carrier, { name: b.adjuster, title: `Adjuster · ${b.carrier || 'insurance carrier'}`, phone, email }, c, note);
                 else if (real(b.carrier)) add('adjuster', 'carrier|' + b.carrier, { name: b.carrier, title: 'Insurance carrier · no adjuster assigned yet', phone, email }, c, note);
             });
+            // 🛡 the property damage adjuster (the vehicle claim, pdClaim)
+            const pc = c.pdClaim || {};
+            if (real(pc.adjuster)) add('adjuster', pc.adjuster + '|' + (pc.carrier || ''), { name: pc.adjuster, title: `PD adjuster · ${pc.carrier || 'insurance carrier'}`, phone: pc.phone, email: pc.email }, c,
+                `PD claim ${pc.claim || '(no number yet)'}${pc.against ? ' · ' + pc.against : ''}`);
             // ⚖ opposing counsel
             (c.counsel || []).forEach(o => {
                 if (!real(o.name)) return;

@@ -175,6 +175,7 @@
         (c.liens || []).forEach(x => bits.push(x.entity, x.file));
         (c.facilities || []).forEach(x => bits.push(x.name));
         if (c.pd) [c.pd.client, c.pd.tp].forEach(v => { if (v) bits.push(v.plate, v.owner, v.driver, v.make, v.model); });
+        if (c.pdClaim) bits.push(c.pdClaim.claim, c.pdClaim.adjuster, c.pdClaim.carrier);
         (c.docs || []).forEach(x => bits.push(x.summary));
         return bits.filter(Boolean).join(' | ');
     };
@@ -548,6 +549,11 @@
         set(card, 'Lien Status', l.status); set(card, 'Date Notified', l.notified); set(card, 'Reduction Requested', l.requested);
         set(card, 'Final Payoff', l.final); set(card, 'Lien Notes', l.notes);
     }
+    // the property damage claim on the Insurance tab (a keyed card: its fields are named by data-k)
+    function fillPdClaim(c) {
+        const box = $id('kx-pd-claim');
+        if (box && c.pdClaim) Object.entries(c.pdClaim).forEach(([k, v]) => setVal(box.querySelector(`[data-k="${k}"]`), v));
+    }
     function fillAdr(c) {
         (c.adr || []).forEach(a => {
             if (typeof addAdr !== 'function') return;
@@ -560,13 +566,14 @@
         });
         if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#kx-adr')) document.activeElement.blur();
     }
-    // An Admin's edit or a trainee's work on a file, saved before the critical note, the ADR tab and the lien status
+    // An Admin's edit or a trainee's work on a file, saved before the critical note, the ADR tab, the lien status and the PD claim
     // existed, has none of them: putting it on screen clears what fillCase filled in. They come from the file again (and
     // saving keeps them from then on), so an older save never hides them, or saves them away for everyone.
     function addNewerParts(c, content) {
         const keyed = (content && content.keyed) || {};
         if (!keyed['kx-critical']) setVal(document.querySelector('#kx-critical [data-k="note"]'), c.critical);
         if (!keyed['kx-adr']) fillAdr(c);
+        if (!keyed['kx-pd-claim']) fillPdClaim(c);
         if (String((content && content.html && content.html.liens) || '').includes('lien-more')) return;
         if (typeof window.upgradeLienRows === 'function') window.upgradeLienRows();
         // each saved lien row gets its status from the file's lien with the same file number (or lienholder)
@@ -614,7 +621,8 @@
             set(pol, 'Reporting Officer', c.police.officer); set(pol, "Officer's Narrative", c.police.narrative);
         }
 
-        // Insurance
+        // Insurance (the property damage claim too)
+        fillPdClaim(c);
         const ins = $id('pane-matrix');
         const hi = cardByHead(ins, 'Health Insurance');
         if (c.health) { set(hi, 'Carrier', c.health.carrier); set(hi, 'Member ID', c.health.memberId); set(hi, 'Group Number', c.health.group); }
@@ -712,6 +720,8 @@
         if (typeof toggleOwnerExtra === 'function') toggleOwnerExtra();
         if (typeof toggleDriverInsuredExtra === 'function') toggleDriverInsuredExtra();
         if (typeof updateTotals === 'function') updateTotals();
+        // the case costs on the settlements (case-sections.js) worked out now, with the file: not a moment later, as an edit
+        if (typeof calcSettlement === 'function') calcSettlement();
     }
 
     /* ---------- view-only mode ---------- */
@@ -722,7 +732,9 @@
     const freeEdit = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('[data-free-edit]')); };
     // A trainee's program's areas (.mock-open) are open once their saved work on the file has loaded.
     const areasOpen = () => { const a = $id('capture-area'); return !!(a && a.classList.contains('mock-areas-ready')); };
-    const inOpenArea = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('.mock-open') && areasOpen()); };
+    // (an additional policy's settlement, on the Insurance tab, is open only to a program that has the Settlement tab)
+    const settlementOpen = () => { const p = $id('pane-settlement'); return !!(p && p.classList.contains('mock-open')); };
+    const inOpenArea = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('.mock-open') && areasOpen() && (!el.closest('.ins-settle') || settlementOpen())); };
     const locked = (t) => !!mockId && !freeEdit(t) && ((mockViewOnly && !inUpdates(t)) || (mockMine && !inOpenArea(t)));
     const blockEdit = (e) => { if (locked(e.target)) { e.preventDefault(); e.stopPropagation(); } };
     const blockKeys = (e) => {
@@ -746,7 +758,7 @@
             const touch = (e) => { if (mockId && (mockEditing || mockMine) && !freeEdit(e.target)) editTouched = true; };
             area.addEventListener('input', touch, true);
             area.addEventListener('change', touch, true);
-            area.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('button, [onclick]'); if (b && !b.closest('.tab-btn, #ssn-mask, [data-cf="open"]')) touch(e); }, true);
+            area.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('button, [onclick]'); if (b && !b.closest('.tab-btn, #ssn-mask, [data-cf="open"], [data-pdp="open"]')) touch(e); }, true);
             area.addEventListener('input', changed, true);
             area.addEventListener('change', changed, true);
             Object.values(UPD_BODIES).forEach(id => { const b = $id(id); if (b) new MutationObserver(scheduleUpdateSave).observe(b, { childList: true }); });
@@ -773,7 +785,7 @@
             if (el) el.classList.add('mock-open');
             const tab = a !== 'header' && $id('tab-' + a); if (tab) tab.classList.add('mock-tab-open');
         });
-        area.querySelectorAll('.mock-open select').forEach(s => { if (s.dataset.mockRo) { s.disabled = false; delete s.dataset.mockRo; } });
+        area.querySelectorAll('.mock-open select').forEach(s => { if (s.dataset.mockRo && (!s.closest('.ins-settle') || areas.includes('settlement'))) { s.disabled = false; delete s.dataset.mockRo; } });
         ['attorney-field', 'case-manager-field'].forEach(id => { const el = $id(id); if (el && el.closest('.mock-open')) el.readOnly = false; });
         area.classList.add('mock-areas-ready');
     }
