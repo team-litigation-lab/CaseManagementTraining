@@ -93,7 +93,8 @@
     let S = {
         open: false, view: 'week', anchor: null, data: null, loadedKey: '', loading: false, error: '',
         hidden: {}, showDeadlines: true, weekends: false, scope: 'mine',
-        panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | null
+        panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | {kind:'import', imp} | null
+        feedPick: null,   // Sync: the calendars the subscribe link covers (null: all)
         dayCache: {}, lastSync: null, poll: null,
         synced: {}        // keys of events already copied to the attorney's Google Calendar ('ev:<id>')
     };
@@ -566,6 +567,7 @@
             <span id="fc-live" class="fc-live"></span>
             <div style="margin-left:auto;display:flex;gap:8px">
                 <button class="fc-btn primary" onclick="fcNew()">+ New event</button>
+                <button class="fc-btn" data-fc="import" onclick="fcImport()" title="Add the events in an .ics file (exported from Google Calendar, Outlook, a court's e-filing site…) to the firm's calendar">⬆ Import .ics</button>
                 <button class="fc-btn" onclick="fcSubscribe()">🔗 Sync to Google / Outlook</button>
             </div>`;
         renderStatus();
@@ -685,6 +687,7 @@
         side.style.display = 'block';
         if (S.panel.kind === 'detail') side.innerHTML = detailHtml(S.panel.ev);
         else if (S.panel.kind === 'subscribe') side.innerHTML = subscribeHtml();
+        else if (S.panel.kind === 'import') side.innerHTML = importHtml(S.panel.imp);
         else { side.innerHTML = formHtml(S.panel.form); checkAvailability(); }
     }
     function findEvent(id) {
@@ -706,7 +709,8 @@
         const who = e.source === 'attorney' ? 'On the attorney\'s calendar (their standing schedule). Schedule around it.'
             : e.source === 'google' ? `On the attorney's Google Calendar (${esc(gs().calendarName)}), their real schedule. Change it in Google Calendar.`
             : e.source === 'case' ? 'A date on the saved case. Change it on the case itself.'
-            : `Scheduled by ${esc(e.mine ? 'you' : e.ownerName)}${e.shared ? ' · shared with every trainee' : ''}${e.updatedAt ? ' · ' + esc(String(e.updatedAt).slice(0, 16)) + ' UTC' : ''}`;
+            : `${e.replaces ? (e.shared ? 'The firm-wide version of ' : `${e.mine ? 'Your' : esc(e.ownerName) + '\'s'} version of `) + (/^std-/.test(e.replaces) ? 'the attorney\'s standing event' : 'a shared event') + (e.mine ? ': delete it to bring the original back. ' : '. ') : ''}`
+                + `${e.imported ? 'Imported from an .ics file by ' : 'Scheduled by '}${esc(e.mine ? 'you' : e.ownerName)}${e.shared ? ' · shared with every trainee' : ''}${e.updatedAt ? ' · ' + esc(String(e.updatedAt).slice(0, 16)) + ' UTC' : ''}`;
         return `<div class="det">
             <div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><h3>${esc(evTitle(e))}</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
             <div style="height:4px;border-radius:4px;background:${c.color};margin:6px 0 10px"></div>
@@ -720,6 +724,7 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
                 ${caseButton(e)}
                 ${e.source === 'user' && !e.readOnly ? `<button class="fc-btn primary" onclick="fcEdit('${esc(e.id)}')">✎ Edit</button><button class="fc-btn danger" onclick="fcDelete('${esc(e.id)}')">🗑 Delete</button>` : ''}
+                ${e.source === 'attorney' || (e.source === 'user' && e.readOnly && e.shared) ? `<button class="fc-btn primary" data-fc="version" onclick="fcEditVersion('${esc(e.id)}')" title="Change it on your calendar: your version shows instead of it">✎ Edit</button>` : ''}
                 ${e.source === 'user' ? `<button class="fc-btn" onclick="fcDuplicate('${esc(e.id)}')">⧉ Duplicate</button>` : ''}
                 ${googleLine(e)}
             </div></div>`;
@@ -728,7 +733,7 @@
         const today = S.data ? S.data.today : firmToday();
         const firstShown = cals().find(c => c.id !== 'firm' && !S.hidden[c.id]);
         return Object.assign({ id: '', calendar: firstShown ? firstShown.id : 'reyes', invite: [], title: '', type: 'Client Meeting', date: S.anchor < today ? today : S.anchor,
-            start: '10:00', end: '11:00', allDay: false, location: '', caseRef: '', caseLabel: '', repoId: null, notes: '', shared: false, conflict: null }, over || {});
+            start: '10:00', end: '11:00', allDay: false, location: '', caseRef: '', caseLabel: '', repoId: null, notes: '', shared: false, replaces: '', conflict: null }, over || {});
     }
     function formHtml(f) {
         const pills = (list, isOn, click) => `<div class="pills">${list.map(x => { const on = isOn(x); const color = x.color || '#0f172a';
@@ -737,7 +742,8 @@
         const oc = openCase();
         const conflict = f.conflict;
         return `<div class="det">
-            <div style="display:flex;justify-content:space-between;align-items:center"><h3>${f.id ? '✎ Edit event' : '+ New event'}</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><h3>${f.id || f.replaces ? '✎ Edit event' : '+ New event'}</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
+            ${f.replaces && !f.id ? `<div class="note" style="margin-top:4px">Saved as <b>your version</b>${me().admin ? ' (tick <b>Share firm-wide</b> to change it for everyone)' : ': everyone else still sees the original'}.</div>` : ''}
             <label class="fl">Title</label>
             <input class="fi" id="fcf-title" value="${esc(f.title)}" placeholder="e.g. Deposition of the defense driver" oninput="fcSet('title',this.value)">
             <label class="fl">Type</label>
@@ -767,7 +773,7 @@
                 ${conflict.suggestions && conflict.suggestions.length ? `Free instead: ${conflict.suggestions.map(s => `<span class="slot" onclick="fcPick('${s.date}','${s.start}','${s.end}')">${esc(fmtDate(s.date))} ${fmtTime(s.start)}</span>`).join('')}` : ''}
                 <div style="margin-top:8px"><button class="fc-btn danger" onclick="fcSave(true)">Book it anyway (double-book)</button></div></div>` : ''}
             <div style="display:flex;gap:8px;margin-top:14px">
-                <button class="fc-btn primary" onclick="fcSave(false)">${f.id ? 'Save changes' : 'Add to calendar'}</button>
+                <button class="fc-btn primary" onclick="fcSave(false)">${f.id || f.replaces ? 'Save changes' : 'Add to calendar'}</button>
                 <button class="fc-btn" onclick="fcClose()">Cancel</button>
                 ${f.id ? `<button class="fc-btn danger" style="margin-left:auto" onclick="fcDelete('${esc(f.id)}')">Delete</button>` : ''}
             </div></div>`;
@@ -803,18 +809,48 @@
     function subscribeHtml() {
         const token = S.data && S.data.feedToken;
         const base = `${location.origin}/api/calendar-feed?token=${encodeURIComponent(token || '')}`;
-        const feeds = [{ id: 'all', name: 'Whole firm calendar' }].concat(cals().map(c => ({ id: c.id, name: c.name })));
+        const all = cals().map(c => c.id);
+        const pick = (S.feedPick || all).filter(id => all.includes(id));
+        const every = pick.length === all.length;
+        const name = every ? 'Whole firm calendar' : pick.map(id => cal(id).name.replace('Atty. ', '')).join(' + ');
+        const url = `${base}&cal=${every ? 'all' : pick.join(',')}`, webcal = url.replace(/^https?:/, 'webcal:');
         return `<div class="det">
             <div style="display:flex;justify-content:space-between;align-items:center"><h3>🔗 Sync to Google / Outlook</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
-            <div class="note" style="margin-top:6px">Subscribe to an attorney's calendar in Google Calendar or Outlook and everything on it, including what you schedule here, appears there and keeps updating as you add, move or cancel events in the CMS. Google refreshes subscribed calendars every few hours, and Outlook about hourly. The CMS itself shows changes right away.<br><br>These links show <b>your</b> view: the attorneys' schedule, firm-wide events and the events you scheduled. Keep them private; <b>Reset links</b> turns off the old ones.</div>
-            ${token ? feeds.map(fd => { const url = `${base}&cal=${fd.id}`, webcal = url.replace(/^https?:/, 'webcal:');
-                return `<div class="feed"><b style="font-size:12.5px;color:#0f172a">${esc(fd.name)}</b><code>${esc(url)}</code>
+            <div class="note" style="margin-top:6px">Subscribe in Google Calendar or Outlook and everything on the calendars you pick, including what you schedule here, appears there and keeps updating as you add, move or cancel events in the CMS. Google refreshes subscribed calendars every few hours, and Outlook about hourly. The CMS itself shows changes right away.<br><br>These links show <b>your</b> view: the attorneys' schedule, firm-wide events and the events you scheduled. Keep them private; <b>Reset links</b> turns off the old ones.</div>
+            <label class="fl">Calendars to sync</label>
+            <div class="pills" data-fc="feed-pick">${cals().map(c => { const on = pick.includes(c.id);
+                return `<button type="button" class="pill ${on ? 'on' : ''}" style="${on ? 'background:' + c.color : ''}" onclick="fcFeedPick('${esc(c.id)}')">${on ? '✓ ' : ''}${esc(c.name.replace('Atty. ', ''))}</button>`; }).join('')}
+                <button type="button" class="pill" onclick="fcFeedPick('*')">${every ? 'None' : 'All'}</button></div>
+            ${!token ? '<div class="fc-sub">Loading your links…</div>' : !pick.length ? '<div class="note">Pick at least one calendar.</div>'
+                : `<div class="feed" data-fc="feed"><b style="font-size:12.5px;color:#0f172a">${esc(name)}</b><code>${esc(url)}</code>
                     <div style="display:flex;gap:6px;flex-wrap:wrap">
                     <button class="fc-btn" onclick="fcCopy('${esc(url)}')">Copy link</button>
                     <a class="fc-btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}">Add to Google</a>
-                    <a class="fc-btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(url)}&name=${encodeURIComponent(fd.name + ' (LSH)')}">Add to Outlook</a></div></div>`; }).join('')
-                : '<div class="fc-sub">Loading your links…</div>'}
-            <button class="fc-btn danger" style="margin-top:8px" onclick="fcRotate()">↻ Reset links</button></div>`;
+                    <a class="fc-btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name + ' (LSH)')}">Add to Outlook</a></div></div>`}
+            <button class="fc-btn danger" style="margin-top:10px" onclick="fcRotate()">↻ Reset links</button></div>`;
+    }
+    // ⬆ Import .ics: pick the calendar, choose the file, see what's in it, then add it
+    function importHtml(imp) {
+        const calList = cals().map(c => ({ id: c.id, label: c.name.replace('Atty. ', ''), color: c.color }));
+        const p = imp.preview, sum = p && p.summary;
+        const when = (e) => `${fmtDate(e.date)} ${e.allDay ? 'all day' : fmtTime(e.start) + '–' + fmtTime(e.end)}`;
+        const skipped = sum ? [sum.already ? `${sum.already} already imported` : '', sum.outside ? `${sum.outside} outside 6 months back – 2 years ahead` : '',
+            sum.cancelled ? `${sum.cancelled} cancelled` : '', sum.invalid ? `${sum.invalid} without a start time` : '', sum.tooMany ? `${sum.tooMany} over your 500-event limit` : ''].filter(Boolean) : [];
+        return `<div class="det" data-fc="import-panel">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h3>⬆ Import an .ics file</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
+            <label class="fl">On whose calendar</label>
+            <div class="pills">${calList.map(x => { const on = imp.calendar === x.id; return `<button type="button" class="pill ${on ? 'on' : ''}" style="${on ? 'background:' + x.color : ''}" onclick="fcImportSet('calendar','${x.id}')">${esc(x.label)}</button>`; }).join('')}</div>
+            ${me().admin ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;margin-top:10px"><input type="checkbox" ${imp.shared ? 'checked' : ''} onchange="fcImportSet('shared',this.checked)"> Share firm-wide (every trainee sees them)</label>` : ''}
+            <label class="fl">The file</label>
+            <label class="fc-btn" style="display:inline-block;cursor:pointer">📄 Choose an .ics file<input type="file" id="fc-ics" accept=".ics,text/calendar" style="display:none" onchange="fcImportFile(this)"></label>
+            ${imp.fileName ? `<span class="fc-sub" style="margin-left:8px">${esc(imp.fileName)}</span>` : ''}
+            ${imp.busy ? '<div class="fc-sub" style="margin-top:10px">Reading the file…</div>' : ''}
+            ${imp.error ? `<div class="avail bad" style="margin-top:10px">${esc(imp.error)}</div>` : ''}
+            ${p ? `<div class="avail ${p.add ? 'ok' : 'bad'}" style="margin-top:10px" data-fc="import-summary">${p.add ? `<b>${p.add} event${p.add === 1 ? '' : 's'}</b> to add${sum.first ? `, ${esc(fmtDate(sum.first))}${sum.last !== sum.first ? ' – ' + esc(fmtDate(sum.last)) : ''}` : ''}${sum.repeating ? ` (${sum.repeating} repeating event${sum.repeating === 1 ? '' : 's'} spread out by date)` : ''}.` : 'Nothing new to add from this file.'}
+                ${skipped.length ? `<div style="margin-top:4px">Left out: ${esc(skipped.join(', '))}.</div>` : ''}
+                ${p.preview.length ? `<ul>${p.preview.map(e => `<li>${esc(when(e))} · ${esc(e.title)}${e.type !== 'Other' ? ` <span class="fc-sub">(${esc(e.type)})</span>` : ''}</li>`).join('')}${p.add > p.preview.length ? `<li>…and ${p.add - p.preview.length} more</li>` : ''}</ul>` : ''}</div>
+                ${p.add ? `<div style="display:flex;gap:8px;margin-top:12px"><button class="fc-btn primary" data-fc="import-go" onclick="fcImportGo()">Import ${p.add} event${p.add === 1 ? '' : 's'} to ${esc(cal(imp.calendar).name)}</button><button class="fc-btn" onclick="fcClose()">Cancel</button></div>` : ''}` : ''}
+        </div>`;
     }
 
     /* ---------- actions ---------- */
@@ -860,6 +896,57 @@
     window.fcClose = function () { S.panel = null; render(); };
     window.fcOpen = function (id) { const e = findEvent(id); if (!e) return; S.panel = { kind: 'detail', ev: e }; render(); };
     window.fcSubscribe = function () { S.panel = { kind: 'subscribe' }; render(); };
+    window.fcFeedPick = function (id) {
+        const all = cals().map(c => c.id), cur = (S.feedPick || all).filter(x => all.includes(x));
+        S.feedPick = id === '*' ? (cur.length === all.length ? [] : all) : cur.includes(id) ? cur.filter(x => x !== id) : all.filter(x => x === id || cur.includes(x));
+        renderSide();
+    };
+    window.fcImport = function () {
+        const firstShown = cals().find(c => c.id !== 'firm' && !S.hidden[c.id]);
+        const c = caseDefaults().calendar || (firstShown ? firstShown.id : 'firm');   // the open case's attorney, if a case is open
+        S.panel = { kind: 'import', imp: { calendar: c, shared: false, text: '', fileName: '', preview: null, error: '', busy: false } }; render();
+    };
+    async function importPost(dryRun) {
+        const imp = S.panel && S.panel.kind === 'import' ? S.panel.imp : null; if (!imp || !imp.text) return null;
+        imp.busy = true; imp.error = ''; renderSide();
+        try {
+            const res = await fetch('/api/calendar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'import', ics: imp.text, calendar: imp.calendar, shared: !!imp.shared, dryRun }) });
+            const data = await res.json().catch(() => ({}));
+            imp.busy = false;
+            if (!data.success) { imp.error = data.error || 'Could not read that file.'; imp.preview = null; renderSide(); return null; }
+            return data;
+        } catch (e) { imp.busy = false; imp.error = 'Could not reach the server. Try again.'; renderSide(); return null; }
+    }
+    window.fcImportSet = async function (k, v) {
+        const imp = S.panel && S.panel.imp; if (!imp) return;
+        imp[k] = v;
+        if (imp.text) { const d = await importPost(true); if (d) imp.preview = d; }
+        renderSide();
+    };
+    window.fcImportFile = function (input) {
+        const file = input.files && input.files[0]; if (!file) return;
+        const imp = S.panel && S.panel.imp; if (!imp) return;
+        if (file.size > 1024 * 1024) { imp.error = 'That file is too big (up to 1 MB). Export a shorter date range.'; imp.preview = null; renderSide(); return; }
+        const reader = new FileReader();
+        reader.onload = async () => {
+            imp.text = String(reader.result || ''); imp.fileName = file.name; imp.preview = null;
+            const d = await importPost(true); if (d) imp.preview = d;
+            renderSide();
+        };
+        reader.onerror = () => { imp.error = 'Could not read that file.'; renderSide(); };
+        reader.readAsText(file);
+    };
+    window.fcImportGo = async function () {
+        const imp = S.panel && S.panel.imp; if (!imp) return;
+        const d = await importPost(false); if (!d) return;
+        toast(`${d.added} event${d.added === 1 ? '' : 's'} imported to ${cal(d.calendar).name}'s calendar.`, 'success', 5000);
+        if (channel) channel.postMessage('changed');
+        const first = d.summary && d.summary.first;
+        S.panel = null;
+        if (first && (first < range()[0] || first > range()[1])) S.anchor = first;
+        await load(true); render();
+    };
     window.fcNew = function (opts) {
         const over = caseDefaults();
         if (!over.caseLabel && opts && opts.fromCase) toast('Open a case first to link the event to it.', 'info');
@@ -879,7 +966,14 @@
     };
     window.fcDuplicate = function (id) {
         const e = findEvent(id); if (!e) return;
-        S.panel = { kind: 'form', form: blankForm(Object.assign({}, e, { id: '', invite: (e.invite || []).slice(), title: e.title, shared: false })) }; render();
+        S.panel = { kind: 'form', form: blankForm(Object.assign({}, e, { id: '', invite: (e.invite || []).slice(), title: e.title, shared: false, replaces: '' })) }; render();
+    };
+    // ✎ Edit on an event you can't change itself (the attorney's standing schedule, one someone else shared):
+    // the form makes your version of it (the server keeps one per event; editing again changes that one)
+    window.fcEditVersion = function (id) {
+        const e = findEvent(id); if (!e) return;
+        S.panel = { kind: 'form', form: blankForm(Object.assign({}, e, { id: '', invite: (e.invite || []).slice(), shared: false, replaces: e.id, caseRef: e.caseRef || '', caseLabel: e.caseLabel || '' })) }; render();
+        setTimeout(() => { const t = $id('fcf-title'); if (t) t.focus(); }, 30);
     };
     // Form edits: keep the state, re-render only when the form's shape changes.
     // After a form change: redraw the form (when its shape changed) or just its availability line,
@@ -911,14 +1005,14 @@
         ['title', 'location', 'notes'].forEach(k => { const el = $id('fcf-' + k); if (el) f[k] = el.value; });
         if (!f.title.trim()) { toast('Give the event a title.', 'error'); const t = $id('fcf-title'); if (t) t.focus(); return; }
         const event = { calendar: f.calendar, invite: f.invite, title: f.title, type: f.type, date: f.date, start: f.start, end: f.end, allDay: f.allDay,
-            location: f.location, caseRef: f.caseRef, caseLabel: f.caseLabel, notes: f.notes, shared: f.shared };
+            location: f.location, caseRef: f.caseRef, caseLabel: f.caseLabel, notes: f.notes, shared: f.shared, replaces: f.replaces || '' };
         try {
             const res = await fetch('/api/calendar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: f.id || undefined, event, force: !!force }) });
             const data = await res.json();
             if (res.status === 409 && data.code === 'CONFLICT') { f.conflict = data; renderSide(); const s = $id('fc-side'); if (s) s.scrollTop = s.scrollHeight; return; }
             if (!data.success) { toast(data.error || 'Could not save the event.', 'error'); return; }
-            toast(`${f.id ? 'Updated' : 'Added'} on ${cal(f.calendar).name}'s calendar${force ? ' (double-booked)' : ''}${canPush() ? ` and copied to ${gs().calendarName}` : ''}.`, 'success');
+            toast(`${f.id || f.replaces ? 'Updated' : 'Added'} on ${cal(f.calendar).name}'s calendar${f.replaces && !f.id ? ' (your version)' : ''}${force ? ' (double-booked)' : ''}${canPush() ? ` and copied to ${gs().calendarName}` : ''}.`, 'success');
             pushOne(data.event);
             S.panel = { kind: 'detail', ev: data.event };
             if (channel) channel.postMessage('changed');

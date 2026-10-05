@@ -214,9 +214,10 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
     if (!(await page.locator('#fc-main .ag-r:has-text("Deposition of the Redline Freight driver")').count())) fail('the agenda view does not list the new event');
 
     // 6. the subscribe feed carries the attorney's schedule and the new event
-    await page.evaluate(() => fcSubscribe());
+    // (the Sync panel makes one link for the calendars picked: here, Atty. Brooks's alone)
+    await page.evaluate(() => { fcSubscribe(); fcFeedPick('*'); fcFeedPick('brooks'); });
     await shot('5-agenda-subscribe');
-    const feedUrl = await page.evaluate(() => [...document.querySelectorAll('#fc-side code')].map(c => c.textContent).find(t => t.includes('cal=brooks')));
+    const feedUrl = await page.evaluate(() => [...document.querySelectorAll('#fc-side code')].map(c => c.textContent).find(t => /cal=brooks$/.test(t)));
     if (!feedUrl) fail('no subscribe link for Atty. Brooks');
     else {
         const ics = await (await call(feedApi, 'GET', feedUrl)).text();

@@ -56,6 +56,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/calendar.cjs
+      - name: Firm Calendar edits, Sync picks and .ics import (the real calendar API on SQLite, in a browser)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/calendar-more.cjs
       - name: Time & Billing (the real time API on SQLite, in a browser)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

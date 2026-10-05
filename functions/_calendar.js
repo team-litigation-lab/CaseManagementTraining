@@ -180,7 +180,8 @@ export function cleanEvent(body) {
         event: {
             calendar, invite, title, type, date: b.date, start, end, allDay,
             location: clip(b.location, 200), caseRef: clip(b.caseRef, 40), caseLabel: clip(b.caseLabel, 120),
-            notes: clip(b.notes, 4000), shared: !!b.shared
+            notes: clip(b.notes, 4000), shared: !!b.shared,
+            replaces: /^[A-Za-z0-9-]{1,80}$/.test(String(b.replaces || '')) ? String(b.replaces) : ''
         }
     };
 }
@@ -265,8 +266,23 @@ const DDL = [
         done_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`
 ];
+// Columns added after the table was first made (ALTER TABLE once per worker, when they're missing):
+//   replaces  your own version of an event you can't change (the attorney's standing event, or one
+//             shared firm-wide): it shows instead of that event on your calendar (on everyone's when an
+//             Admin shares it firm-wide); deleting it brings the original back
+//   ext_uid   where an imported event came from (its .ics UID and date), so importing the file again adds nothing twice
+const LATER_COLUMNS = [['replaces', `TEXT NOT NULL DEFAULT ''`], ['ext_uid', `TEXT NOT NULL DEFAULT ''`]];
+let columnsChecked = false;
 export async function ensureCalendarTables(db) {
     for (const sql of DDL) await db.prepare(sql).run();
+    if (columnsChecked) return;
+    const { results } = await db.prepare(`PRAGMA table_info(calendar_events)`).all();
+    const have = new Set((results || []).map(c => c.name));
+    for (const [name, type] of LATER_COLUMNS) {
+        if (!have.has(name)) { try { await db.prepare(`ALTER TABLE calendar_events ADD COLUMN ${name} ${type}`).run(); } catch (e) { /* added meanwhile */ } }
+    }
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_calendar_events_owner_ext ON calendar_events (owner_username, ext_uid)`).run();
+    columnsChecked = true;
 }
 
 /* ---------- the old Training Calendar's events ----------
@@ -279,13 +295,13 @@ export async function ensureCalendarTables(db) {
 const TRAINING_TYPES = { meeting: 'Client Meeting', call: 'Phone Call', court: 'Court Hearing', deposition: 'Deposition',
     mediation: 'Mediation', deadline: 'Deadline', travel: 'Blocked Time', other: 'Other' };
 const wallFmt = {};
-function wallIn(ms, tz) {
+export function wallIn(ms, tz) {
     const f = wallFmt[tz] || (wallFmt[tz] = new Intl.DateTimeFormat('en-CA', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }));
     const o = {}; f.formatToParts(new Date(ms)).forEach(p => { o[p.type] = p.value; });
     return { date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour === '24' ? '00' : o.hour}:${o.minute}` };
 }
 // The moment a 'YYYY-MM-DDTHH:MM' wall time in a zone stands for.
-function wallToMs(wall, tz) {
+export function wallToMs(wall, tz) {
     const guess = Date.parse(wall + ':00Z');
     const off = (ms) => { const w = wallIn(ms, tz); return Date.parse(`${w.date}T${w.time}:00Z`) - ms; };
     let ms = guess - off(guess);
@@ -351,19 +367,35 @@ export function rowToEvent(r, session) {
         caseRef: r.case_ref || '', caseLabel: r.case_label || '', notes: r.notes || '', shared: !!r.shared,
         owner: r.owner_username, ownerName: r.owner_name || r.owner_username, mine,
         source: 'user', readOnly: !(mine || (session && session.userType === 'Admin')),
+        replaces: r.replaces || '', imported: !!r.ext_uid,
         createdAt: r.created_at, updatedAt: r.updated_at
     };
 }
 // Events a user's calendar holds for [from, to]: the standing schedule, shared events, and their own.
+// An event the user (or an Admin, firm-wide) made their own version of shows as that version instead,
+// even when the version was moved to another day (versions are read whatever their date).
 export async function visibleEvents(db, session, from, to, { scope = 'mine', user = '' } = {}) {
-    let sql = `SELECT * FROM calendar_events WHERE date BETWEEN ? AND ? AND (owner_username = ? OR shared = 1)`;
+    const inRange = `(date BETWEEN ? AND ? OR replaces <> '')`;
+    let sql = `SELECT * FROM calendar_events WHERE ${inRange} AND (owner_username = ? OR shared = 1)`;
     let args = [from, to, session.username];
+    let viewer = session.username;
     if (session.userType === 'Admin' && scope === 'all') {
         // Admins: one trainee's calendar (user=), or everyone's.
-        if (user) args = [from, to, user];
-        else { sql = `SELECT * FROM calendar_events WHERE date BETWEEN ? AND ?`; args = [from, to]; }
+        if (user) { args = [from, to, user]; viewer = user; }
+        else { sql = `SELECT * FROM calendar_events WHERE ${inRange}`; args = [from, to]; }
     }
     const { results } = await db.prepare(sql + ' ORDER BY date, start_time').bind(...args).all();
-    return standingEvents(from, to).concat((results || []).map(r => rowToEvent(r, session)));
+    const rows = (results || []).map(r => rowToEvent(r, session));
+    const replaced = new Set(rows.filter(e => e.replaces && (e.owner === viewer || e.shared)).map(e => e.replaces));
+    return standingEvents(from, to).concat(rows.filter(e => e.date >= from && e.date <= to)).filter(e => !replaced.has(e.id));
+}
+// The event a "your version" edit stands in for, when the user may make one: an attorney's standing
+// event, or an event someone else shared firm-wide. null otherwise.
+export async function replaceable(db, session, id) {
+    const m = /^std-[a-z]+-(\d{4}-\d{2}-\d{2})-[0-9a-z]+$/.exec(String(id || ''));
+    if (m) return standingEvents(m[1], m[1]).find(e => e.id === id) || null;
+    if (!/^[A-Za-z0-9-]{1,64}$/.test(String(id || ''))) return null;
+    const r = await db.prepare(`SELECT * FROM calendar_events WHERE id = ? AND shared = 1 AND owner_username <> ?`).bind(id, session.username).first();
+    return r ? rowToEvent(r, session) : null;
 }
 
