@@ -10,7 +10,7 @@
 //     shows its SSN in both, and it isn't saved twice (the saved fields keep their positions);
 //   - Client's ID: every Training Library client has a mock ID (well-formed, with their
 //     name, date of birth and SPECIMEN on it, its signature clear of the address, and the same
-//     photo for the same client in every file) that opens larger and closes with Escape; a
+//     photo for the same client in every file, masculine, feminine or neutral as the file says) that opens larger and closes with Escape; a
 //     saved case that's work on a library file shows that client's; any other case offers
 //     Upload ID: a large photo is made smaller and sent as a JPG, the card shows it, it's
 //     saved with the case and comes back when the case is opened again, Remove takes it off,
@@ -126,6 +126,15 @@ const failures = []; const fail = (m) => failures.push(m);
     const crowded = looks.sigs.filter(x => x.left < 14 || x.right > 112).map(x => `${x.id} (${Math.round(x.left)}–${Math.round(x.right)})`);
     if (crowded.length) fail(`signatures that reach the address column or the card's edge: ${crowded.join(', ')}`);
     if (looks.split.length) fail(`the same client has different photos in different files: ${looks.split.join(', ')}`);
+
+    // the portrait follows the file: the pronouns its summary and narrative use for the client (pooled over the files a person
+    // is in), `portrait: 'm' | 'f'` on the client when it says, and a neutral look when the file doesn't say
+    const kinds = await page.evaluate(() => {
+        const k = (id) => { const c = MOCK_CASES.find(x => x.id === id).client; return lshClientId.portraitKind(c, c.name.replace(/\s*\(.*$/, '')); };
+        return { ahmed: k('MC-32'), hannah: k('MC-16'), mariaFirstFile: k('MC-01'), set: lshClientId.portraitKind({ name: 'Zed Nobody', dob: '01/01/1990', portrait: 'f' }, 'Zed Nobody'),
+            silent: lshClientId.portraitKind({ name: 'Zed Nobody', dob: '01/01/1990' }, 'Zed Nobody') };
+    });
+    if (kinds.ahmed !== 'm' || kinds.hannah !== 'f' || kinds.mariaFirstFile !== 'f' || kinds.set !== 'f' || kinds.silent !== '') fail(`the portrait doesn't follow the file: ${JSON.stringify(kinds)}`);
 
     // a blank case: typing the SSN in either place changes both
     await page.evaluate(() => closeCase()); await page.waitForTimeout(300);
