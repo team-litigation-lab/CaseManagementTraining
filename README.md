@@ -437,6 +437,7 @@ Both sit under the case's top bar, above the tabs, so they're seen on every tab 
   - The new phases are Discovery, Mediation, Trial Prep, Trial, Post Trial, Settled, Dropped Case, Referred Out and Closed.
   - Employment Status now defaults to **N/A**, and has Self-Employed and Student.
   - Clearing the editor for a new case resets every dropdown to its default.
+- **Field labels** (EMAIL ADDRESS, PHONE…) on the case file's tabs are dark navy, like the header's, and larger (12 px), so they read at a glance. Labels with their own colour (the red BI, the orange PIP) keep it; the sign-in screen and Master Control's forms are unchanged.
 - **Treatment tab:** its notes are now **Other Treatment Notes**, so they aren't confused with the Notes tab.
 - **Notes tab:** the card is **Case Notes** (it was "Case Chronology", easy to confuse with the Treatment tab's Medical Chronology), and its button is **+ Add Case Note**.
 - **Staff roles** (the dropdown on Notes, Tasks and Expenses rows): adds **Litigation Assistant** (after Paralegal) and **Accounting Department** (after Closer).

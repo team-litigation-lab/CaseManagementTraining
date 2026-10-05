@@ -305,6 +305,14 @@
     [contenteditable="true"]:focus { background: #ffffff; border-color: var(--orange); box-shadow: 0 0 0 2px rgba(249,115,22,0.12); }
 
     label { font-size: 10px !important; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.05em; }
+    /* The case file's field labels (EMAIL ADDRESS, PHONE…): dark navy like the header's, and large enough to read at a
+       glance. :where() keeps this as weak as the plain label rule, so a label with its own colour (the red BI, orange
+       PIP, green Target Settlement) keeps it, and labels that are buttons (Upload, ⬆ Add Photos) keep their size. */
+    :where(.tab-pane) label:not(:where(.hub-btn, .add-btn, .kx-dl-btn, .btn-ghost)) { font-size: 12px !important; color: var(--navy-deep); }
+    :where(.header-card) label { color: var(--navy-deep); }
+    /* A lien's status row: "Date Notified / Letter Date" wraps in a narrow window, so the boxes sit at the bottom of
+       their cells and stay level with each other */
+    .lien-more > div { display: flex; flex-direction: column; justify-content: flex-end; }
 
     /* "Contact" label: darker navy blue by default; shifts to a lighter blue for contrast if a background photo is active */
     .contact-label { color: var(--navy-deep) !important; }
@@ -313,7 +321,7 @@
     select.prof-input { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 4px; padding: 8px 10px; font-size: 13px; font-weight: 700; outline: none; width: 100%; color: #0f172a; cursor: pointer; }
 
     .treat-table { width: 100%; border-collapse: collapse; }
-    .treat-table th { background: #f8fafc; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; padding: 12px; border-bottom: 2px solid #e2e8f0; letter-spacing:0.04em; }
+    .treat-table th { background: #f8fafc; text-align: left; font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--navy-deep); padding: 12px; border-bottom: 2px solid #e2e8f0; letter-spacing:0.04em; }
     .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
     .hub-btn { background: #fffaf0; border: 1px solid #ffedd5; color: #9a3412; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 14px; border-radius: 8px; text-align: center; cursor: pointer; }
