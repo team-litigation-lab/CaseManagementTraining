@@ -103,7 +103,7 @@
         font(9, 'bold', [234, 88, 12]); doc.text('LEGAL SUPPORT HELP  ·  CASE MANAGEMENT SYSTEM', M + 10, 285);
         font(30, 'bold', NAVY); doc.text('Training Library', M + 10, 322); doc.text('Mock Cases', M + 10, 356);
         font(11, 'normal', [71, 85, 105]);
-        const blurb = `${opts.title ? opts.title + ': ' : ''}${cases.length} fictional personal-injury case file${cases.length === 1 ? '' : 's'} from the CMS Training Library, with every tab of the case: profile, narrative, police report, insurance, liens, treatment, property damage, litigation, finance, documents, notes and tasks.${opts.trainer ? ' Each file ends with its trainer-only front-desk key: how to verify the caller, the caller scenarios and the Front Desk practice calls.' : ''}`;
+        const blurb = `${opts.title ? opts.title + ': ' : ''}${cases.length} fictional personal-injury case file${cases.length === 1 ? '' : 's'} from the CMS Training Library, with every tab of the case: profile, narrative, police report, insurance, liens, treatment, property damage, litigation, ADR, case costs, documents, notes and tasks.${opts.trainer ? ' Each file ends with its trainer-only front-desk key: how to verify the caller, the caller scenarios and the Front Desk practice calls.' : ''}`;
         doc.text(doc.splitTextToSize(clean(blurb), CW - 40), M + 10, 382);
         let fx = M + 10;
         [[cases.length, 'CASE FILES'], [count('Starter'), 'STARTER'], [count('Intermediate'), 'INTERMEDIATE'], [count('Advanced'), 'ADVANCED']]
@@ -133,6 +133,7 @@
             doc.text(doc.splitTextToSize(clean([c.level].concat((c.programs || []).map(progLabel)).join('  ·  ')), 180), M + CW - 12, y + 17, { align: 'right' });
             y += bandH + 8;
             pairs([['Case type', typeOf(c)], ['Phase', c.phase], ['Date of loss', c.dateOfLoss], ['Statute (SOL)', c.sol], ['Attorney', c.attorney], ['Case manager', c.caseManager], ['Target settlement', c.target]], 4);
+            if (has(c.critical)) table({ body: [[clean('CRITICAL: ' + c.critical)]], theme: 'plain', styles: { fontSize: 9, fontStyle: 'bold', textColor: [153, 27, 27], fillColor: [254, 242, 242], cellPadding: 6 } });
             const ed = typeof window.mockEditInfo === 'function' ? window.mockEditInfo(c.id) : null;
             if (has(c.summary) || ed) {
                 table({ body: [[clean((c.summary || '') + (ed ? `${c.summary ? '\n' : ''}Edited in the CMS by ${ed.updatedBy || 'an Admin'}${ed.updatedAt ? ' (' + ed.updatedAt + ' UTC)' : ''}: the key details here (name, phone, DOB, DOL, phase…) are the edited ones; open the case in the CMS for the whole edited file.` : ''))]],
@@ -153,7 +154,7 @@
             pairs([['Health insurance', hl.carrier], ['Member ID', hl.memberId], ['Group', hl.group]]);
             if ((c.bi || []).length) { sub('Bodily injury (third party)'); grid(['Policyholder', 'Carrier', 'Policy', 'Claim', 'Adjuster', 'Contact', 'Liability', 'Limits'], c.bi.map(b => [b.holder, b.carrier, b.policy, b.claim, b.adjuster, b.contact, b.liability, b.limits])); }
             if ((c.pipum || []).length) { sub('PIP / UM'); grid(['Type', 'Policyholder', 'Carrier', 'Policy', 'Claim', 'Adjuster', 'Contact', 'Limits'], c.pipum.map(b => [b.type, b.holder, b.carrier, b.policy, b.claim, b.adjuster, b.contact, b.limits])); }
-            if ((c.liens || []).length) { heading('Liens'); grid(['Type', 'Lienholder', 'File #', 'Amount'], c.liens.map(l => [l.type === 'Other' && l.typeOther ? l.typeOther : l.type, l.entity, l.file, l.amount])); }
+            if ((c.liens || []).length) { heading('Liens'); grid(['Type', 'Lienholder', 'File #', 'Amount', 'Status', 'Final payoff'], c.liens.map(l => [l.type === 'Other' && l.typeOther ? l.typeOther : l.type, l.entity, l.file, l.amount, l.status || 'Unconfirmed', l.final || ''])); }
             if ((c.facilities || []).length || (c.chrono || []).length || has(c.treatmentNotes)) {
                 heading('Treatment');
                 grid(['Facility', 'Specialty', 'Phone', 'Email', 'Dates', 'Status', 'Charges'], (c.facilities || []).map(f => [f.name, f.specialty === 'Other' && f.specialtyOther ? f.specialtyOther : f.specialty, f.phone, f.email, f.dates, f.status, f.charges]));
@@ -173,7 +174,11 @@
                 if ((c.counsel || []).length) { sub('Opposing counsel'); grid(['Attorney', 'Law firm', 'Represents', 'Phone', 'Email'], c.counsel.map(o => [o.name, o.firm, o.represents, o.phone, o.email])); }
                 grid(['Type', 'Party / detail', 'Due', 'Status'], (c.lit.rows || []).map(r => [r.type, r.party, r.due, r.status]));
             }
-            if ((c.finance || []).length) { heading('Finance'); grid(['Date', 'Staff', 'Description', 'Amount'], c.finance.map(f => [f.date, f.staff, f.desc, f.amount])); }
+            if ((c.adr || []).length) {
+                heading('ADR (mediation / arbitration)');
+                grid(['Type', 'Set by', 'Status', 'Neutral / provider', 'Date and time', 'Brief due', 'Notes'], c.adr.map(a => [a.type, a.setBy, a.status, [a.neutral, a.provider].filter(Boolean).join(' · '), [a.date, a.time].filter(Boolean).join(' '), a.brief, a.notes]));
+            }
+            if ((c.finance || []).length) { heading('Case costs'); grid(['Date', 'Staff', 'Description', 'Amount'], c.finance.map(f => [f.date, f.staff, f.desc, f.amount])); }
             if ((c.docs || []).length) { heading('Doc Hub'); grid(['Category', 'Summary'], c.docs.map(d => [d.cat, d.summary]), { columnStyles: { 0: { cellWidth: 120 } } }); }
             if ((c.notes || []).length) { heading('Notes'); grid(['Date', 'Staff', 'Note'], c.notes.map(n => [n.date, n.staff, n.text]), { columnStyles: { 0: { cellWidth: 58 }, 1: { cellWidth: 90 } } }); }
             if ((c.tasks || []).length) { heading('Tasks'); grid(['Date', 'Staff', 'Task'], c.tasks.map(n => [n.date, n.staff, n.text]), { columnStyles: { 0: { cellWidth: 58 }, 1: { cellWidth: 90 } } }); }

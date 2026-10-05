@@ -87,7 +87,7 @@ const failures = []; const fail = (m) => failures.push(m);
     const entries = () => sql.prepare(`SELECT * FROM time_entries WHERE owner_username = 'ci' ORDER BY created_at, rowid`).all();
 
     // 1. the tab and the timer (in the case header, under the search bars)
-    const tabOrder = await page.evaluate(() => [...document.querySelectorAll('.tab-btn')].map(t => t.id).slice(-2).join(','));
+    const tabOrder = await page.evaluate(() => { const ids = [...document.querySelectorAll('.tab-btn')].map(t => t.id); const i = ids.indexOf('tab-calendar'); return ids.slice(i, i + 2).join(','); });
     if (tabOrder !== 'tab-calendar,tab-time') fail(`the Time tab isn't right after Calendar (${tabOrder})`);
     if (!(await page.isVisible('#tt-widget [data-tt="start"]'))) fail('the case header has no Start timer button');
     // the header timer is just the timer and the Billable / Non-billable dropdown: the timesheet is on the Time tab

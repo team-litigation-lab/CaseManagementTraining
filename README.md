@@ -53,12 +53,12 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
     |---|---|
     | Receptionist / Front Desk | Notes, Tasks (the file stays view only: they log the calls they take, saved for them) |
     | Intake | Header, Profile, Parties Involved, Police Report, Insurance, Doc Hub, Notes, Tasks |
-    | Case Management | Header, Profile, Parties Involved, Police Report, Insurance, Liens, Treatment, Lost Wages, Property Damage, Demand, Settlement, Doc Hub, Notes, Tasks |
-    | Medical Summary & Demand | Treatment, Lost Wages, Liens, Demand, Doc Hub, Notes, Tasks |
+    | Case Management | Header, Profile, Parties Involved, Police Report, Insurance, Treatment, Lost Wages, Demand, Settlement, ADR, Doc Hub, Notes, Tasks, Liens, Property Damage |
+    | Medical Summary & Demand | Treatment, Lost Wages, Demand, Doc Hub, Notes, Tasks, Liens |
     | EA / PA | Doc Hub, Notes, Tasks |
-    | Property Damage | Property Damage, Insurance, Parties Involved, Police Report, Doc Hub, Notes, Tasks |
+    | Property Damage | Parties Involved, Police Report, Insurance, Doc Hub, Notes, Tasks, Property Damage |
 
-    No program yet: view only, with Notes and Tasks. Litigation and Finance are view only for every program. Trainers (Admins) edit the whole library case, as above.
+    No program yet: view only, with Notes and Tasks. Litigation and Case Costs are view only for every program. Trainers (Admins) edit the whole library case, as above.
   - **Save Case** saves the trainee's work on the file as **their own case for it**, with a Case ID: one case per trainee per file (`content.trainingLibraryId`, e.g. `MC-04`). Reopening the file shows their saved work; later saves update the same case. It's never a draft: 🗄 Archive is hidden, and archiving or autosave saves the same case. The server keeps it to one (`/api/case-repository?library=MC-04` finds it, and a new case for a file they already have a case for updates that case), so a second tab can't make a second copy.
   - **Autosave** works as for any case (only when something interrupts the work), including when the page closes on a file they haven't saved yet. Opening another case or closing the file saves unsaved changes first: it's their own case.
   - **↺ Start over** brings the file back as it is in the library; Save Case then replaces their saved work on it.
@@ -292,7 +292,7 @@ The top of the case is the client's demographics. Each box has its label above i
 - **Contact**, **SSN** and **DOB**;
 - **Attorney**, **Case Manager** and **Target Settlement**.
 
-The **SSN** and the **DOB** are typed in the header. The Profile tab no longer shows them: its SSN and DOB boxes are kept, hidden, and they're the ones that are saved (the header's are second views of them, `data-mirror` in `app.js`), so cases saved before keep every field where it was.
+The **SSN** and the **DOB** are typed in the header. Once there is one, the header's SSN shows only its **last 4** (`•••-••-1234`), as the front desk verifies a caller: with the last 4, never reading the whole number out. **👁** shows the whole number for 30 seconds (**🙈 Hide** hides it sooner), and each look is logged: Master Control → Monitoring → **Server Logs** lists it as **SSN Viewed**, with who, when and the case (`case-alerts.js`, `/api/case-activity`). An empty SSN box stays open for typing; after typing, it hides when you leave it. Only the view is masked: the saved SSN keeps every digit. The Profile tab no longer shows them: its SSN and DOB boxes are kept, hidden, and they're the ones that are saved (the header's are second views of them, `data-mirror` in `app.js`), so cases saved before keep every field where it was.
 
 **Client's ID** is the card in the middle of the header (`client-id.js`). In a narrower window the right side (case number, status, search) gives up room first, then the ID card, and the client's boxes least; if the header still doesn't fit, the case is shown smaller (`case-fit.js` counts the header too).
 - **A Training Library client** has a **mock ID** made from their file: name, date of birth, address, and an ID number of its own. It's marked *SPECIMEN · for training only · not a government ID*, follows no real state's design, and has a drawn silhouette, not a photo. A trainee's saved work on a library file shows that client's mock ID too.
@@ -302,7 +302,27 @@ The **SSN** and the **DOB** are typed in the header. The Profile tab no longer s
   - Save the case to keep it.
 - **Click the card** to see it larger. For an uploaded ID, the larger view has **Replace** and **Remove**.
 
+## ⚠ Case alerts: the critical note and the conflict check
+
+Both sit under the case's top bar, above the tabs, so they're seen on every tab (`case-alerts.js`).
+
+**⚠ Critical note.** One short note that everyone must see before talking about the case: *Spanish only*, *a minor: speak only to her mother*, *time-limited demand expires 11/01*.
+- **⚠ Add critical note** opens it; Enter finishes it. It's a red strip, 500 characters at most (the details go in a Case Note).
+- It's saved with the case by id (`#kx-critical`, data-keyed), and it's on the first page of the case summary PDF and at the top of Monitoring's and Case Logs' views of a case. At the limit, what's typed or pasted is cut, never the end of the note.
+- The Training Library files with something everyone must know have one (MC-04, MC-10, MC-15, MC-20, MC-27, MC-33, MC-34: who is or isn't authorized, a minor, a safety flag, a hard-of-hearing client, a mediation the client must attend). It's part of the case header, so the programs that edit the header (Intake, Case Management) can change it; on a view-only file it shows but can't be added to.
+
+**⚖ Conflict check.** A firm can't act for someone against its own client. As people are added to a case, the CMS compares their names with the other case files and warns about a **possible conflict of interest**:
+- the **client** here has the same name as someone **on the other side** of another file (the party at fault: the BI policy holder, the other vehicle's driver or owner);
+- someone **on the other side** here (Parties Involved: At-Fault Party, At-Fault Driver, Vehicle Owner, Property Owner / Business; the other vehicle's driver and owner on Property Damage; a BI policy holder) is a **client** on another file.
+- The other files are the Training Library's (everyone on them) and your own saved cases (their clients: the list of cases doesn't carry the parties). Never another trainee's. A client on two files is the same client, not a conflict; witnesses and passengers aren't checked; a file is never compared with itself.
+- Names match as people write them: "Coleman, Andre" is Andre Coleman, "Sofia Morales (minor), by her father …" is Sofia Morales; nicknames in quotes, middle names, accents, curly apostrophes and Jr./Sr. don't matter; either half of a hyphenated surname matches; a business isn't a person.
+- Each warning names the other file (client, case number, date of loss) with **Open that file**, **Not the same person** and **Escalate to attorney**. Each decision is logged as a **Case Note** (who decided, and which file). *Not the same person* ends the warning; an escalated one stays up, marked as waiting for the attorney, until **Cleared by the attorney**. Only a note that records a decision on that person and that file counts. Save the case to keep the note.
+- The decision buttons show where the Case Notes can be added to (on a library file: when the program has the Notes tab, or the Front Desk's view-only file).
+- To practice it: start a New Intake for a library file's at-fault party (Kyle Brandt hit Maria Santos, MC-01).
+
 ## 🗂 Case editor: newer sections
+
+**The tabs, in order** (two rows of 9): Profile · Parties Involved · Police Report · Insurance · Treatment · Lost Wages · **Case Costs** · Demand · Settlement (BI/UM), then ADR · Litigation · Doc Hub · Notes · Tasks · 📅 Calendar · ⏱ Time · Liens · Property Damage. **Case Costs** is the tab that was called Finance (the case's costs, with their total). Only the tab buttons moved: the tabs' contents stay where they were on the page, so cases saved before load exactly as they did.
 
 **Parties Involved** (tab after Profile)
 - Everyone involved in the incident, each with a role: client, passenger, client vehicle driver, at-fault party, at-fault driver, vehicle owner, property owner / business, witness, or other.
@@ -357,6 +377,12 @@ The **SSN** and the **DOB** are typed in the header. The Profile tab no longer s
 - The choices are **Police Report**, **Incident Report** (premises cases with no police report), or **No report available**.
 - The choice relabels the tab and the report's fields. For example, *Property / Business* and *Incident Report Number* replace *Responding Agency* and *Report Number*.
 
+**ADR: Mediation & Arbitration** (tab, first on the second row, before Litigation)
+- **ADR** is Alternative Dispute Resolution: mediations, arbitrations (binding, non-binding, UM/UIM) and settlement conferences, before a lawsuit or in one.
+- **+ Add ADR** adds one: its type, how it was set (agreed, court-ordered, required by the policy), status, whether the client must attend, the mediator or arbitrator and the provider, date, time, place or video link, brief due date, prep session, the carrier's rep with authority, the fee and its split, the last demand and offer, the settlement or award, and notes.
+- Above the list: how many there are by status, the **next session** with how many days away, and when its **brief is due**. A brief past due, or a session that has passed but is still Scheduled, is flagged (not on a view-only file, which nobody there can update).
+- Saved by id (`#kx-adr`). The library files in mediation or arbitration have theirs (MC-34, MC-39, MC-40, MC-47). The Case Management program edits it.
+
 **Lost Wages** (tab after Treatment)
 - Employer and job, pay type and rate, hours, time off work, days missed, the doctor's off-work note, and wage verification.
 - It shows an estimate: hourly rate × hours ÷ 5 per day, or salary ÷ 260 work days, times the days missed.
@@ -364,6 +390,17 @@ The **SSN** and the **DOB** are typed in the header. The Profile tab no longer s
 **Demand** (tab)
 - One entry per demand sent (BI, UM, UIM, PIP, policy limits, pre-suit).
 - Each entry has the carrier, adjuster, claim number, date sent and how, amount, response due date, whether it's time-limited, status, the response received, and enclosures.
+
+**Liens** (tab)
+- Each lien has its **status**: Unconfirmed, Confirmed (lien letter received), Final lien received, Reduction requested, Negotiated, Waived or Paid; the **date notified** or of the letter; the **reduction requested**; the **final payoff**; and lien notes.
+- More lien types: **Medicare**, **Medicaid / State**, **ERISA Plan**, **Workers' Comp** and **Child Support**.
+- Above the list: how many liens, the amount claimed, what's **still to pay** (the final payoff where there is one, nothing for waived or paid ones) and what reductions and waivers **saved**, then the count and amount by status. Unconfirmed liens are flagged there and on the Settlement tab, whose liens figure may be wrong until the lien letters are in.
+- A lien saved before these fields gets them when the case opens, keeping what it had, with the status **Not recorded** (nobody said where it stands, so it isn't counted as unconfirmed). The library files' liens carry their status from their notes (MC-11's hospital lien: reduction requested to $9,000).
+- A trainer's edit of a library file, or a trainee's saved work on one, from before the critical note, ADR and lien status existed opens with the file's own critical note, ADR and lien statuses (matched by the lien's file number), so an older save never hides them or saves them away.
+
+**Treatment: gaps in care** (under the Medical Chronology)
+- Worked out from the chronology's dates of service and the Provider Treatment Matrix, and never saved: a **gap of more than 30 days** between visits, a **first visit more than 7 days** after the date of loss, a visit dated before the accident, and a provider in the matrix with **no visits** in the chronology. Adjusters attack these, so each one needs a reason in the notes.
+- With none, it says so (✓ No gaps over 30 days, with the number of visits and their dates).
 
 **Settlement (BI/UM)** (tab)
 - **BI** and **UM/UIM** are separate claims, so each has its own card. BI is the at-fault party's carrier; UM/UIM is the client's own policy, and its card says which coverage.
@@ -779,6 +816,7 @@ Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the
 - **Time & Billing CSV:** a typed cell starting with `=`, `+`, `-` or `@` gets a leading `'` so Excel shows it as text instead of running it.
 - **Links in cases** are only `http(s)` addresses; a link (`<a>`, `<area>`) that opens a new tab always gets `rel="noopener noreferrer"`, so the page it opens can't reach back into the CMS, and saved forms or form buttons lose any new-tab target.
 - **Google Drive backup** asks only for `drive.file` (the app's own files), checks every file against the same rule as `/api/file` before copying it, and keeps Google's tokens encrypted.
+- **The SSN in the case header** shows its last 4 only; each look at the whole number is logged (`/api/case-activity`, signed-in people only, one known action, plain text cut short) and listed in Server Logs as **SSN Viewed**. It's a training habit, not a lock: the saved case still holds the number, and anyone who can open the case can show it.
 
 ### Known gaps
 
@@ -993,6 +1031,16 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - 🔗 Link attaches a web address and refuses `javascript:`; old rows get the button; links survive saving and loading and get `rel="noopener noreferrer"`; `javascript:` links are dropped;
   - a pasted address becomes a link, words selected with an address pasted over them become the link, the phone field isn't linked and pasted markup stays text; a click on a link shows Open ↗ and Remove link; a library case's note keeps its links' addresses when saved and shows them as links again;
   - the Drive bar: not set up, Connect, then the case's files (the client's ID too) listed and backed up in batches of 5 with the case's ID and name, Open in Drive going to the case's folder; the status is asked for only when Doc Hub opens; drawing the bar isn't an edit, and neither it nor the timer adds a select or contenteditable (both are data-free-edit).
+- **Case alerts, liens, treatment gaps and ADR** (`.github/scripts/case-alerts.cjs`, in the same job). The server part runs the real `/api/case-activity` and `/api/server-logs` on an in-memory SQLite database. It checks:
+  - a look at the SSN is logged with who and which case (control characters out, long values cut); an unknown action and no session are refused; Server Logs calls it SSN Viewed;
+  - in the page: none of the new parts moves the case's positional fields;
+  - the critical note: added, finished with Enter, shown on another tab, saved by id and loaded back, cleared with the editor, 500 characters at most (typing in the middle at the limit keeps the end), on the case summary PDF; a library file's note shows, and a view-only file can't add one;
+  - the SSN: an empty box is open for typing; typed, it shows only its last 4 while the saved SSN keeps every digit; 👁 shows it and logs the look (with no case number before Save gives one), Hide hides it, and a library file's SSN shows its last 4;
+  - liens: the new fields and types; the totals by status, still to pay and saved; unconfirmed liens warned about here and on the Settlement tab; a lien row saved before the status opens with the new fields, its values and the status Not recorded (not warned about), and the case's later fields load where they were before and after saving again; MC-11's statuses fill in;
+  - a trainee's work on MC-34 and MC-11 saved before these parts existed opens with the files' critical note, ADR and lien statuses; opening it or looking at its SSN isn't an edit;
+  - treatment gaps: a late first visit, a 55-day gap and a provider with no visits are flagged, a provider with visits isn't; fixed, it says no gaps; nothing of it is saved;
+  - ADR: the next session and its brief worked out, saved by id and loaded back with its dropdowns, a past session still Scheduled flagged (not on a view-only file); MC-34's mediation fills in and the tab is the CM program's;
+  - the conflict check: a new client who is a library file's party at fault, a party at fault who is a library client ("Coleman, Andre") or the client on your own saved case are flagged once, with the other file; another trainee's case and a witness aren't; Escalate to attorney logs a Case Note and keeps the warning up as waiting, Cleared by the attorney and Not the same person log one and end it; notes that don't record a decision on that match don't hide it; a library file's party at fault who is your own client is flagged there with the decision buttons; name matching ("Last, First", minors, nicknames, accents, curly apostrophes, hyphenated surnames, Jr., businesses); no library file is flagged against itself or opens with a conflict.
 - **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
   - the tab's place and the header timer: just Start and the Billable / Non-billable dropdown; the dropdown and the Time tab show and change the same choice, a timer started with Non-billable picked is non-billable, another case opened goes back to its default, it works by keyboard, and it switches the running timer;
   - starting, counting, pausing, resuming, and surviving a reload;

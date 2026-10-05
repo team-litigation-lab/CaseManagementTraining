@@ -166,25 +166,40 @@
                     </div>
                 </div>
 
+                <!-- Case alerts (case-alerts.js), seen on every tab: the ⚠ Critical note (saved by id: data-keyed) and the
+                     ⚖ conflict check (worked out from the case files, never saved itself; a decision is logged as a Case Note). -->
+                <div id="case-alerts">
+                    <div id="kx-critical" data-keyed class="crit-note">
+                        <span class="crit-tag">⚠ Critical</span>
+                        <div contenteditable="true" data-k="note" class="crit-text" data-ph="What everyone must know before talking about this case (e.g. Spanish only · a minor: speak only to her mother · time-limited demand expires 11/01)"></div>
+                        <span class="crit-count no-print" aria-live="polite"></span>
+                    </div>
+                    <button type="button" id="crit-add" class="crit-add no-print" onclick="lshCaseAlerts.addCritical()">⚠ Add critical note</button>
+                    <div id="conflict-panel" class="no-print" hidden></div>
+                </div>
+
+                <!-- The tabs in the firm's order (two rows of 9: tab-break after Settlement). Only these buttons were reordered:
+                     the panes below stay where they are, so the case's positional fields don't move. -->
                 <div class="case-tabs no-print">
                     <div onclick="showTab('profile')" id="tab-profile" class="tab-btn active-tab">Profile</div>
                     <div onclick="showTab('parties')" id="tab-parties" class="tab-btn">Parties Involved</div>
                     <div onclick="showTab('police')" id="tab-police" class="tab-btn">Police Report</div>
                     <div onclick="showTab('matrix')" id="tab-matrix" class="tab-btn">Insurance</div>
-                    <div onclick="showTab('liens')" id="tab-liens" class="tab-btn">Liens</div>
                     <div onclick="showTab('medical')" id="tab-medical" class="tab-btn">Treatment</div>
                     <div onclick="showTab('wages')" id="tab-wages" class="tab-btn">Lost Wages</div>
-                    <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Property Damage</div>
+                    <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Case Costs</div>
                     <div onclick="showTab('demand')" id="tab-demand" class="tab-btn">Demand</div>
-                    <span class="tab-break" aria-hidden="true"></span>
                     <div onclick="showTab('settlement')" id="tab-settlement" class="tab-btn">Settlement (BI/UM)</div>
+                    <span class="tab-break" aria-hidden="true"></span>
+                    <div onclick="showTab('adr')" id="tab-adr" class="tab-btn" title="Alternative Dispute Resolution: mediation and arbitration">ADR</div>
                     <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
-                    <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Finance</div>
                     <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
                     <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
                     <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
                     <div onclick="showTab('calendar')" id="tab-calendar" class="tab-btn">📅 Calendar</div>
                     <div onclick="showTab('time')" id="tab-time" class="tab-btn">⏱ Time</div>
+                    <div onclick="showTab('liens')" id="tab-liens" class="tab-btn">Liens</div>
+                    <div onclick="showTab('pd')" id="tab-pd" class="tab-btn">Property Damage</div>
                 </div>
             </div>
 
@@ -297,6 +312,8 @@
                     <div class="section-head" style="margin-bottom:0;">Outstanding Case Liens</div>
                     <button onclick="addLien()" class="add-btn no-print">+ Add Lien Entry</button>
                 </div>
+                <!-- the liens' totals by status (case-sections.js), worked out from the rows below: not saved -->
+                <div id="lien-summary" class="no-print"></div>
                 <div id="lien-container" class="space-y-4"></div>
             </div>
 
@@ -318,6 +335,8 @@
                         </thead>
                         <tbody id="chrono-container"></tbody>
                     </table>
+                    <!-- treatment gaps (case-sections.js), worked out from the dates above and the Provider Treatment Matrix: not saved -->
+                    <div id="chrono-gaps" class="no-print"></div>
                 </div>
                 <div class="pdf-card">
                     <div class="flex justify-between items-center mb-6">
@@ -440,10 +459,24 @@
                 </div>
             </div>
 
+            <!-- ADR (Alternative Dispute Resolution): mediations, arbitrations and settlement conferences, pre-suit or in a lawsuit.
+                 Saved by id (data-keyed rows, case-sections.js); the line above the list is worked out from them (not saved). -->
+            <div id="pane-adr" class="tab-pane">
+                <div class="pdf-card shadow-lg border-l-8 border-violet-600">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="section-head" style="margin-bottom:0;background:#f5f3ff;color:#6d28d9;">ADR: Mediation &amp; Arbitration</div>
+                        <button onclick="addAdr()" class="add-btn no-print">+ Add ADR</button>
+                    </div>
+                    <p class="kx-hint no-print">One entry per mediation, arbitration or settlement conference: who the neutral is, when and where, whether the client must attend, when the brief is due, and how it ended. Court-ordered sessions and UM/UIM arbitrations go here too.</p>
+                    <div id="adr-summary" class="no-print"></div>
+                    <div id="kx-adr" data-keyed="rows" class="space-y-4"></div>
+                </div>
+            </div>
+
             <div id="pane-finance" class="tab-pane">
                 <div class="pdf-card border-l-8 border-orange-500">
                     <div class="flex justify-between items-center mb-6">
-                        <div class="section-head" style="margin-bottom:0;">Finance Tracking</div>
+                        <div class="section-head" style="margin-bottom:0;">Case Costs</div>
                         <button onclick="addRow('fin-body')" class="add-btn no-print">+ Add Entry</button>
                     </div>
                     <table class="treat-table w-full">
@@ -452,7 +485,7 @@
                     </table>
                 </div>
                 <div class="pdf-card bg-blue-50 mt-4 flex justify-between items-center">
-                    <span class="font-black uppercase text-blue-700 text-xs">Consolidated File Expenses</span>
+                    <span class="font-black uppercase text-blue-700 text-xs">Total Case Costs</span>
                     <span id="exp-total" class="text-2xl font-black text-blue-700 mono">$ 0.00</span>
                 </div>
             </div>
@@ -1033,6 +1066,7 @@
          (medical providers, adjusters, opposing counsel, clients, others in the case files) -->
     <script src="contacts.js"></script>
     <script src="case-sections.js"></script>
+    <script src="case-alerts.js"></script>
     <script src="intake-form.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>

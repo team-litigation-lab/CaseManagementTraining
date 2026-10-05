@@ -6,6 +6,11 @@
      - Lost Wages, Demand and Settlement tabs, with their math; each
        demand can carry its demand letter (⬆ Upload Demand)
      - Opposing Counsel (Litigation): the defense attorneys
+     - ADR: mediations, arbitrations and settlement conferences, with
+       the next session and its brief due date worked out above the list
+     - Liens: each lien's status, reduction and final payoff (rows saved
+       before get the fields), totalled by status above the list
+     - Treatment: gaps in care worked out from the chronology's dates
      - Report Type on the Police Report tab (Incident Report for
        premises cases with no police report)
      - Medical Chronology: drag rows to reorder, or sort by date
@@ -180,6 +185,8 @@
     }
     window.calcSettlement = function () {
         const sums = { gross: 0, fee: 0, costs: 0, liens: 0, net: 0, n: 0 };
+        const unconfirmed = typeof window.lienOpenCount === 'function' ? window.lienOpenCount() : 0;
+        const lienWarn = unconfirmed ? `<div class="kx-warn">${unconfirmed} lien${unconfirmed === 1 ? ' on the Liens tab is' : 's on the Liens tab are'} still unconfirmed: the liens figure here may be wrong until the lien letter${unconfirmed === 1 ? '' : 's'} and final amount${unconfirmed === 1 ? '' : 's'} are in.</div>` : '';
         SETTLEMENTS.forEach(([boxId, outId, label]) => {
             const box = $id(boxId), out = $id(outId); if (!box || !out) return;
             const x = settlementMath(box);
@@ -188,7 +195,7 @@
                     <div><span>${label} gross</span><b>${fmt$(x.gross)}</b></div><div><span>Attorney fee${x.pct ? ` (${x.pct === 33.33 ? '33⅓' : x.pct}%)` : ''}</span><b>− ${fmt$(x.fee)}</b></div>
                     <div><span>Case costs</span><b>− ${fmt$(x.costs)}</b></div><div><span>Liens / payoffs</span><b>− ${fmt$(x.liens)}</b></div>
                     <div class="net"><span>${label} net to client</span><b>${fmt$(x.net)}</b></div></div>
-                    ${x.net < 0 ? '<div class="kx-warn">The fee, costs and liens are more than this settlement: liens may need to be negotiated down.</div>' : ''}`
+                    ${x.net < 0 ? '<div class="kx-warn">The fee, costs and liens are more than this settlement: liens may need to be negotiated down.</div>' : ''}${lienWarn}`
                 : `<span class="kx-hint" style="margin:0;">Enter the ${label} gross settlement to see the fee, costs, liens and the net to the client.</span>`;
         });
         const tot = $id('settlement-total'); if (!tot) return;
@@ -198,6 +205,190 @@
                 <div><span style="color:#cbd5e1;">Liens / payoffs</span><b style="color:#fff;">− ${fmt$(sums.liens)}</b></div>
                 <div class="net"><span style="color:#cbd5e1;">Total net to client</span><b style="color:#86efac;">${fmt$(sums.net)}</b></div></div>` : '';
     };
+
+    /* ---------- ADR: mediation, arbitration, settlement conferences ---------- */
+    const ADR_TYPES = ['Mediation', 'Arbitration (binding)', 'Arbitration (non-binding)', 'UM / UIM arbitration', 'Settlement conference', 'Other'];
+    const ADR_SET_BY = ['Agreed by both sides', 'Court-ordered', 'Required by the policy or contract'];
+    const ADR_STATUSES = ['Proposed', 'Scheduled', 'Rescheduled', 'Settled at ADR', 'Impasse (no settlement)', 'Award issued', 'Cancelled'];
+    const ADR_ATTEND = ['In person', 'By video', 'Not required'];
+    const ADR_OPEN = new Set(['Proposed', 'Scheduled', 'Rescheduled']);
+    const opts = (list, pick) => list.map(x => `<option${x === pick ? ' selected' : ''}>${esc(x)}</option>`).join('');
+    window.addAdr = function () {
+        const box = $id('kx-adr'); if (!box) return;
+        const n = box.querySelectorAll('.kx-row').length + 1;
+        const div = document.createElement('div');
+        div.className = 'kx-row pdf-card border-l-4 border-violet-500 relative bg-white p-5 shadow-sm';
+        div.innerHTML = `${removeBtn}
+            <div class="kx-row-title">ADR ${n}</div>
+            <div class="grid grid-cols-4 gap-5">
+                <div><label>ADR Type</label><select class="prof-input" data-adr="type">${opts(ADR_TYPES)}</select></div>
+                <div><label>How It Was Set</label><select class="prof-input">${opts(ADR_SET_BY)}</select></div>
+                <div><label>Status</label><select class="prof-input" data-adr="status">${opts(ADR_STATUSES, 'Scheduled')}</select></div>
+                <div><label>Client Must Attend</label><select class="prof-input">${opts(ADR_ATTEND)}</select></div>
+                <div><label>Mediator / Arbitrator</label><div contenteditable="true" data-ph="e.g. Hon. Carla Meade (ret.)"></div></div>
+                <div><label>ADR Provider</label><div contenteditable="true" data-ph="e.g. JAMS, AAA, a dispute resolution center"></div></div>
+                <div><label>Date</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date" data-adr="date"></div></div>
+                <div><label>Time</label><div contenteditable="true" data-ph="e.g. 9:00 AM" data-adr="time"></div></div>
+                <div><label>Location / Video Link</label><div contenteditable="true" data-ph="Address, or the video link" data-adr="where"></div></div>
+                <div><label>Brief / Summary Due</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date" data-adr="brief"></div></div>
+                <div><label>Prep Session With Client</label><div contenteditable="true" data-ph="e.g. 10/14/2026, 3:00 PM"></div></div>
+                <div><label>Carrier Rep With Authority</label><div contenteditable="true" data-ph="Adjuster attending, and their authority"></div></div>
+                <div><label>Fee &amp; Split</label><div contenteditable="true" data-ph="e.g. $2,400, split 50/50"></div></div>
+                <div><label>Last Demand</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                <div><label>Last Offer</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                <div><label>Settlement / Award</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="font-black text-violet-700"></div></div>
+            </div>
+            <label style="margin-top:10px;">Notes &amp; Outcome</label>
+            <div contenteditable="true" data-ph="Who attends, what to bring, the result and what comes next (release, award appeal deadline)…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>`;
+        box.appendChild(div);
+        placeholders(div);
+        adrSummary();
+        const first = div.querySelector('[contenteditable="true"]'); if (first) first.focus();
+    };
+    // MM/DD/YYYY (or M/D/YYYY) as a day number, for counting days between dates
+    const dayOf = (s) => {
+        const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || ''));
+        if (!m) return null;
+        const t = Date.UTC(+m[3], +m[1] - 1, +m[2]);
+        return isFinite(t) && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31 ? Math.round(t / 864e5) : null;
+    };
+    const today = () => { const d = new Date(); return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5); };
+    const inDays = (n) => n === 0 ? 'today' : n === 1 ? 'tomorrow' : n === -1 ? 'yesterday' : n > 0 ? `in ${n} days` : `${-n} days ago`;
+    const textIn = (row, sel) => { const el = row.querySelector(sel); return el ? (el.tagName === 'SELECT' ? el.value : el.innerText.trim()) : ''; };
+    function adrSummary() {
+        const out = $id('adr-summary'), box = $id('kx-adr'); if (!out || !box) return;
+        const rows = Array.from(box.querySelectorAll(':scope > .kx-row'));
+        if (!rows.length) { out.innerHTML = '<span class="kx-hint" style="margin:0;">No ADR on this case yet. Add one when a mediation or arbitration is proposed or ordered.</span>'; return; }
+        const now = today(), items = rows.map(r => ({ type: textIn(r, '[data-adr="type"]'), status: textIn(r, '[data-adr="status"]'), date: textIn(r, '[data-adr="date"]'), day: dayOf(textIn(r, '[data-adr="date"]')),
+            time: textIn(r, '[data-adr="time"]'), where: textIn(r, '[data-adr="where"]'), brief: textIn(r, '[data-adr="brief"]'), briefDay: dayOf(textIn(r, '[data-adr="brief"]')) }));
+        const counts = {}; items.forEach(x => { counts[x.status] = (counts[x.status] || 0) + 1; });
+        const next = items.filter(x => ADR_OPEN.has(x.status) && x.day !== null && x.day >= now).sort((a, b) => a.day - b.day)[0];
+        const lines = [];
+        if (next) {
+            lines.push(`<div class="adr-next">📅 Next: <b>${esc(next.type)}</b> on <b>${esc(next.date)}</b>${next.time ? ' at ' + esc(next.time) : ''}${next.where ? ' · ' + esc(next.where) : ''} <span>(${inDays(next.day - now)})</span></div>`);
+            if (next.briefDay !== null) lines.push(next.briefDay < now ? `<div class="kx-warn">The ${esc(next.type.toLowerCase())} brief was due ${esc(next.brief)} (${inDays(next.briefDay - now)}).</div>`
+                : `<div class="adr-brief">📝 Brief / summary due <b>${esc(next.brief)}</b> (${inDays(next.briefDay - now)})</div>`);
+        }
+        // (a view-only file is a snapshot: nobody there can record the outcome)
+        if (!viewOnly()) items.filter(x => ADR_OPEN.has(x.status) && x.day !== null && x.day < now).forEach(x => lines.push(`<div class="kx-warn">${esc(x.type)} on ${esc(x.date)} has passed but is still "${esc(x.status)}": record how it ended.</div>`));
+        out.innerHTML = `<div class="kx-chips">${Object.keys(counts).map(k => `<span class="kx-chip">${esc(k)}: <b>${counts[k]}</b></span>`).join('')}</div>${lines.join('')}`;
+    }
+
+    /* ---------- Liens: status, totals, older rows ---------- */
+    const LIEN_UNSETTLED = new Set(['Unconfirmed', 'Confirmed (lien letter received)', 'Reduction requested']);
+    function labelled(card, text) {
+        const l = Array.from(card.querySelectorAll('label')).find(x => x.textContent.trim().toLowerCase() === text.toLowerCase());
+        if (!l) return null;
+        const sib = l.nextElementSibling;
+        if (sib && sib.matches('[contenteditable], select')) return sib;
+        return l.parentElement ? l.parentElement.querySelector('[contenteditable], select') : null;
+    }
+    const lienCards = () => Array.from(document.querySelectorAll('#lien-container > .pdf-card'));
+    // Rows saved before the lien status get its fields (and the newer lien types) when the case opens.
+    window.upgradeLienRows = function () {
+        const area = $id('capture-area');
+        lienCards().forEach(card => {
+            const typeSel = card.querySelector('select');
+            if (typeSel && Array.isArray(window.LIEN_TYPES)) {
+                const have = new Set(Array.from(typeSel.options).map(o => o.value));
+                const other = Array.from(typeSel.options).find(o => o.value === 'Other');
+                window.LIEN_TYPES.forEach(t => { if (!have.has(t)) { const o = document.createElement('option'); o.textContent = t; typeSel.insertBefore(o, other || null); } });
+            }
+            if (card.querySelector('.lien-more') || typeof window.lienDetailsHTML !== 'function') return;
+            card.insertAdjacentHTML('beforeend', window.lienDetailsHTML(true));
+            // on a locked Training Library file, the new dropdowns are locked like the rest (training-library.js)
+            if (area && area.classList.contains('mock-ro') && !(card.closest('.mock-open') && area.classList.contains('mock-areas-ready'))) {
+                card.querySelectorAll('.lien-more select').forEach(s => { s.disabled = true; s.dataset.mockRo = '1'; });
+            }
+        });
+    };
+    function lienRows() {
+        return lienCards().map(card => {
+            const typeSel = card.querySelector('select'), other = typeSel && typeSel.parentElement.querySelector('[contenteditable]');
+            const type = typeSel ? (typeSel.classList.contains('hidden') && other && other.innerText.trim() ? other.innerText.trim() : typeSel.value) : '';
+            const status = card.querySelector('[data-lien="status"]') || labelled(card, 'Lien Status');
+            return {
+                type, holder: (labelled(card, 'Lienholder Entity') || {}).innerText || '',
+                status: status ? status.value : '',
+                amount: money(card.querySelector('[data-lien="amount"]') || labelled(card, 'Lien Amount')),
+                requested: money(card.querySelector('[data-lien="requested"]') || labelled(card, 'Reduction Requested')),
+                final: money(card.querySelector('[data-lien="final"]') || labelled(card, 'Final Payoff'))
+            };
+        });
+    }
+    // the liens still open (not negotiated, final, waived or paid): the Settlement tab warns about them
+    window.lienOpenCount = () => lienRows().filter(l => l.status === 'Unconfirmed').length;
+    window.updateLienSummary = function () {
+        const out = $id('lien-summary'); if (!out) return;
+        const rows = lienRows();
+        if (!rows.length) { out.innerHTML = ''; window.calcSettlement(); return; }
+        const by = {};
+        rows.forEach(l => { const b = by[l.status] = by[l.status] || { n: 0, amt: 0 }; b.n++; b.amt += l.status === 'Waived' ? 0 : (l.final || l.amount); });
+        const asserted = rows.reduce((s, l) => s + l.amount, 0);
+        // what the liens will cost the client now: waived ones nothing; a final payoff where there is one; otherwise the amount claimed
+        const owed = rows.reduce((s, l) => s + (l.status === 'Waived' || l.status === 'Paid' ? 0 : (l.final || l.amount)), 0);
+        const saved = rows.reduce((s, l) => s + (l.status === 'Waived' ? l.amount : (l.final && l.amount > l.final ? l.amount - l.final : 0)), 0);
+        const unconfirmed = rows.filter(l => l.status === 'Unconfirmed').length, open = rows.filter(l => LIEN_UNSETTLED.has(l.status)).length;
+        out.innerHTML = `<div class="lien-sum">
+                <div><span>Liens</span><b>${rows.length}</b></div>
+                <div><span>Amount claimed</span><b>${fmt$(asserted)}</b></div>
+                <div><span>Still to pay</span><b>${fmt$(owed)}</b></div>
+                <div class="good"><span>Saved by reductions / waivers</span><b>${fmt$(saved)}</b></div>
+            </div>
+            <div class="kx-chips">${Object.keys(by).map(k => `<span class="kx-chip lien-st" data-st="${esc(k)}">${esc(k || 'Status not recorded')}: <b>${by[k].n}</b> · ${fmt$(by[k].amt)}</span>`).join('')}</div>
+            ${unconfirmed ? `<div class="kx-warn">${unconfirmed} lien${unconfirmed === 1 ? ' is' : 's are'} still unconfirmed: get the lien letter (and the final amount) before the settlement statement.</div>`
+                : open ? `<div class="kx-hint" style="margin:6px 0 0;">${open} lien${open === 1 ? '' : 's'} not final yet: ask for the final amount (and a reduction) before disbursing.</div>` : ''}`;
+        window.calcSettlement();
+    };
+
+    /* ---------- Treatment: gaps in care ---------- */
+    // Worked out from the Medical Chronology's dates of service and the Provider Treatment Matrix (never saved):
+    // a gap of more than 30 days between visits, a first visit more than 7 days after the accident, a visit dated
+    // before it, and a provider in the matrix with no visit in the chronology. Adjusters attack all of these.
+    const GAP_DAYS = 30, FIRST_VISIT_DAYS = 7;
+    const facKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    window.checkTreatmentGaps = function () {
+        const out = $id('chrono-gaps'), body = $id('chrono-container'); if (!out || !body) return;
+        const visits = [];
+        Array.from(body.children).forEach(tr => {
+            const td = tr.children, fac = td[1] && td[1].querySelector('[contenteditable]');
+            const facility = fac ? fac.innerText.trim() : '';
+            tr.querySelectorAll('.chrono-dos-list [contenteditable]').forEach(d => { const day = dayOf(d.innerText); if (day !== null) visits.push({ day, date: d.innerText.trim(), facility }); });
+        });
+        visits.sort((a, b) => a.day - b.day);
+        const dolEl = $id('date-of-loss-field'), dol = dayOf(dolEl ? dolEl.innerText : '');
+        const flags = [];
+        if (visits.length && dol !== null) {
+            const first = visits[0];
+            if (first.day < dol) flags.push(`A visit is dated <b>${esc(first.date)}</b>${first.facility ? ` (${esc(first.facility)})` : ''}, before the accident (${esc(dolEl.innerText.trim())}). Check the date, or whether it's prior treatment.`);
+            const firstAfter = visits.find(v => v.day >= dol);
+            if (firstAfter && firstAfter.day - dol > FIRST_VISIT_DAYS) flags.push(`First treatment <b>${firstAfter.day - dol} days</b> after the accident (${esc(dolEl.innerText.trim())} → ${esc(firstAfter.date)}${firstAfter.facility ? `, ${esc(firstAfter.facility)}` : ''}). Note why the client waited.`);
+        }
+        for (let i = 1; i < visits.length; i++) {
+            const a = visits[i - 1], b = visits[i], gap = b.day - a.day;
+            if (gap > GAP_DAYS) flags.push(`<b>${gap}-day gap</b> in treatment: ${esc(a.date)}${a.facility ? ` (${esc(a.facility)})` : ''} → ${esc(b.date)}${b.facility ? ` (${esc(b.facility)})` : ''}. Find out why and note it.`);
+        }
+        const seen = new Set(visits.map(v => facKey(v.facility)).filter(Boolean));
+        const providers = Array.from(document.querySelectorAll('#facility-container > tr')).map(tr => { const c = tr.children[0] && tr.children[0].querySelector('[contenteditable]'); return c ? c.innerText.trim() : ''; }).filter(Boolean);
+        const missing = providers.filter(p => { const k = facKey(p); return ![...seen].some(s => s.includes(k) || k.includes(s)); });
+        if (missing.length) flags.push(`No visits in the chronology for: <b>${missing.map(esc).join('</b>, <b>')}</b>. Add their dates of service (or remove the provider).`);
+        if (!visits.length) { out.innerHTML = missing.length ? `<div class="gap-box warn"><div class="gap-head">⚠ Treatment check</div><ul><li>${flags.join('</li><li>')}</li></ul></div>` : ''; return; }
+        const span = `${visits.length} visit${visits.length === 1 ? '' : 's'}, ${esc(visits[0].date)} – ${esc(visits[visits.length - 1].date)}`;
+        out.innerHTML = flags.length
+            ? `<div class="gap-box warn"><div class="gap-head">⚠ Treatment check <span>(${span})</span></div><ul><li>${flags.join('</li><li>')}</li></ul></div>`
+            : `<div class="gap-box ok"><div class="gap-head">✓ No gaps over ${GAP_DAYS} days <span>(${span})</span></div></div>`;
+    };
+
+    // Redraw the worked-out lines (ADR, liens, treatment gaps) a moment after the fields they come from change.
+    let checksTimer = null;
+    function scheduleChecks() { clearTimeout(checksTimer); checksTimer = setTimeout(runChecks, 250); }
+    function runChecks() { adrSummary(); window.updateLienSummary(); window.checkTreatmentGaps(); }
+    function initChecks() {
+        const watch = ['kx-adr', 'lien-container', 'chrono-container', 'facility-container', 'date-of-loss-field'];
+        const mo = new MutationObserver(scheduleChecks);
+        watch.forEach(id => { const el = $id(id); if (el) mo.observe(el, { childList: true, subtree: true, characterData: true }); });
+        document.addEventListener('change', (e) => { if (e.target.closest && watch.some(id => e.target.closest('#' + id))) scheduleChecks(); });
+    }
 
     /* ---------- Police Report tab: report type ---------- */
     const REPORT_LABELS = {
@@ -216,8 +407,8 @@
 
     // After a case loads (or the editor is cleared): redraw what depends on the saved sections.
     window.afterKeyedApplied = function () {
-        window.applyReportKind(); window.calcWages(); window.calcSettlement(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
-        ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
+        window.applyReportKind(); window.calcWages(); window.upgradeLienRows(); runChecks(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
+        ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel', 'kx-adr'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
     };
 
     /* ---------- Medical Chronology: reorder ---------- */
@@ -499,7 +690,7 @@
 
     /* ---------- start ---------- */
     function init() {
-        initChronoDrag(); initRowDrop(); renderDropCats(); window.afterKeyedApplied(); renderTaskCards(); initLocationLine();
+        initChronoDrag(); initRowDrop(); renderDropCats(); initChecks(); window.afterKeyedApplied(); renderTaskCards(); initLocationLine();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
     // redraw the counts and sums as people type in the new sections

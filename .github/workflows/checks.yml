@@ -138,6 +138,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/docs-drive.cjs
+      - name: Case alerts, liens, treatment gaps and ADR (critical note, masked SSN with a logged look, conflict check)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/case-alerts.cjs
       - name: Live view (an Admin watches a trainee's screen live, mirrored as it is)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

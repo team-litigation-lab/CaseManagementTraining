@@ -27,7 +27,8 @@ const LABELS = {
     ping: 'Ping',
     'suspend-user': 'Temporary Revocation',
     'reinstate-user': 'Lift Revocation',
-    'revoke-user': 'Permanent Revocation'
+    'revoke-user': 'Permanent Revocation',
+    'ssn-view': 'SSN Viewed'
 };
 
 export async function onRequestGet({ request, env }) {

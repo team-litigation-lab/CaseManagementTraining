@@ -32,6 +32,12 @@
    adjusters (bi, pipum), opposing counsel (counsel), clients, and others (emergency contacts, the parties
    at fault, lien holders, health plans, police agencies, employers).
 
+   `critical` (optional) is the ⚠ Critical note under the case header (case-alerts.js): what everyone must
+   see before talking about the case (500 characters at most). `adr` (optional) fills the ADR tab: each
+   mediation or arbitration's type, setBy, status, attend, neutral, provider, date, time, where, brief, prep,
+   carrierRep, fee, lastDemand, lastOffer, result and notes (each select one of the tab's options). A lien
+   may carry its status (one of the Liens tab's statuses), notified, requested, final and notes.
+
    `injury` fills the Profile tab's Primary Injury card: primary, parts, type and
    surgery (each one of the card's options), prior and details. Only what the
    file says is filled in.
@@ -217,7 +223,7 @@ const MOCK_CASES = [
     health: { carrier: 'Georgia Educators Health', memberId: 'GEH-7730215', group: 'LIB-2020' },
     bi: [{ holder: 'Gerald Finch', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-3319054', claim: 'HFC-26-02117', adjuster: 'Monica Reyes-Hart', contact: '(555) 010-7640 · mreyeshart@example.com', liability: 'Yes', limits: '$300,000' }],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'Georgia Educators Health', file: 'SUB-GEH-26-1180', amount: '$ 3,940.00' }],
+    liens: [{ type: 'HI Subro', entity: 'Georgia Educators Health', file: 'SUB-GEH-26-1180', amount: '$ 3,940.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '02/03/2026 – 02/03/2026', status: 'Discharged', charges: '$ 5,880.00' },
         { name: 'Lakeside Plastic Surgery', specialty: 'Other', specialtyOther: 'Plastic Surgery', phone: '(555) 010-3220', email: 'office@lakesideplastics.example.com', dates: '03/10/2026 – 07/21/2026', status: 'Discharged', charges: '$ 2,450.00' },
@@ -252,6 +258,7 @@ const MOCK_CASES = [
 {
     id: 'MC-04', caseNumber: 'LSH-2025-MVA-900909', level: 'Intermediate', programs: ['reception', 'cm', 'pd', 'md'],
     summary: 'Policy-limits demand is out. The adjuster calls with an offer that has a deadline.',
+    critical: 'Wife Susan is the emergency contact only: NOT authorized. Client prefers calls to his cell before 9 AM.',
     client: { name: 'Robert Chen', phone: '(555) 010-4741', email: 'bobby.chen@example.com', dob: '01/30/1969', ssn: 'XXX-XX-2208',
         address: '88 Lantern Hill Rd, Riverton, GA 30307',
         emergency: { name: 'Susan Chen', phone: '(555) 010-4742', relationship: 'Wife' },
@@ -264,7 +271,7 @@ const MOCK_CASES = [
     health: { carrier: 'Small Business Health Alliance', memberId: 'SBHA-5510922', group: 'SBHA-CHEN' },
     bi: [{ holder: 'Tanya Mills', carrier: 'Liberty Crest Insurance', policy: 'LC-8810456', claim: 'LC-25-99812', adjuster: 'Greg Hollis', contact: '(555) 010-7755 · ghollis@example.com', liability: 'Yes', limits: '$100,000 / $300,000' }],
     pipum: [{ type: 'UM/UIM', holder: 'Robert Chen', carrier: 'Harbor Point Insurance', policy: 'HP-7720981', claim: 'HP-25-1142', adjuster: 'Irene Shaw', contact: '(555) 010-7811', limits: '$100,000 / $300,000' }],
-    liens: [{ type: 'HI Subro', entity: 'Small Business Health Alliance', file: 'SBHA-SUB-3321', amount: '$ 18,760.00' }],
+    liens: [{ type: 'HI Subro', entity: 'Small Business Health Alliance', file: 'SBHA-SUB-3321', amount: '$ 18,760.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '11/18/2025 – 11/18/2025', status: 'Discharged', charges: '$ 3,950.00' },
         { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '12/02/2025 – 07/30/2026', status: 'Discharged', charges: '$ 9,800.00' },
@@ -312,7 +319,7 @@ const MOCK_CASES = [
     health: { carrier: 'Medicare (Part A & B)', memberId: 'MBI 1EG4-TE5-MK72', group: '—' },
     bi: [{ holder: 'Pine Ridge Property Management LLC', carrier: 'Keystone Commercial', policy: 'KC-CGL-993014', claim: 'KC-24-66310', adjuster: 'Paul Dreyer', contact: '(555) 010-7870', liability: 'No', limits: '$1,000,000' }],
     pipum: [],
-    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 24-0931-7781', amount: '$ 21,344.00' }],
+    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 24-0931-7781', amount: '$ 21,344.00', status: 'Confirmed (lien letter received)', notes: 'Medicare conditional payment letter; ask the BCRC for the final demand once the case settles.' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '08/27/2024 – 08/30/2024', status: 'Discharged', charges: '$ 38,400.00' },
         { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '09/10/2024 – 06/05/2025', status: 'Discharged', charges: '$ 7,900.00' }
@@ -366,8 +373,8 @@ const MOCK_CASES = [
     bi: [{ holder: 'Quickline Logistics Inc.', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-554019', claim: 'TFI-25-18820', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'Yes', limits: '$1,000,000' }],
     pipum: [],
     liens: [
-        { type: 'HI Subro', entity: 'Distribution Workers Health Fund', file: 'DWHF-R-5520', amount: '$ 6,480.00' },
-        { type: 'Medical Lien', entity: 'Align Chiropractic (LOP)', file: 'ALN-2291', amount: '$ 4,200.00' }
+        { type: 'HI Subro', entity: 'Distribution Workers Health Fund', file: 'DWHF-R-5520', amount: '$ 6,480.00', status: 'Negotiated', notified: '09/22/2026', final: '$ 4,320.00', notes: 'Reduction letter 09/22/2026 ($6,480 → $4,320).' },
+        { type: 'Medical Lien', entity: 'Align Chiropractic (LOP)', file: 'ALN-2291', amount: '$ 4,200.00', status: 'Reduction requested', notes: 'Waiting on Align Chiropractic\'s written reduction before the settlement statement.' }
     ],
     facilities: [
         { name: 'Align Chiropractic', specialty: 'Chiro', phone: '(555) 010-3355', email: 'billing@alignchiro.example.com', dates: '01/20/2025 – 06/10/2025', status: 'Discharged', charges: '$ 5,600.00' }
@@ -415,7 +422,7 @@ const MOCK_CASES = [
         { type: 'UM/UIM', holder: 'RideNow Technologies (rideshare policy)', carrier: 'Pinnacle Commercial Auto', policy: 'PCA-TNC-100227', claim: 'PCA-25-70142', adjuster: 'Howard Linn', contact: '(555) 010-7801', limits: '$1,000,000' },
         { type: 'UM/UIM', holder: 'Keisha Brown', carrier: 'Harbor Point Insurance', policy: 'HP-6612084', claim: 'HP-25-2213', adjuster: 'Irene Shaw', contact: '(555) 010-7811', limits: '$25,000 / $50,000' }
     ],
-    liens: [{ type: 'Medical Lien', entity: 'Peak Spine Center (LOP)', file: 'PSC-7713', amount: '$ 11,450.00' }],
+    liens: [{ type: 'Medical Lien', entity: 'Peak Spine Center (LOP)', file: 'PSC-7713', amount: '$ 11,450.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '10/04/2025 – 10/04/2025', status: 'Discharged', charges: '$ 6,200.00' },
         { name: 'Peak Spine Center', specialty: 'Pain Management', phone: '(555) 010-3270', email: 'lop@peakspine.example.com', dates: '11/01/2025 – 07/14/2026', status: 'Discharged', charges: '$ 11,450.00' }
@@ -491,7 +498,7 @@ const MOCK_CASES = [
     health: { carrier: 'Credit Union Employees Health', memberId: 'CUEH-661043', group: 'CUEH-A' },
     bi: [{ holder: 'Bella Cucina LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-661178', claim: 'ARC-25-30551', adjuster: 'Brent Kowalski', contact: '(555) 010-7931', liability: 'Yes', limits: '$500,000' }],
     pipum: [],
-    liens: [{ type: 'Medical Lien', entity: 'Premier Knee & Sports Medicine (LOP)', file: 'PKS-5530', amount: '$ 7,850.00' }],
+    liens: [{ type: 'Medical Lien', entity: 'Premier Knee & Sports Medicine (LOP)', file: 'PKS-5530', amount: '$ 7,850.00', status: 'Confirmed (lien letter received)' }],
     facilities: [{ name: 'Premier Knee & Sports Medicine', specialty: 'Ortho', phone: '(555) 010-3288', email: 'billing@premierknee.example.com', dates: '03/20/2025 – 01/10/2026', status: 'Discharged', charges: '$ 7,850.00' }],
     chrono: [],
     treatmentNotes: 'Treated under a Letter of Protection signed 03/18/2025; provider agreed to wait for settlement.',
@@ -513,6 +520,7 @@ const MOCK_CASES = [
 {
     id: 'MC-10', caseNumber: 'LSH-2026-DOG-901315', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'Child dog-bite victim. The parent on file is the guardian; the other parent and the school are not.',
+    critical: 'Client is a minor. Speak only to her father, Frank Morales (guardian). Her mother, Angela Ruiz, is NOT authorized (custody order).',
     client: { name: 'Sofia Morales (minor), by her father Frank Morales', phone: '(555) 010-5305', email: 'frank.morales@example.com', dob: '06/02/2018', ssn: 'XXX-XX-2718',
         address: '14 Orchard Lane, Riverton, GA 30318',
         emergency: { name: 'Frank Morales', phone: '(555) 010-5305', relationship: 'Father / legal guardian (client contact)' },
@@ -525,7 +533,7 @@ const MOCK_CASES = [
     health: { carrier: 'PeachCare for Kids (CHIP)', memberId: 'PCK-00931442', group: '—' },
     bi: [{ holder: 'Paula Stevens', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-5520931', claim: 'HFC-26-05512', adjuster: 'Monica Reyes-Hart', contact: '(555) 010-7640', liability: 'Pending', limits: '$500,000' }],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'PeachCare for Kids (Medicaid/CHIP)', file: 'PCK-TPL-2291', amount: '$ 2,980.00' }],
+    liens: [{ type: 'HI Subro', entity: 'PeachCare for Kids (Medicaid/CHIP)', file: 'PCK-TPL-2291', amount: '$ 2,980.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'Children\'s Hospital of Riverton', specialty: 'Emergency Hospital', phone: '(555) 010-3120', email: 'him@childrensriverton.example.com', dates: '05/30/2026 – 05/30/2026', status: 'Discharged', charges: '$ 6,940.00' },
         { name: 'Lakeside Plastic Surgery', specialty: 'Other', specialtyOther: 'Plastic Surgery', phone: '(555) 010-3220', email: 'office@lakesideplastics.example.com', dates: '06/15/2026 – present', status: 'Ongoing', charges: '$ 1,200.00' }
@@ -564,8 +572,8 @@ const MOCK_CASES = [
     bi: [{ holder: 'Victor Lang', carrier: 'Liberty Crest Insurance', policy: 'LC-4410988', claim: 'LC-25-66019', adjuster: 'Greg Hollis', contact: '(555) 010-7755', liability: 'Yes', limits: '$100,000 / $300,000' }],
     pipum: [],
     liens: [
-        { type: 'Medical Lien', entity: 'Riverton General Hospital (hospital lien)', file: 'RGH-HL-26-118', amount: '$ 14,600.00' },
-        { type: 'HI Subro', entity: 'Anthem Blue Shield (ERISA)', file: 'ABS-SUB-77120', amount: '$ 9,215.00' }
+        { type: 'Medical Lien', entity: 'Riverton General Hospital (hospital lien)', file: 'RGH-HL-26-118', amount: '$ 14,600.00', status: 'Reduction requested', notified: '09/15/2026', requested: '$ 9,000.00', notes: 'Reduction request sent 09/15/2026 (asked for $9,000). Follow up with the RGH lien department by 10/01/2026.' },
+        { type: 'HI Subro', entity: 'Anthem Blue Shield (ERISA)', file: 'ABS-SUB-77120', amount: '$ 9,215.00', status: 'Confirmed (lien letter received)', notes: 'ERISA plan documents requested.' }
     ],
     facilities: [{ name: 'Riverton General Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3130', email: 'liens@rgh.example.com', dates: '04/02/2025 – 04/04/2025', status: 'Discharged', charges: '$ 14,600.00' }],
     chrono: [],
@@ -663,7 +671,7 @@ const MOCK_CASES = [
     health: { carrier: 'Workers\' comp primary (see lien)', memberId: '', group: '' },
     bi: [{ holder: 'Redline Freight LLC', carrier: 'TransAmerica Freight Insurance', policy: 'TFI-AU-771020', claim: 'TFI-25-20911', adjuster: 'Carol Benning', contact: '(555) 010-7702', liability: 'No', limits: '$2,000,000' }],
     pipum: [],
-    liens: [{ type: 'Other', typeOther: 'Workers\' Comp Lien', entity: 'Granite State Workers\' Comp', file: 'GSWC-25-4412', amount: '$ 96,870.00' }],
+    liens: [{ type: 'Other', typeOther: 'Workers\' Comp Lien', entity: 'Granite State Workers\' Comp', file: 'GSWC-25-4412', amount: '$ 96,870.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'Riverton Neurosurgery', specialty: 'Surgery', phone: '(555) 010-3199', email: 'office@riverneuro.example.com', dates: '03/2025 – present', status: 'Ongoing', charges: '$ 88,400.00' }
     ],
@@ -695,6 +703,7 @@ const MOCK_CASES = [
 {
     id: 'MC-15', caseNumber: 'LSH-2026-MVA-901688', level: 'Intermediate', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Elderly pedestrian in treatment. Her son holds a power of attorney; she is worried about "a lawyer bill".',
+    critical: 'Client is hard of hearing: speak slowly. Son Michael Lewis holds a durable POA and is authorized.',
     client: { name: 'Patricia Lewis', phone: '(555) 010-5850', email: '', dob: '01/14/1946', ssn: 'XXX-XX-1507',
         address: '12 Heritage Way, Riverton, GA 30328',
         emergency: { name: 'Michael Lewis', phone: '(555) 010-5851', relationship: 'Son (durable power of attorney)' },
@@ -707,7 +716,7 @@ const MOCK_CASES = [
     health: { carrier: 'Medicare (Part A & B) + AARP Medigap Plan G', memberId: 'MBI 5TR2-QW1-LK38', group: '—' },
     bi: [{ holder: 'Heather Coyle', carrier: 'Harbor Point Insurance', policy: 'HP-3308812', claim: 'HP-26-8810', adjuster: 'Irene Shaw', contact: '(555) 010-7811', liability: 'Yes', limits: '$250,000 / $500,000' }],
     pipum: [],
-    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 26-0803-5521 (conditional payment amount pending)', amount: '' }],
+    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 26-0803-5521 (conditional payment amount pending)', amount: '', status: 'Unconfirmed', notes: 'Conditional payment amount still pending from Medicare.' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '08/03/2026 – 08/07/2026', status: 'Discharged', charges: '$ 31,200.00' },
         { name: 'Heritage Rehabilitation Center', specialty: 'Other', specialtyOther: 'Inpatient Rehab', phone: '(555) 010-3410', email: 'admissions@heritagerehab.example.com', dates: '08/07/2026 – 08/28/2026', status: 'Discharged', charges: '$ 18,900.00' },
@@ -745,7 +754,7 @@ const MOCK_CASES = [
     health: { carrier: 'Fitness Industry Health Plan', memberId: 'FIHP-448120', group: 'RFC-2' },
     bi: [{ holder: 'Jared Fox', carrier: 'Keystone Mutual Insurance', policy: 'KM-7710340', claim: 'KM-25-140882', adjuster: 'Dana Whitfield', contact: '(555) 010-7702', liability: 'Yes', limits: '$100,000 / $300,000' }],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'Fitness Industry Health Plan', file: 'FIHP-S-2210', amount: '$ 12,330.00' }],
+    liens: [{ type: 'HI Subro', entity: 'Fitness Industry Health Plan', file: 'FIHP-S-2210', amount: '$ 12,330.00', status: 'Confirmed (lien letter received)' }],
     facilities: [{ name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '12/15/2025 – 08/20/2026', status: 'Discharged', charges: '$ 16,780.00' }],
     chrono: [], treatmentNotes: '',
     pd: null, lit: null,
@@ -806,7 +815,7 @@ const MOCK_CASES = [
     health: { carrier: 'State Educators Health Plan', memberId: 'SEHP-3302871', group: 'RMS-09' },
     bi: [{ holder: 'Hearthline Appliances Inc.', carrier: 'Continental Product Liability Group', policy: 'CPLG-PL-2026-118', claim: 'CPLG-26-7719', adjuster: 'Martin Blake', contact: '(555) 010-7988', liability: 'Pending', limits: 'Unknown' }],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'State Educators Health Plan', file: 'SEHP-R-4410', amount: '$ 14,220.00' }],
+    liens: [{ type: 'HI Subro', entity: 'State Educators Health Plan', file: 'SEHP-R-4410', amount: '$ 14,220.00', status: 'Confirmed (lien letter received)' }],
     facilities: [{ name: 'Riverton Burn Center', specialty: 'Emergency Hospital', phone: '(555) 010-3140', email: 'burn@riverton.example.com', dates: '07/04/2026 – 07/09/2026', status: 'Discharged', charges: '$ 26,800.00' }],
     chrono: [], treatmentNotes: 'Scar management ongoing.',
     pd: null, lit: null, finance: [{ date: '07/08/2026', staff: 'Paralegal', desc: 'Evidence storage, SecureHold (monthly)', amount: '$ 45.00' }],
@@ -847,6 +856,7 @@ const MOCK_CASES = [
 {
     id: 'MC-20', caseNumber: 'LSH-2026-MVA-901288', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Wrongful death. Only the estate\'s administrator is authorized; grieving relatives call.',
+    critical: 'Estate case: speak only with the administrator, Carol Hammond. Daniel Hammond and other relatives are NOT authorized.',
     client: { name: 'Estate of George Hammond (Carol Hammond, administrator)', phone: '(555) 010-6307', email: 'carol.hammond@example.com', dob: '12/05/1949', ssn: 'XXX-XX-6678',
         address: '8 Willow Creek Lane, Riverton, GA 30338',
         emergency: { name: 'Carol Hammond', phone: '(555) 010-6307', relationship: 'Daughter · court-appointed administrator (authorized)' },
@@ -859,7 +869,7 @@ const MOCK_CASES = [
     health: { carrier: 'Medicare', memberId: 'MBI 3HD7-KL2-PQ91', group: '—' },
     bi: [{ holder: 'Travis Keene', carrier: 'Liberty Crest Insurance', policy: 'LC-2231887', claim: 'LC-26-10277', adjuster: 'Greg Hollis', contact: '(555) 010-7755', liability: 'Yes', limits: '$250,000 / $500,000' }],
     pipum: [{ type: 'UM/UIM', holder: 'George Hammond', carrier: 'Keystone Mutual Insurance', policy: 'KM-1203348', claim: 'KM-26-104455', adjuster: 'Dana Whitfield', contact: '(555) 010-7702', limits: '$100,000 / $300,000' }],
-    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 26-0328-9920', amount: '$ 18,406.00' }],
+    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 26-0328-9920', amount: '$ 18,406.00', status: 'Confirmed (lien letter received)' }],
     facilities: [{ name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '03/28/2026 – 03/29/2026', status: 'Discharged', charges: '$ 64,200.00' }],
     chrono: [], treatmentNotes: '',
     pd: null, lit: null, finance: [{ date: '05/20/2026', staff: 'Paralegal', desc: 'Probate filing fee (letters of administration)', amount: '$ 145.00' }],
@@ -895,8 +905,8 @@ const MOCK_CASES = [
     bi: [{ holder: 'CareWay Pharmacy Inc.', carrier: 'Summit Commercial Casualty', policy: 'SCC-GL-310477', claim: 'SCC-25-02281', adjuster: 'Owen Price', contact: '(555) 010-7722', liability: 'Yes', limits: '$1,000,000' }],
     pipum: [],
     liens: [
-        { type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-77120', amount: '$ 6,940.00' },
-        { type: 'Medical Lien', entity: 'Riverton Orthopedic Associates (LOP)', file: 'ROA-LOP-4417', amount: '$ 5,300.00' }
+        { type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-77120', amount: '$ 6,940.00', status: 'Reduction requested', notified: '08/20/2026', notes: 'Reduction request sent 08/20/2026. Follow up with Peach State subrogation on 10/05/2026 if no reply.' },
+        { type: 'Medical Lien', entity: 'Riverton Orthopedic Associates (LOP)', file: 'ROA-LOP-4417', amount: '$ 5,300.00', status: 'Reduction requested', notified: '08/20/2026', notes: 'Reduction request sent 08/20/2026.' }
     ],
     facilities: [
         { name: 'QuickCare Urgent Care', specialty: 'EMC', phone: '(555) 010-3301', email: 'records@quickcare.example.com', dates: '01/14/2025 – 01/14/2025', status: 'Discharged', charges: '$ 410.00' },
@@ -1157,6 +1167,7 @@ const MOCK_CASES = [
 {
     id: 'MC-27', caseNumber: 'LSH-2025-PRL-900998', level: 'Advanced', programs: ['reception', 'cm', 'md'],
     summary: 'Negligent security: client was assaulted in a dark apartment parking garage and has moved for her safety. Never confirm she is a client, or give out her address or phone.',
+    critical: 'SAFETY FLAG: never confirm she is a client. Never give out, confirm or change her address or phone from a call.',
     client: { name: 'Olivia Bennett', phone: '(555) 010-6650', email: 'o.bennett.safe@example.com', dob: '07/07/1993', ssn: 'XXX-XX-3094',
         address: '415 Laurel Park Way, Apt 12, Riverton, GA 30330',
         emergency: { name: 'Janine Bennett', phone: '(555) 010-6651', relationship: 'Sister' },
@@ -1169,7 +1180,7 @@ const MOCK_CASES = [
     health: { carrier: 'State Health Benefit Plan', memberId: 'SHBP-2290471', group: 'CITY-LIB' },
     bi: [{ holder: 'Stonegate Residential LLC', carrier: 'Keystone Commercial', policy: 'KC-CGL-660318', claim: 'KC-25-78804', adjuster: 'Monique Tate', contact: '(555) 010-7876', liability: 'Pending', limits: '$2,000,000' }],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'State Health Benefit Plan', file: 'SHBP-SUB-44102', amount: '$ 31,205.00' }],
+    liens: [{ type: 'HI Subro', entity: 'State Health Benefit Plan', file: 'SHBP-SUB-44102', amount: '$ 31,205.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '11/21/2025 – 11/23/2025', status: 'Discharged', charges: '$ 27,400.00' },
         { name: 'Riverton Oral & Facial Surgery', specialty: 'Surgery', phone: '(555) 010-3490', email: 'billing@rivfacial.example.com', dates: '12/02/2025 – 12/02/2025', status: 'Discharged', charges: '$ 14,800.00' },
@@ -1215,7 +1226,7 @@ const MOCK_CASES = [
     health: { carrier: 'None (uninsured)', memberId: '—', group: '—' },
     bi: [{ holder: 'ZipRide Mobility Inc.', carrier: 'Continental Product Liability Group', policy: 'CPLG-GL-2026-118', claim: 'CPLG-26-9044', adjuster: 'Martin Blake', contact: '(555) 010-7988', liability: 'Pending', limits: '$5,000,000' }],
     pipum: [],
-    liens: [{ type: 'Medical Lien', entity: 'St. Mary\'s Hospital (hospital lien filed)', file: 'SMH-HL-26-3390', amount: '$ 9,860.00' }],
+    liens: [{ type: 'Medical Lien', entity: 'St. Mary\'s Hospital (hospital lien filed)', file: 'SMH-HL-26-3390', amount: '$ 9,860.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '09/05/2026 – 09/05/2026', status: 'Discharged', charges: '$ 9,860.00' },
         { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3160', email: 'ortho@riverortho.example.com', dates: '09/12/2026 – present', status: 'Ongoing', charges: '$ 760.00' }
@@ -1258,7 +1269,7 @@ const MOCK_CASES = [
     health: { carrier: 'Georgia Educators Health Plan', memberId: 'GEHP-3319027', group: 'RUSD-01' },
     bi: [{ holder: 'Brandon Voss', carrier: 'Budget Auto Insurance', policy: 'BAI-6632190', claim: 'BAI-25-22019', adjuster: 'Leah Morgan', contact: '(555) 010-7742', liability: 'Yes', limits: '$25,000 / $50,000 (tendered 06/2026)' }],
     pipum: [{ type: 'UM/UIM', holder: 'Denise Carter', carrier: 'Keystone Mutual Insurance', policy: 'KM-6620418', claim: 'KM-25-100872', adjuster: 'Dana Whitfield', contact: '(555) 010-7702', limits: '$100,000 / $300,000' }],
-    liens: [{ type: 'HI Subro', entity: 'Georgia Educators Health Plan', file: 'GEHP-SUB-10277', amount: '$ 22,140.00' }],
+    liens: [{ type: 'HI Subro', entity: 'Georgia Educators Health Plan', file: 'GEHP-SUB-10277', amount: '$ 22,140.00', status: 'Confirmed (lien letter received)', notes: 'Nothing is paid out until the release is signed and this lien is resolved.' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '02/17/2025 – 02/17/2025', status: 'Discharged', charges: '$ 5,900.00' },
         { name: 'Northside Surgery Center', specialty: 'Surgery', phone: '(555) 010-3180', email: 'billing@northsidesc.example.com', dates: '05/06/2025 – 05/06/2025', status: 'Discharged', charges: '$ 31,200.00' },
@@ -1302,7 +1313,7 @@ const MOCK_CASES = [
     health: { carrier: 'Medicare (Part A & B)', memberId: 'MBI 3TR8-KJ2-WQ61', group: '—' },
     bi: [{ holder: 'Lake Riverton Marina LLC', carrier: 'Seaboard Marine Insurance', policy: 'SMI-MAR-44120', claim: 'SMI-25-0918', adjuster: 'Gordon Welch', contact: '(555) 010-7746', liability: 'Yes', limits: '$1,000,000' }],
     pipum: [],
-    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 25-0622-1187', amount: '$ 26,880.00' }],
+    liens: [{ type: 'Medical Lien', entity: 'Medicare (BCRC)', file: 'Case ID 25-0622-1187', amount: '$ 26,880.00', status: 'Final lien received', notified: '09/18/2026', final: '$ 26,880.00', notes: 'Medicare final demand $26,880 (09/18/2026), due within 60 days: pay by 11/17/2026 and confirm with the BCRC.' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '06/22/2025 – 06/27/2025', status: 'Discharged', charges: '$ 61,300.00' },
         { name: 'Riverton Rehabilitation Center', specialty: 'Other', specialtyOther: 'Inpatient Rehab', phone: '(555) 010-3470', email: 'records@rivertonrehab.example.com', dates: '06/27/2025 – 07/18/2025', status: 'Discharged', charges: '$ 22,500.00' },
@@ -1347,7 +1358,7 @@ const MOCK_CASES = [
     health: { carrier: 'Blue Horizon PPO', memberId: 'BHP-7721045', group: 'RDA-OFFICE' },
     bi: [{ holder: 'Gary Whitlock', carrier: 'Homestead Fire & Casualty', policy: 'HFC-HO-339021', claim: 'HFC-25-01877', adjuster: 'Paul Irving', contact: '(555) 010-7644', liability: 'Yes', limits: '$300,000' }],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'Blue Horizon PPO', file: 'BHP-SUB-55610', amount: '$ 18,230.00' }],
+    liens: [{ type: 'HI Subro', entity: 'Blue Horizon PPO', file: 'BHP-SUB-55610', amount: '$ 18,230.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '04/12/2025 – 04/12/2025', status: 'Discharged', charges: '$ 3,100.00' },
         { name: 'Riverton Hand & Upper Extremity', specialty: 'Surgery', phone: '(555) 010-3230', email: 'billing@rivhand.example.com', dates: '04/20/2025 – 11/14/2025', status: 'Discharged', charges: '$ 24,600.00' },
@@ -1390,8 +1401,8 @@ const MOCK_CASES = [
     bi: [{ holder: 'Scott Kerr', carrier: 'Liberty Crest Insurance', policy: 'LC-7700315', claim: 'LC-25-60418', adjuster: 'Greg Hollis', contact: '(555) 010-7755 · ghollis@example.com', liability: 'Yes', limits: '$100,000 / $300,000' }],
     pipum: [{ type: 'UM/UIM', holder: 'Ahmed Rahman', carrier: 'Harbor Point Insurance', policy: 'HP-3301847', claim: 'HP-25-2290', adjuster: 'Irene Shaw', contact: '(555) 010-7811', limits: '$100,000 / $300,000' }],
     liens: [
-        { type: 'Prior Atty Lien', entity: 'Hartley & Moss Law', file: 'HM-2025-0441', amount: '$ 3,850.00' },
-        { type: 'HI Subro', entity: 'Delta Freight Employee Health', file: 'DFE-SUB-7710', amount: '$ 14,960.00' }
+        { type: 'Prior Atty Lien', entity: 'Hartley & Moss Law', file: 'HM-2025-0441', amount: '$ 3,850.00', status: 'Confirmed (lien letter received)', notified: '04/22/2026', notes: 'Lien letter 04/22/2026: costs $3,850 plus a claim for fees for their work.' },
+        { type: 'HI Subro', entity: 'Delta Freight Employee Health', file: 'DFE-SUB-7710', amount: '$ 14,960.00', status: 'Confirmed (lien letter received)' }
     ],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '05/03/2025 – 05/03/2025', status: 'Discharged', charges: '$ 4,400.00' },
@@ -1425,6 +1436,7 @@ const MOCK_CASES = [
 {
     id: 'MC-33', caseNumber: 'LSH-2024-MVA-900242', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Settled; liens being negotiated, including a pre-settlement funding advance. The funding company calls with our case number, asking for amounts.',
+    critical: 'Bridgeway Legal Funding may be told the case STATUS only: never any amount or medical detail.',
     client: { name: 'Latoya Jackson', phone: '(555) 010-6710', email: 'latoya.jackson@example.com', dob: '01/09/1987', ssn: 'XXX-XX-6023',
         address: '240 Peachtree Commons, Unit 9, Riverton, GA 30306',
         emergency: { name: 'Darnell Jackson', phone: '(555) 010-6711', relationship: 'Husband' },
@@ -1438,8 +1450,8 @@ const MOCK_CASES = [
     bi: [{ holder: 'Nora Fields', carrier: 'Budget Auto Insurance', policy: 'BAI-2208840', claim: 'BAI-24-33107', adjuster: 'Leah Morgan', contact: '(555) 010-7742', liability: 'Yes', limits: '$100,000 / $300,000' }],
     pipum: [],
     liens: [
-        { type: 'Funding', entity: 'Bridgeway Legal Funding', file: 'BLF-26-0319', amount: '$ 6,000.00' },
-        { type: 'Medical Lien', entity: 'Georgia Medicaid (CareSource)', file: 'GA-MCD-REC-88214', amount: '$ 17,420.00' }
+        { type: 'Funding', entity: 'Bridgeway Legal Funding', file: 'BLF-26-0319', amount: '$ 6,000.00', status: 'Confirmed (lien letter received)', notes: 'Payoff letter requested (good through 10/31/2026); the payoff grows each month. Status only to Bridgeway: never any amount.' },
+        { type: 'Medical Lien', entity: 'Georgia Medicaid (CareSource)', file: 'GA-MCD-REC-88214', amount: '$ 17,420.00', status: 'Reduction requested', notified: '09/10/2026', notes: 'Medicaid lien letter 09/10/2026; reduction request sent 09/14/2026. Follow up with the recovery contractor by 10/09/2026.' }
     ],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '10/15/2024 – 10/20/2024', status: 'Discharged', charges: '$ 48,900.00' },
@@ -1473,6 +1485,7 @@ const MOCK_CASES = [
 {
     id: 'MC-34', caseNumber: 'LSH-2025-PRL-900393', level: 'Advanced', programs: ['reception', 'cm', 'ea', 'md'],
     summary: 'Elevator dropped two floors in a medical office building. In litigation; the mediation center calls with our case number, and his wife wants the mediation time.',
+    critical: 'Mediation 10/21/2026 at 9:00 AM: the client must attend in person. Wife Kathleen is the emergency contact only (not authorized).',
     client: { name: 'Brian O\'Neill', phone: '(555) 010-6720', email: 'brian.oneill@example.com', dob: '10/03/1972', ssn: 'XXX-XX-5530',
         address: '18 Foxglove Court, Riverton, GA 30329',
         emergency: { name: 'Kathleen O\'Neill', phone: '(555) 010-6721', relationship: 'Wife' },
@@ -1488,7 +1501,7 @@ const MOCK_CASES = [
         { holder: 'Apex Lift Services Inc.', carrier: 'Continental Product Liability Group', policy: 'CPLG-GL-2025-441', claim: 'CPLG-25-6618', adjuster: 'Irene Walsh', contact: '(555) 010-7992', liability: 'Pending', limits: '$5,000,000' }
     ],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'Blue Horizon PPO', file: 'BHP-SUB-60771', amount: '$ 58,400.00' }],
+    liens: [{ type: 'HI Subro', entity: 'Blue Horizon PPO', file: 'BHP-SUB-60771', amount: '$ 58,400.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '01/27/2025 – 01/27/2025', status: 'Discharged', charges: '$ 3,700.00' },
         { name: 'Riverton Neurosurgery Associates', specialty: 'Other', specialtyOther: 'Neurosurgery', phone: '(555) 010-3275', email: 'office@rivneurosurg.example.com', dates: '03/04/2025 – present', status: 'Ongoing', charges: '$ 12,400.00' },
@@ -1503,6 +1516,7 @@ const MOCK_CASES = [
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Richard Voss', firm: 'Voss & Tate LLP', represents: 'Parkside Medical Plaza LLC', phone: '(555) 010-7990', email: 'rvoss@vosstate.example.com', assistant: 'Paula' },
         { name: 'Teresa Lang', firm: 'Lang & Ortiz', represents: 'Apex Lift Services Inc.', phone: '(555) 010-8140', email: 'tlang@langortiz.example.com' }],
+    adr: [{ type: 'Mediation', setBy: 'Court-ordered', status: 'Scheduled', attend: 'In person', neutral: 'Hon. Carla Meade (ret.)', provider: 'Riverton Dispute Resolution Center', date: '10/21/2026', time: '9:00 AM', where: 'Riverton Dispute Resolution Center', prep: '10/14/2026, 3:00 PM with Atty. Brooks', notes: 'Order setting mediation. Defense counsel: Voss & Tate LLP (Parkside), Lang & Ortiz (Apex). Whether his wife may come is Atty. Brooks\'s decision.' }],
     lit: { sol: '01/27/2027', filed: '07/08/2026', cutoff: '03/15/2027', trial: '07/12/2027',
         rows: [
             { type: 'Interrogatories', party: 'Our responses to Apex Lift Services\' interrogatories', due: '10/09/2026', status: 'Pending' },
@@ -1545,7 +1559,7 @@ const MOCK_CASES = [
     health: { carrier: 'Peach State Health Plan', memberId: 'PSH-66102299', group: 'GRP-73015' },
     bi: [{ holder: 'SkyHigh Trampoline Parks LLC', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-551874', claim: 'ARC-26-60112', adjuster: 'Nadia Cole', contact: '(555) 010-7934', liability: 'Pending', limits: '$1,000,000' }],
     pipum: [],
-    liens: [{ type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-81020', amount: '$ 38,650.00' }],
+    liens: [{ type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-81020', amount: '$ 38,650.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'Riverton Children\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3150', email: 'him@rivchildrens.example.com', dates: '07/11/2026 – 07/14/2026', status: 'Discharged', charges: '$ 41,200.00' },
         { name: 'Riverton Pediatric Orthopedics', specialty: 'Ortho', phone: '(555) 010-3165', email: 'office@rivpedsortho.example.com', dates: '07/28/2026 – present', status: 'Ongoing', charges: '$ 2,100.00' },
@@ -1752,6 +1766,7 @@ const MOCK_CASES = [
     pd: null,
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Denise Albright', firm: 'Albright & Cole', represents: 'Kyle Mercer', phone: '(555) 010-8150', email: 'dalbright@albrightcole.example.com' }],
+    adr: [{ type: 'Mediation', setBy: 'Court-ordered', status: 'Scheduled', attend: 'In person', provider: 'Riverton Dispute Resolution Center', date: '06/24/2025', time: '9:00 AM', where: 'Riverton Dispute Resolution Center', brief: '06/20/2025', notes: 'Order setting mediation. Prepare the mediation summary by 06/20/2025.' }],
     lit: { sol: '09/15/2026', filed: '02/03/2025', cutoff: '08/29/2025', trial: '01/12/2026', rows: [{ type: 'Motion', party: 'Court-ordered mediation: 06/24/2025, 9:00 AM, Riverton Dispute Resolution Center', due: '06/24/2025', status: 'Pending' }] },
     finance: [],
     docs: [
@@ -1805,6 +1820,7 @@ const MOCK_CASES = [
     pd: null,
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Martin Yoo', firm: 'Yoo Barrett LLP', represents: 'Centerpoint Parking LLC', phone: '(555) 010-8160', email: 'myoo@yoobarrett.example.com' }],
+    adr: [{ type: 'Arbitration (binding)', setBy: 'Court-ordered', status: 'Scheduled', attend: 'In person', provider: 'Riverton Dispute Resolution Center', date: '09/11/2023', time: '10:00 AM', where: 'Riverton Dispute Resolution Center', notes: 'Order sending the case to arbitration. Prep session with the client before the arbitration.' }],
     lit: { sol: '11/29/2022', filed: '10/14/2022', cutoff: '06/30/2023', trial: '', rows: [{ type: 'Motion', party: 'Binding arbitration: 09/11/2023, 10:00 AM, Riverton Dispute Resolution Center', due: '09/11/2023', status: 'Pending' }] },
     finance: [],
     docs: [
@@ -2150,7 +2166,7 @@ const MOCK_CASES = [
         { holder: 'FreshWay Grocers Inc.', carrier: 'Allied Retail Casualty', policy: 'ARC-GL-660190', claim: 'ARC-23-66019', adjuster: 'Sheila Novak', contact: '(555) 010-7763', liability: 'No', limits: '$2,000,000' }
     ],
     pipum: [],
-    liens: [{ type: 'Medical Lien', entity: 'Medicare (MSPRC)', file: 'MSP-23-448120', amount: '$ 21,400.00' }],
+    liens: [{ type: 'Medical Lien', entity: 'Medicare (MSPRC)', file: 'MSP-23-448120', amount: '$ 21,400.00', status: 'Confirmed (lien letter received)' }],
     facilities: [
         { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '09/29/2023 – 10/04/2023', status: 'Discharged', charges: '$ 38,900.00' }
     ],
@@ -2161,6 +2177,7 @@ const MOCK_CASES = [
     pd: null,
     // defense counsel on the lawsuit (opposing counsel): the 📇 Contacts directory lists them
     counsel: [{ name: 'Martin Yoo', firm: 'Yoo Barrett LLP', represents: 'FreshWay Grocers Inc.', phone: '(555) 010-8160', email: 'myoo@yoobarrett.example.com' }],
+    adr: [{ type: 'Arbitration (non-binding)', setBy: 'Court-ordered', status: 'Scheduled', attend: 'In person', provider: 'Riverton Dispute Resolution Center', date: '03/12/2025', time: '9:30 AM', where: 'Riverton Dispute Resolution Center', notes: 'Notice of arbitration mailed to the client 02/20/2025. Call her to prepare and arrange her ride.' }],
     lit: { sol: '09/29/2025', filed: '05/20/2024', cutoff: '01/15/2025', trial: '', rows: [{ type: 'Motion', party: 'Arbitration: 03/12/2025, 9:30 AM, Riverton Dispute Resolution Center', due: '03/12/2025', status: 'Pending' }] },
     finance: [],
     docs: [

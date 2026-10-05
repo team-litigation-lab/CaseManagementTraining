@@ -86,13 +86,13 @@
     const PROGRAM_AREAS = {
         reception: ['notes', 'tasks'],
         intake: ['header', 'profile', 'parties', 'police', 'matrix', 'docs', 'notes', 'tasks'],
-        cm: ['header', 'profile', 'parties', 'police', 'matrix', 'liens', 'medical', 'wages', 'pd', 'demand', 'settlement', 'docs', 'notes', 'tasks'],
-        md: ['medical', 'wages', 'liens', 'demand', 'docs', 'notes', 'tasks'],
+        cm: ['header', 'profile', 'parties', 'police', 'matrix', 'medical', 'wages', 'demand', 'settlement', 'adr', 'docs', 'notes', 'tasks', 'liens', 'pd'],
+        md: ['medical', 'wages', 'demand', 'docs', 'notes', 'tasks', 'liens'],
         ea: ['docs', 'notes', 'tasks'],
-        pd: ['pd', 'matrix', 'parties', 'police', 'docs', 'notes', 'tasks']
+        pd: ['parties', 'police', 'matrix', 'docs', 'notes', 'tasks', 'pd']
     };
     const AREA_LABELS = { header: 'Case header', profile: 'Profile', parties: 'Parties Involved', police: 'Police Report', matrix: 'Insurance', liens: 'Liens',
-        medical: 'Treatment', wages: 'Lost Wages', pd: 'Property Damage', demand: 'Demand', settlement: 'Settlement', docs: 'Doc Hub', notes: 'Notes', tasks: 'Tasks' };
+        medical: 'Treatment', wages: 'Lost Wages', pd: 'Property Damage', demand: 'Demand', settlement: 'Settlement', adr: 'ADR', docs: 'Doc Hub', notes: 'Notes', tasks: 'Tasks' };
     const programAreas = (p) => PROGRAM_AREAS[p] || null;
     const worksOnCopy = (p) => (programAreas(p) || []).some(a => a !== 'notes' && a !== 'tasks');
     window.mockProgramAreas = (p) => (programAreas(p === undefined ? currentProgram() : p) || []).slice();
@@ -543,6 +543,40 @@
     // The New Matter intake form (intake-form.js) fills a new case with the same helpers.
     window.caseFill = { setVal, set, fieldFor, cardByHead, setOther, added, cells, editIn, selIn };
 
+    // A lien's status and amounts (the Liens tab's newer fields), and the file's ADR (case-sections.js)
+    function fillLienStatus(card, l) {
+        set(card, 'Lien Status', l.status); set(card, 'Date Notified', l.notified); set(card, 'Reduction Requested', l.requested);
+        set(card, 'Final Payoff', l.final); set(card, 'Lien Notes', l.notes);
+    }
+    function fillAdr(c) {
+        (c.adr || []).forEach(a => {
+            if (typeof addAdr !== 'function') return;
+            addAdr(); const card = added('kx-adr'); if (!card) return;
+            set(card, 'ADR Type', a.type); set(card, 'How It Was Set', a.setBy); set(card, 'Status', a.status); set(card, 'Client Must Attend', a.attend);
+            set(card, 'Mediator / Arbitrator', a.neutral); set(card, 'ADR Provider', a.provider); set(card, 'Date', a.date); set(card, 'Time', a.time);
+            set(card, 'Location', a.where); set(card, 'Brief', a.brief); set(card, 'Prep Session', a.prep); set(card, 'Carrier Rep', a.carrierRep);
+            set(card, 'Fee', a.fee); set(card, 'Last Demand', a.lastDemand); set(card, 'Last Offer', a.lastOffer); set(card, 'Settlement / Award', a.result);
+            set(card, 'Notes', a.notes);
+        });
+        if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#kx-adr')) document.activeElement.blur();
+    }
+    // An Admin's edit or a trainee's work on a file, saved before the critical note, the ADR tab and the lien status
+    // existed, has none of them: putting it on screen clears what fillCase filled in. They come from the file again (and
+    // saving keeps them from then on), so an older save never hides them, or saves them away for everyone.
+    function addNewerParts(c, content) {
+        const keyed = (content && content.keyed) || {};
+        if (!keyed['kx-critical']) setVal(document.querySelector('#kx-critical [data-k="note"]'), c.critical);
+        if (!keyed['kx-adr']) fillAdr(c);
+        if (String((content && content.html && content.html.liens) || '').includes('lien-more')) return;
+        if (typeof window.upgradeLienRows === 'function') window.upgradeLienRows();
+        // each saved lien row gets its status from the file's lien with the same file number (or lienholder)
+        Array.from(($id('lien-container') || { children: [] }).children).forEach(card => {
+            const file = norm((fieldFor(card, 'Claim / File #') || {}).innerText || ''), who = norm((fieldFor(card, 'Lienholder Entity') || {}).innerText || '');
+            const l = (c.liens || []).find(x => file && norm(x.file) === file) || (c.liens || []).find(x => who && norm(x.entity) === who);
+            if (l) fillLienStatus(card, l);
+        });
+    }
+
     function fillCase(c) {
         const header = document.querySelector('#capture-area .header-card');
         setVal($id('client-name-field'), c.client.name);
@@ -550,6 +584,7 @@
         set(header, 'Target Settlement', c.target);
         setVal($id('attorney-field'), c.attorney);
         setVal($id('case-manager-field'), c.caseManager);
+        setVal(document.querySelector('#kx-critical [data-k="note"]'), c.critical);   // the ⚠ Critical note under the header (case-alerts.js)
         const phaseSel = $id('phase-selector'); if (phaseSel) phaseSel.value = c.phase;
         if (typeof updatePhaseDisplay === 'function') updatePhaseDisplay(c.phase);
         setVal($id('date-of-loss-field'), c.dateOfLoss);
@@ -603,6 +638,7 @@
                 setOther(sel, wrap && wrap.querySelector('[contenteditable]'), wrap && wrap.querySelector('.revert-btn'), l.typeOther);
             } else setVal(sel, l.type);
             set(card, 'Lienholder Entity', l.entity); set(card, 'Claim / File #', l.file); set(card, 'Lien Amount', l.amount);
+            fillLienStatus(card, l);
         });
 
         // Treatment
@@ -651,6 +687,7 @@
             set(card, 'Attorney', o.name); set(card, 'Law Firm', o.firm); set(card, 'Represents', o.represents);
             set(card, 'Phone', o.phone); set(card, 'Email', o.email); set(card, 'Assistant / Paralegal', o.assistant || '');
         });
+        fillAdr(c);
         if (c.lit) {
             setVal($id('sol-litigation-field'), c.lit.sol); setVal($id('complaint-filed-field'), c.lit.filed);
             setVal($id('discovery-cutoff-field'), c.lit.cutoff); setVal($id('trial-date-field'), c.lit.trial);
@@ -709,7 +746,7 @@
             const touch = (e) => { if (mockId && (mockEditing || mockMine) && !freeEdit(e.target)) editTouched = true; };
             area.addEventListener('input', touch, true);
             area.addEventListener('change', touch, true);
-            area.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('button, [onclick]'); if (b && !b.closest('.tab-btn')) touch(e); }, true);
+            area.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('button, [onclick]'); if (b && !b.closest('.tab-btn, #ssn-mask, [data-cf="open"]')) touch(e); }, true);
             area.addEventListener('input', changed, true);
             area.addEventListener('change', changed, true);
             Object.values(UPD_BODIES).forEach(id => { const b = $id(id); if (b) new MutationObserver(scheduleUpdateSave).observe(b, { childList: true }); });
@@ -962,6 +999,7 @@
             patchFacts(c.id, e.facts);
             showBase(c);
             if (typeof applyCaseContentToDOM === 'function') applyCaseContentToDOM(e.content, document);
+            addNewerParts(c, e.content);
             const ph = $id('phase-selector'); if (ph && typeof updatePhaseDisplay === 'function') updatePhaseDisplay(ph.value);
         } else if (edits[c.id]) {
             delete edits[c.id]; unpatchFacts(c.id);
@@ -1042,6 +1080,7 @@
         if (!fresh && saved.content && typeof applyCaseContentToDOM === 'function') {
             showBase(c);
             applyCaseContentToDOM(saved.content, document);
+            addNewerParts(c, saved.content);
             const ph = $id('phase-selector'); if (ph && typeof updatePhaseDisplay === 'function') updatePhaseDisplay(ph.value);
         }
         ({ mockId, mockViewOnly, mockEditing, mockMine, viewReason } = keep);
