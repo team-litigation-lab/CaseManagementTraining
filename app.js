@@ -301,11 +301,21 @@
         }
 
         /* ---------- Dynamic row/card builders ---------- */
+        // A Discovery & Filing Tracker row's document: the filed copy or the paper served, uploaded like a Doc Hub file
+        // (named by the firm's convention with the row's Task Type) or a 🔗 Link. Backed up to Google Drive in the case's
+        // Litigation folder (drive-backup.js). No field in it is saved by position: only the link inside it.
+        const LIT_TYPES = ['Service', 'Complaint', 'Summons', 'Interrogatories', 'RFP', 'RFA', 'Deposition Notice', 'Subpoena', 'Motion',
+            'Answer', 'Discovery Responses', 'Proof of Service', 'Notice of Hearing', 'Court Order', 'Stipulation', 'Other'];
+        window.LIT_TYPES = LIT_TYPES;
+        function litDocCell() {
+            return `<td width="190" class="no-print lit-doc"><label class="hub-btn" style="display:inline-block;padding:6px 10px;cursor:pointer;">Upload<input type="file" onchange="handleDocUpload(this)" class="hidden"></label> <button type="button" class="hub-btn doc-link-btn" style="padding:6px 8px;" onclick="addDocLink(this)" title="Attach a web link instead (a court portal, a shared folder)">🔗 Link</button><div style="font-size:8px;color:#94a3b8;margin-top:2px;">Max ${formatBytes(DOC_UPLOAD_MAX_BYTES)}</div><div class="doc-attachment" style="margin-top:4px;font-size:9px;"></div></td>`;
+        }
+        window.litDocCell = litDocCell;
         function addRow(id) {
             const tr = document.createElement('tr');
             const today = new Date().toLocaleDateString();
             if (id === 'lit-body') {
-                tr.innerHTML = `<td><select class="prof-input text-xs"><option>Service</option><option>Complaint</option><option>Summons</option><option>Interrogatories</option><option>RFP</option><option>RFA</option><option>Deposition Notice</option><option>Subpoena</option><option>Motion</option></select></td><td><div contenteditable="true" class="text-xs" data-ph="Enter party"></div></td><td><div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY" data-fmt="date"></div></td><td><select class="prof-input text-xs"><option>Pending</option><option>Responded</option><option>Completed</option></select></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
+                tr.innerHTML = `<td><select class="prof-input text-xs">${LIT_TYPES.map(t => `<option>${t}</option>`).join('')}</select></td><td><div contenteditable="true" class="text-xs" data-ph="Enter party"></div></td><td><div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY" data-fmt="date"></div></td><td><select class="prof-input text-xs"><option>Pending</option><option>Responded</option><option>Completed</option></select></td>${litDocCell()}<td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
             } else if (id === 'fin-body') {
                 tr.innerHTML = `<td><div contenteditable="true" class="text-xs">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs" data-ph="Enter description"></div></td><td><div contenteditable="true" class="font-black exp-field text-xs text-blue-600" data-ph="$ 0.00" data-fmt="currency"></div></td><td><button onclick="this.parentElement.parentElement.remove(); updateTotals();" class="text-red-500 font-bold">×</button></td>`;
             } else if (id === 'note-body' || id === 'task-body') {
@@ -567,10 +577,10 @@
             return uniqueCaseFileName([caseId, client || 'No-Client-Name', part(type, 40) || 'Document', day].join('_') + (ext ? '.' + ext.toLowerCase() : ''));
         }
         window.caseFileName = caseFileName;
-        // The names of the files already on the case (Doc Hub, demand letters, the client's ID)
+        // The names of the files already on the case (Doc Hub, Litigation, demand letters, the client's ID, PD photos)
         function caseFileNames() {
             const names = new Set();
-            document.querySelectorAll('#doc-body .doc-attachment a[download], #kx-demand a.kx-dl-link[download]').forEach(a => names.add(a.getAttribute('download')));
+            document.querySelectorAll('#doc-body .doc-attachment a[download], #lit-body .doc-attachment a[download], #kx-demand a.kx-dl-link[download]').forEach(a => names.add(a.getAttribute('download')));
             const f = document.querySelector('#kx-client-id [data-k="file"]');
             if (f) { try { const o = JSON.parse(f.textContent); if (o && o.name) names.add(o.name); } catch (e) { /* no ID file */ } }
             if (window.lshPdPhotos) window.lshPdPhotos.list().forEach(p => { if (p.name) names.add(p.name); });   // property damage photos (pd-photos.js)
@@ -590,7 +600,7 @@
             if (!/\d/.test(id) || !/^[A-Za-z0-9-]+$/.test(id)) return 0;
             const fresh = (old) => uniqueCaseFileName(id + old.slice('NO-CASE-ID'.length));
             let n = 0;
-            document.querySelectorAll('#doc-body .doc-attachment a[data-r2-key], #kx-demand a.kx-dl-link[data-r2-key]').forEach(a => {
+            document.querySelectorAll('#doc-body .doc-attachment a[data-r2-key], #lit-body .doc-attachment a[data-r2-key], #kx-demand a.kx-dl-link[data-r2-key]').forEach(a => {
                 const old = a.getAttribute('download') || '';
                 if (!old.startsWith('NO-CASE-ID_')) return;
                 const name = fresh(old);
@@ -621,8 +631,9 @@
             const holder = row ? row.querySelector('.doc-attachment') : null;
             if (holder) holder.innerHTML = '<span style="color:#64748b;font-style:italic;">Uploading…</span>';
             try {
-                // named by the firm's convention (caseFileName), under the row's category
-                const cat = row && row.querySelector('td div') ? row.querySelector('td div').textContent.trim() : 'Document';
+                // named by the firm's convention (caseFileName), under the row's category (a Litigation row: its Task Type)
+                const litType = row && row.closest('#lit-body') && row.querySelector('select');
+                const cat = litType ? (litType.value || 'Litigation') : row && row.querySelector('td div') ? row.querySelector('td div').textContent.trim() : 'Document';
                 const named = caseFileName(cat, file.name);
                 const up = await uploadFileToR2(file, 'case-doc', named);
                 const q = (v) => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -2026,6 +2037,26 @@
                 virtualPage.innerHTML += `<div style="margin-bottom: 26px; break-inside: avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">Documents</div>
                     <div style="padding: 16px 18px;">${docHubContent}</div>
+                </div>`;
+            }
+            // Litigation documents: the Discovery & Filing Tracker's filed copies and papers (a 📎 file or a 🔗 link per row)
+            let litContent = '';
+            document.querySelectorAll('#lit-body tr').forEach(row => {
+                const a = row.querySelector('.doc-attachment a'); if (!a) return;
+                const sel = row.querySelectorAll('select'), ed = row.querySelectorAll('[contenteditable="true"]');
+                const what = [sel[0] && sel[0].value, ed[0] && ed[0].innerText.trim(), ed[1] && ed[1].innerText.trim() ? 'due ' + ed[1].innerText.trim() : '', sel[1] && sel[1].value].filter(Boolean).join(' · ');
+                const web = a.classList.contains('doc-web-link');
+                const doc = web ? `🔗 Link: ${e(a.innerText.replace(/^🔗\s*/, '').trim())} <span style="font-weight:400;color:#64748b;">(${e(a.getAttribute('href') || '')})</span>`
+                    : `📎 ${e(a.getAttribute('download') || a.innerText.replace(/^\S+\s+/, '').trim())}`;
+                litContent += `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; break-inside: avoid;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace; font-size: 9px; font-weight: 900; color: #9a3412; text-transform: uppercase; letter-spacing:0.05em;">${e(what)}</div>
+                    <div style="margin-top:4px;font-size:11px;font-weight:700;color:#2563eb;">${doc}</div>
+                </div>`;
+            });
+            if (litContent) {
+                virtualPage.innerHTML += `<div style="margin-bottom: 26px; break-inside: avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                    <div style="background-color: #0f2148; color: #f97316; font-family:'IBM Plex Mono','Courier New',monospace; font-size: 11px; font-weight:800; padding: 9px 16px; text-transform: uppercase; letter-spacing:0.05em;">Litigation Documents</div>
+                    <div style="padding: 16px 18px;">${litContent}</div>
                 </div>`;
             }
 

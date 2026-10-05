@@ -1,15 +1,16 @@
-/* ☁ Google Drive backup (the Doc Hub tab).
+/* ☁ Google Drive backup (the Doc Hub and Litigation tabs).
 
    Connect your own Google account (a Gmail address works) once, then "Back up this case's files" copies the
    open case's uploaded files into your Drive:
        LSH CMS Backups / <Case ID> <Client>
    The files: the Doc Hub attachments, the demand letters, the client's ID and the property damage photos, under the names the case shows
-   (the firm's naming: caseFileName in app.js). Backing up again only sends what's new.
+   (the firm's naming: caseFileName in app.js); the Litigation tab's documents (the Discovery & Filing Tracker) go in the case folder's
+   own Litigation folder. Backing up again only sends what's new. The same bar is on both tabs.
 
    The server side is /api/drive-backup (functions/api/drive-backup.js, functions/_google_drive.js). The app
    asks Google only for drive.file: it can see the folders and files it made, nothing else in the Drive.
    It needs Google sign-in set up for the site (README → Doc Hub → Google Drive backup); until then the bar
-   says so. The status is asked for the first time the Doc Hub tab is opened, not on every page load.
+   says so. The status is asked for the first time Doc Hub or Litigation is opened, not on every page load.
 
    The bar sits in the case editor but isn't part of the case: it's data-free-edit (its redraws aren't
    edits, and it works on a view-only case) and no-print. */
@@ -27,25 +28,30 @@
 
     const css = document.createElement('style');
     css.textContent = `
-    #drive-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:9px 12px;border:1px solid #dbeafe;background:#f8fbff;border-radius:10px;font-size:12px;color:#334155}
-    #drive-bar .db-t{font-weight:800;color:#0f2148;white-space:nowrap}
-    #drive-bar .db-t svg{display:inline-block}
-    #drive-bar .db-s{flex:1;min-width:180px;color:#475569}
-    #drive-bar .db-s b{color:#0f2148}
-    #drive-bar button,#drive-bar a.db-btn{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer;text-decoration:none;white-space:nowrap}
-    #drive-bar button.db-go{background:#2563eb;border-color:#2563eb;color:#fff}
-    #drive-bar button:disabled{opacity:.6;cursor:default}
-    #drive-bar button:hover:not(:disabled),#drive-bar a.db-btn:hover{border-color:#f97316}
-    #drive-bar .db-err{color:#b91c1c;flex-basis:100%}`;
+    .drive-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:9px 12px;border:1px solid #dbeafe;background:#f8fbff;border-radius:10px;font-size:12px;color:#334155}
+    .drive-bar .db-t{font-weight:800;color:#0f2148;white-space:nowrap}
+    .drive-bar .db-t svg{display:inline-block}
+    .drive-bar .db-s{flex:1;min-width:180px;color:#475569}
+    .drive-bar .db-s b{color:#0f2148}
+    .drive-bar button,.drive-bar a.db-btn{border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer;text-decoration:none;white-space:nowrap}
+    .drive-bar button.db-go{background:#2563eb;border-color:#2563eb;color:#fff}
+    .drive-bar button:disabled{opacity:.6;cursor:default}
+    .drive-bar button:hover:not(:disabled),.drive-bar a.db-btn:hover{border-color:#f97316}
+    .drive-bar .db-err{color:#b91c1c;flex-basis:100%}`;
     document.head.appendChild(css);
 
-    function bar() {
-        let b = $id('drive-bar');
+    // the bar under Doc Hub's heading (#drive-bar) and under the Discovery & Filing Tracker's (#drive-bar-lit)
+    function makeBar(id, card) {
+        let b = $id(id);
         if (b) return b;
-        const card = document.querySelector('#pane-docs .pdf-card'), head = card && card.querySelector('.section-head');
+        const head = card && (card.querySelector(':scope > .section-head') || card.querySelector(':scope > .flex:first-child'));
         if (!head) return null;
-        head.insertAdjacentHTML('afterend', '<div id="drive-bar" class="no-print" data-free-edit role="region" aria-label="Google Drive backup"></div>');
-        return $id('drive-bar');
+        head.insertAdjacentHTML('afterend', `<div id="${id}" class="drive-bar no-print" data-free-edit role="region" aria-label="Google Drive backup"></div>`);
+        return $id(id);
+    }
+    function bars() {
+        const lit = $id('lit-body');
+        return [makeBar('drive-bar', document.querySelector('#pane-docs .pdf-card')), makeBar('drive-bar-lit', lit && lit.closest('.pdf-card'))].filter(Boolean);
     }
 
     /* ---------- the open case's files ---------- */
@@ -56,15 +62,21 @@
     }
     function caseFiles() {
         const out = [], seen = new Set();
-        const add = (key, name) => { if (!key || seen.has(key) || !/^documents\//.test(key)) return; seen.add(key); out.push({ key, name: String(name || '').trim() || key.split('/').pop() }); };
+        const add = (key, name, folder) => {
+            if (!key || seen.has(key) || !/^documents\//.test(key)) return;
+            seen.add(key); out.push(Object.assign({ key, name: String(name || '').trim() || key.split('/').pop() }, folder ? { folder } : {}));
+        };
+        const linkName = (a) => a.getAttribute('download') || a.textContent.replace(/^\S+\s+/, '');
         document.querySelectorAll('#doc-body .doc-attachment a[data-r2-key], #kx-demand a.kx-dl-link[data-r2-key]')
-            .forEach(a => add(a.getAttribute('data-r2-key'), a.getAttribute('download') || a.textContent.replace(/^\S+\s+/, '')));
+            .forEach(a => add(a.getAttribute('data-r2-key'), linkName(a)));
+        // the Litigation tab's documents: into the case folder's Litigation folder
+        document.querySelectorAll('#lit-body .doc-attachment a[data-r2-key]').forEach(a => add(a.getAttribute('data-r2-key'), linkName(a), 'Litigation'));
         const id = clientIdFile(); if (id) add(id.key, id.name || 'Client-ID.jpg');
         if (window.lshPdPhotos) window.lshPdPhotos.list().forEach(p => add(p.key, p.name || 'PD-Photo.jpg'));   // property damage photos
         return out;
     }
     // files kept inside the case from before uploads went to storage (data: links): these can't be copied
-    const oldInline = () => document.querySelectorAll('#doc-body .doc-attachment a[href^="data:"]').length;
+    const oldInline = () => document.querySelectorAll('#doc-body .doc-attachment a[href^="data:"], #lit-body .doc-attachment a[href^="data:"]').length;
     function caseIdentity() {
         const txt = (id) => { const el = $id(id); return el ? el.innerText.replace(/\s+/g, ' ').trim() : ''; };
         const id = txt('case-id-field'), client = txt('client-name-field');
@@ -97,8 +109,8 @@
 
     /* ---------- the bar ---------- */
     function paint() {
-        const b = bar(); if (!b) return;
-        if (!signedIn()) { b.innerHTML = ''; return; }
+        const bs = bars(); if (!bs.length) return;
+        if (!signedIn()) { bs.forEach(b => { b.innerHTML = ''; }); return; }
         let body;
         if (!D) body = `<span class="db-s">${loading ? 'Checking the Google Drive connection…' : 'Google Drive backup.'}</span>`;
         else if (!D.configured) body = `<span class="db-s">Backing up to Google Drive isn't switched on for this site yet (an admin sets it up: README → Doc Hub → Google Drive backup).</span>`;
@@ -107,9 +119,9 @@
             body = `<span class="db-s">Connect your Google account (Gmail) to back up this case's files to your own Google Drive. The app can only see the folders it makes there.</span>
                 <button type="button" class="db-go" data-db="connect" onclick="driveConnect()" ${connecting ? 'disabled' : ''}>${connecting ? 'Connecting…' : 'Connect Google Drive'}</button>`;
         } else {
-            const n = caseFiles().length, old = oldInline(), id = caseIdentity();
+            const files = caseFiles(), n = files.length, lit = files.filter(f => f.folder === 'Litigation').length, old = oldInline(), id = caseIdentity();
             const what = !id.key ? 'Open a case (or give it a client name) to back up its files.'
-                : n ? `<b>${n} file${n === 1 ? '' : 's'}</b> on this case (Doc Hub, demand letters, the client's ID, PD photos) → <b>LSH CMS Backups / ${esc(id.name)}</b>.`
+                : n ? `<b>${n} file${n === 1 ? '' : 's'}</b> on this case (Doc Hub, Litigation, demand letters, the client's ID, PD photos) → <b>LSH CMS Backups / ${esc(id.name)}</b>${lit ? `, the ${lit} litigation document${lit === 1 ? '' : 's'} in its <b>Litigation</b> folder` : ''}.`
                 : 'No uploaded files on this case yet.';
             body = `<span class="db-s">${what}${old ? ` ${old} older file${old === 1 ? ' is' : 's are'} kept inside the case and can't be copied: upload ${old === 1 ? 'it' : 'them'} again to back ${old === 1 ? 'it' : 'them'} up.` : ''}<br>
                     <span style="color:#64748b">Signed in as ${esc(D.email || 'your Google account')}${D.lastBackupAt ? ` · last backup ${esc(new Date(D.lastBackupAt.replace(' ', 'T') + 'Z').toLocaleString())}` : ''}${progress ? ` · ${esc(progress)}` : ''}</span></span>
@@ -117,7 +129,8 @@
                 ${lastFolder || D.rootUrl ? `<a class="db-btn" data-db="open" href="${esc(lastFolder || D.rootUrl)}" target="_blank" rel="noopener noreferrer">Open in Drive ↗</a>` : ''}
                 <button type="button" data-db="disconnect" onclick="driveDisconnect()" ${busy ? 'disabled' : ''}>Disconnect</button>`;
         }
-        b.innerHTML = `<span class="db-t">${GLOGO}Google Drive backup</span>${body}${error ? `<span class="db-err">${esc(error)}</span>` : ''}`;
+        const html = `<span class="db-t">${GLOGO}Google Drive backup</span>${body}${error ? `<span class="db-err">${esc(error)}</span>` : ''}`;
+        bs.forEach(b => { if (b.innerHTML !== html) b.innerHTML = html; });
     }
 
     /* ---------- Google sign-in (the same popup as the Firm Calendar's Google Calendar) ---------- */
@@ -180,17 +193,17 @@
         busy = false; progress = ''; paint();
     };
 
-    // The status is asked for once, when the Doc Hub tab is first opened; the bar redraws whenever it's opened.
+    // The status is asked for once, when Doc Hub or Litigation is first opened; the bars redraw whenever one is opened.
     function onDocs() { if (!signedIn()) return; watchFiles(); paint(); if (!asked) { asked = true; load(); } }
     const baseShow = window.showTab;
     if (typeof baseShow === 'function') {
-        window.showTab = function (id) { const r = baseShow.apply(this, arguments); if (id === 'docs') onDocs(); return r; };
+        window.showTab = function (id) { const r = baseShow.apply(this, arguments); if (id === 'docs' || id === 'litigation') onDocs(); return r; };
     }
     // a file added or removed on the case (an upload finishing, a row removed, a case opened): the count follows
     let watched = false, later = 0;
     function watchFiles() {
         if (watched || typeof MutationObserver !== 'function') return;
-        const boxes = ['doc-body', 'kx-demand', 'kx-client-id', 'kx-pd-photos'].map(id => $id(id)).filter(Boolean);
+        const boxes = ['doc-body', 'lit-body', 'kx-demand', 'kx-client-id', 'kx-pd-photos'].map(id => $id(id)).filter(Boolean);
         if (!boxes.length) return;
         watched = true;
         const mo = new MutationObserver(() => { if (!$id('drive-bar') || !D || !D.connected) return; clearTimeout(later); later = setTimeout(paint, 150); });
@@ -202,7 +215,8 @@
         window.applySessionUI = function () {
             const r = baseApply.apply(this, arguments);
             D = null; asked = false; lastFolder = ''; error = ''; progress = '';
-            const p = $id('pane-docs'); if (p && p.style.display === 'block' && signedIn()) onDocs(); else paint();
+            const open = ['pane-docs', 'pane-litigation'].some(id => { const p = $id(id); return p && p.style.display === 'block'; });
+            if (open && signedIn()) onDocs(); else paint();
             return r;
         };
     }

@@ -223,7 +223,6 @@
                             <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div id="emergency-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div><div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse"></div></div></div>
                         </div>
                         <div class="pdf-card border-l-4 border-emerald-500 shadow-sm"><div class="flex justify-between items-center mb-2"><div class="section-head" style="margin-bottom:0;background:#ecfdf5;color:#047857;">Authorized to Access Case</div><button onclick="addAuthorized()" class="add-btn no-print">+ Add Person</button></div>
-                            <p class="kx-hint no-print">People the client has authorized to receive updates or discuss the case (spouse, parent, guardian, interpreter…). Check the signed authorization before sharing anything.</p>
                             <div id="kx-authorized" data-keyed="rows" class="space-y-3"></div>
                         </div>
                     </div>
@@ -249,7 +248,7 @@
                      cases' passenger rows still load into place (saved fields are restored by position), and the block
                      shows only when a case has some (styles.css). -->
                 <div id="legacy-passengers" class="mt-6">
-                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase mb-0">Passenger Records</label><span class="kx-hint no-print" style="margin:0;">From an older case. Add passengers in the Parties Involved tab.</span></div>
+                    <div class="flex justify-between items-center mb-4"><label class="text-orange-600 font-black text-sm uppercase mb-0">Passenger Records</label></div>
                     <div id="passenger-container" class="space-y-4"></div>
                 </div>
             </div>
@@ -260,7 +259,6 @@
                 <div class="pdf-card flex items-center gap-4 flex-wrap" style="padding:14px 20px;">
                     <label class="mb-0">Report Type</label>
                     <div id="kx-report-kind" data-keyed><select class="prof-input" data-k="kind" onchange="applyReportKind()" style="min-width:260px;"><option value="Police Report">Police Report</option><option value="Incident Report">Incident Report (premises: no police report)</option><option value="No Report">No report available</option></select></div>
-                    <span class="kx-hint" style="margin:0;">Premises liability (slip and fall, store, apartment): use the business's incident report when there's no police report.</span>
                 </div>
                 <div id="police-body">
                 <div class="pdf-card border-l-8 border-blue-500">
@@ -307,7 +305,6 @@
                     <!-- The property damage claim (the vehicle): its adjuster and the coverage. Saved by id (data-keyed, case-sections.js). -->
                     <div id="kx-pd-claim" data-keyed class="pdf-card border-l-4 border-amber-500 shadow-sm">
                         <div class="section-head" style="background:#fffbeb;color:#b45309;">Property Damage Claim: Adjuster &amp; Coverage</div>
-                        <p class="kx-hint no-print">The vehicle claim, separate from the injury claim: who it's with, the PD adjuster, the coverage (property damage limit, deductible, rental) and where the repair or total loss stands. Photos go on the Property Damage tab.</p>
                         <div class="grid grid-cols-4 gap-5">
                             <div><label>Claim With</label><select class="prof-input" data-k="against"><option>Not opened yet</option><option>At-fault party's carrier (property damage liability)</option><option>Client's own carrier (collision)</option><option>Client's own carrier (UMPD)</option></select></div>
                             <div><label>PD Carrier</label><div contenteditable="true" data-k="carrier" data-ph="e.g. Keystone Mutual Insurance"></div></div>
@@ -332,7 +329,6 @@
                          its settlement is worked out on its card and added on the Settlement tab. Saved by id (case-sections.js). -->
                     <div class="pdf-card border-l-8 border-emerald-600 shadow-sm">
                         <div class="flex justify-between items-center mb-2"><div class="section-head" style="margin-bottom:0;background:#ecfdf5;color:#047857;">Additional Insurance (other policies that can pay)</div><button onclick="addInsurance()" class="add-btn no-print">+ Add Insurance</button></div>
-                        <p class="kx-hint no-print">Umbrella or excess, a second at-fault party, a commercial or business policy, homeowner's or renter's, rideshare, an employer's policy… Each one can settle on its own: its settlement is figured on its card and added to the Settlement tab's totals.</p>
                         <div id="kx-insurance-extra" data-keyed="rows" class="space-y-4"></div>
                     </div>
                 </div>
@@ -352,7 +348,7 @@
                 <div class="pdf-card mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <div class="section-head" style="margin-bottom:0;">Medical Chronology</div>
-                        <div class="flex items-center gap-2"><span class="kx-hint no-print" style="margin:0;">Drag a row by its left edge (⠿) to reorder</span><button onclick="sortChronology()" class="add-btn no-print" title="Order the entries by their first date of service">⇅ Sort by Date</button><button onclick="addChronology()" class="add-btn no-print">+ Add Chronology Entry</button></div>
+                        <div class="flex items-center gap-2"><button onclick="sortChronology()" class="add-btn no-print" title="Order the entries by their first date of service">⇅ Sort by Date</button><button onclick="addChronology()" class="add-btn no-print">+ Add Chronology Entry</button></div>
                     </div>
                     <table class="treat-table w-full">
                         <thead>
@@ -486,7 +482,6 @@
                         <div class="section-head" style="margin-bottom:0;background:#fef2f2;color:#b91c1c;">Opposing Counsel</div>
                         <button onclick="addCounsel()" class="add-btn no-print">+ Add Opposing Counsel</button>
                     </div>
-                    <p class="kx-hint no-print">The defense attorney for each defendant: who they represent, their firm and how to reach them. Calls from opposing counsel go to the attorney or paralegal on the file; the front desk confirms nothing.</p>
                     <div id="kx-counsel" data-keyed="rows" class="space-y-3"></div>
                 </div>
                 <div class="pdf-card shadow-lg">
@@ -495,7 +490,7 @@
                         <button onclick="addRow('lit-body')" class="add-btn no-print">+ Add Task</button>
                     </div>
                     <table class="treat-table w-full">
-                        <thead><tr><th width="200">Task Type</th><th width="200">Party Involved</th><th width="150">Due Date</th><th width="150">Status</th><th width="40"></th></tr></thead>
+                        <thead><tr><th width="200">Task Type</th><th width="200">Party Involved</th><th width="150">Due Date</th><th width="150">Status</th><th width="190" class="no-print">Document</th><th width="40"></th></tr></thead>
                         <tbody id="lit-body"></tbody>
                     </table>
                 </div>
@@ -509,7 +504,6 @@
                         <div class="section-head" style="margin-bottom:0;background:#f5f3ff;color:#6d28d9;">ADR: Mediation &amp; Arbitration</div>
                         <button onclick="addAdr()" class="add-btn no-print">+ Add ADR</button>
                     </div>
-                    <p class="kx-hint no-print">One entry per mediation, arbitration or settlement conference: who the neutral is, when and where, whether the client must attend, when the brief is due, and how it ended. Court-ordered sessions and UM/UIM arbitrations go here too.</p>
                     <div id="adr-summary" class="no-print"></div>
                     <div id="kx-adr" data-keyed="rows" class="space-y-4"></div>
                 </div>
@@ -588,7 +582,6 @@
                             <button onclick="addParty('Other')" class="add-btn">+ Other</button>
                         </div>
                     </div>
-                    <p class="kx-hint no-print">Everyone involved in the incident, with their role: passengers, the at-fault party (and their vehicle owner or business), witnesses, property owners, and anyone else the case may need to contact.</p>
                     <div id="parties-summary" class="kx-summary no-print"></div>
                     <div id="kx-parties" data-keyed="rows" class="space-y-3"></div>
                 </div>
@@ -619,7 +612,6 @@
             <div id="pane-demand" class="tab-pane">
                 <div class="pdf-card border-l-8 border-blue-600">
                     <div class="flex justify-between items-center mb-3"><div class="section-head" style="margin-bottom:0;background:#eff6ff;color:#1d4ed8;">Demand Info</div><button onclick="addDemand()" class="add-btn no-print">+ Add Demand</button></div>
-                    <p class="kx-hint no-print">One entry per demand sent (BI, UM/UIM, PIP, policy limits…): who it went to, when, how much, and when the carrier must answer.</p>
                     <div id="kx-demand" data-keyed="rows" class="space-y-4"></div>
                 </div>
             </div>
@@ -643,7 +635,6 @@
                     </div>
                     <div id="settlement-calc" class="kx-calc"></div>
                 </div>
-                <div class="kx-hint no-print" style="margin:6px 2px 14px;">BI and UM/UIM are separate claims: each settles with its own carrier, release and check, so they're tracked separately. The totals below add them up.</div>
                 <div class="pdf-card border-l-8 border-blue-600">
                     <div class="section-head" style="background:#eff6ff;color:#1d4ed8;">UM / UIM Settlement (the client's own policy)</div>
                     <div id="kx-settlement-um" data-keyed oninput="calcSettlement()" onchange="calcSettlement()">
