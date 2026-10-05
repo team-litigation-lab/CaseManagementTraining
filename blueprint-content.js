@@ -60,7 +60,7 @@
               tip: 'Watch the SOL: it\'s the deadline the whole case runs against.',
               shot: 'blueprint/trainee-insurance.jpg', shotAlt: 'The tabs of a case file, on the Insurance tab' },
             { icon: '📂', title: 'The case file: the rest of the tabs', points: [
-                'ADR: mediations and arbitrations. Litigation: the lawsuit, the opposing counsel and court dates.',
+                'ADR: mediations and arbitrations. Litigation: the lawsuit, the opposing counsel and court dates; each filing or discovery task takes its document (Upload or 🔗 Link), ☁ backed up to the case\'s Litigation folder in Google Drive.',
                 'Liens (each lien\'s status and final payoff) and Property Damage (with ⬆ photos) come after Time, at the end of the second row.',
                 'Doc Hub: the case\'s documents, renamed Case ID_Client_Type_Date as they\'re uploaded. Drop files on it, or 🔗 Link a web address; ☁ back them up to your Google Drive.',
                 'Notes and Tasks: log every call and action, and set the follow-ups. A web address pasted in becomes a link.',

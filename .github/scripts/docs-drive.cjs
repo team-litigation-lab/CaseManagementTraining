@@ -176,6 +176,30 @@ async function serverPart() {
         G.folders.get(folder[0]).trashed = true;
         r = await call('POST', { action: 'backup', caseKey: 'LSH-2026-MVA-000007', caseName: 'LSH-2026-MVA-000007 Maria Santos', files: files.slice(0, 2) });
         if (G.files.length !== 4 || G.folders.size !== 3 || !(r.data.results || []).every(x => x.ok && !x.skipped)) fail(`a case folder deleted in Drive should be made again with its files: ${JSON.stringify(r.data)}`);
+        // the Litigation tab's documents: in the case folder's own Litigation folder (made once); no other folder is taken
+        put('documents/44444444-4444-4444-4444-444444444444-d.pdf', 'ci', 'application/pdf', '%PDF-1.4 complaint');
+        const lit = { key: 'documents/44444444-4444-4444-4444-444444444444-d.pdf', name: 'LSH-2026-MVA-000007_Santos-Maria_Complaint_2026-10-05.pdf', folder: 'Litigation' };
+        const caseNow = () => [...G.folders.entries()].filter(([, f]) => f.name === 'LSH-2026-MVA-000007 Maria Santos' && !f.trashed).map(([id]) => id).pop();
+        const litNow = () => [...G.folders.entries()].filter(([, f]) => f.name === 'Litigation' && !f.trashed && f.parents[0] === caseNow()).map(([id]) => id);
+        const backupLit = (fs) => call('POST', { action: 'backup', caseKey: 'LSH-2026-MVA-000007', caseName: 'LSH-2026-MVA-000007 Maria Santos', files: fs });
+        r = await backupLit([files[0], lit, Object.assign({}, files[0], { folder: 'Elsewhere' })]);
+        let lr = r.data.results || [];
+        const litUp = G.files.filter(f => f.name === lit.name);
+        if (!lr[0] || !lr[0].skipped || !lr[1] || !lr[1].ok || lr[1].skipped || litNow().length !== 1 || litUp.length !== 1 || litUp[0].parents[0] !== litNow()[0] || litUp[0].body !== '%PDF-1.4 complaint')
+            fail(`a litigation document should go in LSH CMS Backups / <case> / Litigation: ${JSON.stringify(lr)} ${JSON.stringify([...G.folders])}`);
+        if (!lr[2] || lr[2].ok || lr[2].error !== 'Not a folder of this case.') fail(`a folder other than Litigation should be refused: ${JSON.stringify(lr[2])}`);
+        r = await backupLit([lit]);
+        if (!(r.data.results || [])[0] || !r.data.results[0].skipped || litNow().length !== 1 || G.files.filter(f => f.name === lit.name).length !== 1) fail(`backing up a litigation document again should skip it, in the same folder: ${JSON.stringify(r.data)}`);
+        // the Litigation folder deleted on its own: made again, its files copied again
+        G.folders.get(litNow()[0]).trashed = true;
+        r = await backupLit([lit]);
+        if (!(r.data.results || [])[0] || !r.data.results[0].ok || r.data.results[0].skipped || litNow().length !== 1 || G.files.filter(f => f.name === lit.name).length !== 2) fail(`a Litigation folder deleted in Drive should be made again with its files: ${JSON.stringify(r.data)}`);
+        // the case folder deleted (Drive reports what was in it as deleted too): both made again, every file copied again
+        const oldCase = caseNow(); G.folders.get(oldCase).trashed = true; litNow().forEach(id => { G.folders.get(id).trashed = true; });
+        [...G.folders.values()].filter(f => f.parents[0] === oldCase).forEach(f => { f.trashed = true; });
+        r = await backupLit([files[0], lit]);
+        lr = r.data.results || [];
+        if (!lr.every(x => x.ok && !x.skipped) || caseNow() === oldCase || litNow().length !== 1 || G.files.filter(f => f.name === lit.name).pop().parents[0] !== litNow()[0]) fail(`a case folder deleted in Drive should be made again with its Litigation folder and files: ${JSON.stringify(lr)}`);
         // limits
         // a file Drive refuses: that one fails, the others are still copied
         G.failUpload = 'quota';
@@ -475,6 +499,61 @@ async function pagePart() {
         if (saves.length - before !== 2 || !/LSH-2026-MVA-000555_Doe-Jane_Medical-Records/.test(JSON.stringify(saves[saves.length - 1].content.html.docs)) || renamed.unsynced) fail(`the renamed files should be saved once more, leaving nothing unsaved: ${saves.length - before} saves, unsynced ${renamed.unsynced}`);
     }
 
+    // Litigation: the Discovery & Filing Tracker's paperwork, a file or a 🔗 Link on each row, backed up in the case's Litigation folder
+    await page.evaluate(() => showTab('litigation')); await page.waitForTimeout(300);
+    const litPos0 = await page.evaluate(() => [posEdits().length, posSels().length]);
+    await page.evaluate(() => { addRow('lit-body'); document.getElementById('lit-body').lastElementChild.querySelector('select').value = 'Complaint'; });
+    const litPos1 = await page.evaluate(() => [posEdits().length, posSels().length]);
+    if (litPos1[0] - litPos0[0] !== 2 || litPos1[1] - litPos0[1] !== 2) fail(`a tracker row should add only its own fields (2 boxes, 2 dropdowns) to the positional lists: ${litPos0} → ${litPos1}`);
+    const litWant = await page.evaluate(() => caseFileName('Complaint', 'Complaint (filed).pdf'));
+    await page.locator('#lit-body tr').last().locator('input[type=file]').setInputFiles({ name: 'Complaint (filed).pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 complaint') });
+    await page.waitForTimeout(500);
+    const litAtt = await page.locator('#lit-body tr').last().evaluate(tr => { const a = tr.querySelector('.lit-doc .doc-attachment a'); return a && { text: a.textContent, download: a.getAttribute('download'), key: a.dataset.r2Key }; });
+    if (!/_Complaint_\d{4}-\d{2}-\d{2}\.pdf$/.test(litWant) || !litAtt || litAtt.text !== '📎 ' + litWant || uploads[uploads.length - 1] !== litWant) fail(`a tracker upload should be named by the convention with its Task Type (${litWant}): ${JSON.stringify(litAtt)}`);
+    const litPos2 = await page.evaluate(() => [posEdits().length, posSels().length]);
+    if (litPos2.join() !== litPos1.join()) fail(`attaching a document changed the positional lists: ${litPos1} → ${litPos2}`);
+    // 🔗 Link on a tracker row (a court's e-filing page)
+    await page.evaluate(() => addRow('lit-body'));
+    answers.push('https://efile.example-court.gov/case/2026-CV-0142', 'Court e-filing');
+    await page.locator('#lit-body tr').last().locator('.doc-link-btn').click(); await page.waitForTimeout(300);
+    const litLink = await page.locator('#lit-body tr').last().evaluate(tr => { const a = tr.querySelector('.doc-attachment a'); return a && { href: a.href, text: a.textContent }; });
+    if (!litLink || litLink.href !== 'https://efile.example-court.gov/case/2026-CV-0142' || litLink.text !== '🔗 Court e-filing') fail(`🔗 Link on a tracker row: ${JSON.stringify(litLink)}`);
+    // the Drive bar on the Litigation tab: the same connection, the litigation documents go in the Litigation folder
+    await page.evaluate(() => lshDriveBackup.refresh()); await page.waitForTimeout(300);
+    const litBar = await page.evaluate(() => { const b = document.getElementById('drive-bar-lit'); return b && { text: b.innerText, free: b.hasAttribute('data-free-edit'), inCard: !!b.closest('#pane-litigation .pdf-card'), backup: !!b.querySelector('[data-db="backup"]') }; });
+    const litFiles = await page.evaluate(() => lshDriveBackup.files().filter(f => f.folder === 'Litigation'));
+    if (!litBar || !litBar.free || !litBar.inCard || !litBar.backup || !/Litigation\s+folder/.test(litBar.text)) fail(`the Litigation tab should have the Google Drive bar: ${JSON.stringify(litBar)}`);
+    if (litFiles.length !== 1 || litFiles[0].name !== litWant || litFiles[0].key !== litAtt.key) fail(`the Drive backup should list the tracker's file (not its link) for the Litigation folder: ${JSON.stringify(litFiles)}`);
+    drivePosts.length = 0;
+    await page.click('#drive-bar-lit [data-db="backup"]'); await page.waitForTimeout(800);
+    const litSent = drivePosts.filter(p => p.action === 'backup').flatMap(p => p.files).filter(f => f.folder === 'Litigation');
+    if (litSent.length !== 1 || litSent[0].name !== litWant) fail(`☁ Back up on the Litigation tab should send the tracker's file for the Litigation folder: ${JSON.stringify(drivePosts)}`);
+    // in the case summary PDF
+    const litPdf = await page.evaluate(async () => {
+        let html = ''; const keep = window.html2pdf;
+        window.html2pdf = () => ({ set() { return this; }, from(el) { html = el.innerHTML; return this; }, save() { return Promise.resolve(); } });
+        await downloadPDF({}); await new Promise(r => setTimeout(r, 300)); window.html2pdf = keep;
+        return html;
+    });
+    if (!/Litigation Documents/.test(litPdf) || !litPdf.includes(litWant) || !litPdf.includes('efile.example-court.gov')) fail('the case summary PDF should list the litigation documents (the file and the link)');
+    // a tracker row saved before the Document column: gets it (and the newer task types) when the case opens, its values kept
+    const oldRow = await page.evaluate(() => {
+        blankCaseEditorContent();
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td><select class="prof-input text-xs"><option>Service</option><option>Complaint</option><option>Summons</option><option>Interrogatories</option><option>RFP</option><option>RFA</option><option>Deposition Notice</option><option>Subpoena</option><option>Motion</option></select></td><td><div contenteditable="true" class="text-xs" data-ph="Enter party"></div></td><td><div contenteditable="true" class="text-xs" data-ph="MM/DD/YYYY" data-fmt="date"></div></td><td><select class="prof-input text-xs"><option>Pending</option><option>Responded</option><option>Completed</option></select></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>';
+        document.getElementById('lit-body').appendChild(tr);
+        const sel = tr.querySelectorAll('select'), ed = tr.querySelectorAll('[contenteditable]');
+        sel[0].value = 'RFP'; sel[1].value = 'Responded'; ed[0].innerText = 'Defense counsel'; ed[1].innerText = '10/30/2026';
+        const content = buildCaseContentPayload();
+        blankCaseEditorContent(); applyCaseContentToDOM(content);
+        const back = document.querySelector('#lit-body tr'), bs = back.querySelectorAll('select'), be = back.querySelectorAll('[contenteditable]');
+        const file = back.querySelector('.lit-doc input[type=file]');
+        return { cells: back.children.length, doc: !!back.querySelector('.lit-doc .doc-attachment'), onchange: file && file.getAttribute('onchange'), lastIsX: back.lastElementChild.textContent.trim() === '×',
+            type: bs[0].value, status: bs[1].value, party: be[0].innerText, due: be[1].innerText, order: [...bs[0].options].some(o => o.value === 'Court Order') };
+    });
+    if (oldRow.cells !== 6 || !oldRow.doc || oldRow.onchange !== 'handleDocUpload(this)' || !oldRow.lastIsX || !oldRow.order) fail(`a tracker row saved before the Document column should get it and the newer task types: ${JSON.stringify(oldRow)}`);
+    if (oldRow.type !== 'RFP' || oldRow.status !== 'Responded' || oldRow.party !== 'Defense counsel' || oldRow.due !== '10/30/2026') fail(`a tracker row saved before the Document column lost its values: ${JSON.stringify(oldRow)}`);
+
     // a library case's Notes (saved as text): a link is kept as its address and comes back a link
     await page.goto(base + '?program=reception', { waitUntil: 'load' }); await page.waitForTimeout(1200);
     await page.evaluate(() => openMockCase('MC-01', { silent: true })); await page.waitForTimeout(1200);
@@ -499,5 +578,5 @@ async function pagePart() {
     await serverPart();
     await pagePart();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log('Doc Hub test passed (file naming on Doc Hub, demand letters and IDs; 🔗 Link and pasted links, safe on load; the Google Drive backup: the server with Google answered by the test, and the Doc Hub bar).');
+    console.log('Doc Hub test passed (file naming on Doc Hub, demand letters and IDs; 🔗 Link and pasted links, safe on load; the Google Drive backup: the server with Google answered by the test, and the Doc Hub bar; Litigation: the tracker\'s documents and links, its Drive bar and Litigation folder, the PDF, older rows).');
 })().catch(e => { console.error(e); process.exit(1); });
