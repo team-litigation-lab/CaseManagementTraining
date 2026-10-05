@@ -219,6 +219,13 @@ const wd = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
     await page.waitForFunction(() => document.querySelectorAll('#fc-main .ev').length > 5);
     await page.evaluate((d) => fcGoWeek(d), mon); await page.waitForTimeout(700);
     await page.shot('atty-1-trainee-week');
+    // color coded by kind: lunch, the daily review, the no-schedule blocks, client meetings and phone calls each their own color, with a key
+    const colors = await page.evaluate(() => {
+        const by = {}; [...document.querySelectorAll('#fc-main .ev')].forEach(el => { const t = el.querySelector('b').textContent; by[t.replace(/^[^\p{L}\p{N}(]+\s/u, '').split(':')[0].trim()] = el.style.borderColor; });
+        return { by, key: [...document.querySelectorAll('#fc-rail .fc-key-i')].map(k => k.dataset.type) };
+    });
+    const want = ['Lunch Break', 'Daily Case and Email Review', 'No Schedule Block', 'Deposition Preparation', 'Attorney Phone Consultation'].map(k => colors.by[k]);
+    if (want.some(c => !c) || new Set(want).size !== want.length || !['Lunch', 'Daily Review', 'No Schedule', 'Client Meeting', 'Phone Call', 'Internal Meeting'].every(k => colors.key.includes(k))) fail(`the Attorney's Calendar isn't color coded by kind of event, with a key: ${JSON.stringify(colors)}`);
     const head = await page.textContent('#fc-head h2'), rail = await page.textContent('#fc-rail');
     let titles = await grid(page);
     if (head.trim() !== '🗓 Attorney\'s Calendar' || await page.locator('#fc-head [data-fc="mode"]').count()) fail(`a trainee's Attorney's Calendar heading (and no switch to the Firm Calendar): ${head}`);
