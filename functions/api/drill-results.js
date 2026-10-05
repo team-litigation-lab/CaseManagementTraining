@@ -46,9 +46,12 @@ async function ensureTable(db) {
 }
 const pct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
 const MODES = ['drill', 'practice', 'line', 'graded'];
-// A line call's line and title, for the lists (an Admin's list leaves the details out).
+// For the lists (an Admin's list leaves the details out): a line call's line and title, the call taken (a Core caller's
+// or a line's: the Call Simulator shows your best on each call), and a drill's set ("Set 2"; 0 is all the calls).
 const LINE_COLS = `CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].line') END AS line,
-    CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].title') END AS title`;
+    CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].title') END AS title,
+    CASE WHEN mode IN ('practice', 'line', 'graded') THEN json_extract(details, '$[0].id') END AS call_id,
+    CASE WHEN mode = 'drill' THEN json_extract(details, '$[0].set') END AS drill_set`;
 
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);

@@ -4,17 +4,23 @@
 // - call-packs.js: every line has calls, ids are unique, each call has what the phone, the caller and the grader need,
 //   FT calls point at Training Library files that exist, and every program's lines and the Reception / Intake /
 //   Calendaring tabs list what they should;
-// - a link from another platform (?calls=1&program=FT&line=…&mode=graded) opens the Call Simulator on that line;
-// - the home screen: the Core callers' practice call with ☎ Reception, 🗓 Calendar Management and 📋 Intake Mock Calls
-//   buttons, and the call lines with Practice and Graded on each line, picked in the Calls dropdown by program and across them;
+// - a link from another platform (?calls=1&program=FT&line=…&mode=graded) opens the Call Simulator on that line, its
+//   numbered graded calls first (no caller named, in an order of their own, the same each time), then its practice calls;
+// - it opens on the Cases System: Master Control and My Dashboard step aside, and an Admin who signs in on a ?calls=1
+//   link stays on the Call Simulator (Master Control doesn't open over it);
+// - the home screen: the Core callers listed by level (no random caller, no description), with ☎ Reception, 🗓 Calendar
+//   Management and 📋 Intake Mock Calls buttons; the scored drill in fixed sets of 8; and the call lines with Practice and
+//   Graded on each line, picked in the Calls dropdown by program and across them;
 // - a practice call (FT Calendar Management, about MC-05): the brief has the caller, the goals and the file; the caller
 //   opens with their own words once greeted; their next lines come from /api/call-ai with their script, under the
 //   line's AI budget; the wrap-up has the file and the line's note; the debrief is graded on the call's goals with the
 //   file and the note, and the call is saved as a line call with its course;
 // - a graded call you place (EA/PA Executive Calls): they pick up and speak first; the goals aren't shown before the
-//   call; the note is required; saved as graded; a graded call you answer shows an unknown caller;
-// - the results: line calls are listed with their line; the Show dropdowns keep them apart for grading (graded only, one
-//   line, a program, the Core callers); a saved line call opens with its goals and transcript.
+//   call; the note is required; saved as graded; the next one is the next number; a graded call you answer shows an
+//   unknown caller;
+// - the results: line calls are listed with their line, drills with their set; the Show dropdowns keep them apart for
+//   grading (graded only, one line, a program, the Core callers, a drill set); each call shows your best on it; a saved
+//   line call opens with its goals and transcript.
 // Usage: node .github/scripts/call-lines.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -102,8 +108,28 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     // 1. a link from another platform opens the line
     await page.goto(base + '?program=reception&calls=1&flow=standard&line=' + encodeURIComponent('Reception Mock Calls') + '&mode=graded', { waitUntil: 'load' });
     await page.waitForSelector('#fdd-panel.open', { timeout: 6000 }).catch(() => fail('a ?calls=1 link didn\'t open the Call Simulator'));
-    const linked = await page.evaluate(() => ({ title: document.querySelector('#fdd-panel .fdd-h b').textContent, graded: !!document.querySelector('.fdd-b .fdd-go.alt'), rows: document.querySelectorAll('.fdd-b .fdd-row').length }));
-    if (!/Reception Mock Calls/.test(linked.title) || !linked.graded || linked.rows !== K.callsIn('FT', 'Reception Mock Calls').length) fail(`the link didn't open the Reception Mock Calls line with its graded call marked: ${JSON.stringify(linked)}`);
+    const lineList = () => page.evaluate(() => {
+        const secs = [...document.querySelectorAll('.fdd-b > .fdd-sec')].map(x => x.className), rows = (sel) => [...document.querySelectorAll(sel + ' .fdd-row')];
+        return { title: document.querySelector('#fdd-panel .fdd-h b').textContent, gradedFirst: secs.findIndex(c => /fdd-graded-calls/.test(c)) < secs.findIndex(c => /fdd-practice-calls/.test(c)),
+            graded: rows('.fdd-graded-calls').map(r => [r.dataset.call, r.textContent.replace(/\s+/g, ' ').trim()]), practice: rows('.fdd-practice-calls').map(r => r.dataset.call),
+            random: /random/i.test(document.querySelector('.fdd-b').textContent) };
+    });
+    const linked = await lineList(), rcCalls = K.callsIn('FT', 'Reception Mock Calls');
+    if (!/Reception Mock Calls/.test(linked.title) || !linked.gradedFirst || linked.graded.length !== rcCalls.length || linked.practice.length !== rcCalls.length || linked.random) fail(`the link didn't open the Reception Mock Calls line with its graded calls first, each listed: ${JSON.stringify(linked)}`);
+    const giveaway = linked.graded.find(([id, t], i) => { const c = K.find(id); return !c || !new RegExp(`^#${i + 1}\\s*Graded call ${i + 1}\\b`).test(t) || t.includes(c.name) || t.includes(c.title); });
+    if (giveaway) fail(`a graded call isn't just numbered, or names the caller: ${JSON.stringify(giveaway)}`);
+    if (linked.graded.map(g => g[0]).join() === linked.practice.join()) fail('the graded calls are numbered in the practice list\'s order, so the number says who\'s calling');
+    if ([...new Set(linked.graded.map(g => g[0]))].sort().join() !== [...linked.practice].sort().join()) fail('the graded calls aren\'t the line\'s calls');
+    await page.evaluate(() => { fddHome(); fddOpenLine('FT', 'Reception Mock Calls', true); });
+    if ((await lineList()).graded.map(g => g[0]).join() !== linked.graded.map(g => g[0]).join()) fail('the graded calls\' numbers changed when the line was opened again');
+    // on the Cases System: Master Control and My Dashboard step aside
+    const cases = await page.evaluate(() => {
+        fddClose();
+        document.getElementById('master-control-page').classList.add('open'); document.getElementById('trainee-dashboard-page').classList.add('open'); document.body.classList.add('mc-active');
+        openFrontDeskDrill();
+        return { mc: document.getElementById('master-control-page').classList.contains('open'), dash: document.getElementById('trainee-dashboard-page').classList.contains('open'), active: document.body.classList.contains('mc-active'), panel: document.getElementById('fdd-panel').classList.contains('open') };
+    });
+    if (cases.mc || cases.dash || cases.active || !cases.panel) fail(`the Call Simulator doesn't open on the Cases System: ${JSON.stringify(cases)}`);
     if (!/Call Simulator/.test(await page.textContent('#fdd-open-btn'))) fail('the sidebar button isn\'t 📞 Call Simulator');
 
     // 2. the home screen: the Core callers with the three Standard lines, and every line with Practice and Graded
@@ -116,6 +142,20 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     if (home.ft.join(' / ') !== '☎ Reception Mock Calls / 🗓 Calendar Management Mock Calls / 📋 Intake Mock Calls') fail(`the Core callers' Standard buttons: ${home.ft.join(' / ')}`);
     if (home.tabs.length !== 7 || !home.tabs.includes('🧑‍💼 EA / PA') || !home.tabs.includes('📋 Intake') || !home.tabs.includes('📘 Standard Training')) fail(`the Calls dropdown: ${home.tabs.join(', ')}`);
     if (home.lines.length !== 3 || home.lines.some(l => l[1] !== 'Practice|Graded')) fail(`the Standard tab's lines don't each have Practice and Graded: ${JSON.stringify(home.lines)}`);
+    // the Core callers: listed by level, each picked (no random caller), without the description
+    const core = async () => page.evaluate(() => { const sec = document.getElementById('fdd-core-calls').closest('.fdd-sec');
+        return { text: sec.textContent, levels: [...sec.querySelectorAll('.fdd-seg button')].map(b => b.textContent.trim()), rows: [...document.querySelectorAll('#fdd-core-calls .fdd-row')].map(r => r.dataset.call),
+            take: !!document.querySelector('.fdd-b button.fdd-go.alt[onclick="fddPracticeStart()"]') }; });
+    const byLevel = (n) => mock.DRILL_CALLS.filter(d => d.level === n).map(d => d.id).join();
+    const c1 = await core();
+    if (c1.levels.join(' / ') !== `Level 1 · warm-up (${byLevel(1).split(',').length}) / Level 2 (${byLevel(2).split(',').length}) / Level 3 · tricky (${byLevel(3).split(',').length})` || c1.rows.join() !== byLevel(1)) fail(`the Core callers aren't listed by level: ${JSON.stringify({ levels: c1.levels, rows: c1.rows })}`);
+    if (c1.take || /random|like on the job|After the call you match the file|RECEPTION MOCK CALL scorecard/i.test(c1.text)) fail('the Core callers still have the random practice call or the description');
+    await page.click('.fdd-seg button:has-text("Level 3")');
+    if ((await core()).rows.join() !== byLevel(3)) fail('Level 3 doesn\'t list the level 3 callers');
+    await page.click('.fdd-seg button:has-text("Level 1")');
+    // the scored drill: fixed sets of 8, in order
+    const sets = await page.evaluate(() => [...document.querySelectorAll('#fdd-set option')].map(o => [o.value, o.textContent.trim()]));
+    if (sets.length !== Math.ceil(mock.DRILL_CALLS.length / 8) + 1 || sets[0][1] !== 'Set 1 · D01–D08 (8 calls)' || sets[1][1] !== 'Set 2 · D09–D16 (8 calls)' || sets[sets.length - 1][0] !== '0') fail(`the drill's sets: ${JSON.stringify(sets)}`);
     await page.selectOption('#fdd-calls-view', 'EA');
     if (await page.locator('.fdd-line').count() !== 6) fail('the EA / PA tab doesn\'t list its 6 lines');
     await page.selectOption('#fdd-calls-view', 'intake');
@@ -164,11 +204,12 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     // 4. a graded call you place: Elias, the Friday 4:00 PM call (EA / PA Executive Calls)
     await page.evaluate(() => fddHome());
     await page.selectOption('#fdd-calls-view', 'EA');
-    await page.evaluate(() => { const pool = CALL_PACKS.callsIn('EA', 'Executive Calls'), i = pool.findIndex(c => c.id === 'ea_ex_friday'); window.__rnd = Math.random; Math.random = () => (i + 0.5) / pool.length; });
     await page.click('.fdd-line:has-text("Executive Calls") button:has-text("Graded")');
-    await page.evaluate(() => { Math.random = window.__rnd; });
+    const exGraded = (await lineList()).graded.map(g => g[0]), friNo = exGraded.indexOf('ea_ex_friday') + 1;
+    await page.click('.fdd-graded-calls .fdd-row[data-call="ea_ex_friday"]');
     const g1 = await page.evaluate(() => ({ brief: document.querySelector('.fdd-brief').textContent, id: document.getElementById('fdd-pc-id').textContent, title: document.querySelector('#fdd-panel .fdd-h b').textContent }));
     const fri = K.find('ea_ex_friday');
+    if (!friNo || !new RegExp(`graded call ${friNo}\\b`).test(g1.brief)) fail(`the graded call's brief doesn't give its number (${friNo}): ${g1.brief.slice(0, 120)}`);
     if (!/Graded call/.test(g1.title) || g1.brief.includes(fri.goals[0]) || !/scored on is in your debrief/.test(g1.brief) || !/Client profile: Elias Thorne/.test(g1.brief)) fail(`the graded brief shows the goals or misses the client profile: ${g1.brief.slice(0, 300)}`);
     if (!/Your call/.test(g1.id) || !/📞 Call/.test(g1.id)) fail(`a call you place doesn't offer 📞 Call: ${g1.id}`);
     await page.click('#fdd-pc-id button:has-text("Call")');
@@ -188,9 +229,17 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     if (!s2 || s2.mode !== 'graded' || s2.program !== 'EA' || d2.mode !== 'graded' || d2.course.program !== 'EA' || reviews[reviews.length - 1].module !== 'ea-pa') fail(`the graded call wasn't saved as graded under EA: ${JSON.stringify(s2 && { mode: s2.mode, program: s2.program })}`);
     if (!/Elias Thorne/.test(await page.textContent('.fdd-b'))) fail('the graded debrief doesn\'t say who it was');
     if (!/counts toward your EA \/ PA course \(Executive Calls\): your best there is 82%/.test(await page.textContent('#fdd-pc-saved'))) fail(`the graded debrief doesn't say where the call counted: "${await page.textContent('#fdd-pc-saved')}"`);
+    // the next graded call is the next number
+    const nextBtn = await page.evaluate(() => [...document.querySelectorAll('.fdd-b button')].map(b => b.textContent.trim()).filter(t => /Next|Another|random/i.test(t)));
+    if (friNo < exGraded.length ? nextBtn.join() !== `🎯 Next: Graded call ${friNo + 1}` : nextBtn.length) fail(`after graded call ${friNo} of ${exGraded.length}: ${JSON.stringify(nextBtn)}`);
+    if (friNo < exGraded.length) {
+        await page.click(`button:has-text("Next: Graded call ${friNo + 1}")`);
+        const g3 = await page.evaluate(() => document.querySelector('.fdd-brief summary').textContent);
+        if (!new RegExp(`graded call ${friNo + 1}$`).test(g3.trim())) fail(`"Next: Graded call ${friNo + 1}" started "${g3}"`);
+    }
     // a graded call you answer: nobody in particular until the debrief, and the brief doesn't name the file
     await page.evaluate(() => fddOpenLine('FT', 'Reception Mock Calls'));
-    await page.click('.fdd-b button:has-text("Graded call")');
+    await page.click('.fdd-graded-calls .fdd-row:not(:has(.fdd-tag)) >> nth=0');
     const g2 = await page.evaluate(() => ({ id: document.getElementById('fdd-pc-id').textContent, brief: document.querySelector('.fdd-brief').textContent }));
     if (!/Unknown caller/.test(g2.id) || /MC-\d/.test(g2.brief) || /Open MC/.test(g2.brief)) fail(`a graded call gives the caller or the file away: ${JSON.stringify(g2)}`);
     await page.click('#fdd-pc-id button:has-text("Answer")');
@@ -200,11 +249,23 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     // 5. the results: line calls with their line; a saved line call opens with its goals
     results = [
         { id: 7, username: 'ci', full_name: 'CI Trainee', program: 'EA', mode: 'graded', calls: 1, score: 82, find_pct: 0, auth_pct: 0, action_pct: 0, avg_seconds: 75, created_at: '2026-10-05 10:00:00', line: 'Executive Calls', title: fri.title, details: JSON.stringify([d2]) },
-        { id: 6, username: 'ci', full_name: 'CI Trainee', program: 'FT', mode: 'line', calls: 1, score: 82, find_pct: 100, auth_pct: 0, action_pct: 0, avg_seconds: 61, created_at: '2026-10-05 09:00:00', line: 'Calendar Management Mock Calls', title: depo.title, details: JSON.stringify([d1]) }
+        { id: 6, username: 'ci', full_name: 'CI Trainee', program: 'FT', mode: 'line', calls: 1, score: 82, find_pct: 100, auth_pct: 0, action_pct: 0, avg_seconds: 61, created_at: '2026-10-05 09:00:00', line: 'Calendar Management Mock Calls', title: depo.title, call_id: 'ft_cal_depo', details: JSON.stringify([d1]) },
+        { id: 5, username: 'ci', full_name: 'CI Trainee', program: 'FT', mode: 'practice', calls: 1, score: 77, find_pct: 100, auth_pct: 100, action_pct: 100, avg_seconds: 90, created_at: '2026-10-05 08:00:00', call_id: 'D01', details: '[]' },
+        { id: 4, username: 'ci', full_name: 'CI Trainee', program: 'FT', mode: 'drill', calls: 8, score: 70, find_pct: 80, auth_pct: 70, action_pct: 60, avg_seconds: 50, created_at: '2026-10-05 07:00:00', drill_set: 2, details: '[]' }
     ];
+    results[0].call_id = 'ea_ex_friday';
     await page.evaluate(() => fddHome()); await page.waitForTimeout(400);
     const hist = await page.evaluate(() => ({ text: document.querySelector('.fdd-b').textContent, views: document.querySelectorAll('.fdd-view').length }));
-    if (!/Executive Calls · graded/i.test(hist.text) || !/Calendar Management Mock Calls · practice/i.test(hist.text) || hist.views !== 2) fail(`the results don't list the line calls: ${hist.text.slice(-400)}`);
+    if (!/Executive Calls · graded/i.test(hist.text) || !/Calendar Management Mock Calls · practice/i.test(hist.text) || !/Drill · Set 2 · 8/.test(hist.text) || hist.views !== 3) fail(`the results don't list the line calls and the drill's set: ${hist.text.slice(-400)}`);
+    // your best on each call: a Core caller, a line's practice call, a graded call (only as graded)
+    const best = (sel) => page.evaluate((q) => { const r = document.querySelector(q); return r ? ((r.querySelector('.fdd-best') || {}).textContent || '') : null; }, sel);
+    const d01 = await best('#fdd-core-calls .fdd-row[data-call="D01"]');
+    await page.evaluate(() => fddOpenLine('FT', 'Calendar Management Mock Calls'));
+    const depoBest = await best('.fdd-practice-calls .fdd-row[data-call="ft_cal_depo"]'), depoGraded = await best('.fdd-graded-calls .fdd-row[data-call="ft_cal_depo"]');
+    await page.evaluate(() => fddOpenLine('EA', 'Executive Calls', true));
+    const friGraded = await best('.fdd-graded-calls .fdd-row[data-call="ea_ex_friday"]'), friPractice = await best('.fdd-practice-calls .fdd-row[data-call="ea_ex_friday"]');
+    if (d01 !== '✓ 77%' || depoBest !== '✓ 82%' || depoGraded !== '' || friGraded !== '✓ 82%' || friPractice !== '') fail(`the calls don't show your best on them: ${JSON.stringify({ d01, depoBest, depoGraded, friGraded, friPractice })}`);
+    await page.evaluate(() => fddHome()); await page.waitForTimeout(300);
     // kept apart for grading: graded only, one line, the Core callers
     const shown = () => page.evaluate(() => [...document.querySelectorAll('.fdd-sec')].find(s => s.querySelector('h4') && /My results/.test(s.querySelector('h4').textContent)).querySelectorAll('tbody tr').length);
     await page.selectOption('#fdd-rf-mode', 'graded');
@@ -214,12 +275,36 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     await page.selectOption('#fdd-rf-line', 'P:EA');
     const eaAll = await shown();
     await page.selectOption('#fdd-rf-line', 'core');
-    const core = await shown(), none = /No calls match/.test(await page.textContent('.fdd-b'));
-    if (gradedOnly !== 1 || ftLine !== 1 || !/Calendar Management Mock Calls · practice/i.test(ftText) || eaAll !== 1 || core !== 0 || !none) fail(`the results dropdowns don't keep the calls apart: ${JSON.stringify({ gradedOnly, ftLine, eaAll, core, none })}`);
+    const coreRows = await shown();
+    await page.selectOption('#fdd-rf-line', 'S:2');
+    const set2 = await shown();
+    await page.selectOption('#fdd-rf-line', 'S:1');
+    const set1 = await shown(), none = /No calls match/.test(await page.textContent('.fdd-b'));
+    if (gradedOnly !== 1 || ftLine !== 1 || !/Calendar Management Mock Calls · practice/i.test(ftText) || eaAll !== 1 || coreRows !== 2 || set2 !== 1 || set1 !== 0 || !none) fail(`the results dropdowns don't keep the calls apart: ${JSON.stringify({ gradedOnly, ftLine, eaAll, coreRows, set2, set1, none })}`);
     await page.selectOption('#fdd-rf-line', 'all');
     await page.click('.fdd-view >> nth=1');
     await page.waitForSelector('.fdd-goals', { timeout: 5000 }).catch(() => fail('a saved line call doesn\'t open with its goals'));
     if (!/KAREN HOLT:/.test(await page.textContent('.fdd-saved-tx'))) fail('a saved line call doesn\'t show its transcript');
+
+    // 6. an Admin signing in on a ?calls=1 link stays on the Call Simulator, over the Cases System: Master Control doesn't open
+    const p2 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    p2.on('pageerror', e => fail(`page error (signing in): ${e.message}`));
+    if (process.env.TAILWIND_JS) await p2.route('https://cdn.tailwindcss.com/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(process.env.TAILWIND_JS, 'utf8') }));
+    await p2.route('**/api/**', route => {
+        const u = new URL(route.request().url()), j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+        if (u.pathname === '/api/login') return j({ success: true, user: { username: 'boss', fullName: 'Tina Trainer', batchId: 'B1', userType: 'Admin' } });
+        if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
+        if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: true, results: [] });
+        if (u.pathname === '/api/live-call') return j({ success: false });
+        return j({ success: true });
+    });
+    await p2.addInitScript(() => { localStorage.setItem('LSH_FDD_LIVE_V1', 'off'); });
+    await p2.goto(base + '?calls=1', { waitUntil: 'load' }); await p2.waitForTimeout(600);
+    await p2.evaluate(() => { switchPortalTab('Admin'); document.getElementById('login-password').value = 'ci-pass'; attemptLogin(); });
+    await p2.waitForTimeout(2200);   // Master Control would open 1.2 s after signing in
+    const signedIn = await p2.evaluate(() => ({ panel: document.getElementById('fdd-panel') && document.getElementById('fdd-panel').classList.contains('open'), mc: document.getElementById('master-control-page').classList.contains('open') }));
+    if (!signedIn.panel || signedIn.mc) fail(`an Admin signing in on a ?calls=1 link: ${JSON.stringify(signedIn)} (the Call Simulator should stay open, without Master Control over the case)`);
+    await p2.close();
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
