@@ -1,5 +1,6 @@
 import { json, requireSession } from '../_utils.js';
-import { drillCall, createLiveToken, LIVE_MODELS, LIVE_WS } from '../_live.js';
+import { drillCall, createLiveToken, liveSetup, LIVE_MODELS, LIVE_WS } from '../_live.js';
+import { gatewayOn, gatewayPost } from '../_ai.js';
 
 // Live Front Desk Drill calls (see functions/_live.js).
 //
@@ -91,7 +92,8 @@ export async function onRequestPost({ request, env }) {
 
     const call = drillCall(String(body.callId || ''));
     if (!call) return json({ success: false, error: 'Unknown drill call.' }, 400);
-    const pool = keyPool(env);
+    const useGateway = gatewayOn(env);   // the Portal's shared keys and budget (functions/_ai.js); this site's own keys otherwise
+    const pool = useGateway ? [{ slot: 'gateway', key: '' }] : keyPool(env);
     if (!pool.length) return json({ success: false, code: 'NOT_CONFIGURED', error: 'Live voice calls aren\'t set up on this site yet (GEMINI_API_KEY). This call runs as text.' }, 503);
     const models = [env.LIVE_MODEL, ...LIVE_MODELS].filter((m, i, a) => m && a.indexOf(m) === i);
     await ensureTable(db);
@@ -119,19 +121,26 @@ export async function onRequestPost({ request, env }) {
     const open = Object.fromEntries((results || []).map(r => [r.key_slot, r.n]));
     const perKey = Number(env.LIVE_CALLS_PER_KEY) || 0;
     const order = pool.map(k => ({ ...k, n: open[k.slot] || 0, r: Math.random() })).sort((a, b) => a.n - b.n || a.r - b.r);
-    let last = null, full = false;
+    let last = null, full = false, model_done = false;
     for (const model of models) {
+        if (model_done) break;
         for (const k of order) {
             if (skip.has(k.slot + '|' + model)) continue;
             if (perKey && k.n >= perKey) { full = true; continue; }
             let r;
-            try { r = await createLiveToken(k.key, call, model, Date.now(), maxMinutes(env), env); } catch (e) { r = { ok: false, status: 502, error: String(e && e.message || e) }; }
+            try {
+                if (useGateway) {
+                    const g = await gatewayPost(env, { action: 'live-token', module: 'cms', user: session.username, setup: liveSetup(call, model), model, maxMinutes: maxMinutes(env) });
+                    r = g.data && g.data.success ? { ok: true, token: g.data.token } : { ok: false, status: g.status === 401 || g.status === 501 ? 502 : g.status, error: (g.data && g.data.error) || `AI gateway error ${g.status}` };
+                } else r = await createLiveToken(k.key, call, model, Date.now(), maxMinutes(env), env);
+            } catch (e) { r = { ok: false, status: 502, error: String(e && e.message || e) }; }
             if (r.ok) {
                 const ins = await db.prepare(`INSERT INTO live_call_log (username, call_id, model, key_slot) VALUES (?, ?, ?, ?) RETURNING id`).bind(session.username, call.id, model, k.slot).first();
                 if (Math.random() < 0.02) await db.prepare(`DELETE FROM live_call_log WHERE created_at < datetime('now', '-3 days')`).run();
                 return json({ success: true, id: ins && ins.id, token: r.token, model, url: LIVE_WS, maxSeconds: maxMinutes(env) * 60 });
             }
             last = r;
+            if (useGateway && r.status === 429) { full = false; model_done = true; break; }   // the shared budget or keys say wait: don't ask again for another model
             console.error('live-call token failed', k.slot, model, r.status, r.error);
             if (/location is not supported/i.test(r.error)) return json({ success: false, code: 'REGION', error: 'Live voice isn\'t available from this region yet. This call runs as text.' }, 502);
             // a busy or rejected key: try the next key; anything else: the next model

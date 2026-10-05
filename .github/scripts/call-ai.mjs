@@ -151,6 +151,28 @@ check(modes === 'drill,drill,practice', `results came back with modes "${modes}"
 const pcRow = (mine.results || []).find(r => r.mode === 'practice');
 check(pcRow && pcRow.score === 97 && pcRow.action_pct === 90 && pcRow.full_name === 'Amy Trainee', `the practice call row is wrong: ${JSON.stringify(pcRow)}`);
 
+
+// 9. the shared AI gateway: with AI_GATEWAY_SECRET set, the practice caller's lines and the reviews go to the Portal's gateway
+//    (module "cms", the trainee as the user), this site's own keys are never called, and a budget "wait" from the Portal comes back as 429.
+{
+    const gwCalls = []; const realFetch = globalThis.fetch;
+    let gwReply = { status: 200, json: { success: true, text: 'from the gateway', model: 'gemini-3.5-flash-lite' } };
+    globalThis.fetch = async (url, init) => {
+        if (String(url).endsWith('/api/ai-gateway')) { gwCalls.push({ key: init.headers['X-Gateway-Key'], body: JSON.parse(init.body) }); return new Response(JSON.stringify(gwReply.json), { status: gwReply.status, headers: { 'Content-Type': 'application/json' } }); }
+        return realFetch(url, init);
+    };
+    calls = [];
+    const gEnv = { AI_GATEWAY_SECRET: ' gw-secret ', PORTAL_URL: 'https://portal.test' };
+    let r = await ai.callAI(gEnv, { ...req(), user: 'amy' });
+    check(r.ok && r.text === 'from the gateway', `the gateway answer wasn't used: ${JSON.stringify(r)}`);
+    check(gwCalls.length === 1 && gwCalls[0].key === 'gw-secret' && gwCalls[0].body.module === 'cms' && gwCalls[0].body.user === 'amy', `the gateway call is wrong: ${JSON.stringify(gwCalls)}`);
+    check(calls.length === 0, 'this site\'s own Gemini keys were called although the gateway is on');
+    gwReply = { status: 429, json: { success: false, error: 'The AI is busy right now. Wait a few seconds and try again.', scope: 'minute' } };
+    r = await ai.callAI(gEnv, { ...req(), user: 'amy' });
+    check(!r.ok && r.status === 429 && /busy/.test(r.error), `a budget wait should come back as 429: ${JSON.stringify(r)}`);
+    check(ai.aiStatus(gEnv).gateway === true && ai.aiStatus({}).gateway === false, 'the status says whether the gateway is on');
+    globalThis.fetch = realFetch;
+}
 console.log('Checked the key pool, /api/call-ai and saving practice calls.');
 if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
 console.log('Practice calls server test passed.');
