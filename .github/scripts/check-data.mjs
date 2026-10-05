@@ -3,8 +3,9 @@
 // data that the drill scores against, so a typo silently breaks a trainee's
 // score. This fails the build when:
 //   - a case id repeats, or a case is missing a required field;
-//   - a phase, case type, lien type or facility specialty isn't one the CMS
-//     editor offers (it would load blank);
+//   - a phase, case type, lien type or status, ADR option or facility specialty
+//     isn't one the CMS editor offers (it would load blank), or a critical note
+//     is empty or longer than 500 characters;
 //   - a drill call points at a case that doesn't exist, has an unknown auth
 //     code, an answer index outside its options, or no caller voice ('f'/'m');
 //   - a caller the key says is verified gave details that don't match the file
@@ -35,7 +36,13 @@ const app = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 const optionsIn = (src, id) => { const m = src.match(new RegExp(`id="${id}"[^>]*>([\\s\\S]*?)</select>`)); return m ? [...m[1].matchAll(/<option([^>]*)>([^<]*)</g)].map(o => { const v = o[1].match(/value="([^"]*)"/); return v ? v[1] : o[2].trim(); }) : []; };
 const PHASES = optionsIn(html, 'phase-selector');
 const TYPES = optionsIn(html, 'main-case-type');
-const LIEN_TYPES = ['Prior Atty Lien', 'Medical Lien', 'HI Subro', 'Funding', 'Other'];
+// the Liens tab's types and statuses (app.js) and the ADR tab's options (case-sections.js)
+const sections = fs.readFileSync(path.join(ROOT, 'case-sections.js'), 'utf8');
+const listIn = (src, name) => { const m = src.match(new RegExp(`const ${name} = \\[([^\\]]*)\\]`)); return m ? [...m[1].matchAll(/'((?:[^'\\]|\\.)*)'|"([^"]*)"/g)].map(x => (x[1] !== undefined ? x[1].replace(/\\'/g, "'") : x[2])) : []; };
+const LIEN_TYPES = listIn(app, 'LIEN_TYPES'), LIEN_STATUSES = listIn(app, 'LIEN_STATUSES');
+const ADR = { type: listIn(sections, 'ADR_TYPES'), setBy: listIn(sections, 'ADR_SET_BY'), status: listIn(sections, 'ADR_STATUSES'), attend: listIn(sections, 'ADR_ATTEND') };
+if (!LIEN_TYPES.length || !LIEN_STATUSES.length) bad('Could not read LIEN_TYPES / LIEN_STATUSES from app.js; update check-data.mjs');
+if (Object.values(ADR).some(l => !l.length)) bad('Could not read the ADR options (ADR_TYPES, ADR_SET_BY, ADR_STATUSES, ADR_ATTEND) from case-sections.js; update check-data.mjs');
 const SPECIALTIES = ((app.match(/<select id="sel-\$\{id\}"[\s\S]*?<\/select>/) || [''])[0].match(/<option[^>]*>([^<]*)</g) || []).map(o => o.replace(/<option[^>]*>|</g, ''));
 const PROGRAMS = new Set(MOCK_PROGRAMS.map(p => p.id));
 // the Primary Injury card's dropdowns (a keyed card: its selects are named by data-k)
@@ -63,7 +70,17 @@ for (const c of MOCK_CASES) {
     if (!TYPES.includes(c.caseType)) bad(`${where}: case type "${c.caseType}" isn't an option in the CMS`);
     if (c.caseType === 'Others' && !c.caseTypeOther) bad(`${where}: caseType Others needs caseTypeOther`);
     for (const p of c.programs || []) if (!PROGRAMS.has(p)) bad(`${where}: unknown program "${p}"`);
-    for (const l of c.liens || []) if (!LIEN_TYPES.includes(l.type)) bad(`${where}: lien type "${l.type}" isn't an option`);
+    for (const l of c.liens || []) {
+        if (!LIEN_TYPES.includes(l.type)) bad(`${where}: lien type "${l.type}" isn't an option`);
+        if (l.status && !LIEN_STATUSES.includes(l.status)) bad(`${where}: lien status "${l.status}" isn't an option (${LIEN_STATUSES.join(', ')})`);
+        for (const k of ['notified']) if (l[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(l[k])) bad(`${where}: lien ${k} must be MM/DD/YYYY`);
+    }
+    if (c.critical !== undefined && (!String(c.critical).trim() || String(c.critical).length > 500)) bad(`${where}: critical note must be 1–500 characters`);
+    for (const a of c.adr || []) {
+        for (const k of Object.keys(ADR)) if (a[k] && !ADR[k].includes(a[k])) bad(`${where}: ADR ${k} "${a[k]}" isn't an option (${ADR[k].join(', ')})`);
+        if (!a.type || !a.status) bad(`${where}: an ADR entry needs a type and a status`);
+        for (const k of ['date', 'brief']) if (a[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(a[k])) bad(`${where}: ADR ${k} must be MM/DD/YYYY`);
+    }
     for (const f of c.facilities || []) if (!SPECIALTIES.includes(f.specialty)) bad(`${where}: facility specialty "${f.specialty}" isn't an option`);
     for (const k of ['dateOfLoss', 'sol']) if (c[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(c[k])) bad(`${where}: ${k} must be MM/DD/YYYY`);
     if (!c.reception || !c.reception.verify || !(c.reception.calls || []).length) bad(`${where}: needs reception.verify and at least one reception call`);

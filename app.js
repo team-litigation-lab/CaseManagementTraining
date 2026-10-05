@@ -385,18 +385,39 @@
             document.getElementById('pip-um-container').appendChild(div);
         }
 
+        // A lien's type, and where it stands: the Liens tab totals them by status (case-sections.js), and the
+        // Settlement tab warns while any is still unconfirmed. Rows saved before the status existed get these
+        // fields when the case opens (upgradeLienRows in case-sections.js), with the status "Not recorded" (older):
+        // nobody said where those liens stand, so they aren't counted as unconfirmed.
+        const LIEN_TYPES = ['Prior Atty Lien', 'Medical Lien', 'HI Subro', 'Medicare', 'Medicaid / State', 'ERISA Plan', "Workers' Comp", 'Child Support', 'Funding', 'Other'];
+        const LIEN_STATUSES = ['Unconfirmed', 'Confirmed (lien letter received)', 'Final lien received', 'Reduction requested', 'Negotiated', 'Waived', 'Paid'];
+        function lienDetailsHTML(older) {
+            return `<div class="grid grid-cols-4 gap-6 lien-more">
+                    <div><label>Lien Status</label><select class="prof-input" data-lien="status">${older ? '<option value="" selected>Not recorded</option>' : ''}${LIEN_STATUSES.map(x => `<option>${x}</option>`).join('')}</select></div>
+                    <div><label>Date Notified / Letter Date</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                    <div><label>Reduction Requested</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" data-lien="requested"></div></div>
+                    <div><label>Final Payoff</label><div contenteditable="true" class="text-green-700 font-bold" data-ph="$ 0.00" data-fmt="currency" data-lien="final"></div></div>
+                </div>
+                <label class="lien-more-notes">Lien Notes</label>
+                <div contenteditable="true" class="multiline-field text-sm italic text-slate-600 min-h-[40px]" data-ph="Dates of service it covers, who you spoke to, letters sent and received, where the lien letter is in Doc Hub…"></div>`;
+        }
         function addLien() {
             const id = Date.now();
             const div = document.createElement('div'); div.className = "pdf-card border-l-4 border-slate-900 relative bg-white p-6 mb-4 shadow-sm";
             div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-2 right-4 text-slate-300 no-print">×</button>
                 <div class="grid grid-cols-4 gap-6">
-                    <div><label>Type of Lien</label><div class="flex items-center"><select id="l-sel-${id}" onchange="handleOtherSystem(this.id, 'l-oth-${id}', 'l-rev-${id}')" class="prof-input"><option>Prior Atty Lien</option><option>Medical Lien</option><option>HI Subro</option><option>Funding</option><option>Other</option></select><div id="l-oth-${id}" contenteditable="true" data-ph="Specify type" class="hidden text-xs font-bold px-2 py-1 bg-orange-50 border border-orange-200 min-w-[80px]"></div><button id="l-rev-${id}" onclick="revertOther('l-sel-${id}', 'l-oth-${id}', this.id)" class="revert-btn">↺</button></div></div>
+                    <div><label>Type of Lien</label><div class="flex items-center"><select id="l-sel-${id}" onchange="handleOtherSystem(this.id, 'l-oth-${id}', 'l-rev-${id}')" class="prof-input">${LIEN_TYPES.map(x => `<option>${x}</option>`).join('')}</select><div id="l-oth-${id}" contenteditable="true" data-ph="Specify type" class="hidden text-xs font-bold px-2 py-1 bg-orange-50 border border-orange-200 min-w-[80px]"></div><button id="l-rev-${id}" onclick="revertOther('l-sel-${id}', 'l-oth-${id}', this.id)" class="revert-btn">↺</button></div></div>
                     <div><label>Lienholder Entity</label><div contenteditable="true" data-ph="Enter entity" data-fmt="name"></div></div>
                     <div><label>Claim / File #</label><div contenteditable="true" data-ph="Enter claim / file #"></div></div>
-                    <div><label>Lien Amount</label><div contenteditable="true" class="text-red-600 font-bold" data-ph="$ 0.00" data-fmt="currency"></div></div>
-                </div>`;
+                    <div><label>Lien Amount</label><div contenteditable="true" class="text-red-600 font-bold" data-ph="$ 0.00" data-fmt="currency" data-lien="amount"></div></div>
+                </div>
+                ${lienDetailsHTML()}`;
             document.getElementById('lien-container').appendChild(div);
+            if (typeof window.updateLienSummary === 'function') window.updateLienSummary();
         }
+        window.lienDetailsHTML = lienDetailsHTML;
+        window.LIEN_TYPES = LIEN_TYPES;
+        window.LIEN_STATUSES = LIEN_STATUSES;
 
         function addFacility() {
             const id = "fac-" + Date.now();
@@ -695,7 +716,7 @@
         const CASE_HANDLER_FNS = new Set(['handleDocUpload', 'handleOtherSystem', 'revertOther', 'addChronoDate', 'updateTotals', 'afterKeyedApplied',
             'window.afterKeyedApplied', 'applyReportKind', 'calcSettlement', 'calcWages', 'toggleDriverInsuredExtra', 'toggleOwnerExtra', 'updatePhaseDisplay',
             'generateCaseId', 'sortChronology', 'docDropCat', 'docDrop', 'docDragOver', 'docDragLeave', 'addRow', 'addBI', 'addPIPUM', 'addLien',
-            'addFacility', 'addChronology', 'addDocument', 'addDocLink', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'uploadDemandLetter', 'showTab',
+            'addFacility', 'addChronology', 'addDocument', 'addDocLink', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'addAdr', 'uploadDemandLetter', 'showTab',
             'lshClientId.pick', 'lshClientId.open', 'lshClientId.remove']);
         const CASE_HANDLER_ARG = /^(?:'[\w .:#\-]*'|-?\d+(?:\.\d+)?|this|this\.(?:id|value|checked)|event|true|false|null)$/;
         function caseHandlerOk(code) {
@@ -895,6 +916,9 @@
         }
         function extractReadableSections(root) {
             let html = '';
+            // the ⚠ Critical note (case-alerts.js) first: it's in the case header, which has no section of its own here
+            const crit = root.querySelector('#kx-critical [data-k="note"]'), critText = crit ? crit.textContent.trim() : '';
+            if (critText) html += `<div style="margin-bottom:16px;padding:9px 12px;background:#fef2f2;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:8px;font-size:12px;font-weight:700;color:#991b1b;white-space:pre-wrap;">⚠ CRITICAL: ${escapeHtmlAttr(critText)}</div>`;
             root.querySelectorAll('.pdf-card').forEach(card => {
                 const header = card.querySelector('.section-head, h3');
                 if (!header) return;
@@ -1827,6 +1851,9 @@
             const attorneyName = e((document.getElementById('attorney-field') && document.getElementById('attorney-field').value.trim()) || '—');
             const caseManagerName = e((document.getElementById('case-manager-field') && document.getElementById('case-manager-field').value.trim()) || '—');
             const logoSrc = AGENCY_LOGO;
+            // the ⚠ Critical note under the case header (case-alerts.js): on the first page, where nobody misses it
+            const critEl = document.querySelector('#kx-critical [data-k="note"]');
+            const critical = critEl ? critEl.innerText.trim() : '';
 
             // Person who originally submitted / created this case record.
             const subName = e(info.submittedBy || '—');
@@ -1861,6 +1888,7 @@
                         <span>Attorney: ${attorneyName}</span>
                         <span>Case Manager: ${caseManagerName}</span>
                     </div>
+                    ${critical ? `<div style="margin-top:12px; padding:9px 12px; background:#fef2f2; border:1px solid #fecaca; border-left:5px solid #dc2626; border-radius:6px; font-size:12px; font-weight:700; color:#991b1b; white-space:pre-wrap;">⚠ CRITICAL: ${e(critical)}</div>` : ''}
                     <div style="margin-top:14px; display:flex; gap:12px;">
                         <div style="flex:1; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-family:'IBM Plex Mono','Courier New',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:#0f2148;">
                             <div style="color:#94a3b8; font-size:8px; margin-bottom:5px;">Submitted By (Case Originator)</div>
@@ -2674,6 +2702,8 @@
                 return '<div class="reg-row"><div class="reg-info">' +
                     '<b>' + l.label + (l.durationSeconds != null ? ' <span class="status-pill status-approved">' + formatDuration(l.durationSeconds) + '</span>' : '') + '</b>' +
                     '<div class="reg-meta">' + (l.actorUsername ? '@' + l.actorUsername : 'System') + (l.actorBatch ? ' \u00B7 Batch ' + l.actorBatch : '') + ' \u00B7 ' + new Date(l.occurredAt).toLocaleString() + '</div>' +
+                    // which case a look at its full SSN was on (case-alerts.js → /api/case-activity)
+                    (l.action === 'ssn-view' && l.details ? '<div class="reg-meta">' + escapeHtmlAttr([l.details.caseId ? 'Case ' + l.details.caseId : '', l.details.client || ''].filter(Boolean).join(' \u00B7 ') || 'a case') + '</div>' : '') +
                     '</div></div>';
             }).join('');
         }

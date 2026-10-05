@@ -402,7 +402,8 @@ const SAVED = [
             ttInHeader: !!(tt && tt.closest('.header-card') && tt.offsetParent), ttUnderBar: !!(tt && bar && r(tt).top >= r(bar).bottom - 1 && r(tt).top - r(bar).bottom < 20),
             ttInSidebar: !!(tt && tt.closest('#sidebar')), ttStart: !!(tt && tt.querySelector('[data-tt="start"]')),
             profileSsn: !!document.getElementById('client-ssn-field').offsetParent, profileDob: !!document.getElementById('client-dob-field').offsetParent,
-            headSsn: !!document.getElementById('head-ssn-field').offsetParent,
+            // the header shows the SSN: the box, or (once there's one) its last 4 (case-alerts.js)
+            headSsn: !!(document.getElementById('head-ssn-field').offsetParent || (document.getElementById('ssn-mask') && document.getElementById('ssn-mask').offsetParent)),
             top: [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id),
             topInStrip: !!(document.getElementById('top-actions') && document.getElementById('top-actions').closest('#classification-bar')),
             topRight: (() => { const a = document.getElementById('lbp-open-btn'); return a ? Math.round(innerWidth - a.getBoundingClientRect().right) : null; })(),
