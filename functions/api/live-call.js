@@ -16,7 +16,7 @@ import { drillCall, createLiveToken, LIVE_MODELS, LIVE_WS } from '../_live.js';
 // key with the fewest calls in progress.
 //
 // Optional variables:
-//   LIVE_MAX_MINUTES    longest a call can run (default 6); the page warns, then hangs up
+//   LIVE_MAX_MINUTES    longest a call can run (1–4; default and most: 4); the page warns, then hangs up
 //   LIVE_CALLS_PER_KEY  most calls at once on one key; more wait (the call runs as text)
 //   LIVE_DAILY_MINUTES  live minutes for the whole site in any 24 hours; after that, text
 //   LIVE_MODEL          a model to try before the built-in list
@@ -39,7 +39,10 @@ async function ensureTable(db) {
         try { await db.prepare(`ALTER TABLE live_call_log ADD COLUMN ${col}`).run(); } catch (e) { /* already there */ }
     }
 }
-const maxMinutes = (env) => Math.min(15, Math.max(1, Number(env.LIVE_MAX_MINUTES) || 6));
+// Calls end at 4 minutes (a front-desk call is short; it also keeps the live minutes, and their cost, down).
+// LIVE_MAX_MINUTES can make it shorter, not longer.
+const MAX_CALL_MINUTES = 4;
+const maxMinutes = (env) => Math.min(MAX_CALL_MINUTES, Math.max(1, Number(env.LIVE_MAX_MINUTES) || MAX_CALL_MINUTES));
 // The keys, by secret name; the same key under two names counts once.
 function keyPool(env) {
     const seen = new Set();

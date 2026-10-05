@@ -120,7 +120,7 @@ export const LIVE_WS = 'wss://generativelanguage.googleapis.com/ws/google.ai.gen
 // A single-use token: the call must start within 2 minutes, and the token stops
 // working a little after the call's time limit (the page hangs up at the limit).
 // A region Gemini refuses is tried again from the US (geminiFetch in _ai.js), when env has the relay.
-export async function createLiveToken(apiKey, call, model, now = Date.now(), maxMinutes = 6, env = {}) {
+export async function createLiveToken(apiKey, call, model, now = Date.now(), maxMinutes = 4, env = {}) {
     const res = await geminiFetch(env, 'https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },

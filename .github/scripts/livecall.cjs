@@ -111,9 +111,9 @@ const failures = []; const fail = (m) => failures.push(m);
     const a1 = (await post({ callId: 'D01' })).data, k1 = lastKey();
     const a2 = (await post({ callId: 'D02' })).data, k2 = lastKey();
     if (!a1.id || !a2.id || k1 === k2) fail(`two calls at once didn't go to different keys (${k1}, ${k2})`);
-    if (a1.maxSeconds !== 360) fail(`calls should be limited to 6 minutes by default (${a1.maxSeconds})`);
+    if (a1.maxSeconds !== 240) fail(`calls should be limited to 4 minutes (${a1.maxSeconds})`);
     const exp = Date.parse(google[google.length - 1].body.expireTime) - Date.now();
-    if (exp < 7 * 60000 || exp > 8.5 * 60000) fail(`the token should expire shortly after the time limit (${Math.round(exp / 1000)} s)`);
+    if (exp < 5 * 60000 || exp > 6.5 * 60000) fail(`the token should expire shortly after the 4-minute limit (${Math.round(exp / 1000)} s)`);
     await post({ end: a1.id });
     const a3 = (await post({ callId: 'D03' })).data;
     if (lastKey() !== k1) fail('after a call ended, the next call didn\'t go to the key it freed');
@@ -144,6 +144,10 @@ const failures = []; const fail = (m) => failures.push(m);
     delete env.LIVE_DAILY_MINUTES;
     env.LIVE_MAX_MINUTES = '3';
     if ((await post({ callId: 'D01' })).data.maxSeconds !== 180) fail('LIVE_MAX_MINUTES isn\'t applied');
+    env.LIVE_MAX_MINUTES = '10';
+    const long = (await post({ callId: 'D01' })).data;
+    if (long.maxSeconds !== 240) fail('LIVE_MAX_MINUTES made calls longer than 4 minutes');
+    sql.prepare('DELETE FROM live_call_log WHERE id = ?').run(long.id);   // (not counted in the usage below)
     delete env.LIVE_MAX_MINUTES;
     // Admins see the usage; trainees don't
     if ((await usage('ci')).status !== 403) fail('a trainee can read the live-call usage');
