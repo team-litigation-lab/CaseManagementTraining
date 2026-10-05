@@ -88,11 +88,21 @@
 
     const TYPE_ICON = { 'Deposition': '🎙', 'Mediation': '🤝', 'Court Hearing': '⚖', 'Trial': '🏛', 'Client Meeting': '👤', 'Medical / IME': '🩺',
         'Deadline': '⏰', 'Phone Call': '📞', 'Internal Meeting': '👥', 'Blocked Time': '⛔', 'Out of Office': '🌴', 'Other': '•', 'Google': '📆' };
+    // Color coding by kind of event (the Attorney's Calendar always; the Firm Calendar when "Color by: Event type" is
+    // picked): Blocked Time is split into the no-schedule blocks, lunch and the daily case and email review.
+    const TYPE_COLOR = { 'Client Meeting': '#2563eb', 'Phone Call': '#ea580c', 'Internal Meeting': '#7c3aed', 'Deposition': '#dc2626',
+        'Mediation': '#db2777', 'Court Hearing': '#991b1b', 'Trial': '#6b21a8', 'Medical / IME': '#059669', 'Deadline': '#b91c1c',
+        'No Schedule': '#64748b', 'Lunch': '#ca8a04', 'Daily Review': '#0d9488', 'Out of Office': '#16a34a', 'Other': '#0891b2', 'Google': '#0b8043' };
+    const TYPE_KEY_ICON = { 'No Schedule': '⛔', 'Lunch': '🍽', 'Daily Review': '📋' };
+    const typeKey = (e) => e.type !== 'Blocked Time' ? (TYPE_COLOR[e.type] ? e.type : 'Other') : /lunch/i.test(e.title || '') ? 'Lunch' : /review/i.test(e.title || '') ? 'Daily Review' : 'No Schedule';
+    const COLOR_KEY = 'LSH_FC_COLOR_BY_V1';
+    const colorByType = () => attyMode() || S.colorBy === 'type';
     const DAY_START = 7 * 60, DAY_END = 19 * 60, PX_PER_MIN = 0.8;   // week grid: 7 AM – 7 PM
 
     let S = {
         open: false, view: 'week', anchor: null, data: null, loadedKey: '', loading: false, error: '',
         hidden: {}, showDeadlines: true, weekends: false, scope: 'mine',
+        colorBy: (() => { try { return localStorage.getItem(COLOR_KEY) === 'type' ? 'type' : 'calendar'; } catch (e) { return 'calendar'; } })(),   // the Firm Calendar's colors
         panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | null
         feedPick: null,   // Sync: the calendars the subscribe link covers (null: all)
         mode: 'firm',     // 'firm': the Firm Calendar (the case's Calendar tab) | 'attorney': 🗓 Attorney's Calendar (Calendaring), on its own
@@ -488,6 +498,9 @@
         #fc-root .ev.ghost{pointer-events:none;z-index:4;border:2px dashed #f97316;border-left-width:2px;background:rgba(249,115,22,.14);color:#9a3412;box-shadow:none}
         #fc-root .chip{display:block;border-radius:5px;padding:2px 6px;font-size:10.5px;margin:2px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid}
         #fc-root .chip.mine{font-weight:800}
+        #fc-root .fc-key{display:flex;flex-wrap:wrap;gap:4px 10px;margin-bottom:4px}
+        #fc-root .fc-key-i{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#334155;font-weight:600}
+        #fc-root .fc-key-i i{width:11px;height:11px;border-radius:3px;display:inline-block}
         #fc-root .chip.dl{background:#fef2f2;border-color:#dc2626;color:#991b1b}
         #fc-root .mo{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:640px}
         #fc-root .mo-h{font-size:11px;font-weight:800;color:#64748b;text-align:center;padding:6px;border-bottom:1px solid #e2e8f0}
@@ -587,6 +600,7 @@
         if (attyMode()) {
             // the Calendaring activity: the attorney's calendar, and what you booked on it
             $id('fc-rail').innerHTML = `
+            <h4>Color key</h4>${colorKeyHtml()}
             <h4>Calendar</h4>
             ${cals().map(c => `<div class="fc-layer ${S.hidden[c.id] ? 'off' : ''}" onclick="fcLayer('${c.id}')">
                 <div class="sw" style="background:${c.color};border-color:${c.color}"></div>
@@ -594,7 +608,7 @@
             ${me().admin ? `<h4>Weekly schedule</h4><div class="fc-sub" style="margin-bottom:6px">Your edits change it every week, for everyone.</div>
                 <button class="fc-btn" style="width:100%" data-fc="tpl-reset" onclick="fcTemplateReset()">↺ Restore the original schedule</button>` : ''}
             <h4>Your appointments</h4>
-            ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:6px" onclick="fcOpen('${esc(e.id)}')">
+            ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${evColor(e)};padding:6px" onclick="fcOpen('${esc(e.id)}')">
                 <div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)}</small></div></div>`).join('')
                 : '<div class="fc-sub">Nothing booked by you in this range yet.</div>'}`;
             return;
@@ -608,12 +622,16 @@
                 <div class="sw" style="background:#dc2626;border-color:#dc2626"></div>
                 <div><b>Case deadlines</b><span>SOL, trial, discovery cut-off… from saved cases</span></div></div>
             ${googleRailHtml()}
+            <h4>Color by</h4><div class="fc-seg" style="display:flex;gap:6px">
+                <button class="fc-btn ${S.colorBy === 'type' ? '' : 'on'}" data-fc="color-cal" onclick="fcColorBy('calendar')">Calendar</button>
+                <button class="fc-btn ${S.colorBy === 'type' ? 'on' : ''}" data-fc="color-type" onclick="fcColorBy('type')">Event type</button></div>
+            ${S.colorBy === 'type' ? colorKeyHtml() : ''}
             ${oc ? `<h4>This case</h4><div class="note" style="margin-top:0"><b style="color:#0f172a">${esc(oc.label)}</b>${oc.ref ? ' · ' + esc(oc.ref) : ''}
-                ${caseEvents(oc).map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:5px 7px;margin-top:6px;background:#fff" onclick="fcOpen('${esc(e.id)}')"><div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)} · ${esc(cal(e.calendar).name)}</small></div></div>`).join('')
+                ${caseEvents(oc).map(e => `<div class="ag-r" style="border-color:${evColor(e)};padding:5px 7px;margin-top:6px;background:#fff" onclick="fcOpen('${esc(e.id)}')"><div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)} · ${esc(cal(e.calendar).name)}</small></div></div>`).join('')
                   || '<div style="margin-top:4px">Nothing on the calendar for this case in this range.</div>'}
                 <button class="fc-btn primary" style="margin-top:8px;width:100%" onclick="fcNew({fromCase:true})">📅 Schedule for this case</button></div>` : ''}
             <h4>Your upcoming events</h4>
-            ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:6px" onclick="fcOpen('${esc(e.id)}')">
+            ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${evColor(e)};padding:6px" onclick="fcOpen('${esc(e.id)}')">
                 <div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)} · ${esc(cal(e.calendar).name)}</small></div></div>`).join('')
                 : '<div class="fc-sub">Nothing scheduled by you in this range yet.</div>'}`;
     }
@@ -625,8 +643,15 @@
         else { main.innerHTML = weekHtml(); const t = main.querySelector('[data-now]'); if (t && !S._scrolled) { main.scrollTop = Math.max(0, (8 * 60 - DAY_START) * PX_PER_MIN); S._scrolled = true; } }
     }
     const byTime = (a, b) => (a.date + (a.allDay ? '00:00' : a.start)).localeCompare(b.date + (b.allDay ? '00:00' : b.start));
-    const evStyle = (e) => { const c = e.source === 'case' ? { color: '#dc2626' } : cal(shownCal(e)); return `background:${c.color}1f;border-color:${c.color}`; };
-    const evTitle = (e) => `${TYPE_ICON[e.type] || '•'} ${e.title}`;
+    const evColor = (e) => e.source === 'case' ? '#dc2626' : colorByType() ? TYPE_COLOR[typeKey(e)] : cal(shownCal(e)).color;
+    const evStyle = (e) => { const c = evColor(e); return `background:${c}26;border-color:${c}`; };
+    const evTitle = (e) => `${TYPE_KEY_ICON[typeKey(e)] || TYPE_ICON[e.type] || '•'} ${e.title}`;
+    // The key to the colors: the kinds of event in the range shown (all of them while none is)
+    function colorKeyHtml() {
+        const shown = new Set((S.data ? visible() : []).filter(e => e.source !== 'case').map(typeKey));
+        const keys = Object.keys(TYPE_COLOR).filter(k => k !== 'Google' && (!shown.size || shown.has(k)));
+        return `<div class="fc-key">${keys.map(k => `<span class="fc-key-i" data-type="${esc(k)}"><i style="background:${TYPE_COLOR[k]}"></i>${esc(k)}</span>`).join('')}</div>`;
+    }
 
     function weekHtml() {
         const from = monday(S.anchor), n = S.weekends ? 7 : 5, today = S.data.today;
@@ -694,7 +719,7 @@
         evs.forEach(e => {
             if (e.date !== last) { html += `<div class="ag-d">${esc(fmtDate(e.date, true))}${e.date === S.data.today ? ' · today' : ''}</div>`; last = e.date; }
             const c = e.source === 'case' ? { color: '#dc2626', name: 'Case deadline' } : cal(e.calendar);
-            html += `<div class="ag-r" style="border-color:${c.color}" onclick="fcOpen('${esc(e.id)}')">
+            html += `<div class="ag-r" style="border-color:${evColor(e)}" onclick="fcOpen('${esc(e.id)}')">
                 <div class="tm">${e.allDay ? 'All day' : fmtTime(e.start) + ' – ' + fmtTime(e.end)}</div>
                 <div class="tt"><b>${esc(evTitle(e))}</b>${e.mine ? ' <span style="color:#c2410c;font-size:10.5px;font-weight:800">· yours</span>' : ''}
                 <small>${esc(c.name)}${(e.invite || []).length ? ' + ' + e.invite.map(i => esc(cal(i).name)).join(', ') : ''}${e.caseLabel ? ' · ' + esc(e.caseLabel) : ''}${e.location ? ' · ' + esc(e.location) : ''}</small></div></div>`;
@@ -900,6 +925,7 @@
     window.fcScope = function () { S.scope = S.scope === 'all' ? 'mine' : 'all'; load(true); };
     window.fcLayer = function (id) { S.hidden[id] = !S.hidden[id]; render(); if (id === 'google') loadGoogleEvents(false); };
     window.fcDeadlines = function () { S.showDeadlines = !S.showDeadlines; render(); };
+    window.fcColorBy = function (by) { S.colorBy = by === 'type' ? 'type' : 'calendar'; try { localStorage.setItem(COLOR_KEY, S.colorBy); } catch (e) {} render(); };
     window.fcClose = function () { S.panel = null; render(); };
     window.fcOpen = function (id) { const e = findEvent(id); if (!e) return; S.panel = { kind: 'detail', ev: e }; render(); };
     window.fcSubscribe = function () { S.panel = { kind: 'subscribe' }; render(); };
