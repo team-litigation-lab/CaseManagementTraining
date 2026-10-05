@@ -95,7 +95,7 @@
         hidden: {}, showDeadlines: true, weekends: false, scope: 'mine',
         panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | null
         feedPick: null,   // Sync: the calendars the subscribe link covers (null: all)
-        mode: 'firm',     // 'firm': the Firm Calendar (the case's Calendar tab) | 'attorney': 🗓 Attorney's Calendar (Calendaring), on its own
+        mode: 'firm',     // 'firm': the Firm Calendar (the case's Calendar tab) | 'attorney': 🗓 Attorney's Calendar (Calendaring): the attorney's week with the firm's calendars
         dayCache: {}, lastSync: null, poll: null,
         synced: {}        // keys of events already copied to the attorney's Google Calendar ('ev:<id>')
     };
@@ -105,12 +105,13 @@
     let channel = null;
     try { channel = new BroadcastChannel('lsh-firm-calendar'); channel.onmessage = () => { if (S.open) load(true); }; } catch (e) { /* older browsers: polling only */ }
 
-    // The calendars on show: the Firm Calendar's, or the Attorney's Calendar alone (the Calendaring activity)
+    // The calendars on show: the Firm Calendar's (the case's Calendar tab), or the Attorney's Calendar together with the firm's calendars
+    // (🗓 Attorney's Calendar, the Calendaring activity): the attorney's week is a calendar of its own, listed first, beside the firm's.
     const ATTY = 'attorney';
     const attyMode = () => S.mode === 'attorney';
-    const inMode = (e) => (e.calendar === ATTY) === attyMode();
+    const inMode = (e) => attyMode() || e.calendar !== ATTY;
     const allCals = () => (S.data && S.data.calendars) || [];
-    const cals = () => allCals().filter(c => (c.id === ATTY) === attyMode());
+    const cals = () => allCals().filter(c => attyMode() || c.id !== ATTY).sort((a, b) => (b.id === ATTY) - (a.id === ATTY));
     const GOOGLE_COLOR = '#0b8043';
     const cal = (id) => id === 'google' ? { id, name: `${(S.data && S.data.google && S.data.google.calendarName) || 'Google Calendar'} (Google)`, color: GOOGLE_COLOR }
         : allCals().find(c => c.id === id) || { id, name: id, color: '#64748b' };
@@ -149,8 +150,9 @@
         return over;
     }
     function calendarForAttorney(name) {
+        if (attyMode()) return null;   // (the Calendaring activity books on the Attorney's Calendar, whoever the case's attorney is)
         const n = String(name || '').toLowerCase();
-        const hit = cals().find(c => c.id !== 'firm' && n.includes(c.id));
+        const hit = cals().find(c => c.id !== 'firm' && c.id !== ATTY && n.includes(c.id));
         return hit ? hit.id : null;
     }
 
@@ -197,7 +199,6 @@
     /* ---------- which events show ---------- */
     function visible() {
         if (!S.data) return [];
-        if (attyMode()) return S.data.events.filter(e => e.calendar === ATTY && !S.hidden[ATTY]);   // the attorney's calendar, nothing else
         const evs = S.data.events.filter(inMode).concat(googleEvents()).filter(e => [e.calendar].concat(e.invite || []).some(c => !S.hidden[c]));
         return S.showDeadlines ? evs.concat(S.data.deadlines || []) : evs;
     }
@@ -563,7 +564,7 @@
     function renderHead() {
         const admin = !!me().admin;
         $id('fc-head').innerHTML = `
-            ${attyMode() ? `<div style="margin-right:6px"><h2 class="serif">🗓 Attorney's Calendar</h2><div class="fc-sub">Calendaring · the attorney's week, the same every week · Eastern (firm time)</div></div>`
+            ${attyMode() ? `<div style="margin-right:6px"><h2 class="serif">🗓 Attorney's Calendar</h2><div class="fc-sub">Calendaring · the attorney's week, the same every week, with the firm's calendars · Eastern (firm time)</div></div>`
                 : `<div style="margin-right:6px"><h2 class="serif">📅 Firm Calendar</h2><div class="fc-sub">LSH Training Law Group · all times Eastern (firm time)</div></div>`}
             <button class="fc-btn" onclick="fcNav(0)">Today</button>
             <button class="fc-btn" onclick="fcNav(-1)" aria-label="Previous">‹</button>
@@ -584,26 +585,13 @@
         const today = S.data ? S.data.today : firmToday();
         const mine = S.data ? S.data.events.filter(e => e.mine && inMode(e) && e.date >= today).sort(byTime).slice(0, 6) : [];
         const oc = openCase();
-        if (attyMode()) {
-            // the Calendaring activity: the attorney's calendar, and what you booked on it
-            $id('fc-rail').innerHTML = `
-            <h4>Calendar</h4>
-            ${cals().map(c => `<div class="fc-layer ${S.hidden[c.id] ? 'off' : ''}" onclick="fcLayer('${c.id}')">
-                <div class="sw" style="background:${c.color};border-color:${c.color}"></div>
-                <div><b>${esc(c.name)}</b><span>${esc(c.role)}</span></div></div>`).join('')}
-            ${me().admin ? `<h4>Weekly schedule</h4><div class="fc-sub" style="margin-bottom:6px">Your edits change it every week, for everyone.</div>
-                <button class="fc-btn" style="width:100%" data-fc="tpl-reset" onclick="fcTemplateReset()">↺ Restore the original schedule</button>` : ''}
-            <h4>Your appointments</h4>
-            ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:6px" onclick="fcOpen('${esc(e.id)}')">
-                <div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)}</small></div></div>`).join('')
-                : '<div class="fc-sub">Nothing booked by you in this range yet.</div>'}`;
-            return;
-        }
         $id('fc-rail').innerHTML = `
             <h4>Calendars</h4>
             ${cals().map(c => `<div class="fc-layer ${S.hidden[c.id] ? 'off' : ''}" onclick="fcLayer('${c.id}')">
                 <div class="sw" style="background:${c.color};border-color:${c.color}"></div>
                 <div><b>${esc(c.name)}</b><span>${esc(c.role)}${c.ext ? ' · ext ' + esc(c.ext) : ''}</span></div></div>`).join('')}
+            ${attyMode() && me().admin ? `<h4>Weekly schedule</h4><div class="fc-sub" style="margin-bottom:6px">Your edits to the Attorney's Calendar change it every week, for everyone.</div>
+                <button class="fc-btn" style="width:100%" data-fc="tpl-reset" onclick="fcTemplateReset()">↺ Restore the original schedule</button>` : ''}
             <div class="fc-layer ${S.showDeadlines ? '' : 'off'}" onclick="fcDeadlines()">
                 <div class="sw" style="background:#dc2626;border-color:#dc2626"></div>
                 <div><b>Case deadlines</b><span>SOL, trial, discovery cut-off… from saved cases</span></div></div>
@@ -760,6 +748,8 @@
             start: '10:00', end: '11:00', allDay: false, location: '', caseRef: '', caseLabel: '', repoId: null, notes: '', shared: false, replaces: '',
             templateId: 0, asTemplate: false, conflict: null }, over || {});
     }
+    // who an event can also be shared with: the Attorney's Calendar stands alone (it isn't invited to a firm event, nor they to it)
+    const inviteList = (f, list) => f.calendar === ATTY ? [] : list.filter(x => x.id !== f.calendar && x.id !== ATTY);
     function formHtml(f) {
         const pills = (list, isOn, click) => `<div class="pills">${list.map(x => { const on = isOn(x); const color = x.color || '#0f172a';
             return `<button type="button" class="pill ${on ? 'on' : ''}" style="${on ? 'background:' + color : ''}" onclick="${click(x)}">${esc(x.label)}</button>`; }).join('')}</div>`;
@@ -776,8 +766,8 @@
             ${pills(types().map(t => ({ id: t, label: `${TYPE_ICON[t] || ''} ${t}` })), x => f.type === x.id, x => `fcSet('type','${x.id}')`)}
             <label class="fl">On whose calendar</label>
             ${pills(calList, x => f.calendar === x.id, x => `fcSet('calendar','${x.id}')`)}
-            ${calList.filter(x => x.id !== f.calendar).length ? `<label class="fl">Also invite</label>
-            ${pills(calList.filter(x => x.id !== f.calendar), x => f.invite.includes(x.id), x => `fcInvite('${x.id}')`)}` : ''}
+            ${inviteList(f, calList).length ? `<label class="fl">Also invite</label>
+            ${pills(inviteList(f, calList), x => f.invite.includes(x.id), x => `fcInvite('${x.id}')`)}` : ''}
             <label class="fl">When (Eastern)</label>
             <div class="row2"><input class="fi" type="date" id="fcf-date" value="${esc(f.date)}" onchange="fcSet('date',this.value)">
                 <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#334155"><input type="checkbox" id="fcf-allday" ${f.allDay ? 'checked' : ''} onchange="fcSet('allDay',this.checked)"> All day</label></div>
@@ -983,7 +973,7 @@
     window.fcSet = function (k, v) {
         const f = S.panel && S.panel.form; if (!f) return;
         f[k] = v; f.conflict = null;
-        if (k === 'calendar') f.invite = f.invite.filter(c => c !== v);
+        if (k === 'calendar') f.invite = v === ATTY ? [] : f.invite.filter(c => c !== v && c !== ATTY);   // (the Attorney's Calendar stands alone)
         if (k === 'start' && v && f.end && mins(f.end) <= mins(v)) f.end = hhmm(Math.min(mins(v) + 60, 23 * 60 + 45));
         if (k === 'type' && v === 'Out of Office') f.allDay = true;
         if (k === 'end' || k === 'start') { const e = $id('fcf-end'); if (e && e.value !== f.end) e.value = f.end; }
