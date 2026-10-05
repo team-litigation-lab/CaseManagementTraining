@@ -73,7 +73,7 @@ export async function onRequestPost({ request, env }) {
     const program = String(body.program || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20) || null;
 
     await ensureGuestTables(db);
-    await shortenOldBatchIds(db);   // older long Batch IDs become B + DDMMYY (_utils.js)
+    await shortenOldBatchIds(db);   // older long Batch IDs lose the trainee number (_utils.js)
     if (await tooManyFailures(db, request)) {
         return json({ success: false, error: 'Too many names tried from this connection. Please wait an hour, or ask your trainer.' }, 429);
     }

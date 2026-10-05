@@ -53,7 +53,7 @@ async function trainerUser(db, name) {
         if (await isUsernameTombstoned(db, username)) return { revoked: true };   // permanently revoked: not made again
         const { first, last } = splitName(name);
         let batchId = null;
-        try { batchId = await nextBatchId(db, 'Admin'); } catch (e) { /* no batch */ }   // B + DDMMYY: the day they first sign in
+        try { batchId = await nextBatchId(db, 'Admin'); } catch (e) { /* no batch */ }   // B + MMDDYY: the day they first sign in
         try {
             await db.prepare(
                 `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
@@ -84,7 +84,7 @@ export async function onRequestPost({ request, env }) {
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const { username, password, portalMode } = body;
-    await shortenOldBatchIds(db);   // older long Batch IDs become B + DDMMYY before anyone is looked up
+    await shortenOldBatchIds(db);   // older long Batch IDs lose the trainee number before anyone is looked up
     let user, usedPassword = false;
     if (portalMode === 'Admin' && !username) {
         // Admin Portal: the admin password, and the trainer's name (blank: the Master Account)
