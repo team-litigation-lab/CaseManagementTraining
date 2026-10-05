@@ -11,16 +11,13 @@
 //     (what trainees booked stays);
 //   - trainees can't change it (403), but they book their own appointments on it: a clash with the
 //     schedule is a double-booking with free times offered, and what they book is theirs alone;
-//   - ⬆ Import .ics onto it: an Admin's file becomes the weekly schedule (the edited Attorney's Calendar file:
-//     exactly the schedule, case files linked; a changed file replaces it, nothing doubled; one-off events from
-//     other weeks left out; a preview changes nothing); a trainee's import is their own events;
 //   - it stands alone: it isn't invited to the Firm Calendar's events, the Firm Calendar's link (cal=all)
 //     leaves it out, and it has its own link (cal=attorney);
 //   - in the page: the sidebar's 🗓 Attorney's Calendar shows that calendar only (no firm calendars,
 //     deadlines or toggle for a trainee), the same appointments next week, no edit buttons on the schedule
 //     for a trainee, + New event books on it (the clash shown, then a free time), the case's Calendar tab
 //     is still the Firm Calendar without it; an Admin (?calendar=attorney, no case open) edits, adds to,
-//     removes from, restores and imports the schedule; no <select> or contenteditable added.
+//     removes from and restores the schedule; no <select> or contenteditable added.
 // Usage: node .github/scripts/attorney-calendar.cjs   (from the repository root; needs playwright, Node 22.13+)
 const { chromium } = require('playwright');
 const { DatabaseSync } = require('node:sqlite');
@@ -48,22 +45,6 @@ function d1(db) {
 }
 const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const wd = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
-// The Attorney's Calendar as an .ics file (as given to the firm): the daily blocks once each, Monday to Friday,
-// and each appointment on its day, all repeating weekly from the week of Sep 7, 2026, on New York time.
-function scheduleIcs(seed, extra = []) {
-    const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'], wk = { 1: '20260907', 2: '20260908', 3: '20260909', 4: '20260910', 5: '20260911' };
-    const esc = (x) => String(x).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
-    const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//LSH Training Law Group//Attorney\'s Calendar//EN', 'X-WR-CALNAME:Attorney\'s Calendar'];
-    const blocks = new Map();
-    seed.filter(r => !r[5]).forEach(r => { const k = r[1] + r[4]; if (!blocks.has(k)) blocks.set(k, { r, days: [] }); blocks.get(k).days.push(r[0]); });
-    const put = (r, days, uid) => L.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTART;TZID=America/New_York:${wk[days[0]]}T${r[1].replace(':', '')}00`,
-        `DTEND;TZID=America/New_York:${wk[days[0]]}T${r[2].replace(':', '')}00`, `RRULE:FREQ=WEEKLY;BYDAY=${days.map(d => DAYS[d]).join(',')}`,
-        ...(r[8] ? [`DESCRIPTION:${esc(r[8])}`] : []), ...(r[7] ? [`LOCATION:${esc(r[7])}`] : []), `SUMMARY:${esc(r[4])}`, 'END:VEVENT');
-    [...blocks.values()].forEach((b, i) => put(b.r, b.days, `block-${i}`));
-    seed.filter(r => r[5]).forEach((r, i) => put(r, [r[0]], `appt-${i}`));
-    return L.concat(extra, ['END:VCALENDAR']).join('\r\n');
-}
-
 (async () => {
     const failures = []; const fail = (m) => failures.push(m);
     const utils = await import(pathToFileURL(path.join(ROOT, 'functions/_utils.js')).href);
@@ -181,38 +162,7 @@ function scheduleIcs(seed, extra = []) {
     if (!ev.some(e => e.id === booked.id)) fail('↺ Restore should keep what trainees booked');
     if (!sql.prepare(`SELECT v FROM calendar_meta WHERE k = 'attorney_seeded'`).get()) fail('the seed should be marked done, so a removed appointment doesn\'t come back by itself');
 
-    /* ---------- 5. ⬆ Import .ics onto the Attorney's Calendar ---------- */
-    const file = scheduleIcs(atty.SEED);
-    const tplShape = () => sql.prepare(`SELECT * FROM calendar_template`).all()
-        .map(x => [x.weekday, x.start_time, x.end_time, x.type, x.title, x.case_ref, x.case_label, x.location, x.notes].join('§')).sort((a, b) => a.localeCompare(b)).join('¶');
-    const seedShape = atty.SEED.map(x => [x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8]].join('§')).sort((a, b) => a.localeCompare(b));
-    const before = tplShape();
-    r = await api('POST', '', { action: 'import', ics: file, calendar: 'attorney', dryRun: true }, 'trainer');
-    if (!r.data.success || !r.data.schedule || r.data.add !== atty.SEED.length || r.data.summary.replaces !== atty.SEED.length || r.data.summary.cases !== atty.SEED.filter(x => x[5]).length
-        || !r.data.preview.some(e => e.weekday === 1 && e.start === '09:00' && e.caseRef === 'MC-48')) fail(`an Admin's preview of the Attorney's Calendar file should be the weekly schedule: ${JSON.stringify(r.data).slice(0, 300)}`);
-    if (tplShape() !== before) fail('the preview (dryRun) changed the schedule');
-    // a changed file: one appointment renamed, one gone, an old one-off from another week, a cancelled one
-    const changedSeed = atty.SEED.filter(x => x[4] !== 'Document Signing: Denise Carter').map(x => x[4] === 'Lunch Break' && x[0] === 2 ? [2, '12:30', '13:30', ...x.slice(3)] : x);
-    const oldOneOff = ['BEGIN:VEVENT', 'UID:old-oneoff', 'DTSTART:20260602T130000Z', 'DTEND:20260602T133000Z', 'SUMMARY:New Intake - Brittany Pierce', 'END:VEVENT',
-        'BEGIN:VEVENT', 'UID:gone', 'DTSTART:20260909T170000Z', 'STATUS:CANCELLED', 'SUMMARY:Cancelled call', 'END:VEVENT'];
-    r = await api('POST', '', { action: 'import', ics: scheduleIcs(changedSeed, oldOneOff), calendar: 'attorney' }, 'trainer');
-    ev = schedule(await range(later, addDays(later, 6), 'other'));
-    if (!r.data.success || !r.data.schedule || r.data.added !== atty.SEED.length - 1 || rowCount() !== atty.SEED.length - 1 || r.data.summary.otherWeeks !== 1 || r.data.summary.cancelled !== 1)
-        fail(`an Admin's import of a changed file should replace the schedule (no doubles; the old one-off and the cancelled one left out): ${JSON.stringify(r.data)} rows=${rowCount()}`);
-    if (ev.some(e => /Denise Carter|Brittany/.test(e.title)) || !ev.some(e => e.title === 'Lunch Break' && wd(e.date) === 2 && e.start === '12:30') || ev.length !== atty.SEED.length - 1)
-        fail('the imported schedule should show for every trainee, every week (the changed lunch, without the removed appointment)');
-    if (!ev.some(e => e.title === 'Deposition Preparation: Niamh Cholmondeley' && e.caseRef === 'MC-48' && e.type === 'Client Meeting')) fail('an imported appointment should keep its case file and type');
-    r = await api('POST', '', { action: 'import', ics: file, calendar: 'attorney' }, 'trainer');
-    const gotShape = tplShape().split('¶');
-    if (!r.data.success || gotShape.join('¶') !== seedShape.join('¶')) fail(`importing the Attorney's Calendar file should give exactly the schedule (types, case files, places, notes): ${gotShape.filter(x => !seedShape.includes(x)).concat(seedShape.filter(x => !gotShape.includes(x))).slice(0, 4).join(' ‖ ')}`);
-    if (!(await range(mon, addDays(mon, 6))).some(e => e.id === booked.id)) fail('an imported schedule should keep what trainees booked');
-    // a trainee's import onto it: their own events, not the schedule
-    const one = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:t1', `DTSTART;TZID=America/New_York:${addDays(mon, 1).replace(/-/g, '')}T180000`, 'DURATION:PT30M', 'SUMMARY:My prep time', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-    r = await api('POST', '', { action: 'import', ics: one, calendar: 'attorney' });
-    if (!r.data.success || r.data.schedule || r.data.added !== 1 || rowCount() !== atty.SEED.length || !sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci' AND calendar = 'attorney' AND title = 'My prep time'`).get().n)
-        fail(`a trainee's import onto the Attorney's Calendar should be their own events: ${JSON.stringify(r.data)}`);
-
-    /* ---------- 6. the links ---------- */
+    /* ---------- 5. the links ---------- */
     const tok = (await api('GET', `?from=${mon}&to=${mon}`)).data.feedToken;
     const feed = async (cal) => { const res = await call(feedApi, 'GET', `${B}api/calendar-feed?token=${tok}&cal=${cal}`); return { status: res.status, text: await res.text() }; };
     let f = await feed('attorney');
@@ -222,8 +172,8 @@ function scheduleIcs(seed, extra = []) {
     f = await feed('all');
     if (!/X-WR-CALNAME:LSH Firm Calendar/.test(f.text) || /UID:tpl-/.test(f.text) || f.text.includes('Callback: Hannah Pierce') || !/SUMMARY:Firm event/.test(f.text)) fail('the Firm Calendar link (cal=all) should leave the Attorney\'s Calendar out');
 
-    /* ---------- 7. in the page ---------- */
-    // (↺ Restore and an import make the schedule's rows anew: the appointments' ids as they are now)
+    /* ---------- 6. in the page ---------- */
+    // (↺ Restore makes the schedule's rows anew: the appointments' ids as they are now)
     const now = schedule(await range(mon, addDays(mon, 6)));
     const nowOf = (title) => now.find(e => e.title === title);
     await new Promise(res => server.listen(0, res));
@@ -272,7 +222,7 @@ function scheduleIcs(seed, extra = []) {
     let titles = await grid(page);
     if (head.trim() !== '🗓 Attorney\'s Calendar' || await page.locator('#fc-head [data-fc="mode"]').count()) fail(`a trainee's Attorney's Calendar heading (and no switch to the Firm Calendar): ${head}`);
     if (!/Attorney's Calendar/.test(rail) || /Marcus Reyes|Elena Brooks|Firm \/ Staff|Weekly schedule/.test(rail)) fail(`the rail should show the Attorney's Calendar only (no firm calendars, no schedule tools for a trainee): ${rail.slice(0, 200)}`);
-    const ownTitles = ['Callback: Hannah Pierce', 'My prep time'];
+    const ownTitles = ['Callback: Hannah Pierce'];
     if (!titles.includes('Deposition Preparation: Niamh Cholmondeley') || titles.some(t => firmOnly.includes(t)) || titles.filter(t => !ownTitles.includes(t)).length !== seeded.length) fail(`the week should show the attorney's schedule only (${titles.length} of ${seeded.length}): ${titles.filter(t => firmOnly.includes(t)).join(', ')}`);
     await page.evaluate(() => fcNav(1)); await page.waitForTimeout(700);
     const nextWeek = await grid(page);
@@ -352,23 +302,11 @@ function scheduleIcs(seed, extra = []) {
     if (sql.prepare(`SELECT COUNT(*) AS n FROM calendar_template WHERE id = ?`).get(huddle.id).n) fail('🗑 Remove from the schedule didn\'t remove it');
     await page.click('#fc-rail [data-fc="tpl-reset"]'); await page.waitForTimeout(900);
     if (sql.prepare(`SELECT COUNT(*) AS n FROM calendar_template WHERE title = 'Post-Settlement Meeting: James Wilson'`).get().n !== 1 || rowCount() !== atty.SEED.length) fail('↺ Restore (in the page) should bring the schedule back as it came');
-    // ⬆ Import .ics: the Attorney's Calendar file sets the weekly schedule
-    await page.click('#fc-head [data-fc="import"]'); await page.waitForSelector('#fc-side [data-fc="import-panel"]');
-    const impPills = await page.evaluate(() => [...document.querySelectorAll('#fc-side [data-fc="import-panel"] .pill')].map(b => b.textContent.trim()));
-    if (impPills.join() !== 'Attorney\'s Calendar' || /Share firm-wide/.test(await page.textContent('#fc-side'))) fail(`the Admin's import on the Attorney's Calendar: ${impPills.join()}`);
-    await page.setInputFiles('#fc-ics', { name: 'Attorneys_Calendar_LSH.ics', mimeType: 'text/calendar', buffer: Buffer.from(scheduleIcs(changedSeed)) });
-    await page.waitForSelector('#fc-side [data-fc="import-summary"]', { timeout: 5000 }).catch(() => {});
-    await page.shot('atty-7-admin-import');
-    const impSum = await page.evaluate(() => (document.querySelector('#fc-side [data-fc="import-summary"]') || {}).textContent || '');
-    if (!new RegExp(`${atty.SEED.length - 1} appointments a week`).test(impSum) || !/Mon 9 AM/.test(impSum)) fail(`the import panel should preview the weekly schedule: ${impSum.slice(0, 200)}`);
-    await page.click('#fc-side [data-fc="import-go"]'); await page.waitForTimeout(1200);
-    if (rowCount() !== atty.SEED.length - 1 || sql.prepare(`SELECT COUNT(*) AS n FROM calendar_template WHERE title = 'Document Signing: Denise Carter'`).get().n) fail('⬆ Import in the page should set the weekly schedule from the file');
-    if ((await grid(page)).includes('Document Signing: Denise Carter')) fail('the page should show the imported schedule');
     // the Admin's switch to the Firm Calendar
     await page.click('#fc-head [data-fc="mode"]'); await page.waitForTimeout(800);
     if (!/Firm Calendar/.test(await page.textContent('#fc-head h2')) || /Attorney's Calendar/.test(await page.textContent('#fc-rail'))) fail('the Admin\'s switch should go back to the Firm Calendar');
     await browser.close(); server.close();
 
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); }
-    console.log(`Attorney's Calendar test passed (the weekly schedule on the case files, the same every week; Admins edit, add, remove, restore and import it, trainees can't; trainees book their own with clashes shown; its own link, out of the Firm Calendar's; the page for a trainee and an Admin).`);
+    console.log(`Attorney's Calendar test passed (the weekly schedule on the case files, the same every week; Admins edit, add, remove and restore it, trainees can't; trainees book their own with clashes shown; its own link, out of the Firm Calendar's; the page for a trainee and an Admin).`);
 })().catch(e => { console.error(e); process.exit(1); });

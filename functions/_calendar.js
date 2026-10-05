@@ -1,4 +1,4 @@
-import { ensureTemplate, templateRows, templateEvents } from './_attorney_calendar.js';
+import { ensureTemplate, templateRows, templateEvents, resetTemplate } from './_attorney_calendar.js';
 // Firm Calendar: shared logic for /api/calendar and /api/calendar-feed.
 //
 // The fictional firm (LSH Training Law Group, mock-cases.js) has one calendar per
@@ -277,7 +277,8 @@ const DDL = [
 //   replaces  your own version of an event you can't change (the attorney's standing event, or one
 //             shared firm-wide): it shows instead of that event on your calendar (on everyone's when an
 //             Admin shares it firm-wide); deleting it brings the original back
-//   ext_uid   where an imported event came from (its .ics UID and date), so importing the file again adds nothing twice
+//   ext_uid   where an event from ⬆ Import .ics came from (its .ics UID and date); the import was taken out and
+//             its events removed (undoImports), so it's empty now
 const LATER_COLUMNS = [['replaces', `TEXT NOT NULL DEFAULT ''`], ['ext_uid', `TEXT NOT NULL DEFAULT ''`]];
 let columnsChecked = false;
 export async function ensureCalendarTables(db) {
@@ -290,7 +291,21 @@ export async function ensureCalendarTables(db) {
         if (!have.has(name)) { try { await db.prepare(`ALTER TABLE calendar_events ADD COLUMN ${name} ${type}`).run(); } catch (e) { /* added meanwhile */ } }
     }
     await db.prepare(`CREATE INDEX IF NOT EXISTS idx_calendar_events_owner_ext ON calendar_events (owner_username, ext_uid)`).run();
+    await undoImports(db);
     columnsChecked = true;
+}
+// Once (October 2026): ⬆ Import .ics was taken out, and what it had added is undone. Every imported event goes
+// (they carry the file's UID: ext_uid), and the Attorney's Calendar's weekly schedule is back as it came if an
+// import had replaced it (an import wrote many rows at once, by one person, in the same minute; an Admin's
+// own edits are one row at a time and stay).
+export async function undoImports(db) {
+    if (await db.prepare(`SELECT v FROM calendar_meta WHERE k = 'imports_undone'`).first()) return;
+    try { await db.prepare(`INSERT INTO calendar_meta (k, v) VALUES ('imports_undone', datetime('now'))`).run(); }
+    catch (e) { return; }   // another request is doing it
+    await db.prepare(`DELETE FROM calendar_events WHERE ext_uid <> ''`).run();
+    const bulk = await db.prepare(`SELECT COUNT(*) AS n FROM calendar_template WHERE updated_by IS NOT NULL
+        GROUP BY updated_by, substr(updated_at, 1, 16) ORDER BY n DESC LIMIT 1`).first();
+    if (bulk && bulk.n >= 10) await resetTemplate(db);
 }
 
 /* ---------- the old Training Calendar's events ----------
@@ -375,7 +390,7 @@ export function rowToEvent(r, session) {
         caseRef: r.case_ref || '', caseLabel: r.case_label || '', notes: r.notes || '', shared: !!r.shared,
         owner: r.owner_username, ownerName: r.owner_name || r.owner_username, mine,
         source: 'user', readOnly: !(mine || (session && session.userType === 'Admin')),
-        replaces: r.replaces || '', imported: !!r.ext_uid,
+        replaces: r.replaces || '',
         createdAt: r.created_at, updatedAt: r.updated_at
     };
 }

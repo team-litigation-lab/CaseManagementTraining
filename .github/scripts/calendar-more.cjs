@@ -1,7 +1,7 @@
 // Firm Calendar, more: editing events you can't change yourself (your own version of the attorney's
-// standing event or of a shared one), syncing a chosen set of calendars, and importing an .ics file.
-// The real API code (functions/api/calendar.js, calendar-feed.js, functions/_ics.js) on an in-memory
-// SQLite database standing in for D1, then the real page in a browser.
+// standing event or of a shared one), syncing a chosen set of calendars, and ⬆ Import .ics taken out.
+// The real API code (functions/api/calendar.js, calendar-feed.js) on an in-memory SQLite database standing
+// in for D1, then the real page in a browser.
 //
 // Checks:
 //   - versions: a trainee's edit of a standing event shows instead of it on their calendar only (the
@@ -11,12 +11,11 @@
 //     follows; an event you may not stand in for (a private one, a made-up id) is refused;
 //   - sync: one link for the calendars picked (cal=reyes,brooks): only their events, named for them;
 //     an unknown calendar is refused;
-//   - .ics import: time zones (Windows and IANA names, UTC), all-day spans, repeating events with an
-//     exception and a moved occurrence, cancelled and far-off events left out, a preview (dryRun) that
-//     adds nothing, then the events on the chosen calendar as the trainee's own, nothing added twice
-//     on a second import, a trainee can't share firm-wide (an Admin can), bad files refused;
+//   - no more .ics import: the API refuses it (410), and what imports had added is undone once on the
+//     first request (every imported event goes, other events stay; the Attorney's Calendar's schedule
+//     is back as it came when an import had replaced it, but not over an Admin's own edits; only once);
 //   - in the page: ✎ Edit on a standing event makes your version, the Sync panel's calendar picks
-//     change the link, ⬆ Import .ics previews and imports a file; no <select> or contenteditable added.
+//     change the link, there's no ⬆ Import .ics; no <select> or contenteditable added.
 // Usage: node .github/scripts/calendar-more.cjs   (from the repository root; needs playwright, Node 22.13+)
 const { chromium } = require('playwright');
 const { DatabaseSync } = require('node:sqlite');
@@ -43,7 +42,6 @@ function d1(db) {
     };
 }
 const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-const compact = (s) => s.replace(/-/g, '');
 
 (async () => {
     const failures = []; const fail = (m) => failures.push(m);
@@ -57,6 +55,26 @@ const compact = (s) => s.replace(/-/g, '');
         CREATE TABLE case_repository (id INTEGER PRIMARY KEY, case_id TEXT, client_name TEXT, date_of_loss TEXT, sol_bar TEXT, sol_litigation TEXT,
             complaint_filed TEXT, discovery_cutoff TEXT, trial_date TEXT, is_draft INTEGER, owner_username TEXT, updated_at TEXT);
         INSERT INTO users VALUES ('ci', 'Trainee', 'Approved'), ('other', 'Trainee', 'Approved'), ('trainer', 'Admin', 'Approved');`);
+    // The live database as an import left it: two imported events (one shared by an Admin), one ordinary event,
+    // and the Attorney's Calendar's weekly schedule replaced by an Admin's import (12 rows, one person, one minute).
+    const atty = await import(pathToFileURL(path.join(ROOT, 'functions/_attorney_calendar.js')).href);
+    const asLive = (db) => db.exec(`CREATE TABLE calendar_events (id TEXT PRIMARY KEY, owner_username TEXT NOT NULL, owner_name TEXT, shared INTEGER NOT NULL DEFAULT 0,
+            calendar TEXT NOT NULL, invitees TEXT NOT NULL DEFAULT '[]', title TEXT NOT NULL, type TEXT NOT NULL, date TEXT NOT NULL, start_time TEXT NOT NULL DEFAULT '',
+            end_time TEXT NOT NULL DEFAULT '', all_day INTEGER NOT NULL DEFAULT 0, location TEXT NOT NULL DEFAULT '', case_ref TEXT NOT NULL DEFAULT '',
+            case_label TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')), replaces TEXT NOT NULL DEFAULT '', ext_uid TEXT NOT NULL DEFAULT '');
+        CREATE TABLE calendar_template (id INTEGER PRIMARY KEY AUTOINCREMENT, calendar TEXT NOT NULL DEFAULT 'attorney', weekday INTEGER NOT NULL,
+            start_time TEXT NOT NULL DEFAULT '', end_time TEXT NOT NULL DEFAULT '', all_day INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL, type TEXT NOT NULL,
+            location TEXT NOT NULL DEFAULT '', case_ref TEXT NOT NULL DEFAULT '', case_label TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '',
+            updated_by TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+        CREATE TABLE calendar_meta (k TEXT PRIMARY KEY, v TEXT);
+        INSERT INTO calendar_meta VALUES ('attorney_seeded', '2026-10-05 18:00:00');`);
+    asLive(sql);
+    sql.exec(`INSERT INTO calendar_events (id, owner_username, owner_name, shared, calendar, title, type, date, start_time, end_time, ext_uid) VALUES
+        ('imp-1', 'trainer', 'CI Trainer', 1, 'reyes', 'Imported: Gerald Anderson', 'Other', '2026-10-12', '09:00', '09:45', 'g1|2026-10-12|09:00'),
+        ('imp-2', 'ci', 'CI Trainee', 0, 'attorney', 'Imported: Lunch Break', 'Other', '2026-10-13', '12:00', '13:00', 'g2|2026-10-13|12:00'),
+        ('keep-1', 'ci', 'CI Trainee', 0, 'firm', 'Ordinary event', 'Other', '2026-10-14', '19:00', '19:30', '')`);
+    for (let i = 0; i < 12; i++) sql.prepare(`INSERT INTO calendar_template (weekday, start_time, end_time, title, type, updated_by, updated_at) VALUES (?, '09:00', '09:30', ?, 'Other', 'CI Trainer', '2026-10-05 18:30:0' || ?)`).run(1 + (i % 5), `Imported ${i}`, i % 10);
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret' };
     const tokens = {
         ci: await utils.createSessionToken({ username: 'ci', userType: 'Trainee', fullName: 'CI Trainee', batchId: 'B1' }, env.SESSION_SECRET),
@@ -131,52 +149,26 @@ const compact = (s) => s.replace(/-/g, '');
     if ((await feed('reyes,nobody')).status !== 404) fail('a link with an unknown calendar should be refused');
     if (!/X-WR-CALNAME:LSH Firm Calendar/.test((await feed('reyes,brooks,okafor,firm')).text)) fail('a link with every calendar is the whole firm calendar');
 
-    /* ---------- 3. import an .ics file ---------- */
-    const d1st = addDays(mon, 8), dMon = addDays(mon, 7), dVac = addDays(mon, 14), dCall = addDays(mon, 9);
-    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Microsoft Corporation//Outlook 16.0//EN',
-        'BEGIN:VTIMEZONE', 'TZID:Pacific Standard Time', 'BEGIN:STANDARD', 'DTSTART:16011104T020000', 'TZOFFSETFROM:-0700', 'TZOFFSETTO:-0800', 'END:STANDARD', 'END:VTIMEZONE',
-        'BEGIN:VEVENT', 'UID:dep-1', `DTSTART;TZID=Pacific Standard Time:${compact(d1st)}T090000`, `DTEND;TZID=Pacific Standard Time:${compact(d1st)}T103000`,
-        'SUMMARY:Deposition of Dr. Lee', 'LOCATION:Suite 300\\, Los Angeles', 'DESCRIPTION:Bring the exhibit binder\\nand the IME report', 'BEGIN:VALARM', 'TRIGGER:-PT15M', 'END:VALARM', 'END:VEVENT',
-        'BEGIN:VEVENT', 'UID:huddle', `DTSTART;TZID=America/New_York:${compact(dMon)}T083000`, 'DURATION:PT30M', 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6',
-        `EXDATE;TZID=America/New_York:${compact(addDays(dMon, 2))}T083000`, 'SUMMARY:Team huddle', 'END:VEVENT',
-        'BEGIN:VEVENT', 'UID:huddle', `RECURRENCE-ID;TZID=America/New_York:${compact(addDays(dMon, 7))}T083000`, `DTSTART;TZID=America/New_York:${compact(addDays(dMon, 7))}T110000`,
-        `DTEND;TZID=America/New_York:${compact(addDays(dMon, 7))}T113000`, 'SUMMARY:Team huddle (moved)', 'END:VEVENT',
-        'BEGIN:VEVENT', 'UID:vac', `DTSTART;VALUE=DATE:${compact(dVac)}`, `DTEND;VALUE=DATE:${compact(addDays(dVac, 3))}`, 'SUMMARY:Vacation', 'END:VEVENT',
-        'BEGIN:VEVENT', 'UID:call-utc', `DTSTART:${compact(dCall)}T180000Z`, `DTEND:${compact(dCall)}T183000Z`, 'SUMMARY:Call with the adjuster', 'END:VEVENT',
-        'BEGIN:VEVENT', 'UID:old', 'DTSTART:20100104T100000', 'SUMMARY:Long ago', 'END:VEVENT',
-        'BEGIN:VEVENT', 'UID:gone', `DTSTART:${compact(dCall)}T150000Z`, 'STATUS:CANCELLED', 'SUMMARY:Cancelled meeting', 'END:VEVENT',
-        'END:VCALENDAR'].join('\r\n');
-    const before = sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci'`).get().n;
-    r = await api('POST', '', { action: 'import', ics, calendar: 'reyes', dryRun: true });
-    const pv = r.data;
-    const want = 1 + 4 + 1 + 3 + 1;   // deposition, huddle ×4 (6 less the exception, less the moved one) + the moved one, vacation ×3, the call
-    if (!pv.success || !pv.dryRun || pv.add !== want || pv.summary.outside !== 1 || pv.summary.cancelled !== 1 || pv.summary.repeating !== 1)
-        fail(`the import preview is wrong (expected ${want} to add, 1 far off, 1 cancelled, 1 repeating): ${JSON.stringify(pv.summary)} add=${pv.add}`);
-    if (sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci'`).get().n !== before) fail('a preview (dryRun) added events');
-    r = await api('POST', '', { action: 'import', ics, calendar: 'reyes', shared: true });
-    const rows = sql.prepare(`SELECT * FROM calendar_events WHERE owner_username = 'ci' AND ext_uid <> '' ORDER BY date, start_time`).all();
-    const dep = rows.find(x => x.title === 'Deposition of Dr. Lee'), call1 = rows.find(x => x.title === 'Call with the adjuster');
-    const huddles = rows.filter(x => /^Team huddle/.test(x.title)).map(x => `${x.date} ${x.start_time}`);
-    if (!r.data.success || r.data.added !== want || rows.length !== want) fail(`the import should add ${want} events: ${JSON.stringify(r.data)} (${rows.length} rows)`);
-    if (!dep || dep.date !== d1st || dep.start_time !== '12:00' || dep.end_time !== '13:30' || dep.type !== 'Deposition' || dep.location !== 'Suite 300, Los Angeles' || dep.notes !== 'Bring the exhibit binder\nand the IME report' || dep.calendar !== 'reyes')
-        fail(`9 AM Pacific should be 12 PM Eastern, a Deposition on Reyes's calendar, with its place and notes: ${JSON.stringify(dep)}`);
-    if (!call1 || call1.date !== dCall || call1.type !== 'Phone Call' || !/^1[34]:00$/.test(call1.start_time)) fail(`a UTC time should come in on Eastern time: ${JSON.stringify(call1)}`);
-    const wantH = [`${dMon} 08:30`, `${addDays(dMon, 7)} 11:00`, `${addDays(dMon, 9)} 08:30`, `${addDays(dMon, 14)} 08:30`, `${addDays(dMon, 16)} 08:30`].sort();
-    if (huddles.join() !== wantH.join()) fail(`the repeating huddle: the exception left out and the moved one at its new time (${huddles.join()} vs ${wantH.join()})`);
-    if (rows.filter(x => x.title === 'Vacation' && x.all_day === 1 && x.type === 'Out of Office').length !== 3) fail('a 3-day all-day event should be 3 all-day Out of Office days');
-    if (rows.some(x => x.shared)) fail('a trainee\'s import was shared firm-wide');
-    r = await api('POST', '', { action: 'import', ics, calendar: 'reyes' });
-    if (!r.data.success || r.data.added !== 0 || r.data.summary.already !== want) fail(`importing the same file again should add nothing: ${JSON.stringify(r.data)}`);
-    ci = (await api('GET', `?from=${d1st}&to=${d1st}`)).data.events;
-    const shown = ci.find(e => e.title === 'Deposition of Dr. Lee');
-    if (!shown || !shown.imported || !shown.mine || shown.readOnly) fail(`an imported event should be the trainee's own, editable, marked imported: ${JSON.stringify(shown)}`);
-    r = await api('POST', '', { action: 'import', ics: ics.replace(/UID:/g, 'UID:t-'), calendar: 'firm', shared: true }, 'trainer');
-    if (!r.data.success || !sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'trainer' AND shared = 1 AND ext_uid <> ''`).get().n) fail(`an Admin can import firm-wide: ${JSON.stringify(r.data)}`);
-    for (const [body, code, why] of [[{ action: 'import', ics: 'hello', calendar: 'reyes' }, 400, 'not a calendar'], [{ action: 'import', ics, calendar: 'nobody' }, 400, 'no calendar'],
-        [{ action: 'import', ics: 'BEGIN:VCALENDAR\nBEGIN:VEVENT\n' + 'X'.repeat(1024 * 1024), calendar: 'reyes' }, 413, 'over 1 MB'], [{ action: 'import', ics: '', calendar: 'reyes' }, 400, 'empty']]) {
-        r = await api('POST', '', body);
-        if (r.status !== code) fail(`an import with ${why} should be refused with ${code} (got ${r.status})`);
-    }
+    /* ---------- 3. ⬆ Import .ics taken out, and what it added undone ---------- */
+    r = await api('POST', '', { action: 'import', ics: 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nEND:VEVENT\nEND:VCALENDAR', calendar: 'reyes' });
+    if (r.status !== 410) fail(`importing an .ics file should be refused now (got ${r.status})`);
+    const left = sql.prepare(`SELECT id FROM calendar_events WHERE id IN ('imp-1', 'imp-2', 'keep-1')`).all().map(x => x.id);
+    if (left.join() !== 'keep-1') fail(`the first request should remove every imported event and keep the others: ${left.join()}`);
+    const tpl = sql.prepare(`SELECT title FROM calendar_template`).all().map(x => x.title);
+    if (tpl.length !== atty.SEED.length || tpl.some(t => /^Imported/.test(t)) || !tpl.includes('Deposition Preparation: Niamh Cholmondeley')) fail(`an imported weekly schedule should be back as it came: ${tpl.length} rows, ${tpl.slice(0, 3).join(', ')}`);
+    if (!sql.prepare(`SELECT v FROM calendar_meta WHERE k = 'imports_undone'`).get()) fail('the undo should be marked done');
+    // only once; and an Admin's own edits (one row at a time) aren't an import
+    const sql2 = new DatabaseSync(':memory:'); asLive(sql2);
+    atty.SEED.forEach(x => sql2.prepare(`INSERT INTO calendar_template (weekday, start_time, end_time, title, type, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, NULL, '2026-10-05 18:00:00')`).run(x[0], x[1], x[2], x[4], x[3]));
+    sql2.exec(`UPDATE calendar_template SET title = 'Edited by an Admin', updated_by = 'CI Trainer', updated_at = '2026-10-05 18:40:00' WHERE id = 3;
+        UPDATE calendar_template SET start_time = '09:15', updated_by = 'CI Trainer', updated_at = '2026-10-05 18:41:00' WHERE id = 4;
+        INSERT INTO calendar_events (id, owner_username, calendar, title, type, date, ext_uid) VALUES ('imp-3', 'ci', 'reyes', 'Imported', 'Other', '2026-10-12', 'x|1');`);
+    await lib.undoImports(d1(sql2));
+    if (sql2.prepare(`SELECT COUNT(*) AS n FROM calendar_events`).get().n || !sql2.prepare(`SELECT COUNT(*) AS n FROM calendar_template WHERE title = 'Edited by an Admin'`).get().n)
+        fail('the undo should remove imported events but keep an Admin\'s own edits to the schedule');
+    sql2.exec(`INSERT INTO calendar_events (id, owner_username, calendar, title, type, date, ext_uid) VALUES ('imp-4', 'ci', 'reyes', 'Later', 'Other', '2026-10-12', 'x|2')`);
+    await lib.undoImports(d1(sql2));
+    if (!sql2.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE id = 'imp-4'`).get().n) fail('the undo should run only once');
 
     /* ---------- 4. in the page ---------- */
     await new Promise(res => server.listen(0, res));
@@ -229,26 +221,13 @@ const compact = (s) => s.replace(/-/g, '');
     await shot('more-2-sync-picks');
     const link = await page.textContent('#fc-side [data-fc="feed"] code'), linkName = await page.textContent('#fc-side [data-fc="feed"] b');
     if (!/&cal=reyes,brooks$/.test(link) || linkName !== 'Marcus Reyes + Elena Brooks') fail(`the Sync link should cover the picked calendars: ${link} (${linkName})`);
-    // ⬆ Import .ics: preview, then import
-    const ics2 = ics.replace(/UID:/g, 'UID:p-').replace('Deposition of Dr. Lee', 'Deposition of Dr. Park');
-    await page.click('#fc-head [data-fc="import"]'); await page.waitForSelector('#fc-side [data-fc="import-panel"]');
-    await page.click('#fc-side [data-fc="import-panel"] .pill:has-text("Okafor")');
-    await page.setInputFiles('#fc-ics', { name: 'outlook-export.ics', mimeType: 'text/calendar', buffer: Buffer.from(ics2) });
-    await page.waitForSelector('#fc-side [data-fc="import-summary"]', { timeout: 5000 }).catch(() => {});
-    await shot('more-3-import-preview');
-    const summary = await page.evaluate(() => (document.querySelector('#fc-side [data-fc="import-summary"]') || {}).textContent || '');
-    if (!new RegExp(`${want} events to add`).test(summary) || !/Deposition of Dr\. Park/.test(summary)) fail(`the import panel should preview the file: ${summary.slice(0, 200)}`);
-    const n0 = sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci' AND calendar = 'okafor' AND ext_uid LIKE 'p-%'`).get().n;
-    await page.click('#fc-side [data-fc="import-go"]'); await page.waitForTimeout(1200);
-    const n1 = sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci' AND calendar = 'okafor' AND ext_uid LIKE 'p-%'`).get().n;
-    if (n0 !== 0 || n1 !== want) fail(`⬆ Import should add the file's ${want} events to Okafor's calendar (${n0} → ${n1})`);
-    await page.evaluate((d) => fcGoWeek(d), d1st); await page.waitForTimeout(800);
-    await shot('more-4-imported');
-    if (!(await page.locator('#fc-main .ev:has-text("Deposition of Dr. Park")').count())) fail('the imported deposition isn\'t on the week grid');
+    // no ⬆ Import .ics
+    if (await page.locator('#fc-head [data-fc="import"]').count() || await page.evaluate(() => typeof window.fcImport !== 'undefined' || /Import \.ics/.test(document.getElementById('fc-head').textContent)))
+        fail('the calendar still offers ⬆ Import .ics');
     const fieldsAfter = await pageFields();
     if (fieldsAfter.join() !== fieldsBefore.join()) fail(`the calendar added a select or contenteditable to the page (${fieldsBefore} → ${fieldsAfter}); the case editor saves those by position`);
     await browser.close(); server.close();
 
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); }
-    console.log(`Calendar edit / sync / import test passed (versions of standing and shared events, per person or firm-wide; a link for picked calendars; .ics import with time zones, repeats and exceptions, a preview, no duplicates; the page's Edit, Sync picks and Import).`);
+    console.log(`Calendar edit / sync test passed (versions of standing and shared events, per person or firm-wide; a link for picked calendars; .ics import taken out and what it added undone once; the page's Edit and Sync picks, no Import).`);
 })().catch(e => { console.error(e); process.exit(1); });
