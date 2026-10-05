@@ -11,7 +11,16 @@ import { portalOnly } from '../_portal.js';
 // registration (register.js) and is on the account, and an Admin approves every
 // registration before it can sign in. Only a Trainee account signs in this way, never
 // an Admin's; an Admin account with a password of its own still needs that password.
-const adminPasswords = (env) => [env.MASTER_ADMIN_PASSWORD].map(p => String(p || '')).filter(Boolean);
+// The admin password is compared as a person types it: without spaces or line breaks around it, quotes pasted around the whole
+// password, invisible characters or curly quotes and long dashes (a secret pasted into Cloudflare with any of these works from a
+// saved password but could never be typed). The same rule on every LSH platform.
+function normPass(v) {
+    const t = String(v == null ? '' : v).normalize('NFKC').replace(/[\u00AD\u180E\u200B-\u200F\u2028-\u202F\u205F-\u206F\uFEFF]/g, '')
+        .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"').replace(/[\u2010-\u2015\u2212]/g, '-').trim();
+    const q = t.match(/^(["'`])([\s\S]*)\1$/);
+    return q ? q[2].trim() : t;
+}
+const adminPasswords = (env) => [env.MASTER_ADMIN_PASSWORD].map(normPass).filter(Boolean);
 async function sameSecret(given, want) {
     const enc = new TextEncoder();
     const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', enc.encode(given)), crypto.subtle.digest('SHA-256', enc.encode(want))]);
@@ -22,7 +31,7 @@ async function sameSecret(given, want) {
 }
 async function adminPasswordOk(env, password) {
     let ok = false;
-    for (const want of adminPasswords(env)) if (await sameSecret(password, want)) ok = true;
+    for (const want of adminPasswords(env)) if (await sameSecret(normPass(password), want)) ok = true;
     return ok;
 }
 // Wrong passwords count against the connection (its IP), so the admin password can't be guessed by trying:
