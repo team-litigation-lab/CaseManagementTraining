@@ -24,7 +24,7 @@
                 'The sidebar, top to bottom: your training program, My cases, 📝 New Intake and 📞 Reception Simulator.',
                 'Top right: 📄 Download Case Summary, 📊 My Dashboard and 🧭 Blueprint. The date and time are right above the case.'],
               where: 'The sidebar on the left (Log Out at the bottom) · the buttons at the top right.',
-              tip: 'Your trainer gives you the Batch ID: B and the day your batch started (DDMMYY), e.g. B300926.',
+              tip: 'Your trainer gives you the Batch ID: B and the day your batch started (MMDDYY), e.g. B100526.',
               shot: 'blueprint/trainee-sign-in.jpg', shotAlt: 'The CMS sign-in screen: Trainee Portal, username, Log In' },
             { icon: '🔍', title: 'Finding a case', points: [
                 'My cases lists the cases and drafts you saved yourself, each with Open and 🗑 Delete.',
@@ -121,7 +121,7 @@
               tip: 'Ask the Master Account\'s owner for the admin password. It is never written in the CMS itself.',
               shot: 'blueprint/trainer-sign-in.jpg', shotAlt: 'The Admin Portal sign-in: your name and the admin password' },
             { icon: '🗓', title: 'Before a batch starts', points: [
-                'Set the Batch ID: B and the batch\'s start date (DDMMYY), e.g. B061026 for 6 October 2026. Trainees type it when they register.',
+                'Set the Batch ID: B and the batch\'s start date (MMDDYY), e.g. B100626 for 6 October 2026. Trainees type it when they register.',
                 'Send the class the CMS link with their program on it (next slide).',
                 'Approve the registrations in Master Control → Registrations, and check each Batch ID.',
                 'Once approved, trainees sign in with just their username.',
@@ -142,7 +142,7 @@
                 'Registrations: approve the trainees who registered, or decline them.',
                 'Users: every account, with trainees grouped by Batch ID, the newest batch first.',
                 'Revoke or suspend access. ✎ Batch ID fixes a typo or moves a trainee to another batch.',
-                'Batch IDs are B and the batch\'s start date (DDMMYY), e.g. B300926.'],
+                'Batch IDs are B and the batch\'s start date (MMDDYY), e.g. B100526.'],
               where: 'Master Control → Registrations · Users.',
               tip: 'A trainee who can\'t sign in is usually pending, suspended or revoked: check Users.',
               shot: 'blueprint/trainer-users.jpg', shotAlt: 'Master Control, Users: the admins, and the trainees grouped by Batch ID' },
@@ -294,7 +294,7 @@
               where: 'Cloudflare → Workers & Pages → lshcmtraining-trainingcrm → Settings → Variables and Secrets.',
               tip: 'Anyone with the admin password can sign in as the Master Account. When a trainer leaves, revoke them and change the password.' },
             { icon: '👥', title: 'Accounts and batches', points: [
-                'Trainees register: full name, Batch ID (B + the start date, DDMMYY) and a username. They start as Pending.',
+                'Trainees register: full name, Batch ID (B + the start date, MMDDYY) and a username. They start as Pending.',
                 'Approve in Master Control → Registrations; ✎ Batch ID corrects a batch.',
                 'Once approved, a trainee signs in with just their username. From a course platform they can type their name.',
                 'Users: Temporary Revocation (Lift Revocation undoes it) or Permanent Revocation (deletes the account and blocks the name; their cases stay).',

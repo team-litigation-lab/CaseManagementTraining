@@ -2,7 +2,7 @@ import { json, logActivity, isUsernameTombstoned, cleanBatchId } from '../_utils
 import { portalOnly } from '../_portal.js';
 import { isGuestUsername, isTrainerUsername, cleanGuestName, parseFullName } from '../_guest.js';
 // Trainees register with three things: their full name, their Batch ID (B + the
-// date their batch started, DDMMYY, e.g. B300926: cleanBatchId in _utils.js) and a
+// date their batch started, MMDDYY, e.g. B100526: cleanBatchId in _utils.js) and a
 // username. There's no password: once an Admin approves the registration, they
 // sign in with just their username (login.js), or with just their name
 // from a training platform (guest-login.js).
@@ -35,7 +35,7 @@ export async function onRequestPost({ request, env }) {
     }
     const batchId = cleanBatchId(rawBatch);
     if (!batchId) {
-        return json({ success: false, error: 'Enter your Batch ID as B and the date your batch started (DDMMYY), e.g. B300926.' }, 400);
+        return json({ success: false, error: 'Enter your Batch ID as B and the date your batch started (MMDDYY), e.g. B100526.' }, 400);
     }
     if (!USERNAME_RE.test(username)) {
         return json({ success: false, error: 'Usernames are 3 to 30 letters, numbers or underscores.' }, 400);

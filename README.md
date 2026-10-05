@@ -213,7 +213,7 @@ To go back, click **⇦ Back to trainer view** at the bottom of the sidebar (the
 
 **Registering** asks for three things only (`functions/api/register.js`):
 - **Full Name**: first and last name, with the middle initial and suffix if they like (e.g. `Juan P. Dela Cruz`, `Ana Reyes Jr.`). The CMS splits it into its name columns itself.
-- **Batch ID**: `B` and the date their batch started, as DDMMYY, e.g. `B300926` for 30 September 2026. Their trainer gives it to them. It must be a real date. Capitals, spaces and dashes don't matter, and the B can be left off. The longer form the CMS used before (`B30092026`, `B30092026-LSHTRAINEE-001`) is read as the short one.
+- **Batch ID**: `B` and the date their batch started, as MMDDYY, e.g. `B100526` for 5 October 2026. Their trainer gives it to them. It must be a real date. Capitals, spaces and dashes don't matter, the B can be left off and a four-digit year is shortened. Batch IDs given out before October 2026 as DDMMYY (`B300926` for 30 September 2026) still work as they are. The longer form the CMS used before (`B30092026`, `B30092026-LSHTRAINEE-001`) is read as the short one, without the trainee number.
 - **Username**: 3 to 30 letters, numbers or underscores.
 
 There is no email, start date or password. The day they register counts as Day 1 of training. The registration waits for an Admin's approval; approving keeps the Batch ID the trainee typed.
@@ -224,7 +224,7 @@ There is no email, start date or password. The day they register counts as Day 1
 
 In the **Users** tab, trainees are grouped by Batch ID, the newest batch first.
 
-**One Batch ID format, B + DDMMYY.** That's what trainees type, what an Admin's edit saves, and what the CMS issues itself: a trainer's account gets the day it was made, and a registration approved without one gets its start date (`nextBatchId` in `functions/_utils.js`). It's the same format as the course batch the training platforms send. Batch IDs saved in the old long form (`B30092026-LSHADMIN-003`, `B05022026-LSHTRAINEE-001`, `B30092026`) are shortened to `B300926` / `B050226` the first time anyone signs in after this change (`shortenOldBatchIds`). A Batch ID is shared by everyone in the batch, so it isn't unique.
+**One Batch ID format, B + MMDDYY** (since October 2026; it was B + DDMMYY). That's what trainees type, what an Admin's edit saves, and what the CMS issues itself: a trainer's account gets the day it was made, and a registration approved without one gets its start date (`nextBatchId` in `functions/_utils.js`). The batch the training platforms send is read the same way. Batch IDs saved in the old long form, with a trainee number (`B30092026-LSHADMIN-003`, `B05022026-LSHTRAINEE-001`, `B300926-LSHTRAINEE-004`, `B30092026`), are shortened to `B300926` / `B050226`, without the trainee number, the first time anyone signs in (`shortenOldBatchIds`); their dates keep the order they were given in. A Batch ID is shared by everyone in the batch, so it isn't unique.
 
 **The trade-off:** anyone who knows a trainee's username can sign in as them. That's the same convenience the name sign-in below already gives on the training platforms, and an Admin approves every registration first (an Admin can suspend or revoke an account at any time). Admin access still needs the admin password.
 
@@ -1035,7 +1035,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - a session stays alive with a heartbeat up to 2 minutes old (a background tab, e.g. while on a Google Meet tab) and ends after that;
   - `/api/state` lists the last minute's pings sent to whoever asks (the one sent to two trainees shows only the asker), with their age measured on the server, and none to someone signed out;
   - registration asks for just the Full Name, Batch ID and Username (nothing grayed out), refuses a bad name, Batch ID or username, saves the name split into its columns, keeps the typed Batch ID through approval, then opens sign-in with the username filled in; it scrolls on a small screen;
-  - Batch IDs are `B` + DDMMYY: any typed form is read as that (the date must be real, so 31 Feb is refused), the CMS issues them that way, the old long forms saved before are shortened at the first sign-in, and the Users tab groups trainees by Batch ID, the newest batch first;
+  - Batch IDs are `B` + MMDDYY: any typed form is read as that (the date must be real, so 31 Feb is refused; the older DDMMYY ones still read as they are), the CMS issues them that way, the old long forms saved before are shortened at the first sign-in, and the Users tab groups trainees by Batch ID, the newest batch first;
   - an Admin changes a trainee's Batch ID with ✎ Batch ID in the Registrations and Users tabs (an empty one isn't sent; Esc cancels); trainees can't, an Admin's own can't be, and it's logged;
   - a tab still running the old Training Calendar is told to reload.
 - **Case editor sections** (`.github/scripts/sections.cjs`, in the same job). It checks that:
