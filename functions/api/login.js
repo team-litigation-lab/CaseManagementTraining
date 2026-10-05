@@ -6,13 +6,12 @@ import { portalOnly } from '../_portal.js';
 //     (no registration), so pings, logs and reviews show who they are;
 //   - with no name: as the Master Account (MASTER_USERNAME in _utils.js), which
 //     keeps every admin power it has.
-// The password is the MASTER_ADMIN_PASSWORD secret on the Pages project (the earlier
-// name, ADMIN_PORTAL_PASSWORD, still works), never the code (README → Admin Portal).
+// The password is the MASTER_ADMIN_PASSWORD secret on the Pages project, never the code (README → Admin Portal).
 // The Trainee Portal signs in with the username alone: the Batch ID was given at
 // registration (register.js) and is on the account, and an Admin approves every
 // registration before it can sign in. Only a Trainee account signs in this way, never
 // an Admin's; an Admin account with a password of its own still needs that password.
-const adminPasswords = (env) => [env.MASTER_ADMIN_PASSWORD, env.ADMIN_PORTAL_PASSWORD].map(p => String(p || '')).filter(Boolean);
+const adminPasswords = (env) => [env.MASTER_ADMIN_PASSWORD].map(p => String(p || '')).filter(Boolean);
 async function sameSecret(given, want) {
     const enc = new TextEncoder();
     const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', enc.encode(given)), crypto.subtle.digest('SHA-256', enc.encode(want))]);

@@ -6,7 +6,7 @@
 // Register link) and signs in as the Master Account; with a trainer's name it
 // signs in as that trainer's own Admin account, made on first use (the same name
 // gets the same account; a revoked one isn't made again); MASTER_ADMIN_PASSWORD
-// and the older ADMIN_PORTAL_PASSWORD both work; a wrong admin password, a bad
+// is the only admin password; a wrong admin password, a bad
 // name and no admin password set up are refused; "trainer-" usernames can't be
 // registered; a session stays alive with a heartbeat up to 2 minutes old (a
 // background tab) and ends after that; /api/state lists the last minute's pings sent to
@@ -86,7 +86,7 @@ const failures = []; const fail = (m) => failures.push(m);
     const shortened = sql.prepare("SELECT username, batch_id FROM users WHERE username IN ('olga', 'typed_ty', 'trainer-lei-abut', 'tia') ORDER BY username").all().map(u => `${u.username}=${u.batch_id}`).join(',');
     if (shortened !== 'olga=B050226,tia=B1,trainer-lei-abut=B300926,typed_ty=B300926' || sql.prepare("SELECT batch_id FROM heartbeats WHERE username = 'olga'").get().batch_id !== 'B050226') fail(`the first sign-in didn't shorten the old Batch IDs: ${shortened}`);
     if (r.status !== 503 || !/MASTER_ADMIN_PASSWORD/.test(r.data.error)) fail(`without an admin password the admin sign-in should say to set MASTER_ADMIN_PASSWORD (got ${r.status} ${r.data.error})`);
-    env.ADMIN_PORTAL_PASSWORD = 'ci-admin-pass';
+    env.MASTER_ADMIN_PASSWORD = 'ci-admin-pass';
     r = await post({ portalMode: 'Admin', password: 'wrong-pass' });
     if (r.status !== 401) fail(`a wrong admin password was not refused (${r.status})`);
     r = await post({ portalMode: 'Admin', password: 'ci-admin-pass' });
@@ -99,15 +99,12 @@ const failures = []; const fail = (m) => failures.push(m);
     if (r.status !== 200 || r.data.user.username !== 'tia') fail(`a trainee could not sign in with username and password (${r.status})`);
     r = await post({ portalMode: 'Trainee', password: 'ci-admin-pass' });
     if (r.status === 200) fail('the admin password signed in from the Trainee tab without a username');
-    // MASTER_ADMIN_PASSWORD (the secret's current name) works, alone or next to the older one
+    // changing MASTER_ADMIN_PASSWORD (the only admin password) signs in with the new one and refuses the old one
     env.MASTER_ADMIN_PASSWORD = 'ci-master-pass';
     r = await post({ portalMode: 'Admin', password: 'ci-master-pass' });
     if (r.status !== 200 || r.data.user.username !== utils.MASTER_USERNAME) fail(`MASTER_ADMIN_PASSWORD did not sign in (${r.status} ${JSON.stringify(r.data)})`);
-    delete env.ADMIN_PORTAL_PASSWORD;
-    r = await post({ portalMode: 'Admin', password: 'ci-master-pass' });
-    if (r.status !== 200) fail(`MASTER_ADMIN_PASSWORD alone did not sign in (${r.status})`);
     r = await post({ portalMode: 'Admin', password: 'ci-admin-pass' });
-    if (r.status !== 401) fail(`the old admin password still signed in after it was removed (${r.status})`);
+    if (r.status !== 401) fail(`the old admin password still signed in after it was changed (${r.status})`);
     // trainers: their name and the admin password, no registration
     const usersBefore = sql.prepare('SELECT COUNT(*) AS n FROM users').get().n;
     r = await post({ portalMode: 'Admin', name: 'Maria Lopez', password: 'wrong' });

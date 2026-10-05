@@ -287,7 +287,7 @@
               where: 'The sign-in screen → Admin Portal.',
               tip: 'Your day-to-day training work is the same as a trainer\'s: see the Trainer blueprint.' },
             { icon: '🔑', title: 'Signing in and sessions', points: [
-                'One admin password for the Master Account and every trainer: the MASTER_ADMIN_PASSWORD secret (ADMIN_PORTAL_PASSWORD also works).',
+                'One admin password for the Master Account and every trainer: the MASTER_ADMIN_PASSWORD secret.',
                 'The Master Account (LSHADMIN123) is made the first time and can never be suspended or revoked.',
                 'A trainer\'s first sign-in creates their own account. A permanently revoked name is refused for good.',
                 'Sessions last 12 hours. A page unheard from for 2 minutes is signed out, and so is 15 minutes idle. A suspension takes effect on their next click.'],
@@ -351,7 +351,7 @@
               where: 'GitHub → CaseManagementTraining → Actions.',
               tip: 'Don\'t run a database workflow without a plan and a fresh Time Travel point.' },
             { icon: '⚙', title: 'Settings: secrets', points: [
-                'MASTER_ADMIN_PASSWORD (or ADMIN_PORTAL_PASSWORD): the admin password.',
+                'MASTER_ADMIN_PASSWORD: the admin password.',
                 'SESSION_SECRET: signs everyone\'s sign-in. Changing it signs everyone out and disconnects Google Calendars.',
                 'GEMINI_API_KEY and the numbered keys: the practice caller, the debriefs and live voice.',
                 'ANTHROPIC_API_KEY: AI reviews of documents and intakes. GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET: Google Calendar.'],

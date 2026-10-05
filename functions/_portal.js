@@ -11,7 +11,7 @@ const MAX_AHEAD_MS = 10 * 60 * 1000;
 const enc = new TextEncoder();
 
 export const portalSecret = (env) => String(env.PORTAL_SSO_SECRET || '').trim();
-export const adminPasswordsSet = (env) => [env.MASTER_ADMIN_PASSWORD, env.ADMIN_PORTAL_PASSWORD].some(p => String(p || '').trim());
+export const adminPasswordsSet = (env) => String(env.MASTER_ADMIN_PASSWORD || '').trim();
 // Portal-only needs only the admin password to be set (the same condition the training programs use for their lock-in).
 // PORTAL_ONLY=off is the way back to the old sign-ins (the CMS's own tests use it); leave it unset in production.
 export const portalOnly = (env) => adminPasswordsSet(env) && String(env.PORTAL_ONLY || '').trim().toLowerCase() !== 'off';
