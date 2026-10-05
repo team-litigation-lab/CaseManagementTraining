@@ -402,6 +402,27 @@ Both sit under the case's top bar, above the tabs, so they're seen on every tab 
 - Worked out from the chronology's dates of service and the Provider Treatment Matrix, and never saved: a **gap of more than 30 days** between visits, a **first visit more than 7 days** after the date of loss, a visit dated before the accident, and a provider in the matrix with **no visits** in the chronology. Adjusters attack these, so each one needs a reason in the notes.
 - With none, it says so (✓ No gaps over 30 days, with the number of visits and their dates).
 
+**Case Costs** (tab, was Finance)
+- The case's costs (filing fees, records charges, postage…), each with its date, who and the amount, and their total.
+- The total is **taken off the settlements automatically**, once: each settlement (BI, UM/UIM and every additional policy below) carries its share of the costs by its gross, and the shares always add up to the total (all of it sits on BI until something has a gross). Those Case Costs boxes can't be typed in while there are case costs; change the costs on this tab. With no case costs entered, they're typed as before: a figure typed there comes back if the case costs are removed again, and a case's own typed costs are kept when it opens.
+- The **Target Settlement** in the case header shows what's left after the case costs: *After case costs ($ 500.00): $ 49,500.00*.
+
+**Additional insurance** (Insurance tab, **+ Add Insurance**)
+- Another policy that can pay: umbrella or excess, a second at-fault party, commercial or business auto, homeowner's or renter's, premises / general liability, rideshare, an employer's policy, or other. Carrier, policy holder, policy and claim numbers, adjuster and limits.
+- Each one has its own **settlement** (status, date, gross, attorney fee %, its share of the case costs, liens) worked out on its card: gross − fee − costs − liens = net to the client. The Settlement tab lists them under *Additional Insurance Settlements* and adds them to the totals.
+- On a Training Library file, a policy's settlement is open to the programs that have the Settlement tab; the rest of the card goes with the Insurance tab. A second at-fault party's policy holder is in the ⚖ conflict check.
+- The attorney fee of 33⅓% is a third of the gross (on every settlement), not 33.33%.
+- Saved by id (`#kx-insurance-extra`).
+
+**Property Damage Claim: Adjuster & Coverage** (Insurance tab)
+- The vehicle claim, separate from the injury claim: who it's with (the at-fault party's carrier, the client's collision or UMPD, not opened yet), the carrier and PD claim number, liability, the **PD adjuster** (name, phone, email), the status, the **coverage** (property damage limit, deductible, rental / loss of use), repair or total loss, the estimate or ACV, the body shop and notes.
+- Saved by id (`#kx-pd-claim`). The Training Library's car-accident files have theirs, and their PD adjusters are in 📇 Contacts.
+
+**Property Damage Photos** (Property Damage tab, `pd-photos.js`)
+- **⬆ Add Photos** adds photos of the vehicles, the damage and the scene (several at once, 20 a case). Each is made smaller before it's sent (a JPG at most 1,600 px, its location data left behind), kept in the site's file storage and named by the convention: `<Case ID>_<Last-First>_PD-Photo_<date>.jpg` (the second that day …-2; renamed with the Case ID on Save like other files). ✎ gives a photo a caption, ✕ removes it, a click shows it larger. They're in Doc Hub's ☁ Google Drive backup.
+- The list is saved with the case by id (`#kx-pd-photos`).
+- The Training Library's car-accident files show **mock photos** drawn from the file: each vehicle (its year, make, model and plate) with the damage where it was hit, marked *SPECIMEN · mock training photo*. Nothing to add, caption or remove on a view-only file.
+
 **Settlement (BI/UM)** (tab)
 - **BI** and **UM/UIM** are separate claims, so each has its own card. BI is the at-fault party's carrier; UM/UIM is the client's own policy, and its card says which coverage.
 - Each card has its status, carrier or party, date, gross amount, attorney fee %, case costs, liens and payoffs, release, check and disbursement dates, the offer and counter history, and notes.
@@ -1041,6 +1062,14 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - treatment gaps: a late first visit, a 55-day gap and a provider with no visits are flagged, a provider with visits isn't; fixed, it says no gaps; nothing of it is saved;
   - ADR: the next session and its brief worked out, saved by id and loaded back with its dropdowns, a past session still Scheduled flagged (not on a view-only file); MC-34's mediation fills in and the tab is the CM program's;
   - the conflict check: a new client who is a library file's party at fault, a party at fault who is a library client ("Coleman, Andre") or the client on your own saved case are flagged once, with the other file; another trainee's case and a witness aren't; Escalate to attorney logs a Case Note and keeps the warning up as waiting, Cleared by the attorney and Not the same person log one and end it; notes that don't record a decision on that match don't hide it; a library file's party at fault who is your own client is flagged there with the decision buttons; name matching ("Last, First", minors, nicknames, accents, curly apostrophes, hyphenated surnames, Jr., businesses); no library file is flagged against itself or opens with a conflict.
+- **Case Costs, additional insurance, the PD claim and photos** (`.github/scripts/case-costs.cjs`, in the same job). In the page:
+  - none of the new parts moves the case's positional fields; Finance is Case Costs;
+  - the case costs all on BI with no gross yet, then shared 30,000 / 10,000 → $375 / $125, an uneven split still adding up to the total; the BI net and the total take them once; those boxes can't be typed in; with the costs gone they're handed back; a case's typed costs survive opening it after a case with case costs; the Target Settlement shows what's left after the costs;
+  - + Add Insurance: an umbrella policy's settlement worked out on its card (40% fee), its share of the costs, listed on the Settlement tab and in the total gross; saved by id and loaded back with its dropdowns;
+  - the additional policy and the PD claim in the case summary PDF; a second at-fault party's policy holder who is another client flagged by the ⚖ conflict check;
+  - the PD claim card saved by id and loaded back, and in the case summary PDF;
+  - photos: two uploaded as JPGs with their original names kept, named `NO-CASE-ID_Santos-Maria_PD-Photo_<date>.jpg` and `…-2`, captioned, one removed, saved by id and loaded back, renamed with the Case ID, in the Drive backup's list, shown larger; an upload still going when another case is opened stops and adds nothing to it;
+  - a library file's PD claim and mock photos (larger, SPECIMEN; opening one isn't an edit), its PD adjuster in Contacts, its claim back on work saved before the card existed; an intake program can't change a policy's settlement but can fill in the rest of the card; nothing to add or change on the Front Desk's view-only file.
 - **Time & Billing** (`.github/scripts/time.cjs`, in the same job): runs the real time API on an in-memory SQLite database, through the real page. It checks:
   - the tab's place and the header timer: just Start and the Billable / Non-billable dropdown; the dropdown and the Time tab show and change the same choice, a timer started with Non-billable picked is non-billable, another case opened goes back to its default, it works by keyboard, and it switches the running timer;
   - starting, counting, pausing, resuming, and surviving a reload;

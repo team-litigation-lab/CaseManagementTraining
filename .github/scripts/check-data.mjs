@@ -5,7 +5,8 @@
 //   - a case id repeats, or a case is missing a required field;
 //   - a phase, case type, lien type or status, ADR option or facility specialty
 //     isn't one the CMS editor offers (it would load blank), or a critical note
-//     is empty or longer than 500 characters;
+//     is empty or longer than 500 characters; a property damage claim option, or a
+//     PD photo's area, isn't one the CMS has;
 //   - a drill call points at a case that doesn't exist, has an unknown auth
 //     code, an answer index outside its options, or no caller voice ('f'/'m');
 //   - a caller the key says is verified gave details that don't match the file
@@ -42,6 +43,12 @@ const listIn = (src, name) => { const m = src.match(new RegExp(`const ${name} = 
 const LIEN_TYPES = listIn(app, 'LIEN_TYPES'), LIEN_STATUSES = listIn(app, 'LIEN_STATUSES');
 const ADR = { type: listIn(sections, 'ADR_TYPES'), setBy: listIn(sections, 'ADR_SET_BY'), status: listIn(sections, 'ADR_STATUSES'), attend: listIn(sections, 'ADR_ATTEND') };
 if (!LIEN_TYPES.length || !LIEN_STATUSES.length) bad('Could not read LIEN_TYPES / LIEN_STATUSES from app.js; update check-data.mjs');
+// the Insurance tab's property damage claim card (keyed: its dropdowns are named by data-k) and the photo areas pd-photos.js draws
+const pdCard = (html.match(/id="kx-pd-claim"[\s\S]*?data-k="notes"/) || [''])[0];
+const pdOpts = (k) => ((pdCard.match(new RegExp(`<select[^>]*data-k="${k}"[^>]*>([\\s\\S]*?)</select>`)) || ['', ''])[1].match(/<option[^>]*>[^<]*</g) || []).map(o => o.replace(/<option[^>]*>|</g, '').replace(/&#39;|&apos;/g, "'"));
+const PD = { against: pdOpts('against'), liability: pdOpts('liability'), status: pdOpts('status'), outcome: pdOpts('outcome') };
+const PD_AREAS = Object.keys(Function(`return ${(fs.readFileSync(path.join(ROOT, 'pd-photos.js'), 'utf8').match(/const AREAS = (\{[\s\S]*?\});/) || ['', '{}'])[1]}`)());
+if (Object.values(PD).some(l => !l.length) || !PD_AREAS.length) bad('Could not read the property damage claim options (index.html #kx-pd-claim) or the photo areas (pd-photos.js AREAS); update check-data.mjs');
 if (Object.values(ADR).some(l => !l.length)) bad('Could not read the ADR options (ADR_TYPES, ADR_SET_BY, ADR_STATUSES, ADR_ATTEND) from case-sections.js; update check-data.mjs');
 const SPECIALTIES = ((app.match(/<select id="sel-\$\{id\}"[\s\S]*?<\/select>/) || [''])[0].match(/<option[^>]*>([^<]*)</g) || []).map(o => o.replace(/<option[^>]*>|</g, ''));
 const PROGRAMS = new Set(MOCK_PROGRAMS.map(p => p.id));
@@ -76,6 +83,21 @@ for (const c of MOCK_CASES) {
         for (const k of ['notified']) if (l[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(l[k])) bad(`${where}: lien ${k} must be MM/DD/YYYY`);
     }
     if (c.critical !== undefined && (!String(c.critical).trim() || String(c.critical).length > 500)) bad(`${where}: critical note must be 1–500 characters`);
+    if (c.pd && (c.pd.pdClaim || c.pd.pdPhotos)) bad(`${where}: pdClaim / pdPhotos are inside pd: they belong on the case itself`);
+    if (c.pd && c.pd.client && !c.pdClaim) bad(`${where}: a file with the client's vehicle (pd) needs its property damage claim (pdClaim)`);
+    if (c.pdClaim && !(c.pdPhotos || []).length) bad(`${where}: a file with a property damage claim needs its photos (pdPhotos)`);
+    if (c.pdClaim) {
+        const pc = c.pdClaim;
+        for (const k of Object.keys(PD)) if (pc[k] && !PD[k].includes(pc[k])) bad(`${where}: PD claim ${k} "${pc[k]}" isn't an option (${PD[k].join(', ')})`);
+        if (pc.phone && !/^\(555\) 010-\d{4}$/.test(pc.phone)) bad(`${where}: the PD adjuster's phone must be a fictional (555) 010-xxxx number`);
+        if (pc.email && !/@[\w-]+(\.[\w-]+)*\.example\.com$/.test(pc.email)) bad(`${where}: the PD adjuster's email must be at an example.com address`);
+        for (const k of ['limit', 'deductible', 'estimate']) if (pc[k] && !/^\$ [\d,]+\.\d{2}$/.test(pc[k])) bad(`${where}: PD claim ${k} must look like $ 1,234.56`);
+    }
+    for (const ph of c.pdPhotos || []) {
+        if (!['client', 'other'].includes(ph.vehicle)) bad(`${where}: a PD photo's vehicle must be client or other`);
+        if (!PD_AREAS.includes(ph.area)) bad(`${where}: PD photo area "${ph.area}" isn't one pd-photos.js draws (${PD_AREAS.join(', ')})`);
+        if (ph.vehicle === 'other' && !(c.pd && c.pd.tp)) bad(`${where}: a photo of the other vehicle, but the file has no other vehicle (pd.tp)`);
+    }
     for (const a of c.adr || []) {
         for (const k of Object.keys(ADR)) if (a[k] && !ADR[k].includes(a[k])) bad(`${where}: ADR ${k} "${a[k]}" isn't an option (${ADR[k].join(', ')})`);
         if (!a.type || !a.status) bad(`${where}: an ADR entry needs a type and a status`);

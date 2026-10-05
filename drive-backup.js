@@ -3,7 +3,7 @@
    Connect your own Google account (a Gmail address works) once, then "Back up this case's files" copies the
    open case's uploaded files into your Drive:
        LSH CMS Backups / <Case ID> <Client>
-   The files: the Doc Hub attachments, the demand letters and the client's ID, under the names the case shows
+   The files: the Doc Hub attachments, the demand letters, the client's ID and the property damage photos, under the names the case shows
    (the firm's naming: caseFileName in app.js). Backing up again only sends what's new.
 
    The server side is /api/drive-backup (functions/api/drive-backup.js, functions/_google_drive.js). The app
@@ -60,6 +60,7 @@
         document.querySelectorAll('#doc-body .doc-attachment a[data-r2-key], #kx-demand a.kx-dl-link[data-r2-key]')
             .forEach(a => add(a.getAttribute('data-r2-key'), a.getAttribute('download') || a.textContent.replace(/^\S+\s+/, '')));
         const id = clientIdFile(); if (id) add(id.key, id.name || 'Client-ID.jpg');
+        if (window.lshPdPhotos) window.lshPdPhotos.list().forEach(p => add(p.key, p.name || 'PD-Photo.jpg'));   // property damage photos
         return out;
     }
     // files kept inside the case from before uploads went to storage (data: links): these can't be copied
@@ -108,7 +109,7 @@
         } else {
             const n = caseFiles().length, old = oldInline(), id = caseIdentity();
             const what = !id.key ? 'Open a case (or give it a client name) to back up its files.'
-                : n ? `<b>${n} file${n === 1 ? '' : 's'}</b> on this case (Doc Hub, demand letters, the client's ID) → <b>LSH CMS Backups / ${esc(id.name)}</b>.`
+                : n ? `<b>${n} file${n === 1 ? '' : 's'}</b> on this case (Doc Hub, demand letters, the client's ID, PD photos) → <b>LSH CMS Backups / ${esc(id.name)}</b>.`
                 : 'No uploaded files on this case yet.';
             body = `<span class="db-s">${what}${old ? ` ${old} older file${old === 1 ? ' is' : 's are'} kept inside the case and can't be copied: upload ${old === 1 ? 'it' : 'them'} again to back ${old === 1 ? 'it' : 'them'} up.` : ''}<br>
                     <span style="color:#64748b">Signed in as ${esc(D.email || 'your Google account')}${D.lastBackupAt ? ` · last backup ${esc(new Date(D.lastBackupAt.replace(' ', 'T') + 'Z').toLocaleString())}` : ''}${progress ? ` · ${esc(progress)}` : ''}</span></span>
@@ -189,7 +190,7 @@
     let watched = false, later = 0;
     function watchFiles() {
         if (watched || typeof MutationObserver !== 'function') return;
-        const boxes = ['doc-body', 'kx-demand', 'kx-client-id'].map(id => $id(id)).filter(Boolean);
+        const boxes = ['doc-body', 'kx-demand', 'kx-client-id', 'kx-pd-photos'].map(id => $id(id)).filter(Boolean);
         if (!boxes.length) return;
         watched = true;
         const mo = new MutationObserver(() => { if (!$id('drive-bar') || !D || !D.connected) return; clearTimeout(later); later = setTimeout(paint, 150); });

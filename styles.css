@@ -913,3 +913,27 @@
     .gap-head { font-weight: 900; }
     .gap-head span { font-weight: 600; opacity: .8; margin-left: 4px; }
     .gap-box ul { margin: 6px 0 0 18px; padding: 0; list-style: disc; display: flex; flex-direction: column; gap: 3px; }
+
+    /* ===== Case Costs on the settlements, additional insurance, the PD claim and photos ===== */
+    .target-net { margin-top: 3px; font-size: 10.5px; font-weight: 700; color: #15803d; line-height: 1.25; }
+    .target-net:empty { display: none; }
+    [data-s="costs"][data-auto] { background: #f1f5f9 !important; color: #475569; cursor: not-allowed; }
+    #settlement-extra:empty { display: none; }
+    #settlement-extra .se-card { margin: 0 0 14px; }
+    .se-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; padding: 7px 0; border-bottom: 1px dashed #d1fae5; font-size: 12.5px; color: #065f46; }
+    .se-row:last-child { border-bottom: 0; }
+    .ins-settle { margin-top: 6px; padding-top: 4px; border-top: 1px dashed #d1fae5; }
+    .ins-calc:empty { display: none; }
+    .pdp-card { background: #fff; border: 1px solid #e2e8f0; border-left: 8px solid #f59e0b; border-radius: 10px; padding: 22px 24px; box-shadow: 0 1px 2px rgba(15,23,42,.05); }
+    .pdp-add { display: inline-flex; align-items: center; cursor: pointer; margin: 0 !important; }
+    .pdp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin-top: 14px; }
+    .pdp-tile { margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+    .pdp-img { display: block; width: 100%; aspect-ratio: 16 / 10; padding: 0; border: 0; background: #e2e8f0; cursor: zoom-in; }
+    .pdp-img svg, .pdp-img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .pdp-tile figcaption { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; padding: 6px 9px; font-size: 11.5px; color: #334155; line-height: 1.35; }
+    .pdp-acts { display: inline-flex; gap: 4px; flex-shrink: 0; }
+    .pdp-acts button { border: 1px solid #cbd5e1; background: #fff; border-radius: 5px; padding: 0 6px; font-size: 11px; cursor: pointer; color: #475569; }
+    .pdp-acts button:hover { border-color: #f97316; color: #c2410c; }
+    .pdp-empty { grid-column: 1 / -1; font-size: 12.5px; color: #94a3b8; font-style: italic; padding: 10px 2px; }
+    .cid-box.pdp-box { width: min(900px, 100%); }
+    .pdp-big svg, .pdp-big img { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 6px; }

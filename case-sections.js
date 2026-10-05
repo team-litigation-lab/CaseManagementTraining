@@ -175,36 +175,145 @@
         else out.innerHTML = '<span class="kx-hint" style="margin:0;">Enter the pay type, rate and work days missed for an estimate.</span>';
     };
 
-    /* ---------- Settlement: BI and UM/UIM, each on its own, then both together ---------- */
-    const SETTLEMENTS = [['kx-settlement', 'settlement-calc', 'BI'], ['kx-settlement-um', 'settlement-calc-um', 'UM/UIM']];
+    /* ---------- Additional insurance (Insurance tab): other policies that can pay, each settling on its own ---------- */
+    const EXTRA_TYPES = ['Umbrella / excess', 'Second at-fault party (BI)', 'Commercial / business auto', "Homeowner's / renter's", 'Premises / general liability', 'Rideshare (TNC)', "Employer's policy", 'Other'];
+    const SETTLE_STATUSES = ['Not settled', 'Negotiating', 'Offer received', 'Accepted', 'Release signed', 'Check received', 'Disbursed'];
+    const FEES = [['33.33', '33⅓%'], ['40', '40%'], ['25', '25%'], ['35', '35%'], ['0', 'Other / none']];
+    window.addInsurance = function () {
+        const box = $id('kx-insurance-extra'); if (!box) return;
+        const n = box.querySelectorAll('.kx-row').length + 1;
+        const div = document.createElement('div');
+        div.className = 'kx-row pdf-card border-l-4 border-emerald-600 relative bg-white p-5 shadow-sm';
+        div.innerHTML = `${removeBtn}
+            <div class="kx-row-title" style="color:#047857;">Additional Insurance ${n}</div>
+            <div class="grid grid-cols-4 gap-5">
+                <div><label>Coverage Type</label><select class="prof-input" data-x="type">${EXTRA_TYPES.map(t => `<option>${esc(t)}</option>`).join('')}</select></div>
+                <div><label>Carrier</label><div contenteditable="true" data-x="carrier" data-ph="e.g. Summit Casualty (umbrella)"></div></div>
+                <div><label>Policy Holder / Insured</label><div contenteditable="true" data-ph="Who the policy covers" data-fmt="name"></div></div>
+                <div><label>Policy #</label><div contenteditable="true" data-ph="Enter policy #"></div></div>
+                <div><label>Claim #</label><div contenteditable="true" data-ph="Enter claim #"></div></div>
+                <div><label>Adjuster Name</label><div contenteditable="true" data-ph="Adjuster's name" data-fmt="name"></div></div>
+                <div><label>Adjuster Contact</label><div contenteditable="true" data-ph="Phone, email"></div></div>
+                <div><label>Policy Limits</label><div contenteditable="true" data-ph="e.g. $1,000,000"></div></div>
+            </div>
+            <div class="ins-settle">
+                <div class="kx-row-title" style="color:#047857;margin:14px 0 8px;">Settlement on this policy</div>
+                <div class="grid grid-cols-3 gap-5">
+                    <div><label>Settlement Status</label><select class="prof-input" data-x="status">${SETTLE_STATUSES.map(t => `<option>${esc(t)}</option>`).join('')}</select></div>
+                    <div><label>Date Settled</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                    <div><label>Gross Settlement</label><div contenteditable="true" data-s="gross" data-ph="$ 0.00" data-fmt="currency" class="font-black text-emerald-700"></div></div>
+                    <div><label>Attorney Fee %</label><select class="prof-input" data-s="pct">${FEES.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
+                    <div><label>Case Costs</label><div contenteditable="true" data-s="costs" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                    <div><label>Medical Liens / Payoffs</label><div contenteditable="true" data-s="liens" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                </div>
+                <div class="kx-calc ins-calc"></div>
+            </div>
+            <label style="margin-top:10px;">Notes</label>
+            <div contenteditable="true" data-ph="How this policy came up, the tender or offer history, the release…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>`;
+        box.appendChild(div);
+        placeholders(div);
+        // on a locked library file, its settlement is open only to a program with the Settlement tab (training-library.js)
+        const area = $id('capture-area'), settle = $id('pane-settlement');
+        if (area && area.classList.contains('mock-ro') && !(settle && settle.classList.contains('mock-open'))) div.querySelectorAll('.ins-settle select').forEach(s => { s.disabled = true; s.dataset.mockRo = '1'; });
+        window.calcSettlement();
+        const first = div.querySelector('[contenteditable="true"]'); if (first) first.focus();
+    };
+
+    /* ---------- Settlement: BI, UM/UIM and each additional policy, then all together ---------- */
+    // The Case Costs tab's total is taken off the settlements automatically, once: each settlement carries its share
+    // of the costs by its gross (all of it on BI until something has a gross). With no case costs entered there, the
+    // Case Costs boxes are typed as before. The Target Settlement shows what it leaves after the case costs.
     function settlementMath(box) {
         const f = (k) => box.querySelector(`[data-s="${k}"]`);
         const gross = money(f('gross')), pct = parseFloat(f('pct') ? f('pct').value : '0') || 0, costs = money(f('costs')), liens = money(f('liens'));
-        const fee = gross * pct / 100;
+        const fee = pct === 33.33 ? gross / 3 : gross * pct / 100;   // 33⅓% is a third, not 33.33%
         return { gross, pct, fee, costs, liens, net: gross - fee - costs - liens };
+    }
+    const caseCostsTotal = () => Array.from(document.querySelectorAll('#fin-body .exp-field')).reduce((s, el) => s + money(el), 0);
+    window.caseCostsTotal = caseCostsTotal;
+    const extraLabel = (row) => { const t = row.querySelector('[data-x="type"]'), c = row.querySelector('[data-x="carrier"]'); return [t ? t.value : 'Additional insurance', c && c.innerText.trim() ? c.innerText.trim() : ''].filter(Boolean).join(' · '); };
+    function settlements() {
+        const list = [['kx-settlement', 'settlement-calc', 'BI'], ['kx-settlement-um', 'settlement-calc-um', 'UM/UIM']]
+            .map(([b, o, label]) => ({ box: $id(b), out: $id(o), label })).filter(x => x.box);
+        document.querySelectorAll('#kx-insurance-extra > .kx-row').forEach(row => list.push({ box: row, out: row.querySelector('.ins-calc'), label: extraLabel(row), extra: true }));
+        return list;
+    }
+    const AUTO_TIP = 'From the Case Costs tab: the case costs are taken off once, shared by each settlement\'s gross.';
+    function shareCosts(list) {
+        const total = Math.round(caseCostsTotal() * 100) / 100;
+        const fields = list.map(x => x.box.querySelector('[data-s="costs"]'));
+        if (!(total > 0)) {   // nothing on the Case Costs tab: the boxes are typed again (what was typed there before comes back)
+            fields.forEach(f => {
+                if (!f || !f.dataset.auto) return;
+                const typed = f.dataset.typed || '';
+                delete f.dataset.auto; delete f.dataset.typed; f.removeAttribute('title');
+                if (f.innerText.trim() !== typed) f.innerText = typed;
+            });
+            return 0;
+        }
+        const grosses = list.map(x => { const g = x.box.querySelector('[data-s="gross"]'); return money(g); });
+        const sum = grosses.reduce((a, b) => a + b, 0);
+        // shares in cents, the remainder to the largest, so they always add up to the total
+        let cents = list.map((x, i) => (sum > 0 ? Math.floor(Math.round(total * 100) * grosses[i] / sum) : (i === 0 ? Math.round(total * 100) : 0)));
+        const left = Math.round(total * 100) - cents.reduce((a, b) => a + b, 0);
+        if (left) { const big = cents.indexOf(Math.max(...cents)); cents[big] += left; }
+        fields.forEach((f, i) => {
+            if (!f) return;
+            if (!f.dataset.auto) f.dataset.typed = f.innerText.trim();   // a figure typed there, kept to give back if the case costs go
+            const v = fmt$(cents[i] / 100);
+            if (f.innerText.trim() !== v) f.innerText = v;
+            f.dataset.auto = '1'; f.title = AUTO_TIP;
+        });
+        return total;
+    }
+    function paintTargetNet(costs) {
+        const out = $id('target-net'), t = document.querySelector('.target-settlement-display'); if (!out) return;
+        const target = money(t);
+        const html = target && costs ? `After case costs (${fmt$(costs)}): <b>${fmt$(target - costs)}</b>` : '';
+        if (out.innerHTML !== html) out.innerHTML = html;
     }
     window.calcSettlement = function () {
         const sums = { gross: 0, fee: 0, costs: 0, liens: 0, net: 0, n: 0 };
         const unconfirmed = typeof window.lienOpenCount === 'function' ? window.lienOpenCount() : 0;
         const lienWarn = unconfirmed ? `<div class="kx-warn">${unconfirmed} lien${unconfirmed === 1 ? ' on the Liens tab is' : 's on the Liens tab are'} still unconfirmed: the liens figure here may be wrong until the lien letter${unconfirmed === 1 ? '' : 's'} and final amount${unconfirmed === 1 ? '' : 's'} are in.</div>` : '';
-        SETTLEMENTS.forEach(([boxId, outId, label]) => {
-            const box = $id(boxId), out = $id(outId); if (!box || !out) return;
+        const list = settlements(), costs = shareCosts(list);
+        paintTargetNet(costs);
+        const extras = [];
+        list.forEach(({ box, out, label, extra }) => {
             const x = settlementMath(box);
-            if (x.gross) { ['gross', 'fee', 'costs', 'liens', 'net'].forEach(k => { sums[k] += x[k]; }); sums.n++; }
-            out.innerHTML = x.gross ? `<div class="kx-calc-grid">
-                    <div><span>${label} gross</span><b>${fmt$(x.gross)}</b></div><div><span>Attorney fee${x.pct ? ` (${x.pct === 33.33 ? '33⅓' : x.pct}%)` : ''}</span><b>− ${fmt$(x.fee)}</b></div>
-                    <div><span>Case costs</span><b>− ${fmt$(x.costs)}</b></div><div><span>Liens / payoffs</span><b>− ${fmt$(x.liens)}</b></div>
-                    <div class="net"><span>${label} net to client</span><b>${fmt$(x.net)}</b></div></div>
-                    ${x.net < 0 ? '<div class="kx-warn">The fee, costs and liens are more than this settlement: liens may need to be negotiated down.</div>' : ''}${lienWarn}`
-                : `<span class="kx-hint" style="margin:0;">Enter the ${label} gross settlement to see the fee, costs, liens and the net to the client.</span>`;
+            if (x.gross) { ['gross', 'fee', 'costs', 'liens', 'net'].forEach(k => { sums[k] += x[k]; }); sums.n++; if (extra) extras.push({ label, x }); }
+            if (!out) return;
+            const html = x.gross ? `<div class="kx-calc-grid">
+                    <div><span>${esc(extra ? 'Gross' : label + ' gross')}</span><b>${fmt$(x.gross)}</b></div><div><span>Attorney fee${x.pct ? ` (${x.pct === 33.33 ? '33⅓' : x.pct}%)` : ''}</span><b>− ${fmt$(x.fee)}</b></div>
+                    <div><span>Case costs${costs ? ' (shared)' : ''}</span><b>− ${fmt$(x.costs)}</b></div><div><span>Liens / payoffs</span><b>− ${fmt$(x.liens)}</b></div>
+                    <div class="net"><span>${esc(extra ? 'Net to client' : label + ' net to client')}</span><b>${fmt$(x.net)}</b></div></div>
+                    ${x.net < 0 ? '<div class="kx-warn">The fee, costs and liens are more than this settlement: liens may need to be negotiated down.</div>' : ''}${extra ? '' : lienWarn}`
+                : `<span class="kx-hint" style="margin:0;">Enter the ${esc(extra ? 'gross settlement on this policy' : label + ' gross settlement')} to see the fee, costs, liens and the net to the client.</span>`;
+            if (out.innerHTML !== html) out.innerHTML = html;
         });
+        // the additional policies' settlements, listed on the Settlement tab (worked out on the Insurance tab)
+        const ex = $id('settlement-extra');
+        if (ex) {
+            const html = extras.length ? `<div class="pdf-card border-l-8 border-emerald-600 se-card"><div class="section-head" style="background:#ecfdf5;color:#047857;">Additional Insurance Settlements (Insurance tab)</div>
+                ${extras.map(({ label, x }) => `<div class="se-row"><b>${esc(label)}</b><span>gross ${fmt$(x.gross)} − fee ${fmt$(x.fee)} − costs ${fmt$(x.costs)} − liens ${fmt$(x.liens)} = <b>${fmt$(x.net)}</b> net</span></div>`).join('')}</div>` : '';
+            if (ex.innerHTML !== html) ex.innerHTML = html;
+        }
         const tot = $id('settlement-total'); if (!tot) return;
         tot.style.display = sums.n ? '' : 'none';
-        tot.innerHTML = sums.n ? `<div class="kx-calc-grid"><div><span style="color:#cbd5e1;">Total gross (BI + UM/UIM)</span><b style="color:#fff;">${fmt$(sums.gross)}</b></div>
+        const html = sums.n ? `<div class="kx-calc-grid"><div><span style="color:#cbd5e1;">Total gross (${extras.length ? 'all settlements' : 'BI + UM/UIM'})</span><b style="color:#fff;">${fmt$(sums.gross)}</b></div>
                 <div><span style="color:#cbd5e1;">Attorney fees</span><b style="color:#fff;">− ${fmt$(sums.fee)}</b></div><div><span style="color:#cbd5e1;">Case costs</span><b style="color:#fff;">− ${fmt$(sums.costs)}</b></div>
                 <div><span style="color:#cbd5e1;">Liens / payoffs</span><b style="color:#fff;">− ${fmt$(sums.liens)}</b></div>
-                <div class="net"><span style="color:#cbd5e1;">Total net to client</span><b style="color:#86efac;">${fmt$(sums.net)}</b></div></div>` : '';
+                <div class="net"><span style="color:#cbd5e1;">Total net to client</span><b style="color:#86efac;">${fmt$(sums.net)}</b></div></div>
+                ${costs ? `<div class="kx-hint" style="margin:8px 0 0;color:#cbd5e1;">Case costs from the Case Costs tab: ${fmt$(costs)}, taken off once and shared by each settlement's gross.</div>` : ''}` : '';
+        if (tot.innerHTML !== html) tot.innerHTML = html;
     };
+    // a Case Costs box filled from the Case Costs tab isn't typed in (change the costs on that tab)
+    document.addEventListener('beforeinput', (e) => {
+        const f = e.target && e.target.closest && e.target.closest('[data-s="costs"][data-auto]');
+        if (!f || e.defaultPrevented) return;
+        e.preventDefault();
+        toast('Case costs come from the Case Costs tab: add or change them there.', 'info', 4000);
+    }, true);
 
     /* ---------- ADR: mediation, arbitration, settlement conferences ---------- */
     const ADR_TYPES = ['Mediation', 'Arbitration (binding)', 'Arbitration (non-binding)', 'UM / UIM arbitration', 'Settlement conference', 'Other'];
@@ -384,7 +493,9 @@
     function scheduleChecks() { clearTimeout(checksTimer); checksTimer = setTimeout(runChecks, 250); }
     function runChecks() { adrSummary(); window.updateLienSummary(); window.checkTreatmentGaps(); }
     function initChecks() {
-        const watch = ['kx-adr', 'lien-container', 'chrono-container', 'facility-container', 'date-of-loss-field'];
+        const watch = ['kx-adr', 'lien-container', 'chrono-container', 'facility-container', 'date-of-loss-field', 'fin-body', 'kx-insurance-extra'];
+        const target = document.querySelector('.target-settlement-display');
+        if (target) new MutationObserver(scheduleChecks).observe(target, { childList: true, subtree: true, characterData: true });
         const mo = new MutationObserver(scheduleChecks);
         watch.forEach(id => { const el = $id(id); if (el) mo.observe(el, { childList: true, subtree: true, characterData: true }); });
         document.addEventListener('change', (e) => { if (e.target.closest && watch.some(id => e.target.closest('#' + id))) scheduleChecks(); });
@@ -407,8 +518,12 @@
 
     // After a case loads (or the editor is cleared): redraw what depends on the saved sections.
     window.afterKeyedApplied = function () {
+        // a case opened (or the editor cleared): with case costs, its Case Costs boxes hold their shares (it was saved that
+        // way); with none, what's in them was typed. (Not what the last case's boxes were.)
+        const hasCosts = caseCostsTotal() > 0;
+        document.querySelectorAll('[data-s="costs"]').forEach(f => { delete f.dataset.typed; if (hasCosts) f.dataset.auto = '1'; else { delete f.dataset.auto; f.removeAttribute('title'); } });
         window.applyReportKind(); window.calcWages(); window.upgradeLienRows(); runChecks(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
-        ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel', 'kx-adr'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
+        ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel', 'kx-adr', 'kx-insurance-extra'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
     };
 
     /* ---------- Medical Chronology: reorder ---------- */

@@ -161,12 +161,22 @@
                 if ((c.chrono || []).length) { sub('Treatment chronology'); grid(['Date(s) of service', 'Facility', 'Next visit', 'Notes'], c.chrono.map(r => [(r.dos || []).join(' – '), r.facility, r.next, r.notes])); }
                 if (has(c.treatmentNotes)) { sub('Treatment notes'); para(c.treatmentNotes); }
             }
-            if (c.pd) {
+            if (c.pd || c.pdClaim) {
                 heading('Property damage');
-                const v = (x) => x ? [[x.year, x.make, x.model].filter(Boolean).join(' '), x.plate, x.owner, x.driver] : null;
-                grid(['', 'Vehicle', 'Plate', 'Owner', 'Driver'], [['Client vehicle', ...(v(c.pd.client) || [])], ['Other vehicle', ...(v(c.pd.tp) || [])]].filter(r => r.length > 1));
-                const tp = c.pd.tp || {};
-                pairs([['Other driver insured', tp.insured], ['Other carrier / policy', tp.carrierPolicy], ['Other driver phone', tp.driverPhone], ['Other driver insurer', tp.driverInsurer]], 2);
+                if (c.pd) {
+                    const v = (x) => x ? [[x.year, x.make, x.model].filter(Boolean).join(' '), x.plate, x.owner, x.driver] : null;
+                    grid(['', 'Vehicle', 'Plate', 'Owner', 'Driver'], [['Client vehicle', ...(v(c.pd.client) || [])], ['Other vehicle', ...(v(c.pd.tp) || [])]].filter(r => r.length > 1));
+                    const tp = c.pd.tp || {};
+                    pairs([['Other driver insured', tp.insured], ['Other carrier / policy', tp.carrierPolicy], ['Other driver phone', tp.driverPhone], ['Other driver insurer', tp.driverInsurer]], 2);
+                }
+                const pc = c.pdClaim;
+                if (pc) {
+                    sub('Property damage claim (adjuster and coverage)');
+                    pairs([['Claim with', pc.against], ['Carrier', pc.carrier], ['PD claim #', pc.claim], ['Liability', pc.liability], ['PD adjuster', pc.adjuster], ['Phone', pc.phone], ['Email', pc.email], ['Status', pc.status],
+                        ['PD limit', pc.limit], ['Deductible', pc.deductible], ['Rental / loss of use', pc.rental], ['Repair or total loss', pc.outcome], ['Estimate / ACV', pc.estimate], ['Body shop', pc.shop]], 4);
+                    if (has(pc.notes)) para(pc.notes);
+                }
+                if ((c.pdPhotos || []).length) para(`Photos in the CMS (mock, for training): ${c.pdPhotos.map(p => `${p.vehicle === 'other' ? 'other vehicle' : 'client vehicle'}, ${p.area}: ${p.caption || ''}`).join('; ')}.`);
             }
             if (c.lit) {
                 heading('Litigation');

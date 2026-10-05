@@ -154,6 +154,11 @@
         if (d) people.push({ name: d, side: 'other', what: 'the other vehicle\'s driver here' });
         if (o && !sameName(o, d)) people.push({ name: o, side: 'other', what: 'the other vehicle\'s owner here' });
         document.querySelectorAll('#bi-container > *').forEach(card => { const h = nameOf(fieldBy(card, 'Policy Holder')); if (h) people.push({ name: h, side: 'other', what: 'the BI policy holder here' }); });
+        // an additional policy for a second at-fault party (Insurance tab, + Add Insurance)
+        document.querySelectorAll('#kx-insurance-extra > .kx-row').forEach(row => {
+            const t = row.querySelector('[data-x="type"]'); if (!t || !/at-fault/i.test(t.value)) return;
+            const h = nameOf(fieldBy(row, 'Policy Holder')); if (h) people.push({ name: h, side: 'other', what: 'the second at-fault party here' });
+        });
         return people;
     }
     let loadedLib = null;   // a saved case that is someone's work on a library file (its trainingLibraryId): not a conflict with itself

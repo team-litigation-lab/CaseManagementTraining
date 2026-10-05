@@ -111,7 +111,7 @@
                         <div id="attorney-cm-container" class="hdr-people">
                             <div class="hdr-f"><label class="contact-label" for="attorney-field">Attorney:</label><input type="text" id="attorney-field" placeholder="Attorney name" class="hdr-input"></div>
                             <div class="hdr-f"><label class="contact-label" for="case-manager-field">Case Manager:</label><input type="text" id="case-manager-field" placeholder="Case manager name" class="hdr-input"></div>
-                            <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div></div>
+                            <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div><div id="target-net" class="target-net no-print" aria-live="polite"></div></div>
                         </div>
                     </div>
                     <!-- The client's ID (client-id.js): a mock ID for a Training Library client; for any other client, a photo of
@@ -304,6 +304,38 @@
 
                     <div class="flex justify-between items-center"><label class="font-black text-orange-600 text-sm uppercase mb-0">PIP / UM/UIM Coverage Stack</label><button onclick="addPIPUM()" class="add-btn no-print">+ Add Coverage</button></div>
                     <div id="pip-um-container" class="space-y-4"></div>
+
+                    <!-- The property damage claim (the vehicle): its adjuster and the coverage. Saved by id (data-keyed, case-sections.js). -->
+                    <div id="kx-pd-claim" data-keyed class="pdf-card border-l-4 border-amber-500 shadow-sm">
+                        <div class="section-head" style="background:#fffbeb;color:#b45309;">Property Damage Claim: Adjuster &amp; Coverage</div>
+                        <p class="kx-hint no-print">The vehicle claim, separate from the injury claim: who it's with, the PD adjuster, the coverage (property damage limit, deductible, rental) and where the repair or total loss stands. Photos go on the Property Damage tab.</p>
+                        <div class="grid grid-cols-4 gap-5">
+                            <div><label>Claim With</label><select class="prof-input" data-k="against"><option>Not opened yet</option><option>At-fault party's carrier (property damage liability)</option><option>Client's own carrier (collision)</option><option>Client's own carrier (UMPD)</option></select></div>
+                            <div><label>PD Carrier</label><div contenteditable="true" data-k="carrier" data-ph="e.g. Keystone Mutual Insurance"></div></div>
+                            <div><label>PD Claim #</label><div contenteditable="true" data-k="claim" data-ph="Enter PD claim #"></div></div>
+                            <div><label>Liability</label><select class="prof-input" data-k="liability"><option>Pending</option><option>Accepted</option><option>Denied</option><option>Partial</option></select></div>
+                            <div><label>PD Adjuster</label><div contenteditable="true" data-k="adjuster" data-ph="Adjuster's name" data-fmt="name"></div></div>
+                            <div><label>Adjuster Phone</label><div contenteditable="true" data-k="phone" data-ph="(000) 000-0000" data-fmt="phone"></div></div>
+                            <div><label>Adjuster Email</label><div contenteditable="true" data-k="email" data-ph="name@example.com" data-fmt="email"></div></div>
+                            <div><label>Status</label><select class="prof-input" data-k="status"><option>Open</option><option>Estimate done</option><option>In repair</option><option>Repaired and paid</option><option>Total loss paid</option><option>Closed</option></select></div>
+                            <div><label>PD Liability Limit</label><div contenteditable="true" data-k="limit" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Deductible</label><div contenteditable="true" data-k="deductible" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Rental / Loss of Use</label><div contenteditable="true" data-k="rental" data-ph="e.g. $40/day up to 30 days"></div></div>
+                            <div><label>Repair or Total Loss</label><select class="prof-input" data-k="outcome"><option>Not inspected yet</option><option>Repairable</option><option>Total loss</option></select></div>
+                            <div><label>Repair Estimate / ACV</label><div contenteditable="true" data-k="estimate" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div class="col-span-3"><label>Body Shop</label><div contenteditable="true" data-k="shop" data-ph="Shop name, phone"></div></div>
+                        </div>
+                        <label style="margin-top:10px;">PD Notes</label>
+                        <div contenteditable="true" data-k="notes" data-ph="Inspection, estimate and supplements, rental extensions, the property damage release…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>
+                    </div>
+
+                    <!-- Other policies that can pay (umbrella, a second at-fault party, commercial, homeowner's…): each settles on its own;
+                         its settlement is worked out on its card and added on the Settlement tab. Saved by id (case-sections.js). -->
+                    <div class="pdf-card border-l-8 border-emerald-600 shadow-sm">
+                        <div class="flex justify-between items-center mb-2"><div class="section-head" style="margin-bottom:0;background:#ecfdf5;color:#047857;">Additional Insurance (other policies that can pay)</div><button onclick="addInsurance()" class="add-btn no-print">+ Add Insurance</button></div>
+                        <p class="kx-hint no-print">Umbrella or excess, a second at-fault party, a commercial or business policy, homeowner's or renter's, rideshare, an employer's policy… Each one can settle on its own: its settlement is figured on its card and added to the Settlement tab's totals.</p>
+                        <div id="kx-insurance-extra" data-keyed="rows" class="space-y-4"></div>
+                    </div>
                 </div>
             </div>
 
@@ -426,6 +458,17 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                <!-- Property damage photos (pd-photos.js): uploaded photos (kept in the case's file storage, their keys saved here by id),
+                     or a Training Library file's mock photos (drawn from the file, marked SPECIMEN). Not a .pdf-card: the case summary
+                     walks those cards' fields, and this one's hidden field is the photos' list, not something to print. -->
+                <div id="kx-pd-photos" data-keyed class="pdp-card mt-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="section-head" style="margin-bottom:0;background:#fffbeb;color:#b45309;">Property Damage Photos</div>
+                        <label class="add-btn no-print pdp-add" title="Photos of the vehicles, the scene and the damage (JPG, PNG or WebP; each made smaller before it's sent)">⬆ Add Photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="lshPdPhotos.add(this)"></label>
+                    </div>
+                    <div contenteditable="true" data-k="photos" style="display:none" aria-hidden="true"></div>
+                    <div id="pd-photo-grid" class="pdp-grid"></div>
                 </div>
             </div>
 
@@ -622,6 +665,8 @@
                     </div>
                     <div id="settlement-calc-um" class="kx-calc"></div>
                 </div>
+                <!-- the Insurance tab's additional settlements (worked out there, never typed here) -->
+                <div id="settlement-extra"></div>
                 <div id="settlement-total" class="kx-calc" style="background:#0f2148;color:#fff;"></div>
             </div>
 
@@ -1067,6 +1112,7 @@
     <script src="contacts.js"></script>
     <script src="case-sections.js"></script>
     <script src="case-alerts.js"></script>
+    <script src="pd-photos.js"></script>
     <script src="intake-form.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>
