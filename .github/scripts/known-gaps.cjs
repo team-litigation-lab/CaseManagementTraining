@@ -8,7 +8,7 @@
 //     the vacuum endpoint and vacuum-d1.yml are gone;
 //   - Trainer Notes: the trainee's dashboard gets their trainer's note and name, and shows it read only (an Admin
 //     still writes it);
-//   - Saved Reception Simulator calls: /api/drill-results?id= gives a call with its scorecard, review and
+//   - Saved Call Simulator calls: /api/drill-results?id= gives a call with its scorecard, review and
 //     transcript (an Admin any, a trainee only their own), and 🎧 Saved calls → View shows them.
 // Usage: node .github/scripts/known-gaps.cjs   (from the repository root; needs `npm i playwright`, Node 22.13+)
 const { chromium } = require('playwright');
@@ -118,7 +118,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     r = await dash.onRequestGet({ request: req('/api/trainee-dashboard?username=tia', 'bo'), env });
     if (r.status !== 403) fail(`another trainee could read a trainee's dashboard (${r.status})`);
 
-    // ---- saved Reception Simulator calls ----
+    // ---- saved Call Simulator calls ----
     const detail = { mock: 'MC-01', mode: 'practice', score: 82, points: 41, outOf: 50, secs: 95, find: true, items: [{ k: 'intro', s: 5, n: 'Firm and name given.' }, { k: 'auth', s: 3, n: 'No DOB.' }],
         review: { verdict: 'Friendly and clear.', strengths: ['Good greeting'], improve: ['Ask for the DOB'], betterLine: 'May I have your date of birth?' }, note: 'Callback at 3 pm', transcript: 'Caller: Hi, it\'s Maria Santos.\nReceptionist: Thank you for calling.' };
     r = await drills.onRequestPost({ request: req('/api/drill-results', 'tia', { method: 'POST', body: JSON.stringify({ mode: 'practice', program: 'reception', calls: 1, details: [detail], score: 82, findPct: 100, authPct: 60, actionPct: 80, avgSeconds: 95 }) }), env });
@@ -170,7 +170,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     // Admin: the saved calls list and a call opened
     await m.evaluate(() => { exitMasterControl && exitMasterControl(); openFrontDeskDrill(); }); await m.waitForTimeout(800);
     const listA = await m.evaluate(() => { const p = document.getElementById('fdd-panel'); return { saved: /Saved calls/.test(p.textContent), name: /Tia Trainee/.test(p.textContent), view: p.querySelectorAll('.fdd-view').length }; });
-    if (!listA.saved || !listA.name || listA.view !== 1) fail(`an Admin's Reception Simulator has no saved calls list: ${JSON.stringify(listA)}`);
+    if (!listA.saved || !listA.name || listA.view !== 1) fail(`an Admin's Call Simulator has no saved calls list: ${JSON.stringify(listA)}`);
     else { await m.click('#fdd-panel .fdd-view'); await m.waitForTimeout(600); }
     const call = await m.evaluate(() => { const p = document.getElementById('fdd-panel'); const t = p.textContent;
         return { title: /Saved call/.test(t), score: /82\/100/.test(t), transcript: /Thank you for calling/.test(t) && /Maria Santos/.test(t), rubric: p.querySelectorAll('.fdd-rub tr').length, review: /Friendly and clear/.test(t) && /Ask for the DOB/.test(t), note: /Callback at 3 pm/.test(t) }; });
@@ -182,7 +182,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     const t = await open({ username: 'tia', fullName: 'Tia Trainee', batchId: 'B300926', userType: 'Trainee' }, false);
     await t.evaluate(() => openFrontDeskDrill()); await t.waitForTimeout(800);
     const listT = await t.evaluate(() => { const p = document.getElementById('fdd-panel'); return { saved: /Saved calls/.test(p.textContent), view: p.querySelectorAll('.fdd-view').length }; });
-    if (!listT.saved || listT.view !== 1) fail(`a trainee's Reception Simulator has no saved calls: ${JSON.stringify(listT)}`);
+    if (!listT.saved || listT.view !== 1) fail(`a trainee's Call Simulator has no saved calls: ${JSON.stringify(listT)}`);
     await t.evaluate(() => { fddClose(); openTraineeDashboard(); }); await t.waitForTimeout(800);
     const note = await t.evaluate(() => { const box = document.getElementById('trainee-dashboard-page'); const t2 = box.textContent;
         return { note: /Note from your trainer/.test(t2) && /adjuster's phone number/.test(t2), by: /Maria Lopez/.test(t2), textarea: box.querySelectorAll('textarea').length, save: /Save Note/.test(t2) }; });
@@ -191,5 +191,5 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     await browser.close(); server.close();
 
     if (failures.length) { console.error('FAILED:\n - ' + failures.join('\n - ')); process.exit(1); }
-    console.log('Known gaps test passed (no Lock / Unlock; 🧹 Clear old data, Master Account only; Trainer Notes for trainees; saved Reception Simulator calls).');
+    console.log('Known gaps test passed (no Lock / Unlock; 🧹 Clear old data, Master Account only; Trainer Notes for trainees; saved Call Simulator calls).');
 })().catch(e => { console.error(e); process.exit(1); });

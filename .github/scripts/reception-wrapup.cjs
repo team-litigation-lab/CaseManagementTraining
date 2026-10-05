@@ -1,4 +1,4 @@
-// Reception Simulator wrap-up and debrief test (front-desk-drill.js, training-library.js) in a browser; /api/ calls
+// Call Simulator wrap-up and debrief test (front-desk-drill.js, training-library.js) in a browser; /api/ calls
 // are answered by the test, and the clock can be moved on (Date.now) to stand in for silences and slow answers.
 //
 // Checks:

@@ -93,9 +93,9 @@ const SAVED = [
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
 
-    // trainee view: no Training Library button, the 📞 Reception Simulator, no list of everyone's cases, a search bar above the case
+    // trainee view: no Training Library button, the 📞 Call Simulator, no list of everyone's cases, a search bar above the case
     if (await page.isVisible('#lib-open-btn')) fail('trainees can see the Training Library button');
-    if (!(await page.isVisible('#fdd-open-btn'))) fail('trainees don\'t see the 📞 Reception Simulator button');
+    if (!(await page.isVisible('#fdd-open-btn'))) fail('trainees don\'t see the 📞 Call Simulator button');
     if (!(await page.isVisible('#cl-bar-input'))) fail('the search bar above the case is missing');
     if (await page.locator('#repo-list .repo-card').count()) fail('the sidebar lists saved cases');
     await page.evaluate(() => openTrainingLibrary());
@@ -374,7 +374,7 @@ const SAVED = [
     if (await page.locator('#sidebar-actions button:has-text(".ics")').count()) fail('the sidebar still offers .ics downloads');
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
     if (!(await page.locator('#tab-calendar').count())) fail('the Calendar tab is missing');
-    // A trainee's sidebar: the program, their cases, then New Intake and the Reception Simulator. Download Case Summary, My Dashboard
+    // A trainee's sidebar: the program, their cases, then New Intake and the Call Simulator. Download Case Summary, My Dashboard
     // and the Blueprint are at the top right.
     // No Latest Updates, Intake Folder, Firm Calendar or other trainer tools; the case's own actions are at the bottom of the case.
     const side = await page.evaluate(() => ({
@@ -497,7 +497,7 @@ const SAVED = [
         tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
     const work = await admin.evaluate(() => [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id));
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
-    if (work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's sidebar should have New Intake, 📞 Reception Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
+    if (work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Call Simulator') fail(`an Admin's sidebar should have New Intake, 📞 Call Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
     const adminTop = await admin.evaluate(() => [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id));
     if (adminTop.join() !== 'download-summary-btn,dash-open-btn,lbp-open-btn') fail(`an Admin's top right should be Download Case Summary, My Dashboard, Blueprint: ${adminTop.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));

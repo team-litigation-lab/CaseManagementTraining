@@ -15,7 +15,11 @@
    plays without gaps and dropped at once when the trainee
    interrupts.
 
-   LiveCall.start({ callId, onState, onLine, onError })
+   LiveCall.start({ callId, onState, onLine, onError, pickup, nudge })
+     pickup                 a call the trainee places: sent (unseen) as soon as
+                            the line is up, so the other side picks up and speaks first
+     nudge                  what the caller is told after a silent pickup
+                            (default: the receptionist hasn't said anything yet)
      onState(state)         connecting · live · ended
      onLine(role, text, id) role 'you' | 'caller'; the same id is
                             sent again as a line grows
@@ -175,8 +179,10 @@
             call.warn = setTimeout(() => { if (C === call && opts.onNotice) opts.onNotice(`⏱ ${Math.round(lead / 1000)} seconds left on this call. Wrap it up.`); }, ms - lead);
             call.limit = setTimeout(() => { if (C === call) { stop(true); if (opts.onError) opts.onError(`The call reached its ${Math.round(call.maxSeconds / 60)}-minute limit and ended.`, 'TIME'); } }, ms);
         }
+        // A call the trainee places: the other side picks up and speaks first.
+        if (opts.pickup) { sendText(opts.pickup, true); return; }
         // Silence after picking up: the caller says "Hello?" as a caller would.
-        call.kick = setTimeout(() => { if (C === call && !call.heard) sendText('(The receptionist picked up but hasn\'t said anything yet.)', true); }, 4500);
+        call.kick = setTimeout(() => { if (C === call && !call.heard) sendText(opts.nudge || '(The receptionist picked up but hasn\'t said anything yet.)', true); }, 4500);
     }
 
     function handle(call, msg) {

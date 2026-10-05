@@ -150,7 +150,45 @@ const modes = (mine.results || []).map(r => r.mode).sort().join(',');
 check(modes === 'drill,drill,practice', `results came back with modes "${modes}" (expected the old row and the drill as drill, the call as practice)`);
 const pcRow = (mine.results || []).find(r => r.mode === 'practice');
 check(pcRow && pcRow.score === 97 && pcRow.action_pct === 90 && pcRow.full_name === 'Amy Trainee', `the practice call row is wrong: ${JSON.stringify(pcRow)}`);
+// the Call Simulator lines' calls: a practice call ('line') and a graded one keep their mode, and the lists name their line and call
+// (an Admin's list too, which leaves the details out); an unknown mode is a drill
+[st] = await saveResult({ mode: 'line', program: 'FT', calls: 1, score: 82, avgSeconds: 61, details: [{ pack: true, id: 'ft_cal_depo', line: 'Calendar Management Mock Calls', title: 'Defense Counsel Wants to Move a Deposition' }] });
+check(st === 200, `saving a line call failed: ${st}`);
+[st] = await saveResult({ mode: 'graded', program: 'EA', calls: 1, score: 74, details: [{ pack: true, id: 'ea_ex_friday', line: 'Executive Calls', title: 'The Friday 4:00 PM Closing-the-Loop Call' }] });
+[st] = await saveResult({ mode: 'bogus', calls: 1, score: 1, details: [] });
+const lines = await (await results.onRequestGet({ request: new Request('https://cms.test/api/drill-results', { headers: { cookie: 'lsh_session=' + await tok('amy') } }), env })).json();
+const lineRow = (lines.results || []).find(r => r.mode === 'line'), gradedRow = (lines.results || []).find(r => r.mode === 'graded');
+check(lineRow && lineRow.line === 'Calendar Management Mock Calls' && lineRow.title === 'Defense Counsel Wants to Move a Deposition' && lineRow.program === 'FT', `the line call came back wrong: ${JSON.stringify(lineRow)}`);
+check(gradedRow && gradedRow.line === 'Executive Calls' && gradedRow.score === 74 && gradedRow.program === 'EA', `the graded call came back wrong: ${JSON.stringify(gradedRow)}`);
+check((lines.results || []).filter(r => r.mode === 'drill').length === 3 && (lines.results || []).find(r => r.mode === 'drill' && r.line != null) === undefined, 'an unknown mode wasn\'t saved as a drill, or a drill has a line');
+const team = await (await results.onRequestGet({ request: new Request('https://cms.test/api/drill-results', { headers: { cookie: 'lsh_session=' + await tok('boss', 'Admin') } }), env })).json();
+const teamGraded = (team.results || []).find(r => r.mode === 'graded');
+check(team.isAdmin && teamGraded && teamGraded.line === 'Executive Calls' && teamGraded.details === undefined, `an Admin's list doesn't name a graded call's line (or carries its details): ${JSON.stringify(teamGraded)}`);
 
+// 8. a graded call counts in the trainee's course: it's sent to the Portal (/api/call-results, the gateway's secret) with the
+//    trainee's name and batch and the call; practice calls aren't; the Portal down still saves the call here
+{
+    const sent = []; const realFetch = globalThis.fetch;
+    let portalReply = { status: 200, json: { success: true, course: { key: 'ft:callsim:amy-trainee--b1', best: { score: 88, calls: 1 } } } };
+    globalThis.fetch = async (url, init) => {
+        if (String(url).endsWith('/api/call-results')) { sent.push({ url: String(url), key: init.headers['X-Gateway-Key'], body: JSON.parse(init.body) }); return new Response(JSON.stringify(portalReply.json), { status: portalReply.status, headers: { 'Content-Type': 'application/json' } }); }
+        return realFetch(url, init);
+    };
+    const gEnv = Object.assign({}, env, { AI_GATEWAY_SECRET: ' gw-secret ', PORTAL_URL: 'https://portal.test' });
+    const save = async (body) => { const r = await results.onRequestPost({ request: new Request('https://cms.test/api/drill-results', { method: 'POST', headers: { cookie: 'lsh_session=' + await tok('amy'), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), env: gEnv }); return r.json(); };
+    const detail = { pack: true, id: 'ft_cal_depo', program: 'FT', line: 'Calendar Management Mock Calls', title: 'Defense Counsel Wants to Move a Deposition', course: { program: 'FT', lesson: 5 }, verdict: 'Solid.', voice: 'live' };
+    let d1 = await save({ mode: 'graded', program: 'FT', calls: 1, score: 88, avgSeconds: 150, details: [detail] });
+    const s1 = sent[0] || { body: {} };
+    check(sent.length === 1 && s1.url === 'https://portal.test/api/call-results' && s1.key === 'gw-secret', `the graded call wasn't sent to the Portal with the secret: ${JSON.stringify(sent.map(x => ({ url: x.url, key: x.key })))}`);
+    check(s1.body.first === 'Amy' && s1.body.last === 'Trainee' && s1.body.batch === 'B1' && s1.body.call && s1.body.call.id === 'ft_cal_depo' && s1.body.call.lesson === 5 && s1.body.call.score === 88 && s1.body.call.program === 'FT' && s1.body.call.secs === 150, `what's sent to the Portal: ${JSON.stringify(s1.body)}`);
+    check(d1.success && d1.course && d1.course.counted === true && d1.course.lesson === 5 && d1.course.best.score === 88, `the answer doesn't say where the call counted: ${JSON.stringify(d1)}`);
+    await save({ mode: 'line', program: 'FT', calls: 1, score: 70, details: [detail] });
+    check(sent.length === 1, 'a practice call was sent to the Portal');
+    portalReply = { status: 500, json: { success: false, error: 'down' } };
+    d1 = await save({ mode: 'graded', program: 'FT', calls: 1, score: 60, details: [detail] });
+    check(d1.success && d1.course && d1.course.counted === false, `with the Portal down the call should be saved here and say it didn't count yet: ${JSON.stringify(d1)}`);
+    globalThis.fetch = realFetch;
+}
 
 // 9. the shared AI gateway: with AI_GATEWAY_SECRET set, the practice caller's lines and the reviews go to the Portal's gateway
 //    (module "cms", the trainee as the user), this site's own keys are never called, and a budget "wait" from the Portal comes back as 429.
@@ -167,6 +205,10 @@ check(pcRow && pcRow.score === 97 && pcRow.action_pct === 90 && pcRow.full_name 
     check(r.ok && r.text === 'from the gateway', `the gateway answer wasn't used: ${JSON.stringify(r)}`);
     check(gwCalls.length === 1 && gwCalls[0].key === 'gw-secret' && gwCalls[0].body.module === 'cms' && gwCalls[0].body.user === 'amy', `the gateway call is wrong: ${JSON.stringify(gwCalls)}`);
     check(calls.length === 0, 'this site\'s own Gemini keys were called although the gateway is on');
+    // a Call Simulator line's call counts under its line; anything else under cms
+    await ai.callAI(gEnv, { ...req(), user: 'amy', module: 'reception' });
+    await ai.callAI(gEnv, { ...req(), user: 'amy', module: 'portal-admin' });
+    check(gwCalls[1].body.module === 'reception' && gwCalls[2].body.module === 'cms', `a line call's budget module is wrong: ${gwCalls.slice(1).map(c => c.body.module)}`);
     gwReply = { status: 429, json: { success: false, error: 'The AI is busy right now. Wait a few seconds and try again.', scope: 'minute' } };
     r = await ai.callAI(gEnv, { ...req(), user: 'amy' });
     check(!r.ok && r.status === 429 && /busy/.test(r.error), `a budget wait should come back as 429: ${JSON.stringify(r)}`);

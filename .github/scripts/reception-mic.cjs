@@ -1,14 +1,14 @@
-// Reception Simulator test: answering a practice call by microphone (front-desk-drill.js, call-voice.js) in a
+// Call Simulator test: answering a practice call by microphone (front-desk-drill.js, call-voice.js) in a
 // browser. The browser's speech recognition and speech output are stand-ins driven by the test (a headless
 // browser has neither a microphone nor voices); /api/ calls are answered by the test.
 //
-// Checks: the sidebar has 📞 Reception Simulator right before 📊 My Dashboard (Admins and trainees), and it opens the panel;
+// Checks: the sidebar has 📞 Call Simulator right before 📊 My Dashboard (Admins and trainees), and it opens the panel;
 // on the standard voice, hands-free is on by default: the microphone listens from the greeting, the greeting
 // said out loud is sent when the trainee pauses, and after each of the caller's lines it listens again; it is
 // never listening while the caller talks; a silence is tried twice more, then it asks for 🎙 or typing; the 🎙
 // button next to the reply box listens and sends; typing takes over from the microphone; hands-free off stops
 // the automatic listening; a blocked microphone says so and the call goes on typed; Trainee view has no
-// floating bar over the case, its action bar stays at the bottom, and Trainee view shows the Reception Simulator.
+// floating bar over the case, its action bar stays at the bottom, and Trainee view shows the Call Simulator.
 // Usage: node .github/scripts/reception-mic.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -85,11 +85,11 @@ function fakeSpeech() {
         overlap: window.__srOverlap, starts: window.__srStarts }));
     const until = (fn, what, ms = 4000) => page.waitForFunction(fn, null, { timeout: ms }).catch(() => fail(`timed out waiting for ${what}`));
 
-    // 1. the sidebar: 📞 Reception Simulator right before 📊 My Dashboard (Admins)
+    // 1. the sidebar: 📞 Call Simulator right before 📊 My Dashboard (Admins)
     const side = await page.evaluate(() => { const b = document.getElementById('fdd-open-btn'); return { text: b && b.textContent.trim(), shown: !!(b && b.offsetParent), group: b && b.parentElement.id, prev: b && b.previousElementSibling && b.previousElementSibling.id }; });
-    if (side.text !== '📞 Reception Simulator' || !side.shown || side.group !== 'sb-work' || side.prev !== 'nm-open-btn') fail(`the sidebar's Reception Simulator button (after New Intake): ${JSON.stringify(side)}`);
+    if (side.text !== '📞 Call Simulator' || !side.shown || side.group !== 'sb-work' || side.prev !== 'nm-open-btn') fail(`the sidebar's Call Simulator button (after New Intake): ${JSON.stringify(side)}`);
     await page.click('#fdd-open-btn');
-    await page.waitForSelector('#fdd-panel.open', { timeout: 3000 }).catch(() => fail('📞 Reception Simulator did not open the panel'));
+    await page.waitForSelector('#fdd-panel.open', { timeout: 3000 }).catch(() => fail('📞 Call Simulator did not open the panel'));
 
     // 2. a practice call: hands-free listens from the greeting; what's said is sent when the trainee pauses
     await page.click('button:has-text("Take a practice call")');
@@ -160,9 +160,9 @@ function fakeSpeech() {
     await page.waitForTimeout(1000);
     const boxes = await page.evaluate(() => { const r = (id) => { const e = document.getElementById(id); if (!e) return null; const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom }; }; return { tv: r('trainee-view-bar'), bar: r('case-actions-bar'), sim: !!(document.getElementById('fdd-open-btn') || {}).offsetParent, vh: innerHeight }; });
     if (boxes.tv || !boxes.bar || Math.round(boxes.bar.bottom) !== boxes.vh) fail(`Trainee view shows a floating bar, or the case's action bar isn't at the bottom of the screen: ${JSON.stringify(boxes)}`);
-    if (!boxes.sim) fail('Trainee view doesn\'t show the 📞 Reception Simulator button (trainees have it too)');
+    if (!boxes.sim) fail('Trainee view doesn\'t show the 📞 Call Simulator button (trainees have it too)');
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); }
-    console.log('Reception Simulator test passed (sidebar place; greeting, hands-free, 🎙, silence, typing, blocked microphone; Trainee view).');
+    console.log('Call Simulator test passed (sidebar place; greeting, hands-free, 🎙, silence, typing, blocked microphone; Trainee view).');
 })().catch(e => { console.error(e); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); });
