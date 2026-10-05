@@ -1,6 +1,6 @@
 import { CALENDARS, CALENDAR_IDS, buildICS, addDays, firmToday, ensureCalendarTables, visibleEvents } from '../_calendar.js';
 
-// GET /api/calendar-feed?token=<feed token>&cal=reyes|brooks|okafor|firm|all
+// GET /api/calendar-feed?token=<feed token>&cal=reyes|brooks|okafor|firm|all, or several: cal=reyes,brooks
 //
 // A live iCalendar feed of an attorney's calendar, for "subscribe by URL" in
 // Google Calendar or Outlook, so the schedule a trainee builds in the CMS shows
@@ -14,7 +14,10 @@ export async function onRequestGet({ request, env }) {
     const token = String(url.searchParams.get('token') || '');
     const cal = String(url.searchParams.get('cal') || 'all');
     if (!/^[a-f0-9]{32,80}$/.test(token)) return new Response('Unknown calendar link.', { status: 404 });
-    if (cal !== 'all' && !CALENDAR_IDS.includes(cal)) return new Response('Unknown calendar.', { status: 404 });
+    // the calendars the link covers (Firm Calendar → Sync: the ones the person ticked)
+    const picked = cal === 'all' ? CALENDAR_IDS.slice() : [...new Set(cal.split(','))];
+    if (!picked.length || picked.some(c => !CALENDAR_IDS.includes(c))) return new Response('Unknown calendar.', { status: 404 });
+    const everyOne = picked.length === CALENDAR_IDS.length;
     await ensureCalendarTables(env.DB);
     const row = await env.DB.prepare(
         `SELECT f.username, u.user_type, u.status FROM calendar_feeds f JOIN users u ON u.username = f.username WHERE f.token = ?`
@@ -24,13 +27,14 @@ export async function onRequestGet({ request, env }) {
     const today = firmToday();
     const session = { username: row.username, userType: row.user_type };
     let events = await visibleEvents(env.DB, session, addDays(today, -30), addDays(today, 120));
-    if (cal !== 'all') events = events.filter(e => e.calendar === cal || (e.invite || []).includes(cal));
-    const name = cal === 'all' ? 'LSH Firm Calendar (training)' : `${CALENDARS.find(c => c.id === cal).name} (LSH training)`;
+    if (!everyOne) events = events.filter(e => picked.includes(e.calendar) || (e.invite || []).some(c => picked.includes(c)));
+    const name = everyOne ? 'LSH Firm Calendar (training)'
+        : `${picked.map(c => CALENDARS.find(x => x.id === c).name.replace('Atty. ', '')).join(' + ')} (LSH training)`;
     return new Response(buildICS(events, name, url.host), {
         status: 200,
         headers: {
             'Content-Type': 'text/calendar; charset=utf-8',
-            'Content-Disposition': `inline; filename="lsh-${cal}-calendar.ics"`,
+            'Content-Disposition': `inline; filename="lsh-${everyOne ? 'all' : picked.join('-')}-calendar.ics"`,
             'Cache-Control': 'no-cache, max-age=0'
         }
     });
