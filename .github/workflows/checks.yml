@@ -138,6 +138,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/case-fields.cjs
+      - name: Case dates move together (edit the DOL or a date of service; the DOB stays; Undo; only what the user may edit)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/case-dates.cjs
       - name: Contacts (a card for every provider, adjuster, opposing counsel, client and other contact in the case files)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
