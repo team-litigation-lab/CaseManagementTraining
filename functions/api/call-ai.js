@@ -59,7 +59,7 @@ export async function onRequestPost({ request, env }) {
         return json({ success: false, error: 'You\'re making calls very fast. Wait a minute and try again.' }, 429);
     }
     const r = await callAI(env, {
-        system, messages, feature: purpose,
+        system, messages, feature: purpose, user: auth.session.username,
         json: purpose === 'review' && !!body.json,
         maxTokens: purpose === 'review' ? 2000 : 260
     });

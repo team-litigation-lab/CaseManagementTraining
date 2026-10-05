@@ -44,7 +44,7 @@ function keyOrder(env) {
 
 export function aiStatus(env) {
     const names = keyNames(env);
-    return { keys: names.length, resting: names.filter(n => [...rest.keys()].some(k => k.startsWith(n + '|') && resting(k))) };
+    return { gateway: gatewayOn(env), keys: names.length, resting: names.filter(n => [...rest.keys()].some(k => k.startsWith(n + '|') && resting(k))) };
 }
 // For tests: forget which keys are resting.
 export function _resetAi() { rest.clear(); }
@@ -69,9 +69,30 @@ export async function geminiFetch(env, url, init) {
     return relay();
 }
 
+
+// The shared AI gateway (the Main Portal's /api/ai-gateway): when AI_GATEWAY_SECRET is set on this project, every AI call
+// (the practice caller's lines, the call reviews and the live voice tokens) goes there and draws from the Portal's one master
+// key pool and one shared budget with the Standard program and the Portal's own simulators. Without the secret this site still
+// uses its own GEMINI_API_KEY pool below, as before.
+const PORTAL = 'https://cm-training-activity.pages.dev';
+export const gatewayOn = (env) => !!String((env && env.AI_GATEWAY_SECRET) || '').trim();
+export async function gatewayPost(env, body) {
+    const url = String(env.PORTAL_URL || PORTAL).replace(/\/+$/, '') + '/api/ai-gateway';
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Gateway-Key': String(env.AI_GATEWAY_SECRET).trim() }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => null);
+    return { status: res.status, data };
+}
+
 // req: { system, messages: [{ role: 'user'|'model', text }], json, maxTokens, feature: 'caller'|'review' }
 // → { ok, status, text, model, error }
 export async function callAI(env, req) {
+    if (gatewayOn(env)) {
+        try {
+            const g = await gatewayPost(env, { module: 'cms', user: req.user || 'cms', system: req.system, messages: req.messages, json: !!req.json, maxTokens: req.maxTokens });
+            if (g.data && g.data.success) return { ok: true, status: 200, text: g.data.text, model: g.data.model };
+            return { ok: false, status: g.status === 429 ? 429 : g.status === 501 || g.status === 401 ? 502 : (g.status || 502), error: (g.data && g.data.error) || `AI gateway error ${g.status}` };
+        } catch (e) { return { ok: false, status: 502, error: 'The shared AI gateway is unreachable: ' + (e && e.message || e) }; }
+    }
     const names = keyOrder(env).filter(n => !resting(n + '|*'));
     if (!keyNames(env).length) return { ok: false, status: 500, error: 'The practice caller isn\'t set up on this site yet (GEMINI_API_KEY).' };
     const payload = {
