@@ -736,6 +736,7 @@
     const settlementOpen = () => { const p = $id('pane-settlement'); return !!(p && p.classList.contains('mock-open')); };
     const inOpenArea = (t) => { const el = t && (t.nodeType === 3 ? t.parentElement : t); return !!(el && el.closest && el.closest('.mock-open') && areasOpen() && (!el.closest('.ins-settle') || settlementOpen())); };
     const locked = (t) => !!mockId && !freeEdit(t) && ((mockViewOnly && !inUpdates(t)) || (mockMine && !inOpenArea(t)));
+    window.mockLocked = locked;   // case-dates.js moves only the dates the user may edit
     const blockEdit = (e) => { if (locked(e.target)) { e.preventDefault(); e.stopPropagation(); } };
     const blockKeys = (e) => {
         if (!(mockId && (mockViewOnly || mockMine))) return;
