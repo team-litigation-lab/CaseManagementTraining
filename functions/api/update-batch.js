@@ -14,7 +14,7 @@ export async function onRequestPost({ request, env }) {
     const userId = Number(body.userId);
     if (!Number.isInteger(userId) || userId <= 0) return json({ success: false, error: 'Invalid request.' }, 400);
     const batchId = cleanBatchId(body.batchId);
-    if (!batchId) return json({ success: false, error: 'Enter the Batch ID as B and the date the batch started (DDMMYY), e.g. B300926.' }, 400);
+    if (!batchId) return json({ success: false, error: 'Enter the Batch ID as B and the date the batch started (MMDDYY), e.g. B100526.' }, 400);
     const user = await db.prepare(`SELECT id, username, user_type, batch_id FROM users WHERE id = ?`).bind(userId).first();
     if (!user) return json({ success: false, error: 'User not found.' }, 404);
     if (user.user_type !== 'Trainee') return json({ success: false, error: 'Only trainees\' Batch IDs can be changed here.' }, 403);

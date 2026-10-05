@@ -2360,24 +2360,29 @@
         }
 
         /* =========================================================
-           BATCH IDs — B + the date the batch started (DDMMYY), e.g. B300926
+           BATCH IDs — B + the date the batch started (MMDDYY), e.g. B100526 for 5 October 2026
+           (Batch IDs given out before as B + DDMMYY, e.g. B300926, keep working as they are.)
            canonicalBatchId() is canonicalBatch() in functions/_utils.js: what's typed (any capitals,
-           spaces or dashes, the B left off, or the older long forms B30092026 and
-           B30092026-LSHTRAINEE-001) in its one form, or null when it isn't a real date.
+           spaces or dashes, the B left off, a four-digit year, or the older long forms B30092026 and
+           B30092026-LSHTRAINEE-001 without the trainee number) in its one form, or null when it isn't a real date.
            parseBatchId() sorts the Users tab's batches, the newest first.
            ========================================================= */
+        const batchRealDay = (mm, dd, yy) => { const d = new Date(Date.UTC(2000 + yy, mm - 1, dd)); return mm >= 1 && mm <= 12 && dd >= 1 && d.getUTCMonth() === mm - 1; };
         function canonicalBatchId(raw) {
             const v = String(raw || '').toUpperCase().replace(/[\s\-]/g, '');
             const m = /^B?(\d{2})(\d{2})(\d{4}|\d{2})(?:LSH[A-Z]*\d+)?$/.exec(v);
             if (!m) return null;
-            const dd = +m[1], mm = +m[2], yy = m[3].slice(-2);
-            const d = new Date(Date.UTC(2000 + +yy, mm - 1, dd));
-            if (mm < 1 || mm > 12 || dd < 1 || d.getUTCMonth() !== mm - 1) return null;
+            const a = +m[1], b = +m[2], yy = m[3].slice(-2);
+            if (!batchRealDay(a, b, +yy) && !batchRealDay(b, a, +yy)) return null;
             return 'B' + m[1] + m[2] + yy;
         }
         function parseBatchId(batchId) {
             const b = canonicalBatchId(batchId);
-            return b ? { batch: b, sortKey: b.slice(5, 7) + b.slice(3, 5) + b.slice(1, 3) } : null;   // YYMMDD
+            if (!b) return null;
+            // YYMMDD: read as MMDDYY, or as the older DDMMYY when that's the only real date
+            const a = b.slice(1, 3), c = b.slice(3, 5), yy = b.slice(5, 7);
+            const mmdd = batchRealDay(+a, +c, +yy);
+            return { batch: b, sortKey: yy + (mmdd ? a + c : c + a) };
         }
 
         /* =========================================================
@@ -2556,7 +2561,7 @@
         function saveUserBatch(userId, value, box) {
             const msg = box.querySelector('.batch-edit-msg');
             const batchId = canonicalBatchId(value);
-            if (!batchId) { msg.textContent = 'B and the date the batch started (DDMMYY), e.g. B300926.'; return; }
+            if (!batchId) { msg.textContent = 'B and the date the batch started (MMDDYY), e.g. B100526.'; return; }
             box.querySelectorAll('button').forEach(b => { b.disabled = true; });
             msg.textContent = '';
             fetch('/api/update-batch', {

@@ -38,9 +38,9 @@ function submitRegistration() {
     };
     if (!payload.fullName || !payload.batchId || !payload.username) { say("Please fill in your full name, Batch ID and username.", "error"); return; }
     if (!/\s/.test(payload.fullName)) { say("Please enter your first and last name.", "error"); return; }
-    // B + the date the batch started (DDMMYY): B30092026 or b 300926 are read as B300926 (canonicalBatchId in app.js)
+    // B + the date the batch started (MMDDYY; older ones DDMMYY): b 10-05-26 or B10052026 are read as B100526 (canonicalBatchId in app.js)
     const batch = typeof canonicalBatchId === 'function' ? canonicalBatchId(payload.batchId) : payload.batchId;
-    if (!batch) { say("Enter your Batch ID as B and the date your batch started (DDMMYY), e.g. B300926.", "error"); return; }
+    if (!batch) { say("Enter your Batch ID as B and the date your batch started (MMDDYY), e.g. B100526.", "error"); return; }
     payload.batchId = batch;
     const box = document.getElementById('reg-batchid'); if (box) box.value = batch;
 

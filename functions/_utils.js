@@ -460,29 +460,32 @@ export async function upgradePasswordHash(db, userId, plainPassword) {
 /* =====================================================================
    BATCH ID / CREDENTIAL HELPERS
    ===================================================================== */
-// Batch ID format: B<DD><MM><YY>, e.g. B300926: B and the date the batch started, the
-// same as the course batch our training platforms send (_guest.js). Trainees type
-// theirs at registration (register.js); an Admin can change it (update-batch.js).
-// The CMS issues one itself only for a trainer's account (login.js, from the day it's
-// made) and for a registration that has none when it's approved (update-status.js).
-// Batch IDs are shared by a batch, so they aren't unique (the batch_id_counter table
-// that numbered the old long form, B<DDMMYYYY>-LSH<TYPE>-<XXX>, isn't used any more).
+// Batch ID format: B<MM><DD><YY>, e.g. B100526 for 5 October 2026: B and the date the batch
+// started. (Batch IDs given out before October 2026 are B<DD><MM><YY>, e.g. B300926: they're
+// kept as they are, so a batch keeps its ID.) Trainees type theirs at registration
+// (register.js); an Admin can change it (update-batch.js). The CMS issues one itself only
+// for a trainer's account (login.js, from the day it's made) and for a registration that
+// has none when it's approved (update-status.js). Batch IDs are shared by a batch, so
+// they aren't unique (the batch_id_counter table that numbered the old long form,
+// B<DDMMYYYY>-LSH<TYPE>-<XXX>, a per-trainee number, isn't used any more).
 
-// A Batch ID in its one form, B + DDMMYY, from what's typed or stored: capitals,
-// spaces and dashes don't matter, the B may be left off, and the longer forms the CMS
-// used before (B30092026, B30092026-LSHADMIN-003) read as the short one. The date
-// must be a real one. null when it isn't a Batch ID.
+// A Batch ID in its one form, B + six digits, from what's typed or stored: capitals,
+// spaces and dashes don't matter, the B may be left off, a four-digit year is shortened,
+// and the longer forms the CMS used before (B30092026, B30092026-LSHADMIN-003) lose the
+// trainee number. The digits keep their order, so a Batch ID given out as B + DDMMYY
+// reads the same as before. They must be a real date, as MMDDYY (or the older DDMMYY).
+// null when it isn't a Batch ID.
+const realDay = (mm, dd, yy) => { const d = new Date(Date.UTC(2000 + yy, mm - 1, dd)); return mm >= 1 && mm <= 12 && dd >= 1 && d.getUTCMonth() === mm - 1; };
 export function canonicalBatch(raw) {
     const v = String(raw || '').toUpperCase().replace(/[\s\-]/g, '');
     const m = /^B?(\d{2})(\d{2})(\d{4}|\d{2})(?:LSH[A-Z]*\d+)?$/.exec(v);
     if (!m) return null;
-    const dd = +m[1], mm = +m[2], yy = m[3].slice(-2);
-    const d = new Date(Date.UTC(2000 + +yy, mm - 1, dd));
-    if (mm < 1 || mm > 12 || dd < 1 || d.getUTCMonth() !== mm - 1) return null;
+    const a = +m[1], b = +m[2], yy = m[3].slice(-2);
+    if (!realDay(a, b, +yy) && !realDay(b, a, +yy)) return null;
     return `B${m[1]}${m[2]}${yy}`;
 }
 // A Batch ID as a trainee types it at registration, or an Admin edits it (update-batch.js):
-// '' when blank, null when it isn't valid, otherwise B + DDMMYY.
+// '' when blank, null when it isn't valid, otherwise B + six digits (canonicalBatch).
 export function cleanBatchId(raw) {
     if (!String(raw || '').trim()) return '';
     return canonicalBatch(raw);
@@ -491,24 +494,27 @@ export function cleanBatchId(raw) {
 // aren't dates (e.g. a guest account's) compare as typed, ignoring capitals and spacing.
 export const batchKey = (s) => (canonicalBatch(s) || String(s || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
 
-// B + DDMMYY for a date (today when none). db and userType are no longer needed, kept for the callers.
+// B + MMDDYY for a date (today when none). db and userType are no longer needed, kept for the callers.
 export async function nextBatchId(db, userType, referenceDate) {
     const d = referenceDate ? new Date(referenceDate) : new Date();
     const p = (n) => String(n).padStart(2, '0');
-    return `B${p(d.getUTCDate())}${p(d.getUTCMonth() + 1)}${String(d.getUTCFullYear()).slice(-2)}`;
+    return `B${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${String(d.getUTCFullYear()).slice(-2)}`;
 }
 
-// Batch IDs saved in the old long forms, rewritten as B + DDMMYY: B30092026 and
-// B30092026-LSHADMIN-003 become B300926. Runs at sign-in (login.js, guest-login.js),
-// once per worker; after the first run there's nothing left to change.
+// Batch IDs saved in the old long forms, rewritten as B + six digits (the date as it was
+// given, DDMMYY, without the trainee number): B30092026 and B30092026-LSHADMIN-003 become
+// B300926, and B300926-LSHTRAINEE-004 becomes B300926. Runs at sign-in (login.js,
+// guest-login.js, portal-login.js), once per worker; after the first run there's nothing left to change.
 let batchIdsShortened = false;
 export async function shortenOldBatchIds(db) {
     if (batchIdsShortened) return;
     batchIdsShortened = true;
     const set = `batch_id = 'B' || substr(batch_id, 2, 4) || substr(batch_id, 8, 2)`;
     const where = `batch_id GLOB 'B[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' OR batch_id GLOB 'B[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-LSH*'`;
-    try { await db.prepare(`UPDATE users SET ${set} WHERE ${where}`).run(); } catch (e) { batchIdsShortened = false; }
-    try { await db.prepare(`UPDATE heartbeats SET ${set} WHERE ${where}`).run(); } catch (e) { /* no heartbeats table yet */ }
+    // (six digits followed by the trainee number: just the six digits)
+    const set6 = `batch_id = substr(batch_id, 1, 7)`, where6 = `batch_id GLOB 'B[0-9][0-9][0-9][0-9][0-9][0-9]-LSH*'`;
+    try { await db.prepare(`UPDATE users SET ${set} WHERE ${where}`).run(); await db.prepare(`UPDATE users SET ${set6} WHERE ${where6}`).run(); } catch (e) { batchIdsShortened = false; }
+    try { await db.prepare(`UPDATE heartbeats SET ${set} WHERE ${where}`).run(); await db.prepare(`UPDATE heartbeats SET ${set6} WHERE ${where6}`).run(); } catch (e) { /* no heartbeats table yet */ }
 }
 
 /* =====================================================================
