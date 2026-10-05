@@ -95,6 +95,7 @@
         hidden: {}, showDeadlines: true, weekends: false, scope: 'mine',
         panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | {kind:'import', imp} | null
         feedPick: null,   // Sync: the calendars the subscribe link covers (null: all)
+        mode: 'firm',     // 'firm': the Firm Calendar (the case's Calendar tab) | 'attorney': 🗓 Attorney's Calendar (Calendaring), on its own
         dayCache: {}, lastSync: null, poll: null,
         synced: {}        // keys of events already copied to the attorney's Google Calendar ('ev:<id>')
     };
@@ -104,10 +105,15 @@
     let channel = null;
     try { channel = new BroadcastChannel('lsh-firm-calendar'); channel.onmessage = () => { if (S.open) load(true); }; } catch (e) { /* older browsers: polling only */ }
 
-    const cals = () => (S.data && S.data.calendars) || [];
+    // The calendars on show: the Firm Calendar's, or the Attorney's Calendar alone (the Calendaring activity)
+    const ATTY = 'attorney';
+    const attyMode = () => S.mode === 'attorney';
+    const inMode = (e) => (e.calendar === ATTY) === attyMode();
+    const allCals = () => (S.data && S.data.calendars) || [];
+    const cals = () => allCals().filter(c => (c.id === ATTY) === attyMode());
     const GOOGLE_COLOR = '#0b8043';
     const cal = (id) => id === 'google' ? { id, name: `${(S.data && S.data.google && S.data.google.calendarName) || 'Google Calendar'} (Google)`, color: GOOGLE_COLOR }
-        : cals().find(c => c.id === id) || { id, name: id, color: '#64748b' };
+        : allCals().find(c => c.id === id) || { id, name: id, color: '#64748b' };
     const types = () => (S.data && S.data.types) || Object.keys(TYPE_ICON);
     // Trainee view (a trainer previewing): no Admin extras.
     const me = () => { const m = (S.data && S.data.me) || {}; return window.isTraineeView && window.isTraineeView() ? Object.assign({}, m, { admin: false }) : m; };
@@ -131,7 +137,7 @@
     function caseEvents(oc) {
         if (!S.data || !oc) return [];
         const label = oc.label.toLowerCase();
-        return S.data.events.filter(e => e.source !== 'case' && ((oc.ref && e.caseRef === oc.ref) || (!oc.ref && e.caseLabel && e.caseLabel.toLowerCase() === label)))
+        return S.data.events.filter(e => e.source !== 'case' && inMode(e) && ((oc.ref && e.caseRef === oc.ref) || (!oc.ref && e.caseLabel && e.caseLabel.toLowerCase() === label)))
             .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)).slice(0, 6);
     }
     // A new event is linked to the open case, on that case's attorney's calendar ("Unlink" in the form).
@@ -191,7 +197,8 @@
     /* ---------- which events show ---------- */
     function visible() {
         if (!S.data) return [];
-        const evs = S.data.events.concat(googleEvents()).filter(e => [e.calendar].concat(e.invite || []).some(c => !S.hidden[c]));
+        if (attyMode()) return S.data.events.filter(e => e.calendar === ATTY && !S.hidden[ATTY]);   // the attorney's calendar, nothing else
+        const evs = S.data.events.filter(inMode).concat(googleEvents()).filter(e => [e.calendar].concat(e.invite || []).some(c => !S.hidden[c]));
         return S.showDeadlines ? evs.concat(S.data.deadlines || []) : evs;
     }
     // the calendar whose color an event takes: its own, or the first visible invitee
@@ -556,7 +563,8 @@
     function renderHead() {
         const admin = !!me().admin;
         $id('fc-head').innerHTML = `
-            <div style="margin-right:6px"><h2 class="serif">📅 Firm Calendar</h2><div class="fc-sub">LSH Training Law Group · all times Eastern (firm time)</div></div>
+            ${attyMode() ? `<div style="margin-right:6px"><h2 class="serif">🗓 Attorney's Calendar</h2><div class="fc-sub">Calendaring · the attorney's week, the same every week · Eastern (firm time)</div></div>`
+                : `<div style="margin-right:6px"><h2 class="serif">📅 Firm Calendar</h2><div class="fc-sub">LSH Training Law Group · all times Eastern (firm time)</div></div>`}
             <button class="fc-btn" onclick="fcNav(0)">Today</button>
             <button class="fc-btn" onclick="fcNav(-1)" aria-label="Previous">‹</button>
             <button class="fc-btn" onclick="fcNav(1)" aria-label="Next">›</button>
@@ -564,6 +572,7 @@
             ${['week', 'month', 'agenda'].map(v => `<button class="fc-btn ${S.view === v ? 'on' : ''}" onclick="fcView('${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}
             ${S.view === 'week' ? `<button class="fc-btn" onclick="fcWeekends()">${S.weekends ? 'Hide' : 'Show'} weekend</button>` : ''}
             ${admin ? `<button class="fc-btn ${S.scope === 'all' ? 'on' : ''}" onclick="fcScope()" title="Admins: show the events every trainee scheduled">👥 All trainees</button>` : ''}
+            ${admin ? `<button class="fc-btn" data-fc="mode" onclick="fcMode('${attyMode() ? 'firm' : 'attorney'}')">${attyMode() ? '📅 Firm Calendar' : '🗓 Attorney\'s Calendar'}</button>` : ''}
             <span id="fc-live" class="fc-live"></span>
             <div style="margin-left:auto;display:flex;gap:8px">
                 <button class="fc-btn primary" onclick="fcNew()">+ New event</button>
@@ -574,8 +583,23 @@
     }
     function renderRail() {
         const today = S.data ? S.data.today : firmToday();
-        const mine = S.data ? S.data.events.filter(e => e.mine && e.date >= today).sort(byTime).slice(0, 6) : [];
+        const mine = S.data ? S.data.events.filter(e => e.mine && inMode(e) && e.date >= today).sort(byTime).slice(0, 6) : [];
         const oc = openCase();
+        if (attyMode()) {
+            // the Calendaring activity: the attorney's calendar, and what you booked on it
+            $id('fc-rail').innerHTML = `
+            <h4>Calendar</h4>
+            ${cals().map(c => `<div class="fc-layer ${S.hidden[c.id] ? 'off' : ''}" onclick="fcLayer('${c.id}')">
+                <div class="sw" style="background:${c.color};border-color:${c.color}"></div>
+                <div><b>${esc(c.name)}</b><span>${esc(c.role)}</span></div></div>`).join('')}
+            ${me().admin ? `<h4>Weekly schedule</h4><div class="fc-sub" style="margin-bottom:6px">Your edits change it every week, for everyone.</div>
+                <button class="fc-btn" style="width:100%" data-fc="tpl-reset" onclick="fcTemplateReset()">↺ Restore the original schedule</button>` : ''}
+            <h4>Your appointments</h4>
+            ${mine.length ? mine.map(e => `<div class="ag-r" style="border-color:${cal(e.calendar).color};padding:6px" onclick="fcOpen('${esc(e.id)}')">
+                <div class="tt" style="font-size:11.5px"><b>${esc(e.title)}</b><small>${esc(fmtDate(e.date))}${e.allDay ? '' : ' · ' + fmtTime(e.start)}</small></div></div>`).join('')
+                : '<div class="fc-sub">Nothing booked by you in this range yet.</div>'}`;
+            return;
+        }
         $id('fc-rail').innerHTML = `
             <h4>Calendars</h4>
             ${cals().map(c => `<div class="fc-layer ${S.hidden[c.id] ? 'off' : ''}" onclick="fcLayer('${c.id}')">
@@ -709,6 +733,7 @@
         const who = e.source === 'attorney' ? 'On the attorney\'s calendar (their standing schedule). Schedule around it.'
             : e.source === 'google' ? `On the attorney's Google Calendar (${esc(gs().calendarName)}), their real schedule. Change it in Google Calendar.`
             : e.source === 'case' ? 'A date on the saved case. Change it on the case itself.'
+            : e.source === 'template' ? `On the attorney's weekly schedule (every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][e.weekday]}).${me().admin ? ' An edit changes it every week, for everyone.' : ' Book around it.'}`
             : `${e.replaces ? (e.shared ? 'The firm-wide version of ' : `${e.mine ? 'Your' : esc(e.ownerName) + '\'s'} version of `) + (/^std-/.test(e.replaces) ? 'the attorney\'s standing event' : 'a shared event') + (e.mine ? ': delete it to bring the original back. ' : '. ') : ''}`
                 + `${e.imported ? 'Imported from an .ics file by ' : 'Scheduled by '}${esc(e.mine ? 'you' : e.ownerName)}${e.shared ? ' · shared with every trainee' : ''}${e.updatedAt ? ' · ' + esc(String(e.updatedAt).slice(0, 16)) + ' UTC' : ''}`;
         return `<div class="det">
@@ -724,6 +749,7 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
                 ${caseButton(e)}
                 ${e.source === 'user' && !e.readOnly ? `<button class="fc-btn primary" onclick="fcEdit('${esc(e.id)}')">✎ Edit</button><button class="fc-btn danger" onclick="fcDelete('${esc(e.id)}')">🗑 Delete</button>` : ''}
+                ${e.source === 'template' && me().admin ? `<button class="fc-btn primary" data-fc="tpl-edit" onclick="fcEditTemplate('${esc(e.id)}')">✎ Edit the weekly schedule</button><button class="fc-btn danger" data-fc="tpl-delete" onclick="fcDeleteTemplate(${Number(e.templateId) || 0})">🗑 Remove from the schedule</button>` : ''}
                 ${e.source === 'attorney' || (e.source === 'user' && e.readOnly && e.shared) ? `<button class="fc-btn primary" data-fc="version" onclick="fcEditVersion('${esc(e.id)}')" title="Change it on your calendar: your version shows instead of it">✎ Edit</button>` : ''}
                 ${e.source === 'user' ? `<button class="fc-btn" onclick="fcDuplicate('${esc(e.id)}')">⧉ Duplicate</button>` : ''}
                 ${googleLine(e)}
@@ -733,7 +759,8 @@
         const today = S.data ? S.data.today : firmToday();
         const firstShown = cals().find(c => c.id !== 'firm' && !S.hidden[c.id]);
         return Object.assign({ id: '', calendar: firstShown ? firstShown.id : 'reyes', invite: [], title: '', type: 'Client Meeting', date: S.anchor < today ? today : S.anchor,
-            start: '10:00', end: '11:00', allDay: false, location: '', caseRef: '', caseLabel: '', repoId: null, notes: '', shared: false, replaces: '', conflict: null }, over || {});
+            start: '10:00', end: '11:00', allDay: false, location: '', caseRef: '', caseLabel: '', repoId: null, notes: '', shared: false, replaces: '',
+            templateId: 0, asTemplate: false, conflict: null }, over || {});
     }
     function formHtml(f) {
         const pills = (list, isOn, click) => `<div class="pills">${list.map(x => { const on = isOn(x); const color = x.color || '#0f172a';
@@ -742,7 +769,8 @@
         const oc = openCase();
         const conflict = f.conflict;
         return `<div class="det">
-            <div style="display:flex;justify-content:space-between;align-items:center"><h3>${f.id || f.replaces ? '✎ Edit event' : '+ New event'}</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><h3>${f.templateId ? '✎ Weekly schedule' : f.id || f.replaces ? '✎ Edit event' : '+ New event'}</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
+            ${f.templateId || f.asTemplate ? `<div class="note" style="margin-top:4px">On the attorney's <b>weekly schedule</b>: every ${esc(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][weekday(f.date)])}, for everyone.</div>` : ''}
             ${f.replaces && !f.id ? `<div class="note" style="margin-top:4px">Saved as <b>your version</b>${me().admin ? ' (tick <b>Share firm-wide</b> to change it for everyone)' : ': everyone else still sees the original'}.</div>` : ''}
             <label class="fl">Title</label>
             <input class="fi" id="fcf-title" value="${esc(f.title)}" placeholder="e.g. Deposition of the defense driver" oninput="fcSet('title',this.value)">
@@ -750,8 +778,8 @@
             ${pills(types().map(t => ({ id: t, label: `${TYPE_ICON[t] || ''} ${t}` })), x => f.type === x.id, x => `fcSet('type','${x.id}')`)}
             <label class="fl">On whose calendar</label>
             ${pills(calList, x => f.calendar === x.id, x => `fcSet('calendar','${x.id}')`)}
-            <label class="fl">Also invite</label>
-            ${pills(calList.filter(x => x.id !== f.calendar), x => f.invite.includes(x.id), x => `fcInvite('${x.id}')`)}
+            ${calList.filter(x => x.id !== f.calendar).length ? `<label class="fl">Also invite</label>
+            ${pills(calList.filter(x => x.id !== f.calendar), x => f.invite.includes(x.id), x => `fcInvite('${x.id}')`)}` : ''}
             <label class="fl">When (Eastern)</label>
             <div class="row2"><input class="fi" type="date" id="fcf-date" value="${esc(f.date)}" onchange="fcSet('date',this.value)">
                 <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#334155"><input type="checkbox" id="fcf-allday" ${f.allDay ? 'checked' : ''} onchange="fcSet('allDay',this.checked)"> All day</label></div>
@@ -768,14 +796,16 @@
                 <input class="fi" style="margin-top:6px" id="fcf-caselabel" value="" placeholder="…or type the client name" onchange="fcSet('caseLabel',this.value)">`}
             <label class="fl">Notes</label>
             <textarea class="fi" id="fcf-notes" rows="4" placeholder="Who attends, what to bring, dial-in, prep needed…" oninput="fcSet('notes',this.value)">${esc(f.notes)}</textarea>
-            ${me().admin ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;margin-top:10px"><input type="checkbox" ${f.shared ? 'checked' : ''} onchange="fcSet('shared',this.checked)"> Share firm-wide (every trainee sees it on the attorney's calendar)</label>` : ''}
+            ${me().admin && attyMode() && !f.id && !f.templateId ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;margin-top:10px"><input type="checkbox" data-fc="as-template" ${f.asTemplate ? 'checked' : ''} onchange="fcSet('asTemplate',this.checked)"> Add to the weekly schedule (every week, for everyone)</label>` : ''}
+            ${me().admin && !f.templateId && !f.asTemplate ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;margin-top:10px"><input type="checkbox" ${f.shared ? 'checked' : ''} onchange="fcSet('shared',this.checked)"> Share firm-wide (every trainee sees it on the attorney's calendar)</label>` : ''}
             ${conflict ? `<div class="avail bad" style="margin-top:12px"><b>⚠ Double-booking.</b> This overlaps:<ul>${conflict.conflicts.map(c => `<li>${esc(c.title)} (${c.allDay ? 'all day' : fmtTime(c.start) + '–' + fmtTime(c.end)}) · ${esc(c.calendars.map(x => cal(x).name).join(', '))}</li>`).join('')}</ul>
                 ${conflict.suggestions && conflict.suggestions.length ? `Free instead: ${conflict.suggestions.map(s => `<span class="slot" onclick="fcPick('${s.date}','${s.start}','${s.end}')">${esc(fmtDate(s.date))} ${fmtTime(s.start)}</span>`).join('')}` : ''}
                 <div style="margin-top:8px"><button class="fc-btn danger" onclick="fcSave(true)">Book it anyway (double-book)</button></div></div>` : ''}
             <div style="display:flex;gap:8px;margin-top:14px">
-                <button class="fc-btn primary" onclick="fcSave(false)">${f.id || f.replaces ? 'Save changes' : 'Add to calendar'}</button>
+                <button class="fc-btn primary" onclick="fcSave(false)">${f.templateId || f.id || f.replaces ? 'Save changes' : 'Add to calendar'}</button>
                 <button class="fc-btn" onclick="fcClose()">Cancel</button>
                 ${f.id ? `<button class="fc-btn danger" style="margin-left:auto" onclick="fcDelete('${esc(f.id)}')">Delete</button>` : ''}
+                ${f.templateId ? `<button class="fc-btn danger" style="margin-left:auto" onclick="fcDeleteTemplate(${Number(f.templateId)})">Remove</button>` : ''}
             </div></div>`;
     }
     // Live availability for the calendars the event books, for the chosen day.
@@ -788,7 +818,8 @@
         const evs = await dayEvents(f.date);
         if (seq !== availSeq || !$id('fcf-avail')) return;
         const booked = [f.calendar].concat(f.invite);
-        const busy = evs.filter(e => e.id !== f.id && booked.some(c => onCal(e, c)) && !(e.allDay && e.type === 'Deadline')).sort(byTime);
+        // (not the event being changed: itself, the weekly schedule's appointment, or what a version stands in for)
+        const busy = evs.filter(e => e.id !== f.id && !(f.templateId && e.templateId === f.templateId) && !(f.replaces && e.id === f.replaces) && booked.some(c => onCal(e, c)) && !(e.allDay && e.type === 'Deadline')).sort(byTime);
         const hits = busy.filter(e => f.allDay || e.allDay || (mins(f.start) < mins(e.end) && mins(e.start) < mins(f.end)));
         const names = booked.map(c => cal(c).name).join(' + ');
         const list = busy.length ? `<ul>${busy.map(e => `<li${hits.includes(e) ? ' style="font-weight:800"' : ''}>${e.allDay ? 'All day' : fmtTime(e.start) + '–' + fmtTime(e.end)} · ${esc(e.title)}${booked.length > 1 ? ' (' + esc(booked.filter(c => onCal(e, c)).map(c => cal(c).name.replace('Atty. ', '')).join(', ')) + ')' : ''}</li>`).join('')}</ul>` : '';
@@ -811,7 +842,7 @@
         const base = `${location.origin}/api/calendar-feed?token=${encodeURIComponent(token || '')}`;
         const all = cals().map(c => c.id);
         const pick = (S.feedPick || all).filter(id => all.includes(id));
-        const every = pick.length === all.length;
+        const every = pick.length === all.length && !attyMode();   // ('all' is the Firm Calendar's; the Attorney's Calendar is named)
         const name = every ? 'Whole firm calendar' : pick.map(id => cal(id).name.replace('Atty. ', '')).join(' + ');
         const url = `${base}&cal=${every ? 'all' : pick.join(',')}`, webcal = url.replace(/^https?:/, 'webcal:');
         return `<div class="det">
@@ -840,13 +871,17 @@
             <div style="display:flex;justify-content:space-between;align-items:center"><h3>⬆ Import an .ics file</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
             <label class="fl">On whose calendar</label>
             <div class="pills">${calList.map(x => { const on = imp.calendar === x.id; return `<button type="button" class="pill ${on ? 'on' : ''}" style="${on ? 'background:' + x.color : ''}" onclick="fcImportSet('calendar','${x.id}')">${esc(x.label)}</button>`; }).join('')}</div>
-            ${me().admin ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;margin-top:10px"><input type="checkbox" ${imp.shared ? 'checked' : ''} onchange="fcImportSet('shared',this.checked)"> Share firm-wide (every trainee sees them)</label>` : ''}
+            ${me().admin && imp.calendar !== ATTY ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;margin-top:10px"><input type="checkbox" ${imp.shared ? 'checked' : ''} onchange="fcImportSet('shared',this.checked)"> Share firm-wide (every trainee sees them)</label>` : ''}
             <label class="fl">The file</label>
             <label class="fc-btn" style="display:inline-block;cursor:pointer">📄 Choose an .ics file<input type="file" id="fc-ics" accept=".ics,text/calendar" style="display:none" onchange="fcImportFile(this)"></label>
             ${imp.fileName ? `<span class="fc-sub" style="margin-left:8px">${esc(imp.fileName)}</span>` : ''}
             ${imp.busy ? '<div class="fc-sub" style="margin-top:10px">Reading the file…</div>' : ''}
             ${imp.error ? `<div class="avail bad" style="margin-top:10px">${esc(imp.error)}</div>` : ''}
-            ${p ? `<div class="avail ${p.add ? 'ok' : 'bad'}" style="margin-top:10px" data-fc="import-summary">${p.add ? `<b>${p.add} event${p.add === 1 ? '' : 's'}</b> to add${sum.first ? `, ${esc(fmtDate(sum.first))}${sum.last !== sum.first ? ' – ' + esc(fmtDate(sum.last)) : ''}` : ''}${sum.repeating ? ` (${sum.repeating} repeating event${sum.repeating === 1 ? '' : 's'} spread out by date)` : ''}.` : 'Nothing new to add from this file.'}
+            ${p && p.schedule ? `<div class="avail ok" style="margin-top:10px" data-fc="import-summary"><b>${p.add} appointment${p.add === 1 ? '' : 's'} a week</b> become the attorney's weekly schedule, every week, for everyone${sum.replaces ? ` (in place of the ${sum.replaces} there now)` : ''}.
+                ${sum.otherWeeks ? `<div style="margin-top:4px">Left out: ${sum.otherWeeks} one-off event${sum.otherWeeks === 1 ? '' : 's'} from other weeks.</div>` : ''}
+                <ul>${p.preview.map(e => `<li>${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][e.weekday]} ${e.allDay ? 'all day' : fmtTime(e.start) + '–' + fmtTime(e.end)} · ${esc(e.title)}${e.caseRef ? ` <span class="fc-sub">(${esc(e.caseRef)})</span>` : ''}</li>`).join('')}${p.add > p.preview.length ? `<li>…and ${p.add - p.preview.length} more</li>` : ''}</ul></div>
+                <div style="display:flex;gap:8px;margin-top:12px"><button class="fc-btn primary" data-fc="import-go" onclick="fcImportGo()">Set the weekly schedule (${p.add})</button><button class="fc-btn" onclick="fcClose()">Cancel</button></div>`
+            : p ? `<div class="avail ${p.add ? 'ok' : 'bad'}" style="margin-top:10px" data-fc="import-summary">${p.add ? `<b>${p.add} event${p.add === 1 ? '' : 's'}</b> to add${sum.first ? `, ${esc(fmtDate(sum.first))}${sum.last !== sum.first ? ' – ' + esc(fmtDate(sum.last)) : ''}` : ''}${sum.repeating ? ` (${sum.repeating} repeating event${sum.repeating === 1 ? '' : 's'} spread out by date)` : ''}.` : 'Nothing new to add from this file.'}
                 ${skipped.length ? `<div style="margin-top:4px">Left out: ${esc(skipped.join(', '))}.</div>` : ''}
                 ${p.preview.length ? `<ul>${p.preview.map(e => `<li>${esc(when(e))} · ${esc(e.title)}${e.type !== 'Other' ? ` <span class="fc-sub">(${esc(e.type)})</span>` : ''}</li>`).join('')}${p.add > p.preview.length ? `<li>…and ${p.add - p.preview.length} more</li>` : ''}</ul>` : ''}</div>
                 ${p.add ? `<div style="display:flex;gap:8px;margin-top:12px"><button class="fc-btn primary" data-fc="import-go" onclick="fcImportGo()">Import ${p.add} event${p.add === 1 ? '' : 's'} to ${esc(cal(imp.calendar).name)}</button><button class="fc-btn" onclick="fcClose()">Cancel</button></div>` : ''}` : ''}
@@ -859,6 +894,7 @@
     function enter(opts) {
         if (!signedIn()) { toast('Sign in to use the Firm Calendar.', 'error'); return; }
         ensureDom();
+        setMode(pendingMode || 'firm'); pendingMode = null;   // the case's Calendar tab: the Firm Calendar; 🗓 Attorney's Calendar: that one alone
         const first = !S.open;
         S.open = true;
         if (first) {
@@ -896,6 +932,40 @@
     window.fcClose = function () { S.panel = null; render(); };
     window.fcOpen = function (id) { const e = findEvent(id); if (!e) return; S.panel = { kind: 'detail', ev: e }; render(); };
     window.fcSubscribe = function () { S.panel = { kind: 'subscribe' }; render(); };
+    // 🗓 Attorney's Calendar (the Calendaring activity) / 📅 Firm Calendar
+    let pendingMode = null;
+    function setMode(m) {
+        const mode = m === 'attorney' ? 'attorney' : 'firm';
+        if (S.mode !== mode) { S.mode = mode; S.panel = null; S.feedPick = null; S._scrolled = false; }
+    }
+    window.fcMode = function (m) { setMode(m); if (S.open) { render(); load(true); } };
+    window.openAttorneyCalendar = function () {
+        pendingMode = 'attorney';
+        if (S.open) { pendingMode = null; window.fcMode('attorney'); return; }
+        window.openFirmCalendar();
+    };
+    window.fcEditTemplate = function (id) {
+        const e = findEvent(id); if (!e || !me().admin) return;
+        S.panel = { kind: 'form', form: blankForm(Object.assign({}, e, { id: '', invite: [], templateId: e.templateId, replaces: '', shared: false })) }; render();
+    };
+    window.fcDeleteTemplate = async function (tid) {
+        if (!tid || !confirm('Take this appointment off the attorney\'s weekly schedule? It goes from every week, for everyone.')) return;
+        const res = await fetch('/api/calendar?template=' + encodeURIComponent(tid), { method: 'DELETE', credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        if (!data.success) { toast(data.error || 'Could not remove it.', 'error'); return; }
+        toast('Removed from the weekly schedule.', 'success'); S.panel = null; S.dayCache = {};
+        if (channel) channel.postMessage('changed');
+        await load(true); render();
+    };
+    window.fcTemplateReset = async function () {
+        if (!confirm('Restore the attorney\'s weekly schedule as it came? Your changes to the schedule are undone (the appointments trainees booked stay).')) return;
+        const res = await fetch('/api/calendar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'template-reset' }) });
+        const data = await res.json().catch(() => ({}));
+        if (!data.success) { toast(data.error || 'Could not restore it.', 'error'); return; }
+        toast('The original weekly schedule is back.', 'success'); S.dayCache = {};
+        if (channel) channel.postMessage('changed');
+        await load(true); render();
+    };
     window.fcFeedPick = function (id) {
         const all = cals().map(c => c.id), cur = (S.feedPick || all).filter(x => all.includes(x));
         S.feedPick = id === '*' ? (cur.length === all.length ? [] : all) : cur.includes(id) ? cur.filter(x => x !== id) : all.filter(x => x === id || cur.includes(x));
@@ -939,8 +1009,10 @@
     };
     window.fcImportGo = async function () {
         const imp = S.panel && S.panel.imp; if (!imp) return;
+        if (imp.preview && imp.preview.schedule && !confirm(`Set the attorney's weekly schedule from this file? It takes the place of the schedule there now, every week, for everyone.`)) return;
         const d = await importPost(false); if (!d) return;
-        toast(`${d.added} event${d.added === 1 ? '' : 's'} imported to ${cal(d.calendar).name}'s calendar.`, 'success', 5000);
+        toast(d.schedule ? `Weekly schedule set: ${d.added} appointment${d.added === 1 ? '' : 's'} a week.` : `${d.added} event${d.added === 1 ? '' : 's'} imported to ${cal(d.calendar).name}'s calendar.`, 'success', 5000);
+        if (d.schedule) S.dayCache = {};
         if (channel) channel.postMessage('changed');
         const first = d.summary && d.summary.first;
         S.panel = null;
@@ -993,7 +1065,7 @@
         if (k === 'type' && v === 'Out of Office') f.allDay = true;
         if (k === 'end' || k === 'start') { const e = $id('fcf-end'); if (e && e.value !== f.end) e.value = f.end; }
         if (['title', 'location', 'notes'].includes(k)) { if (k === 'title') renderMain(); return; }
-        formChanged(['type', 'calendar', 'allDay', 'caseLabel', 'shared'].includes(k));
+        formChanged(['type', 'calendar', 'allDay', 'caseLabel', 'shared', 'asTemplate'].includes(k));
     };
     window.fcInvite = function (id) { const f = S.panel.form; f.invite = f.invite.includes(id) ? f.invite.filter(x => x !== id) : f.invite.concat(id); f.conflict = null; formChanged(true); };
     window.fcDuration = function (m) { const f = S.panel.form; f.end = hhmm(Math.min(mins(f.start) + m, 23 * 60 + 45)); f.conflict = null; formChanged(true); };
@@ -1006,6 +1078,19 @@
         if (!f.title.trim()) { toast('Give the event a title.', 'error'); const t = $id('fcf-title'); if (t) t.focus(); return; }
         const event = { calendar: f.calendar, invite: f.invite, title: f.title, type: f.type, date: f.date, start: f.start, end: f.end, allDay: f.allDay,
             location: f.location, caseRef: f.caseRef, caseLabel: f.caseLabel, notes: f.notes, shared: f.shared, replaces: f.replaces || '' };
+        if (f.templateId || f.asTemplate) {   // Admins: the attorney's weekly schedule (every week, for everyone)
+            try {
+                const res = await fetch('/api/calendar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'template', id: f.templateId || undefined, weekday: weekday(f.date), event }) });
+                const data = await res.json();
+                if (!data.success) { toast(data.error || 'Could not save the schedule.', 'error'); return; }
+                toast(`Weekly schedule ${f.templateId ? 'updated' : 'added to'}: every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][data.weekday]}.`, 'success');
+                S.panel = null; S.dayCache = {};
+                if (channel) channel.postMessage('changed');
+                await load(true); render();
+            } catch (e) { toast('Could not reach the server. Try again.', 'error'); }
+            return;
+        }
         try {
             const res = await fetch('/api/calendar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: f.id || undefined, event, force: !!force }) });
@@ -1071,7 +1156,11 @@
         window.applySessionUI = function () {
             const r = baseApply.apply(this, arguments);
             if (!signedIn()) { leave(); S.data = null; S.loadedKey = ''; S.panel = null; S.synced = {}; gCals = null; gPicking = false; G = { key: '', at: 0, items: [], loading: false, error: '' }; }
-            else if (new URLSearchParams(location.search).get('calendar') && !window.__fcOpened) { window.__fcOpened = true; setTimeout(() => window.openFirmCalendar(), 80); }
+            else if (new URLSearchParams(location.search).get('calendar') && !window.__fcOpened) {
+                window.__fcOpened = true;
+                const which = new URLSearchParams(location.search).get('calendar');
+                setTimeout(() => (which === 'attorney' ? window.openAttorneyCalendar() : window.openFirmCalendar()), 80);
+            }
             return r;
         };
     }

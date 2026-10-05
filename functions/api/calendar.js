@@ -3,7 +3,8 @@ import {
     CALENDARS, CALENDAR_IDS, EVENT_TYPES, conflictsFor, freeSlots, cleanEvent, isDate, addDays, daysBetween, firmToday,
     ensureCalendarTables, rowToEvent, visibleEvents, importTrainingEvents, replaceable
 } from '../_calendar.js';
-import { parseICS } from '../_ics.js';
+import { parseICS, weeklySchedule } from '../_ics.js';
+import { ATTORNEY_CAL, resetTemplate, replaceTemplate, seedFor } from '../_attorney_calendar.js';
 import { ensureGoogleTables, googleStatus } from '../_google_calendar.js';
 
 // Firm Calendar (firm-calendar.js): the attorneys' calendars inside the CMS.
@@ -28,9 +29,15 @@ import { ensureGoogleTables, googleStatus } from '../_google_calendar.js';
 //          second edit updates it. Deleting the version brings the original back.
 //   POST   /api/calendar  {action: 'feed', rotate?}   create (or replace) the
 //          caller's feed token for /api/calendar-feed.
+//   POST   /api/calendar  {action: 'template', id?, weekday, event}   Admins: add or change an
+//          appointment on the Attorney's Calendar's weekly schedule (functions/_attorney_calendar.js):
+//          it changes every week, for everyone. {action: 'template-reset'}: back to the schedule as it came.
+//   DELETE /api/calendar?template=<id>   Admins: take an appointment off the weekly schedule.
 //   POST   /api/calendar  {action: 'import', ics, calendar, shared?, dryRun?}   the events
 //          in an .ics file (functions/_ics.js), put on one of the firm's calendars as the
-//          caller's events. dryRun: only say what would be added. Events already imported
+//          caller's events. dryRun: only say what would be added. An Admin's import onto the
+//          Attorney's Calendar sets its weekly schedule instead (each appointment on its day of the
+//          week, every week, in place of the schedule there now). Events already imported
 //          from the file (same UID and time) are skipped, so importing it again adds nothing twice.
 //   DELETE /api/calendar?id=<id>
 //
@@ -152,6 +159,11 @@ export async function onRequestPost({ request, env }) {
         return json({ success: true, feedToken: await feedToken(env.DB, session.username, !!body.rotate) });
     }
     if (body && body.action === 'import') return importIcs(env.DB, session, body, admin);
+    if (body && (body.action === 'template' || body.action === 'template-reset')) {
+        if (!admin) return json({ success: false, error: 'Only an Admin changes the attorney\'s weekly schedule. Add your own appointment instead.' }, 403);
+        if (body.action === 'template-reset') { await resetTemplate(env.DB); return json({ success: true }); }
+        return saveTemplate(env.DB, session, body);
+    }
 
     const { event, error } = cleanEvent(body && body.event);
     if (error) return json({ success: false, error }, 400);
@@ -215,6 +227,7 @@ async function importIcs(db, session, body, admin) {
     if (!/BEGIN:VCALENDAR/i.test(ics) || !/BEGIN:VEVENT/i.test(ics)) return json({ success: false, error: 'That isn\'t a calendar file with events in it (.ics).' }, 400);
     const calendar = CALENDAR_IDS.includes(body.calendar) ? body.calendar : null;
     if (!calendar) return json({ success: false, error: 'Pick whose calendar the events go on.' }, 400);
+    if (calendar === ATTORNEY_CAL && admin) return importSchedule(db, session, ics, !!body.dryRun);
     const shared = admin && !!body.shared;
     const parsed = parseICS(ics, { today: firmToday() });
     const { results } = await db.prepare(`SELECT ext_uid FROM calendar_events WHERE owner_username = ? AND ext_uid <> ''`).bind(session.username).all();
@@ -242,10 +255,59 @@ async function importIcs(db, session, body, admin) {
     return json({ success: true, added: take.length, calendar, summary });
 }
 
+// An Admin's import onto the Attorney's Calendar: the file is the attorney's week. Its appointments, each on its
+// day of the week, become the weekly schedule (every week, for everyone) in place of the one there now.
+async function importSchedule(db, session, ics, dryRun) {
+    const parsed = weeklySchedule(ics);
+    const rows = parsed.rows.map(r => {
+        const s = seedFor(r.title, r.notes);
+        return s ? Object.assign({}, r, { type: s.sameTitle ? s.type : r.type, caseRef: s.caseRef, caseLabel: s.caseLabel }) : r;
+    });
+    if (!rows.length) return json({ success: false, error: 'There are no appointments in that file.' }, 400);
+    const now = await db.prepare(`SELECT COUNT(*) AS n FROM calendar_template`).first();
+    const summary = { found: parsed.found, cancelled: parsed.cancelled, invalid: parsed.invalid, twice: parsed.twice, otherWeeks: parsed.otherWeeks,
+        week: parsed.week, replaces: (now && now.n) || 0, cases: rows.filter(r => r.caseRef).length };
+    if (dryRun) {
+        return json({ success: true, dryRun: true, schedule: true, add: rows.length, summary,
+            preview: rows.slice(0, 40).map(r => ({ weekday: r.weekday, title: r.title, type: r.type, start: r.start, end: r.end, allDay: r.allDay, caseRef: r.caseRef || '' })) });
+    }
+    await replaceTemplate(db, rows, session.fullName || session.username);
+    return json({ success: true, schedule: true, added: rows.length, calendar: ATTORNEY_CAL, summary });
+}
+
+// An appointment on the Attorney's Calendar's weekly schedule (Admins): every week, for everyone.
+async function saveTemplate(db, session, body) {
+    const { event, error } = cleanEvent(Object.assign({}, body.event, { calendar: ATTORNEY_CAL }));
+    if (error) return json({ success: false, error }, 400);
+    const weekday = Number.isInteger(body.weekday) ? body.weekday : new Date(event.date + 'T00:00:00Z').getUTCDay();
+    if (!(weekday >= 0 && weekday <= 6)) return json({ success: false, error: 'Pick the day of the week.' }, 400);
+    const values = [weekday, event.allDay ? '' : event.start, event.allDay ? '' : event.end, event.allDay ? 1 : 0, event.title, event.type,
+        event.location, event.caseRef, event.caseLabel, event.notes, session.fullName || session.username];
+    const id = Number(body.id) || 0;
+    if (id) {
+        const row = await db.prepare(`SELECT id FROM calendar_template WHERE id = ?`).bind(id).first();
+        if (!row) return json({ success: false, error: 'That appointment is no longer on the schedule.' }, 404);
+        await db.prepare(`UPDATE calendar_template SET weekday = ?, start_time = ?, end_time = ?, all_day = ?, title = ?, type = ?, location = ?, case_ref = ?,
+            case_label = ?, notes = ?, updated_by = ?, updated_at = datetime('now') WHERE id = ?`).bind(...values, id).run();
+        return json({ success: true, id, weekday });
+    }
+    await db.prepare(`INSERT INTO calendar_template (weekday, start_time, end_time, all_day, title, type, location, case_ref, case_label, notes, updated_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(...values).run();
+    const made = await db.prepare(`SELECT MAX(id) AS id FROM calendar_template`).first();
+    return json({ success: true, id: made && made.id, weekday });
+}
+
 export async function onRequestDelete({ request, env }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
     const { session } = auth;
+    const tpl = new URL(request.url).searchParams.get('template');
+    if (tpl != null) {
+        if (session.userType !== 'Admin') return json({ success: false, error: 'Only an Admin changes the attorney\'s weekly schedule.' }, 403);
+        await ensureCalendarTables(env.DB);
+        await env.DB.prepare(`DELETE FROM calendar_template WHERE id = ?`).bind(Number(tpl) || 0).run();
+        return json({ success: true });
+    }
     const id = String(new URL(request.url).searchParams.get('id') || '').slice(0, 64);
     if (!id) return json({ success: false, error: 'Which event?' }, 400);
     await ensureCalendarTables(env.DB);

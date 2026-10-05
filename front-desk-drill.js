@@ -239,10 +239,11 @@
     document.head.appendChild(css);
 
     function buildUI() {
-        // 📞 Reception Simulator: in the sidebar after 📝 New Intake (index.html, #sb-work)
-        const work = $id('sb-work');
+        // 📞 Reception Simulator: in the sidebar after 📝 New Intake (index.html, #sb-work; 🗓 Attorney's Calendar comes next)
+        const work = $id('sb-work'), intake = $id('nm-open-btn');
         if (work && !$id('fdd-open-btn')) {
-            work.insertAdjacentHTML('beforeend', `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Reception Simulator</button>`);
+            const html = `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Reception Simulator</button>`;
+            if (intake && intake.parentElement === work) intake.insertAdjacentHTML('afterend', html); else work.insertAdjacentHTML('beforeend', html);
         }
         // Everyone signed in gets it, trainees too (their calls and scores are saved for their trainer);
         // a course link with ?drill=1 opens it as well.
