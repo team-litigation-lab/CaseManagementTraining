@@ -15,8 +15,11 @@
 //     exception and a moved occurrence, cancelled and far-off events left out, a preview (dryRun) that
 //     adds nothing, then the events on the chosen calendar as the trainee's own, nothing added twice
 //     on a second import, a trainee can't share firm-wide (an Admin can), bad files refused;
+//   - deleting an import: the trainee's imports listed (file, calendar, events, dates; earlier unnamed ones per
+//     calendar), 🗑 Delete removes all of one import's events and nothing else, another trainee can't, bad
+//     requests refused, the file can be imported again;
 //   - in the page: ✎ Edit on a standing event makes your version, the Sync panel's calendar picks
-//     change the link, ⬆ Import .ics previews and imports a file; no <select> or contenteditable added.
+//     change the link, ⬆ Import .ics previews and imports a file and 🗑 Delete removes it; no <select> or contenteditable added.
 // Usage: node .github/scripts/calendar-more.cjs   (from the repository root; needs playwright, Node 22.13+)
 const { chromium } = require('playwright');
 const { DatabaseSync } = require('node:sqlite');
@@ -178,6 +181,37 @@ const compact = (s) => s.replace(/-/g, '');
         if (r.status !== code) fail(`an import with ${why} should be refused with ${code} (got ${r.status})`);
     }
 
+    /* ---------- 3b. deleting an import ---------- */
+    let imps = (await api('GET', '?imports=1')).data.imports;
+    const reyesImp = imps.find(x => x.calendar === 'reyes' && x.importId);
+    if (!reyesImp || reyesImp.events !== want || reyesImp.fileName !== 'calendar.ics' || reyesImp.first !== dMon) fail(`the trainee's import should be listed with its events and dates: ${JSON.stringify(imps)}`);
+    // events imported before imports were named: one "earlier" import per calendar
+    sql.prepare(`INSERT INTO calendar_events (id, owner_username, owner_name, shared, calendar, invitees, title, type, date, ext_uid) VALUES
+        ('old-1', 'ci', 'CI Trainee', 0, 'brooks', '[]', 'Old import 1', 'Other', ?, 'old-a'), ('old-2', 'ci', 'CI Trainee', 0, 'brooks', '[]', 'Old import 2', 'Other', ?, 'old-b'),
+        ('old-3', 'ci', 'CI Trainee', 0, 'okafor', '[]', 'Old import 3', 'Other', ?, 'old-c')`).run(dMon, dCall, dCall);
+    imps = (await api('GET', '?imports=1')).data.imports;
+    const earlier = imps.find(x => x.calendar === 'brooks' && !x.importId);
+    if (!earlier || earlier.events !== 2 || earlier.fileName) fail(`earlier imports should be listed per calendar: ${JSON.stringify(imps)}`);
+    if ((await api('GET', '?imports=1', null, 'other')).data.imports.length) fail('another trainee sees this trainee\'s imports');
+    r = await api('DELETE', `?import=${reyesImp.importId}`, null, 'other');
+    if (sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE import_id = ?`).get(reyesImp.importId).n !== want) fail('another trainee deleted this trainee\'s import');
+    for (const q of ['?import=bad!', '?import=earlier', '?import=earlier&calendar=nobody']) if ((await api('DELETE', q)).status !== 400) fail(`a delete with ${q} should be refused`);
+    // the earlier imports on Brooks's calendar: those only (not Okafor's, not a named import)
+    r = await api('DELETE', '?import=earlier&calendar=brooks');
+    if (!r.data.success || r.data.deleted !== 2 || sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE id IN ('old-1', 'old-2')`).get().n) fail(`deleting the earlier imports on Brooks's calendar: ${JSON.stringify(r.data)}`);
+    if (!sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE id = 'old-3'`).get().n || sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE import_id = ?`).get(reyesImp.importId).n !== want)
+        fail('deleting the earlier imports on one calendar deleted other imports');
+    await api('DELETE', '?import=earlier&calendar=okafor');
+    const others = sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci' AND (import_id <> ? OR ext_uid = '')`).get(reyesImp.importId).n;
+    r = await api('DELETE', `?import=${reyesImp.importId}`);
+    if (!r.data.success || r.data.deleted !== want || sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE import_id = ?`).get(reyesImp.importId).n) fail(`deleting an import should delete its ${want} events: ${JSON.stringify(r.data)}`);
+    if (sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci' AND (import_id <> ? OR ext_uid = '')`).get(reyesImp.importId).n !== others) fail('deleting an import touched other events');
+    if ((await api('GET', `?from=${d1st}&to=${d1st}`)).data.events.some(e => e.mine && /Deposition of Dr\. Lee/.test(e.title)) || (await api('GET', '?imports=1')).data.imports.some(x => x.calendar === 'reyes')) fail('a deleted import should be gone from the calendar and the list');
+    // imported again: the same file comes back (nothing is remembered as already imported)
+    r = await api('POST', '', { action: 'import', ics, calendar: 'reyes', fileName: 'outlook.ics' });
+    if (!r.data.success || r.data.added !== want || !r.data.importId) fail(`a deleted import can be imported again: ${JSON.stringify(r.data)}`);
+    await api('DELETE', `?import=${r.data.importId}`);
+
     /* ---------- 4. in the page ---------- */
     await new Promise(res => server.listen(0, res));
     const base = `http://localhost:${server.address().port}/`;
@@ -245,10 +279,20 @@ const compact = (s) => s.replace(/-/g, '');
     await page.evaluate((d) => fcGoWeek(d), d1st); await page.waitForTimeout(800);
     await shot('more-4-imported');
     if (!(await page.locator('#fc-main .ev:has-text("Deposition of Dr. Park")').count())) fail('the imported deposition isn\'t on the week grid');
+    // 🗑 Delete the import from the import panel
+    await page.click('#fc-head [data-fc="import"]'); await page.waitForSelector('#fc-side [data-fc="imports"]', { timeout: 5000 }).catch(() => {});
+    await shot('more-5-your-imports');
+    const listed = await page.evaluate(() => (document.querySelector('#fc-side [data-fc="imports"]') || {}).textContent || '');
+    if (!/outlook-export\.ics/.test(listed) || !/Okafor/.test(listed) || !new RegExp(`${want} events`).test(listed)) fail(`the import panel should list the import (file, calendar, events): ${listed.replace(/\s+/g, ' ').slice(0, 200)}`);
+    const row = page.locator('#fc-side [data-fc="imports"] > div', { hasText: 'outlook-export.ics' });
+    await row.locator('[data-fc="import-delete"]').click(); await page.waitForTimeout(1200);
+    if (sql.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = 'ci' AND ext_uid LIKE 'p-%'`).get().n) fail('🗑 Delete in the import panel should delete the import\'s events');
+    if (await page.locator('#fc-main .ev:has-text("Deposition of Dr. Park")').count()) fail('the deleted import\'s deposition is still on the week grid');
+    if (/outlook-export\.ics/.test(await page.evaluate(() => (document.querySelector('#fc-side') || {}).textContent || ''))) fail('the deleted import is still listed');
     const fieldsAfter = await pageFields();
     if (fieldsAfter.join() !== fieldsBefore.join()) fail(`the calendar added a select or contenteditable to the page (${fieldsBefore} → ${fieldsAfter}); the case editor saves those by position`);
     await browser.close(); server.close();
 
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((m, i) => console.log(`${i + 1}. ${m}`)); process.exit(1); }
-    console.log(`Calendar edit / sync / import test passed (versions of standing and shared events, per person or firm-wide; a link for picked calendars; .ics import with time zones, repeats and exceptions, a preview, no duplicates; the page's Edit, Sync picks and Import).`);
+    console.log(`Calendar edit / sync / import test passed (versions of standing and shared events, per person or firm-wide; a link for picked calendars; .ics import with time zones, repeats and exceptions, a preview, no duplicates, deleting an import; the page's Edit, Sync picks, Import and Delete).`);
 })().catch(e => { console.error(e); process.exit(1); });

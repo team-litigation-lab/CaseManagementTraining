@@ -863,6 +863,7 @@
     // ⬆ Import .ics: pick the calendar, choose the file, see what's in it, then add it
     function importHtml(imp) {
         const calList = cals().map(c => ({ id: c.id, label: c.name.replace('Atty. ', ''), color: c.color }));
+        const mine = (imp.list || []).map((x, i) => ({ x, i })).filter(({ x }) => calList.some(c => c.id === x.calendar));   // (this calendar view's)
         const p = imp.preview, sum = p && p.summary;
         const when = (e) => `${fmtDate(e.date)} ${e.allDay ? 'all day' : fmtTime(e.start) + '–' + fmtTime(e.end)}`;
         const skipped = sum ? [sum.already ? `${sum.already} already imported` : '', sum.outside ? `${sum.outside} outside 6 months back – 2 years ahead` : '',
@@ -885,6 +886,9 @@
                 ${skipped.length ? `<div style="margin-top:4px">Left out: ${esc(skipped.join(', '))}.</div>` : ''}
                 ${p.preview.length ? `<ul>${p.preview.map(e => `<li>${esc(when(e))} · ${esc(e.title)}${e.type !== 'Other' ? ` <span class="fc-sub">(${esc(e.type)})</span>` : ''}</li>`).join('')}${p.add > p.preview.length ? `<li>…and ${p.add - p.preview.length} more</li>` : ''}</ul>` : ''}</div>
                 ${p.add ? `<div style="display:flex;gap:8px;margin-top:12px"><button class="fc-btn primary" data-fc="import-go" onclick="fcImportGo()">Import ${p.add} event${p.add === 1 ? '' : 's'} to ${esc(cal(imp.calendar).name)}</button><button class="fc-btn" onclick="fcClose()">Cancel</button></div>` : ''}` : ''}
+            ${mine.length ? `<label class="fl" style="margin-top:16px">Your imports</label><div data-fc="imports">${mine.map(({ x, i }) => `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #e2e8f0">
+                <div style="flex:1;min-width:0;font-size:12.5px"><b style="word-break:break-all">📄 ${esc(x.fileName || 'Earlier import')}</b><div class="fc-sub">${esc(cal(x.calendar).name)} · ${x.events} event${x.events === 1 ? '' : 's'} · ${esc(fmtDate(x.first))}${x.last !== x.first ? ' – ' + esc(fmtDate(x.last)) : ''}${x.shared ? ' · firm-wide' : ''}</div></div>
+                <button class="fc-btn danger" data-fc="import-delete" onclick="fcImportDelete(${i})">🗑 Delete</button></div>`).join('')}</div>` : ''}
         </div>`;
     }
 
@@ -974,14 +978,38 @@
     window.fcImport = function () {
         const firstShown = cals().find(c => c.id !== 'firm' && !S.hidden[c.id]);
         const c = caseDefaults().calendar || (firstShown ? firstShown.id : 'firm');   // the open case's attorney, if a case is open
-        S.panel = { kind: 'import', imp: { calendar: c, shared: false, text: '', fileName: '', preview: null, error: '', busy: false } }; render();
+        S.panel = { kind: 'import', imp: { calendar: c, shared: false, text: '', fileName: '', preview: null, error: '', busy: false, list: null } }; render();
+        loadImports();
+    };
+    // the caller's imports still on the calendar (🗑 Delete one: all its events)
+    async function loadImports() {
+        const imp = S.panel && S.panel.kind === 'import' ? S.panel.imp : null; if (!imp) return;
+        try {
+            const res = await fetch('/api/calendar?imports=1', { credentials: 'include' });
+            const data = await res.json();
+            if (data && data.success && S.panel && S.panel.imp === imp) { imp.list = data.imports; renderSide(); }
+        } catch (e) { /* the list stays hidden */ }
+    }
+    window.fcImportDelete = async function (i) {
+        const imp = S.panel && S.panel.kind === 'import' ? S.panel.imp : null; const x = imp && imp.list && imp.list[i]; if (!x) return;
+        if (!confirm(`Delete the ${x.events} event${x.events === 1 ? '' : 's'} imported from ${x.fileName || 'an earlier import'} on ${cal(x.calendar).name}?${x.shared ? ' They come off every trainee\'s calendar.' : ''}`)) return;
+        try {
+            const q = x.importId ? `import=${encodeURIComponent(x.importId)}` : `import=earlier&calendar=${encodeURIComponent(x.calendar)}`;
+            const res = await fetch('/api/calendar?' + q, { method: 'DELETE', credentials: 'include' });
+            const data = await res.json();
+            if (!data.success) { toast(data.error || 'Could not delete the import.', 'error'); return; }
+            toast(`${data.deleted} imported event${data.deleted === 1 ? '' : 's'} deleted.`, 'success');
+            S.dayCache = {};
+            if (channel) channel.postMessage('changed');
+            await load(true); await loadImports(); render();
+        } catch (e) { toast('Could not reach the server. Try again.', 'error'); }
     };
     async function importPost(dryRun) {
         const imp = S.panel && S.panel.kind === 'import' ? S.panel.imp : null; if (!imp || !imp.text) return null;
         imp.busy = true; imp.error = ''; renderSide();
         try {
             const res = await fetch('/api/calendar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'import', ics: imp.text, calendar: imp.calendar, shared: !!imp.shared, dryRun }) });
+                body: JSON.stringify({ action: 'import', ics: imp.text, calendar: imp.calendar, shared: !!imp.shared, dryRun, fileName: imp.fileName }) });
             const data = await res.json().catch(() => ({}));
             imp.busy = false;
             if (!data.success) { imp.error = data.error || 'Could not read that file.'; imp.preview = null; renderSide(); return null; }

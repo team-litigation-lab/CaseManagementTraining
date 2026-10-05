@@ -278,7 +278,8 @@ const DDL = [
 //             shared firm-wide): it shows instead of that event on your calendar (on everyone's when an
 //             Admin shares it firm-wide); deleting it brings the original back
 //   ext_uid   where an imported event came from (its .ics UID and date), so importing the file again adds nothing twice
-const LATER_COLUMNS = [['replaces', `TEXT NOT NULL DEFAULT ''`], ['ext_uid', `TEXT NOT NULL DEFAULT ''`]];
+// (import_id, import_name: the ⬆ Import .ics an event came in with, so the whole import can be deleted)
+const LATER_COLUMNS = [['replaces', `TEXT NOT NULL DEFAULT ''`], ['ext_uid', `TEXT NOT NULL DEFAULT ''`], ['import_id', `TEXT NOT NULL DEFAULT ''`], ['import_name', `TEXT NOT NULL DEFAULT ''`]];
 let columnsChecked = false;
 export async function ensureCalendarTables(db) {
     for (const sql of DDL) await db.prepare(sql).run();

@@ -39,6 +39,11 @@ import { ensureGoogleTables, googleStatus } from '../_google_calendar.js';
 //          Attorney's Calendar sets its weekly schedule instead (each appointment on its day of the
 //          week, every week, in place of the schedule there now). Events already imported
 //          from the file (same UID and time) are skipped, so importing it again adds nothing twice.
+//   GET    /api/calendar?imports=1   the caller's .ics imports still on the calendar: [{importId,
+//          fileName, calendar, shared, events, first, last, at}], newest first. Events imported before
+//          imports were named come as one "earlier" import per calendar (importId '').
+//   DELETE /api/calendar?import=<importId>&calendar=<id>   deletes every event of that import
+//          (import=earlier: the caller's earlier imports on that calendar).
 //   DELETE /api/calendar?id=<id>
 //
 // The tables are created on first use: see ensureCalendarTables in functions/_calendar.js.
@@ -124,6 +129,14 @@ export async function onRequestGet({ request, env }) {
     if (daysBetween(from, to) < 0) return json({ success: false, error: 'The date range is backwards.' }, 400);
     if (daysBetween(from, to) > MAX_WINDOW_DAYS) to = addDays(from, MAX_WINDOW_DAYS);
     await ensureCalendarTables(env.DB);
+    if (url.searchParams.get('imports')) {
+        const { results } = await env.DB.prepare(
+            `SELECT import_id, import_name, calendar, MAX(shared) AS shared, COUNT(*) AS n, MIN(date) AS first, MAX(date) AS last, MIN(created_at) AS at
+             FROM calendar_events WHERE owner_username = ? AND ext_uid <> '' GROUP BY import_id, import_name, calendar ORDER BY at DESC LIMIT 50`
+        ).bind(session.username).all();
+        return json({ success: true, imports: (results || []).map(r => ({ importId: r.import_id || '', fileName: r.import_name || '', calendar: r.calendar,
+            shared: !!r.shared, events: r.n, first: r.first, last: r.last, at: r.at })) });
+    }
     if (url.searchParams.get('list') === 'mine') {
         const { results } = await env.DB.prepare(`SELECT * FROM calendar_events WHERE owner_username = ? ORDER BY date, start_time LIMIT ${MAX_EVENTS_PER_USER}`)
             .bind(session.username).all();
@@ -246,13 +259,16 @@ async function importIcs(db, session, body, admin) {
                 .map(e => ({ title: e.title, type: e.type, date: e.date, start: e.start, end: e.end, allDay: e.allDay, location: e.location })) });
     }
     const name = session.fullName || session.username;
+    // this import's own id and the file's name (🗑 Delete in the import panel deletes it whole)
+    const importId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+    const fileName = String(body.fileName || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 120) || 'calendar.ics';
     const stmts = take.map(e => db.prepare(
         `INSERT INTO calendar_events (id, owner_username, owner_name, shared, calendar, invitees, title, type, date, start_time, end_time, all_day,
-            location, case_ref, case_label, notes, ext_uid) VALUES (?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?, ?, ?, '', '', ?, ?)`
+            location, case_ref, case_label, notes, ext_uid, import_id, import_name) VALUES (?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?, ?, ?, '', '', ?, ?, ?, ?)`
     ).bind(crypto.randomUUID(), session.username, name, shared ? 1 : 0, calendar, e.title, e.type, e.date, e.start, e.end, e.allDay ? 1 : 0,
-        e.location, e.notes, e.extUid));
+        e.location, e.notes, e.extUid, importId, fileName));
     for (let i = 0; i < stmts.length; i += INSERT_BATCH) await db.batch(stmts.slice(i, i + INSERT_BATCH));
-    return json({ success: true, added: take.length, calendar, summary });
+    return json({ success: true, added: take.length, calendar, importId: take.length ? importId : '', summary });
 }
 
 // An Admin's import onto the Attorney's Calendar: the file is the attorney's week. Its appointments, each on its
@@ -307,6 +323,19 @@ export async function onRequestDelete({ request, env }) {
         await ensureCalendarTables(env.DB);
         await env.DB.prepare(`DELETE FROM calendar_template WHERE id = ?`).bind(Number(tpl) || 0).run();
         return json({ success: true });
+    }
+    const imp = new URL(request.url).searchParams.get('import');
+    if (imp != null) {
+        // a whole .ics import: the caller's own events from it (import=earlier: their unnamed earlier imports on one calendar)
+        const which = String(imp).slice(0, 40), calendar = String(new URL(request.url).searchParams.get('calendar') || '');
+        if (which === 'earlier' && !CALENDAR_IDS.includes(calendar)) return json({ success: false, error: 'Which calendar?' }, 400);
+        if (which !== 'earlier' && !/^[a-f0-9]{8,40}$/.test(which)) return json({ success: false, error: 'Which import?' }, 400);
+        await ensureCalendarTables(env.DB);
+        const where = which === 'earlier' ? `owner_username = ? AND ext_uid <> '' AND import_id = '' AND calendar = ?` : `owner_username = ? AND ext_uid <> '' AND import_id = ?`;
+        const args = which === 'earlier' ? [session.username, calendar] : [session.username, which];
+        const n = await env.DB.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE ${where}`).bind(...args).first();
+        await env.DB.prepare(`DELETE FROM calendar_events WHERE ${where}`).bind(...args).run();
+        return json({ success: true, deleted: (n && n.n) || 0 });
     }
     const id = String(new URL(request.url).searchParams.get('id') || '').slice(0, 64);
     if (!id) return json({ success: false, error: 'Which event?' }, 400);
