@@ -1,4 +1,5 @@
 import { json, requireSession, buildFullName } from '../_utils.js';
+import { gatewayOn, portalPost } from '../_ai.js';
 
 // Call Simulator results (front-desk-drill.js in the CMS). One row per completed
 // drill (mode 'drill') or Core callers practice call (mode 'practice'): which
@@ -7,6 +8,12 @@ import { json, requireSession, buildFullName } from '../_utils.js';
 // (call-packs.js): a practice call (mode 'line') or a graded one (mode
 // 'graded'), its details naming the program, line and call. Trainees read
 // their own history; Admins read everyone's.
+//
+// A graded call counts in the trainee's course: it's sent to the Training Portal
+// (its /api/call-results, with the AI gateway's shared secret, AI_GATEWAY_SECRET),
+// which keeps it on their Portal results and in their course's own store (FT by
+// lesson, CM / PD / EA by line). The answer says where it counted ({ course });
+// if the Portal can't be reached the call is still saved here.
 //
 // The table is created on first use (CREATE TABLE IF NOT EXISTS is a cheap
 // no-op after that), and the mode column is added to a table made before it
@@ -78,11 +85,28 @@ export async function onRequestPost({ request, env }) {
     if (details.length > 600000) return json({ success: false, error: 'Result too large.' }, 413);
     await ensureTable(env.DB);
     const userRow = await env.DB.prepare(`SELECT first_name, mi, last_name, suffix FROM users WHERE username = ?`).bind(session.username).first();
+    const mode = MODES.includes(body.mode) ? body.mode : 'drill';
     await env.DB.prepare(
         `INSERT INTO front_desk_drills (username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(session.username, buildFullName(userRow) || session.fullName || session.username, session.batchId || null,
-        String(body.program || '').slice(0, 20) || null, MODES.includes(body.mode) ? body.mode : 'drill', calls, pct(body.score), pct(body.findPct), pct(body.authPct), pct(body.actionPct),
+        String(body.program || '').slice(0, 20) || null, mode, calls, pct(body.score), pct(body.findPct), pct(body.authPct), pct(body.actionPct),
         Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), details).run();
-    return json({ success: true });
+    const course = mode === 'graded' ? await sendGraded(env, session, userRow, body) : null;
+    return json(course ? { success: true, course } : { success: true });
+}
+
+// A graded call, to the Portal (it counts in the course). At most 6 seconds; a failure only means it didn't count yet.
+async function sendGraded(env, session, userRow, body) {
+    const d = (Array.isArray(body.details) && body.details[0]) || {};
+    if (!gatewayOn(env) || !d.pack || !userRow || !userRow.first_name || !userRow.last_name) return null;
+    const payload = { first: userRow.first_name, last: userRow.last_name, batch: session.batchId || '', username: session.username,
+        call: { id: d.id, program: d.program, line: d.line, lesson: d.course && d.course.lesson, title: d.title, score: pct(body.score), verdict: d.verdict,
+            secs: Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), voice: d.voice, at: new Date().toISOString() } };
+    try {
+        const r = await Promise.race([portalPost(env, '/api/call-results', payload), new Promise(res => setTimeout(() => res({ status: 504 }), 6000))]);
+        if (r.data && r.data.success) return { counted: true, program: d.program, lesson: (d.course && d.course.lesson) || null, line: d.line, best: r.data.course ? r.data.course.best : null };
+        console.error('drill-results: the Portal didn\'t take the graded call', r.status, r.data && r.data.error);
+    } catch (e) { console.error('drill-results: the Portal is unreachable', e); }
+    return { counted: false, program: d.program, line: d.line };
 }

@@ -165,6 +165,30 @@ const team = await (await results.onRequestGet({ request: new Request('https://c
 const teamGraded = (team.results || []).find(r => r.mode === 'graded');
 check(team.isAdmin && teamGraded && teamGraded.line === 'Executive Calls' && teamGraded.details === undefined, `an Admin's list doesn't name a graded call's line (or carries its details): ${JSON.stringify(teamGraded)}`);
 
+// 8. a graded call counts in the trainee's course: it's sent to the Portal (/api/call-results, the gateway's secret) with the
+//    trainee's name and batch and the call; practice calls aren't; the Portal down still saves the call here
+{
+    const sent = []; const realFetch = globalThis.fetch;
+    let portalReply = { status: 200, json: { success: true, course: { key: 'ft:callsim:amy-trainee--b1', best: { score: 88, calls: 1 } } } };
+    globalThis.fetch = async (url, init) => {
+        if (String(url).endsWith('/api/call-results')) { sent.push({ url: String(url), key: init.headers['X-Gateway-Key'], body: JSON.parse(init.body) }); return new Response(JSON.stringify(portalReply.json), { status: portalReply.status, headers: { 'Content-Type': 'application/json' } }); }
+        return realFetch(url, init);
+    };
+    const gEnv = Object.assign({}, env, { AI_GATEWAY_SECRET: ' gw-secret ', PORTAL_URL: 'https://portal.test' });
+    const save = async (body) => { const r = await results.onRequestPost({ request: new Request('https://cms.test/api/drill-results', { method: 'POST', headers: { cookie: 'lsh_session=' + await tok('amy'), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), env: gEnv }); return r.json(); };
+    const detail = { pack: true, id: 'ft_cal_depo', program: 'FT', line: 'Calendar Management Mock Calls', title: 'Defense Counsel Wants to Move a Deposition', course: { program: 'FT', lesson: 5 }, verdict: 'Solid.', voice: 'live' };
+    let d1 = await save({ mode: 'graded', program: 'FT', calls: 1, score: 88, avgSeconds: 150, details: [detail] });
+    const s1 = sent[0] || { body: {} };
+    check(sent.length === 1 && s1.url === 'https://portal.test/api/call-results' && s1.key === 'gw-secret', `the graded call wasn't sent to the Portal with the secret: ${JSON.stringify(sent.map(x => ({ url: x.url, key: x.key })))}`);
+    check(s1.body.first === 'Amy' && s1.body.last === 'Trainee' && s1.body.batch === 'B1' && s1.body.call && s1.body.call.id === 'ft_cal_depo' && s1.body.call.lesson === 5 && s1.body.call.score === 88 && s1.body.call.program === 'FT' && s1.body.call.secs === 150, `what's sent to the Portal: ${JSON.stringify(s1.body)}`);
+    check(d1.success && d1.course && d1.course.counted === true && d1.course.lesson === 5 && d1.course.best.score === 88, `the answer doesn't say where the call counted: ${JSON.stringify(d1)}`);
+    await save({ mode: 'line', program: 'FT', calls: 1, score: 70, details: [detail] });
+    check(sent.length === 1, 'a practice call was sent to the Portal');
+    portalReply = { status: 500, json: { success: false, error: 'down' } };
+    d1 = await save({ mode: 'graded', program: 'FT', calls: 1, score: 60, details: [detail] });
+    check(d1.success && d1.course && d1.course.counted === false, `with the Portal down the call should be saved here and say it didn't count yet: ${JSON.stringify(d1)}`);
+    globalThis.fetch = realFetch;
+}
 
 // 9. the shared AI gateway: with AI_GATEWAY_SECRET set, the practice caller's lines and the reviews go to the Portal's gateway
 //    (module "cms", the trainee as the user), this site's own keys are never called, and a budget "wait" from the Portal comes back as 429.

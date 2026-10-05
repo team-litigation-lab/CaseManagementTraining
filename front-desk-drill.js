@@ -1634,7 +1634,7 @@ Reply with exactly this JSON:
     function paintSaved() {
         const el = $id('fdd-pc-saved'), l = P; if (!el || !l) return;
         el.style.color = l.saved === 'failed' ? '#b91c1c' : '#047857';
-        el.textContent = l.saved === 'saving' ? 'Saving…' : l.saved === 'saved' ? '✓ Saved to your results (your trainer sees them too)' : l.saved === 'failed' ? 'Couldn\'t save this result. Check your connection.' : '';
+        el.textContent = l.saved === 'saving' ? 'Saving…' : l.saved === 'saved' ? '✓ Saved to your results (your trainer sees them too).' + (l.pack ? countedText(l) : '') : l.saved === 'failed' ? 'Couldn\'t save this result. Check your connection.' : '';
     }
 
     function rubricHTML(r) {
@@ -1855,8 +1855,16 @@ Reply with exactly this JSON:
             });
             const data = await res.json().catch(() => ({}));
             l.saved = data && data.success ? 'saved' : 'failed';
+            l.course = data && data.course || null;   // a graded call: where it counted (functions/api/drill-results.js)
         } catch (e) { l.saved = 'failed'; }
         paintSaved(); loadHistory();
+    }
+    // Where a graded call counted, for the saved line.
+    function countedText(l) {
+        const c = l.course; if (!c) return '';
+        const where = c.program === 'FT' && c.lesson ? `your Standard Training, lesson ${c.lesson}` : `your ${programLabel(c.program)} course (${c.line})`;
+        return c.counted ? ` It counts toward ${where}${c.best && typeof c.best.score === 'number' ? `: your best there is ${c.best.score}%` : ''}.`
+            : ' It couldn\'t reach your course just now; your trainer still sees it here.';
     }
     // The debrief: the score, each goal met or not yet, what worked, what's next, and a better line.
     function goalsHTML(goals) {

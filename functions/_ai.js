@@ -76,8 +76,10 @@ export async function geminiFetch(env, url, init) {
 // uses its own GEMINI_API_KEY pool below, as before.
 const PORTAL = 'https://cm-training-activity.pages.dev';
 export const gatewayOn = (env) => !!String((env && env.AI_GATEWAY_SECRET) || '').trim();
-export async function gatewayPost(env, body) {
-    const url = String(env.PORTAL_URL || PORTAL).replace(/\/+$/, '') + '/api/ai-gateway';
+export async function gatewayPost(env, body) { return portalPost(env, '/api/ai-gateway', body); }
+// A server-to-server request to the Portal with the gateway's shared secret (the AI gateway; graded calls, /api/call-results).
+export async function portalPost(env, path, body) {
+    const url = String(env.PORTAL_URL || PORTAL).replace(/\/+$/, '') + path;
     const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Gateway-Key': String(env.AI_GATEWAY_SECRET).trim() }, body: JSON.stringify(body) });
     const data = await res.json().catch(() => null);
     return { status: res.status, data };

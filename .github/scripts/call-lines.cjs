@@ -75,7 +75,10 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
         const u = new URL(route.request().url()), m = route.request().method();
         const j = (o, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
-        if (u.pathname === '/api/drill-results' && m === 'POST') { saved.push(JSON.parse(route.request().postData())); return j({ success: true }); }
+        if (u.pathname === '/api/drill-results' && m === 'POST') {
+            const b = JSON.parse(route.request().postData()); saved.push(b);
+            return j(b.mode === 'graded' ? { success: true, course: { counted: true, program: b.program, lesson: b.details[0].course.lesson || null, line: b.details[0].line, best: { score: 82 } } } : { success: true });
+        }
         if (u.pathname === '/api/drill-results' && u.searchParams.get('id')) { const r = results.find(x => String(x.id) === u.searchParams.get('id')); return r ? j({ success: true, result: r }) : j({ success: false, error: 'not found' }, 404); }
         if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: false, results });
         if (u.pathname === '/api/call-ai') {
@@ -184,6 +187,7 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     const s2 = saved[saved.length - 1], d2 = s2 && s2.details[0];
     if (!s2 || s2.mode !== 'graded' || s2.program !== 'EA' || d2.mode !== 'graded' || d2.course.program !== 'EA' || reviews[reviews.length - 1].module !== 'ea-pa') fail(`the graded call wasn't saved as graded under EA: ${JSON.stringify(s2 && { mode: s2.mode, program: s2.program })}`);
     if (!/Elias Thorne/.test(await page.textContent('.fdd-b'))) fail('the graded debrief doesn\'t say who it was');
+    if (!/counts toward your EA \/ PA course \(Executive Calls\): your best there is 82%/.test(await page.textContent('#fdd-pc-saved'))) fail(`the graded debrief doesn't say where the call counted: "${await page.textContent('#fdd-pc-saved')}"`);
     // a graded call you answer: nobody in particular until the debrief, and the brief doesn't name the file
     await page.evaluate(() => fddOpenLine('FT', 'Reception Mock Calls'));
     await page.click('.fdd-b button:has-text("Graded call")');
