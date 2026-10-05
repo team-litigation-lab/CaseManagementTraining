@@ -143,13 +143,15 @@ const saveResult = async (body, user = 'amy') => {
 };
 [st, d] = await saveResult({ mode: 'practice', calls: 1, score: 97, findPct: 100, authPct: 100, actionPct: 90, avgSeconds: 140, details: [{ id: 'D01', transcript: 'Caller: hi' }] });
 check(st === 200 && d.success, `saving a practice call failed: ${st} ${JSON.stringify(d)}`);
-[st] = await saveResult({ calls: 5, score: 80, details: [] });
+[st] = await saveResult({ calls: 8, score: 80, details: [{ set: 2, id: 'D09' }, { set: 2, id: 'D10' }] });
 check(st === 200, `saving a drill failed: ${st}`);
 const mine = await (await results.onRequestGet({ request: new Request('https://cms.test/api/drill-results', { headers: { cookie: 'lsh_session=' + await tok('amy') } }), env })).json();
 const modes = (mine.results || []).map(r => r.mode).sort().join(',');
 check(modes === 'drill,drill,practice', `results came back with modes "${modes}" (expected the old row and the drill as drill, the call as practice)`);
 const pcRow = (mine.results || []).find(r => r.mode === 'practice');
-check(pcRow && pcRow.score === 97 && pcRow.action_pct === 90 && pcRow.full_name === 'Amy Trainee', `the practice call row is wrong: ${JSON.stringify(pcRow)}`);
+check(pcRow && pcRow.score === 97 && pcRow.action_pct === 90 && pcRow.full_name === 'Amy Trainee' && pcRow.call_id === 'D01', `the practice call row is wrong (or doesn't say which call): ${JSON.stringify(pcRow)}`);
+const setRows = (mine.results || []).filter(r => r.mode === 'drill').map(r => r.drill_set);
+check(setRows.includes(2) && setRows.includes(null), `a drill doesn't say its set (an older one has none): ${JSON.stringify(setRows)}`);
 // the Call Simulator lines' calls: a practice call ('line') and a graded one keep their mode, and the lists name their line and call
 // (an Admin's list too, which leaves the details out); an unknown mode is a drill
 [st] = await saveResult({ mode: 'line', program: 'FT', calls: 1, score: 82, avgSeconds: 61, details: [{ pack: true, id: 'ft_cal_depo', line: 'Calendar Management Mock Calls', title: 'Defense Counsel Wants to Move a Deposition' }] });
@@ -163,7 +165,8 @@ check(gradedRow && gradedRow.line === 'Executive Calls' && gradedRow.score === 7
 check((lines.results || []).filter(r => r.mode === 'drill').length === 3 && (lines.results || []).find(r => r.mode === 'drill' && r.line != null) === undefined, 'an unknown mode wasn\'t saved as a drill, or a drill has a line');
 const team = await (await results.onRequestGet({ request: new Request('https://cms.test/api/drill-results', { headers: { cookie: 'lsh_session=' + await tok('boss', 'Admin') } }), env })).json();
 const teamGraded = (team.results || []).find(r => r.mode === 'graded');
-check(team.isAdmin && teamGraded && teamGraded.line === 'Executive Calls' && teamGraded.details === undefined, `an Admin's list doesn't name a graded call's line (or carries its details): ${JSON.stringify(teamGraded)}`);
+check(team.isAdmin && teamGraded && teamGraded.line === 'Executive Calls' && teamGraded.call_id === 'ea_ex_friday' && teamGraded.details === undefined, `an Admin's list doesn't name a graded call's line and call (or carries its details): ${JSON.stringify(teamGraded)}`);
+check(lineRow && lineRow.call_id === 'ft_cal_depo' && (lines.results || []).every(r => r.mode !== 'drill' || r.call_id == null), 'a line call doesn\'t say which call it was, or a drill has a call');
 
 // 8. a graded call counts in the trainee's course: it's sent to the Portal (/api/call-results, the gateway's secret) with the
 //    trainee's name and batch and the call; practice calls aren't; the Portal down still saves the call here

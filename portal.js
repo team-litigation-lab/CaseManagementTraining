@@ -155,8 +155,10 @@ function attemptLogin() {
             setTimeout(() => {
                 const authGate = document.getElementById('auth-gate');
                 if (authGate) authGate.classList.remove('open');
+                // A link that opened the Call Simulator (?calls=1) stays on it, over the Cases System.
+                const onCalls = document.body.classList.contains('fdd-open');
                 if (normalizedUser.userType === "Admin") {
-                    openAdminDashboard();
+                    if (!onCalls) openAdminDashboard();
                 } else if (typeof showTraineeDashboard === "function") {
                     showTraineeDashboard();
                 }

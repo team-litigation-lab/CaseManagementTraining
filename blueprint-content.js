@@ -93,7 +93,7 @@
                 'The scored drill: 5, 8, 12 or all the calls, each one scored, with feedback at the end.'],
               where: 'Sidebar → 📞 Call Simulator.',
               tip: 'Never give advice or a case value on a call. Take a complete message instead.',
-              shot: 'blueprint/trainee-reception.jpg', shotAlt: 'The Call Simulator: Take a practice call, and the scored drill' },
+              shot: 'blueprint/trainee-reception.jpg', shotAlt: 'The Call Simulator: the Core callers listed by level, and the scored drill' },
             { icon: '📊', title: 'My Dashboard and the case summary', points: [
                 '📊 My Dashboard: automatic reviews of the cases you saved, with what\'s missing and how complete each one is.',
                 'Your trends over time, for completeness and for the writing in your notes.',
@@ -206,7 +206,7 @@
               tip: 'Feedback: two strengths, one thing to fix, and the line they could have said.',
               shot: 'blueprint/trainer-caller-scenarios.jpg', shotAlt: 'A case file\'s Caller scenarios panel, with its reception call scripts' },
             { icon: '📞', title: 'Call Simulator', points: [
-                'Practice call: a caller picked at random; the trainee takes the whole call in their own words, by voice or typing.',
+                'Practice call: the trainee picks a caller from the list (by level); they take the whole call in their own words, by voice or typing.',
                 'Scored drill: a run of calls, step by step, 100 points each: find the file 30, authenticate 40, handle the call 30.',
                 'After a practice call the trainee matches the file (the search finds names spelled the way they sound), checks the authentication and gets a debrief.',
                 'Authentication is ticked from the call itself: full name, date of birth, date of loss and one more identifier on file.',
