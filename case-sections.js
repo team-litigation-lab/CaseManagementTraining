@@ -392,6 +392,20 @@
         if (sib && sib.matches('[contenteditable], select')) return sib;
         return l.parentElement ? l.parentElement.querySelector('[contenteditable], select') : null;
     }
+    // Discovery & Filing Tracker rows saved before the Document column get it (Upload / 🔗 Link) and the newer task types
+    window.upgradeLitRows = function () {
+        if (typeof window.litDocCell !== 'function') return;
+        document.querySelectorAll('#lit-body > tr').forEach(tr => {
+            const typeSel = tr.querySelector('select');
+            if (typeSel && Array.isArray(window.LIT_TYPES)) {
+                const have = new Set(Array.from(typeSel.options).map(o => o.value));
+                window.LIT_TYPES.forEach(t => { if (!have.has(t)) { const o = document.createElement('option'); o.textContent = t; typeSel.appendChild(o); } });
+            }
+            if (tr.querySelector('.lit-doc')) return;
+            const last = tr.lastElementChild; if (!last) return;
+            last.insertAdjacentHTML('beforebegin', window.litDocCell());
+        });
+    };
     const lienCards = () => Array.from(document.querySelectorAll('#lien-container > .pdf-card'));
     // Rows saved before the lien status get its fields (and the newer lien types) when the case opens.
     window.upgradeLienRows = function () {
@@ -522,7 +536,7 @@
         // way); with none, what's in them was typed. (Not what the last case's boxes were.)
         const hasCosts = caseCostsTotal() > 0;
         document.querySelectorAll('[data-s="costs"]').forEach(f => { delete f.dataset.typed; if (hasCosts) f.dataset.auto = '1'; else { delete f.dataset.auto; f.removeAttribute('title'); } });
-        window.applyReportKind(); window.calcWages(); window.upgradeLienRows(); runChecks(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
+        window.applyReportKind(); window.calcWages(); window.upgradeLienRows(); window.upgradeLitRows(); runChecks(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
         ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel', 'kx-adr', 'kx-insurance-extra'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
     };
 

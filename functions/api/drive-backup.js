@@ -9,8 +9,9 @@ import {
 //
 // GET                                             the connection: { configured, connected, email, … }
 // POST { action: 'connect', code }                finish Google sign-in (the one-time code from the popup)
-// POST { action: 'backup', caseKey, caseName, files: [{ key, name }] }
+// POST { action: 'backup', caseKey, caseName, files: [{ key, name, folder? }] }
 //                                                 copy up to BATCH files into LSH CMS Backups / <caseName>
+//                                                 (folder: 'Litigation': into the case folder's Litigation folder)
 // POST { action: 'disconnect' }                   revoke access and forget the link (the Drive copies stay)
 //
 // Only files the person may open themselves (the same rule as /api/file) are copied. Each copy is recorded,
@@ -19,6 +20,7 @@ import {
 
 const BATCH = 5;
 const MAX_NAME = 180;
+const SUBFOLDERS = ['Litigation'];   // the folders a case's folder may hold (the Litigation tab's documents)
 function fail(error, status = 400, code) { return json({ success: false, error, code }, status); }
 // A name Drive shows as is: no slashes or control characters, not too long.
 const cleanName = (s, fallback) => String(s || '').replace(/[\u0000-\u001f\u007f/\\]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME) || fallback;
@@ -106,22 +108,29 @@ export async function onRequestPost({ request, env }) {
             if (!files.length) return json({ success: true, results: [], folderUrl: '' });
             if (files.length > BATCH) return fail(`Send at most ${BATCH} files at a time.`);
             const folder = await caseFolder(env, db, link, caseKey, cleanName(body.caseName, caseKey));
+            const subs = {};   // the case folder's own folders, made when a file goes in one
             const results = [];
             for (const f of files) {
                 const key = String((f && f.key) || '');
                 const name = cleanName(f && f.name, key.split('/').pop());
                 if (!validFileKey(key)) { results.push({ key, ok: false, error: 'Not a file from this case.' }); continue; }
-                const done = await db.prepare(`SELECT drive_file_id FROM drive_backups WHERE username = ? AND r2_key = ? AND case_key = ?`).bind(username, key, caseKey).first();
+                const sub = f && f.folder ? String(f.folder) : '';
+                if (sub && !SUBFOLDERS.includes(sub)) { results.push({ key, ok: false, error: 'Not a folder of this case.' }); continue; }
+                // A file in a sub folder is recorded under that folder's key. The folder is looked up (made again if it was
+                // deleted, with the case folder or on its own, which forgets what was copied into it) before the record is.
+                const fileCase = sub ? `${caseKey}/${sub}` : caseKey;
+                if (sub && !subs[sub]) subs[sub] = await caseFolder(env, db, link, fileCase, sub, folder.id);
+                const done = await db.prepare(`SELECT drive_file_id FROM drive_backups WHERE username = ? AND r2_key = ? AND case_key = ?`).bind(username, key, fileCase).first();
                 if (done) { results.push({ key, ok: true, skipped: true }); continue; }
                 const object = await env.DOCUMENTS.get(key);
                 if (!object) { results.push({ key, ok: false, error: 'The file is no longer in storage.' }); continue; }
                 if (!(await mayOpen(db, session, object, key))) { results.push({ key, ok: false, error: 'This file belongs to another trainee\'s case.' }); continue; }
                 const type = (object.httpMetadata && object.httpMetadata.contentType) || 'application/octet-stream';
                 try {
-                    const made = await uploadFile(env, db, link, folder.id, name, type, await object.arrayBuffer());
+                    const made = await uploadFile(env, db, link, sub ? subs[sub].id : folder.id, name, type, await object.arrayBuffer());
                     await db.prepare(`INSERT INTO drive_backups (username, r2_key, case_key, drive_file_id, name, backed_up_at) VALUES (?, ?, ?, ?, ?, datetime('now'))
                         ON CONFLICT(username, r2_key, case_key) DO UPDATE SET drive_file_id = excluded.drive_file_id, name = excluded.name, backed_up_at = excluded.backed_up_at`)
-                        .bind(username, key, caseKey, made.id, name).run();
+                        .bind(username, key, fileCase, made.id, name).run();
                     results.push({ key, ok: true, id: made.id });
                 } catch (e) {
                     if (e instanceof GoogleError && (e.code === 'DRIVE_RECONNECT')) throw e;
