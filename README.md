@@ -194,7 +194,7 @@ The sign-in screen's **Admin Portal** tab asks for the trainer's **name** and th
 **Setting or changing the admin password** (it is never in the code):
 1. Cloudflare → Workers & Pages → the CMS Pages project → **Settings → Variables and Secrets**.
 2. Add a secret, for both Production and Preview:
-   - **Variable name:** `MASTER_ADMIN_PASSWORD` (the older name, `ADMIN_PORTAL_PASSWORD`, also works; if both are set, either password signs in)
+   - **Variable name:** `MASTER_ADMIN_PASSWORD` (the only admin password)
    - **Value:** the admin password
 3. Redeploy, or wait for the next deploy. The new password works right away.
 
@@ -1027,7 +1027,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
 - **Sign-in** (`.github/scripts/login.cjs`, in the same job): the real login code on SQLite. It checks:
   - the Admin tab asks for the trainer's name and the admin password (Enter signs in); with no name it signs in as the Master Account;
   - with a name, each trainer gets their own Admin account on first sign-in (the same name, the same account; suspended and revoked trainers are refused, and a revoked one isn't made again), and `trainer-` usernames can't be registered;
-  - `MASTER_ADMIN_PASSWORD` and the older `ADMIN_PORTAL_PASSWORD` both work;
+  - `MASTER_ADMIN_PASSWORD` is the only admin password (changing it refuses the old one);
   - a wrong or unset admin password, and a name without a last name, are refused;
   - when the server's Functions aren't running (`/api/login` answers an empty 405), the sign-in screen says the server isn't answering, not "Network error";
   - an approved trainee signs in with just the username (other capitals too, when only one trainee has it; exactly, when two do); no username or an unknown one is refused plainly; a tab still sending a Batch ID or password signs in too; an Admin account (a trainer's or the Master Account) is never signed in by username, Batch ID or other capitals; a pending, suspended, revoked or declined account is still refused; the Trainee tab shows the username box only and sends the username only;
