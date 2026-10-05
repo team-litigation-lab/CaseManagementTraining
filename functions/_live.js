@@ -9,8 +9,10 @@
 //
 // The caller is built from the drill call in mock-cases.js: `opening` is why they
 // call, `gives` is what they answer when asked for each identifier (some answers are
-// wrong on purpose, and null means "I don't know / I'd rather not say").
+// wrong on purpose, and null means "I don't know / I'd rather not say"). A call from
+// the Call Simulator's lines (call-packs.js) brings its own caller (livePrompt).
 import mock from '../mock-cases.js';
+import packs from '../call-packs.js';
 import { geminiFetch } from './_ai.js';
 
 // First choice first. LIVE_MODEL (a Pages variable) goes in front when it's set.
@@ -20,6 +22,11 @@ const VOICES = { f: ['Kore', 'Aoede', 'Leda', 'Zephyr'], m: ['Puck', 'Charon', '
 
 export const drillCalls = () => mock.DRILL_CALLS || [];
 export const drillCall = (id) => drillCalls().find(c => c.id === id) || null;
+// A call from the Call Simulator's lines (call-packs.js): it has goals and no gives.
+export const packCall = (id) => packs.find(id);
+const isPack = (call) => Array.isArray(call.goals);
+// Where the call's live minutes count in the Portal's shared AI budget.
+export const liveModule = (call) => isPack(call) ? packs.aiModule(call) : 'cms';
 const caseOf = (id) => (mock.MOCK_CASES || []).find(c => c.id === id) || null;
 const unquote = (s) => String(s || '').trim().replace(/^["“]+|["”]+$/g, '');
 
@@ -42,10 +49,10 @@ ${names.map(n => `- ${n.name} is pronounced "${n.say}".`).join('\n')}
 }
 
 // The same caller always gets the same voice, female or male as the call's `voice`
-// says (from the first name for a call without one).
+// (a line's call: `gender`) says (from the first name for a call without one).
 export function voiceFor(call) {
-    const name = String((call.gives && call.gives.name) || call.id);
-    const pool = VOICES[call.voice === 'f' || call.voice === 'm' ? call.voice : FEMALE.test(name) ? 'f' : 'm'];
+    const name = String((call.gives && call.gives.name) || call.name || call.id), g = call.voice || call.gender;
+    const pool = VOICES[g === 'f' || g === 'm' ? g : FEMALE.test(name) ? 'f' : 'm'];
     let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     return pool[h % pool.length];
 }
@@ -109,7 +116,7 @@ export function liveSetup(call, model) {
             temperature: 0.8,
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceFor(call) } } }
         },
-        systemInstruction: { parts: [{ text: callerPrompt(call) }] },
+        systemInstruction: { parts: [{ text: isPack(call) ? packs.livePrompt(call) : callerPrompt(call) }] },
         inputAudioTranscription: {},
         outputAudioTranscription: {}
     };

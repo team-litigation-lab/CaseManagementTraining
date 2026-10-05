@@ -9,7 +9,9 @@
 // busy first) and an ended call frees its key; a try Google refused moves to the
 // other key, then the next model, then text; LIVE_CALLS_PER_KEY, LIVE_DAILY_MINUTES
 // and LIVE_MAX_MINUTES; the Admin usage report; a rate-limited key hands over to
-// the next; unknown calls and signed-out users are refused; the hourly cap. In the browser: the drill offers live voice,
+// the next; unknown calls and signed-out users are refused; the hourly cap; a Call Simulator line's call
+// (call-packs.js) gets its own caller and a voice for its gender, is picked up by the other side when the trainee
+// places it, and counts under its line in the shared AI budget. In the browser: the drill offers live voice,
 // the phone rings and Answer connects; the microphone streams as PCM; the caller's
 // voice plays and is transcribed; identifiers asked out loud are ticked; a tapped
 // identifier is asked in writing; mute stops the microphone; the caller talking
@@ -106,6 +108,17 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!/Your last 4 of your Social Security number|The last 4 of your Social Security number: you don't know it/.test(d06)) fail('a detail the caller doesn\'t have (D06 SSN) isn\'t marked as unknown');
     if (live.voiceFor(live.drillCall('D03')) === live.voiceFor(live.drillCall('D01')) || !['Puck', 'Charon', 'Fenrir', 'Orus'].includes(live.voiceFor(live.drillCall('D03')))) fail('James Wilson did not get a male voice');
     if (!live.callerPrompt(live.drillCall('D02')).includes('06/09/2026') && !live.callerPrompt(live.drillCall('D02')).includes('back in June')) fail('the date of the accident answer is missing from D02');
+    // a Call Simulator line's call (call-packs.js): its own caller, who opens with their opening line; a voice for their gender;
+    // a call the trainee places is picked up by them
+    r = await post({ callId: 'ft_cal_depo' });
+    const pg = google[google.length - 1] || { body: {} }, psetup = pg.body.bidiGenerateContentSetup || {};
+    const psys = ((psetup.systemInstruction || {}).parts || [{}])[0].text || '';
+    if (r.status !== 200 || !r.data.success) fail(`a line's call (ft_cal_depo) was refused: ${r.status} ${JSON.stringify(r.data)}`);
+    for (const want of ['You are Karen Holt', 'Voss & Tate', '(555) 010-7991', 'move Ms. Garcia\'s deposition', 'Wait for the trainee to greet you', 'Never say you are an AI']) if (!psys.includes(want)) fail(`the line caller's live script for ft_cal_depo is missing "${want}"`);
+    if (!['Kore', 'Aoede', 'Leda', 'Zephyr'].includes(psetup.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName)) fail('Karen Holt (a line\'s caller, gender f) did not get a female voice');
+    const out = live.liveSetup(live.packCall('ea_ex_friday'), 'm').systemInstruction.parts[0].text;
+    if (!/you have just picked up/.test(out) || !out.includes('Thorne. Go') || !['Puck', 'Charon', 'Fenrir', 'Orus'].includes(live.voiceFor(live.packCall('ea_ex_friday')))) fail('a call the trainee places (ea_ex_friday) isn\'t picked up by Elias, in a male voice');
+    if (live.liveModule(live.packCall('ft_cal_depo')) !== 'calendaring' || live.liveModule(live.packCall('ea_ex_friday')) !== 'ea-pa' || live.liveModule(live.drillCall('D01')) !== 'cms') fail('live calls don\'t count under their line in the shared AI budget');
     // spreading a class over the keys: each new call goes to the key with the fewest calls in progress
     sql.exec(`DELETE FROM live_call_log`);
     const a1 = (await post({ callId: 'D01' })).data, k1 = lastKey();

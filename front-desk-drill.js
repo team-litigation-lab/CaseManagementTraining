@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — FRONT DESK DRILL
+   LSH CMS — CALL SIMULATOR (the front desk drill and the call lines)
    ---------------------------------------------------------
    Measures a receptionist's (or any VA's) front-desk ability on the
    Training Library cases. Each drill is a run of randomly picked
@@ -29,8 +29,8 @@
    Without a microphone, or when live voice isn't set up, the call
    runs as text, as before.
 
-   PRACTICE CALLS (no script), like the Training Portal's Call
-   Simulator: a random caller from DRILL_CALLS phones in, and the
+   PRACTICE CALLS (no script), the Core callers: a random caller from
+   DRILL_CALLS phones in, and the
    trainee takes the whole call in their own words. No answer choices,
    no identifier buttons. After hanging up they match the file (the
    search finds names that sound like what they typed), see whether the
@@ -52,6 +52,14 @@
    voice's lines and the debriefs take turns over every key, resting a
    key that hits its limit (functions/_ai.js); and a busy line is
    retried here with a back-off.
+
+   CALL LINES (call-packs.js; see "CALL LINES" below): every other
+   platform's Call Simulator opens this one (?calls=1, with &program= or
+   &flow= and &line=). Standard Training's Reception, Calendar
+   Management and Intake Mock Calls, Case Management, Property Damage
+   and EA / PA, each line with Practice and Graded calls, on the same
+   phone (live voice or the standard voice) and graded on the call's
+   goals and the note the line asks for.
    ========================================================= */
 (function () {
     'use strict';
@@ -235,14 +243,36 @@
     .fdd-rub b{color:#0f2148}.fdd-rub .nt{display:block;font-size:11.3px;color:#475569;margin-top:2px}
     .fdd-rub .how{font-size:9px;font-weight:800;text-transform:uppercase;border-radius:4px;padding:0 4px;margin-left:5px;background:#e0f2fe;color:#0369a1;vertical-align:1px}
     .fdd-rub .how.ai{background:#f3e8ff;color:#7e22ce}
+    .fdd-ftl{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+    .fdd-ftl button{flex:1 1 auto;font-size:11.5px;font-weight:800;border:1px solid #0f2148;background:#eef2ff;color:#0f2148;border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left}
+    .fdd-ftl button:hover{background:#0f2148;color:#fff}
+    .fdd-views button{font-size:10.5px;padding:4px 9px}
+    .fdd-line{display:flex;align-items:center;gap:6px;padding:7px 0;border-top:1px solid #f1f5f9}
+    .fdd-line .nm{flex:1;min-width:0;font-weight:700;font-size:12.5px;color:#0f2148}
+    .fdd-line .nm small{display:block;font-weight:500;font-size:10.5px;color:#64748b}
+    .fdd-line button{font-size:11px;font-weight:800;border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:7px;padding:6px 10px;cursor:pointer}
+    .fdd-line button.g{background:#0f2148;color:#fff;border-color:#0f2148}
+    .fdd-line a{font-size:11px;font-weight:800;border:1px solid #cbd5e1;background:#fff;color:#0f2148;border-radius:7px;padding:6px 10px;text-decoration:none}
+    .fdd-brief>summary{cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#0f2148}
+    .fdd-brief p{margin:6px 0;font-size:12.3px;line-height:1.5}
+    .fdd-brief ol,.fdd-brief ul{margin:4px 0 6px 18px;padding:0;font-size:12px;line-height:1.5}
+    .fdd-bnote{color:#475569}
+    .fdd-file summary{cursor:pointer;font-weight:700;font-size:12px;color:#0f2148}
+    .fdd-file pre{white-space:pre-wrap;font:inherit;font-size:11.5px;line-height:1.5;max-height:260px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:8px;margin:6px 0 0}
+    .fdd-pk-note{min-height:210px;max-height:none;font-family:'IBM Plex Mono',monospace;font-size:12px}
+    .fdd-goals{list-style:none;margin:0;padding:0}
+    .fdd-goals li{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12.3px;line-height:1.4}
+    .fdd-goals li span{font-weight:900;width:16px;flex-shrink:0}.fdd-goals li span.ok{color:#047857}.fdd-goals li span.no{color:#b45309}
+    .fdd-goals small{display:block;color:#475569;font-size:11.3px;margin-top:2px}
+    .fdd-tag.g{background:#fef3c7;color:#92400e}
     `;
     document.head.appendChild(css);
 
     function buildUI() {
-        // 📞 Reception Simulator: in the sidebar after 📝 New Intake (index.html, #sb-work; 🗓 Attorney's Calendar comes next)
+        // 📞 Call Simulator: in the sidebar after 📝 New Intake (index.html, #sb-work; 🗓 Attorney's Calendar comes next)
         const work = $id('sb-work'), intake = $id('nm-open-btn');
         if (work && !$id('fdd-open-btn')) {
-            const html = `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Reception Simulator</button>`;
+            const html = `<button id="fdd-open-btn" class="fdd-btn" onclick="openFrontDeskDrill()">📞 Call Simulator</button>`;
             if (intake && intake.parentElement === work) intake.insertAdjacentHTML('afterend', html); else work.insertAdjacentHTML('beforeend', html);
         }
         // Everyone signed in gets it, trainees too (their calls and scores are saved for their trainer);
@@ -515,14 +545,17 @@
     function paint() {
         const p = $id('fdd-panel'); if (!p) return;
         if (['practice', 'pcwrap', 'pcdebrief'].includes(screen) && !P) screen = 'home';
+        if (screen === 'line' && !LN) screen = 'home';
         const title = screen === 'call' ? `Call ${D.i + 1} of ${D.calls.length}` : screen === 'summary' ? 'Drill complete'
-            : screen === 'practice' ? 'Practice call' : screen === 'pcwrap' ? 'Wrap up the call' : screen === 'pcdebrief' ? 'Call debrief' : screen === 'saved' ? 'Saved call' : 'Front Desk Calls';
+            : screen === 'practice' ? (P.pack && P.graded ? 'Graded call' : 'Practice call') : screen === 'pcwrap' ? 'Wrap up the call' : screen === 'pcdebrief' ? 'Call debrief' : screen === 'saved' ? 'Saved call'
+            : screen === 'line' ? esc(LN.line) : 'Call Simulator';
         const t0 = screen === 'call' ? D.cur.t0 : screen === 'practice' ? P.t0 : null;
         const clock = screen === 'call' || screen === 'practice' ? `<span class="t" id="fdd-timer">${t0 ? fmtSec(Math.round((Date.now() - t0) / 1000)) : '0:00'}</span>` : '';
         const hide = ['call', 'practice', 'pcwrap'].includes(screen) ? `<button onclick="fddMinimize()" title="Hide to read the case">▭ Case</button>` : '';
         p.innerHTML = `<div class="fdd-h"><b>📞 ${title}</b>${clock}${hide}<button onclick="fddClose()">✕</button></div>
             <div class="fdd-b">${screen === 'call' ? callHTML() : screen === 'summary' ? summaryHTML() : screen === 'practice' ? practiceHTML()
-                : screen === 'pcwrap' ? pcWrapHTML() : screen === 'pcdebrief' ? pcDebriefHTML() : screen === 'saved' ? savedCallHTML() : homeHTML()}</div>`;
+                : screen === 'pcwrap' ? (P.pack ? packWrapHTML() : pcWrapHTML()) : screen === 'pcdebrief' ? (P.pack ? packDebriefHTML() : pcDebriefHTML()) : screen === 'saved' ? savedCallHTML()
+                : screen === 'line' ? lineHTML() : homeHTML()}</div>`;
         if (['call', 'practice', 'pcwrap'].includes(screen)) paintResults();
         if (screen === 'practice') { pcIdCard(); pcControls(); pcTr(); const box = $id('fdd-pc-in'); if (box) box.value = P.draft || ''; }
         if (screen === 'pcdebrief') paintSaved();
@@ -537,7 +570,7 @@
         const lv = [[0, 'Any caller'], [1, 'Level 1 · warm-up'], [2, 'Level 2'], [3, 'Level 3 · tricky']];
         return `${liveOK() ? `<label class="fdd-live-opt" style="margin:0 0 10px"><input type="checkbox" id="fdd-live" ${livePref() ? 'checked' : ''} onchange="fddSetLive(this.checked)"><span><b>🎙 Live voice calls.</b> The phone rings, you answer and talk, and the caller talks back like a real call. Use a headset and allow the microphone. Turn this off to type (practice calls) or read (drill) instead.</span></label>`
                 : `<p class="fdd-live-opt" style="margin:0 0 10px">🎙 Live voice calls need Chrome or Edge with a microphone. In this browser you type (practice calls) or read (drill).</p>`}
-            <div class="fdd-sec"><h4>📞 Practice call · no script</h4>
+            <div class="fdd-sec"><h4>📞 Core callers · practice call (no script)</h4>
             <p style="margin:0 0 6px;line-height:1.5">A caller phones the front desk and you take the whole call in your own words, like on the job: no script and no answer choices. The caller reacts to what you say.</p>
             <ol style="margin:0 0 8px 18px;padding:0;line-height:1.55">
               <li><b>Answer</b> and greet the caller, and find out what they need.</li>
@@ -545,7 +578,9 @@
               <li><b>Help</b> them from the file, or take a complete message and route it. Then hang up.</li></ol>
             <p style="margin:0 0 4px;font-size:12px;color:#475569">After the call you match the file (the authentication is checked from the call), and you get a debrief on the RECEPTION MOCK CALL scorecard: 14 items, from the opening spiel to the closing spiel.</p>
             <div class="fdd-seg">${lv.map(([n, l]) => `<button class="${pcLevel === n ? 'on' : ''}" onclick="fddPracticeLevel(${n}, this)">${l}</button>`).join('')}</div>
-            <button class="fdd-go alt" onclick="fddPracticeStart()">📞 Take a practice call</button></div>
+            <button class="fdd-go alt" onclick="fddPracticeStart()">📞 Take a practice call</button>
+            ${ftButtonsHTML()}</div>
+            ${linesHomeHTML()}
             <div class="fdd-sec"><h4>📋 Scored drill · step by step</h4>
             <p style="margin:0 0 6px;line-height:1.5;font-size:12.3px">A run of calls where you <b>ask</b> for identifiers, <b>find</b> the case, <b>authenticate</b> the caller (some get it wrong on purpose) and pick how to <b>handle</b> the call. On a live call, just ask out loud: what you ask is ticked as you say it. Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. ${total} calls in the pool, across ${(window.MOCK_CASES || []).length} case files. The firm directory and front-desk rules are below.</p>
             <div style="display:flex;gap:8px;align-items:center"><select id="fdd-len" style="padding:8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px">
@@ -571,22 +606,25 @@
             rows.forEach(r => { (by[r.username] = by[r.username] || []).push(r); });
             const team = Object.entries(by).map(([u, rs]) => {
                 const n = rs.length, avg = (k) => Math.round(rs.reduce((a, r) => a + (r[k] || 0), 0) / n);
-                return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, practice: rs.filter(r => r.mode === 'practice').length, score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: avg('find_pct'), auth: avg('auth_pct'), act: avg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
+                // Find / Auth / Handle are the front desk's (drills and Core callers calls); a line call has its own goals
+                const core = rs.filter(r => !isLineRow(r)), cavg = (k) => core.length ? Math.round(core.reduce((a, r) => a + (r[k] || 0), 0) / core.length) + '%' : '—';
+                return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, practice: rs.filter(r => r.mode === 'practice').length, lines: rs.filter(isLineRow).length, graded: rs.filter(r => r.mode === 'graded').length,
+                    score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: cavg('find_pct'), auth: cavg('auth_pct'), act: cavg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
             }).sort((a, b) => b.score - a.score);
-            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} drills and practice calls)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}%</td><td>${t.auth}%</td><td>${t.act}%</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>` + savedListHTML(rows, true);
+            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} calls and drills)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
+                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}${t.lines ? `<br><span style="color:#64748b">${t.lines} line call${t.lines === 1 ? '' : 's'}${t.graded ? ` (${t.graded} graded)` : ''}</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}</td><td>${t.auth}</td><td>${t.act}</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>` + savedListHTML(rows, true);
         }
         return `<div class="fdd-sec"><h4>My results</h4>${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Type</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${r.mode === 'practice' ? '<span class="fdd-tag">Practice call</span>' : `Drill · ${r.calls}`}</td><td><b>${r.score}%</b></td><td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td><td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : 'No calls yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>` + savedListHTML(rows, false);
+            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${rowType(r)}</td><td><b>${r.score}%</b></td>${isLineRow(r) ? '<td>—</td><td>—</td><td>—</td>' : `<td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td>`}<td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : 'No calls yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>` + savedListHTML(rows, false);
     }
 
-    // 🎧 Saved calls: the Reception Simulator's practice calls, newest first (an Admin's lists everyone's), each opening
+    // 🎧 Saved calls: the Call Simulator's practice calls, newest first (an Admin's lists everyone's), each opening
     // with its scorecard, the review and the whole transcript (fddSavedCall).
     function savedListHTML(rows, team) {
-        const calls = rows.filter(r => r.mode === 'practice').slice(0, team ? 40 : 15);
+        const calls = rows.filter(r => r.mode === 'practice' || isLineRow(r)).slice(0, team ? 40 : 15);
         if (!calls.length) return '';
-        return `<div class="fdd-sec"><h4>🎧 Saved calls</h4><table class="fdd-tbl"><thead><tr><th>Date</th>${team ? '<th>Trainee</th>' : ''}<th>Score</th><th></th></tr></thead><tbody>
-            ${calls.map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td>${team ? `<td><b>${esc(r.full_name || r.username)}</b><br><span style="color:#64748b">${esc(r.batch_id || '')}</span></td>` : ''}<td><b>${Number(r.score) || 0}%</b></td>
+        return `<div class="fdd-sec"><h4>🎧 Saved calls</h4><table class="fdd-tbl"><thead><tr><th>Date</th>${team ? '<th>Trainee</th>' : ''}<th>Call</th><th>Score</th><th></th></tr></thead><tbody>
+            ${calls.map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td>${team ? `<td><b>${esc(r.full_name || r.username)}</b><br><span style="color:#64748b">${esc(r.batch_id || '')}</span></td>` : ''}<td>${rowType(r)}${r.title ? `<br><span style="color:#64748b">${esc(r.title)}</span>` : ''}</td><td><b>${Number(r.score) || 0}%</b></td>
                 <td><button class="fdd-view" onclick="fddSavedCall(${Number(r.id)})">View</button></td></tr>`).join('')}</tbody></table></div>`;
     }
     let SAVED = null;   // the saved call being read
@@ -606,6 +644,7 @@
         const back = `<button class="fdd-go" onclick="fddSavedBack()">← Back to the results</button>`;
         if (!SAVED || SAVED.loading) return `<p style="color:#64748b;font-size:12px">Loading the call…</p>${back}`;
         if (SAVED.error || !SAVED.d) return `<div class="fdd-fb bad">${esc(SAVED.error || 'This call has no scorecard or transcript saved with it.')}</div>${back}`;
+        if (SAVED.d.pack) return savedPackHTML(SAVED.row, SAVED.d, back);
         const row = SAVED.row, d = SAVED.d, rv = d.review || {}, k = d.mock && caseOf(d.mock);
         const items = (d.items || []).map(i => { const r = RUBRIC.find(x => x[0] === i.k) || [i.k, i.k, 'auto']; return { key: i.k, label: r[1], how: r[2], s: i.s, note: i.n }; });
         const li = (x) => Array.isArray(x) && x.filter(Boolean).length ? `<ul>${x.filter(Boolean).map(v => `<li>${esc(v)}</li>`).join('')}</ul>` : '';
@@ -927,7 +966,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const out = [];
         l.msgs.filter(m => m.who !== 'sys').forEach(m => {
             const role = m.who === 'caller' ? 'model' : 'user';
-            if (!out.length && role === 'model') out.push({ role: 'user', text: '(The receptionist picks up.)' });
+            if (!out.length && role === 'model') out.push({ role: 'user', text: l.pack ? (l.out ? '(The trainee calls you and you pick up.)' : '(The trainee answers the phone.)') : '(The receptionist picks up.)' });
             if (out.length && out[out.length - 1].role === role) out[out.length - 1].text += ' ' + m.text; else out.push({ role, text: m.text });
         });
         // The start of the call and the latest turns (the list always ends on the receptionist's line).
@@ -935,12 +974,12 @@ The call has just been answered. When the receptionist greets you, say why you'r
     }
     const cleanLine = (t) => unquote(String(t || '').replace(/\[END_CALL\]/gi, ' ').replace(/\*[^*]*\*/g, ' ').replace(/^\s*(caller|client|me)\s*:\s*/i, '').replace(/\s+/g, ' '));
 
-    // One request to /api/call-ai. retry: worth trying again (busy line, network).
-    async function askAI(purpose, system, messages, json) {
+    // One request to /api/call-ai. retry: worth trying again (busy line, network). module: a line's call counts under its line (call-packs.js aiModule).
+    async function askAI(purpose, system, messages, json, module) {
         try {
             const res = await fetch('/api/call-ai', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ purpose, system, messages, json: !!json })
+                body: JSON.stringify({ purpose, system, messages, json: !!json, module: module || '' })
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok && data && data.success && data.text) return { ok: true, text: String(data.text) };
@@ -948,9 +987,9 @@ The call has just been answered. When the receptionist greets you, say why you'r
         } catch (e) { return { ok: false, retry: true, error: 'Connection problem.' }; }
     }
     // A busy line is retried 3 times (1.5 s, 3 s, 6 s). stale() → the call moved on; stop quietly.
-    async function askWithRetry(purpose, system, messages, json, stale, onWait) {
+    async function askWithRetry(purpose, system, messages, json, stale, onWait, module) {
         for (let attempt = 0; ; attempt++) {
-            const r = await askAI(purpose, system, messages, json);
+            const r = await askAI(purpose, system, messages, json, module);
             if (stale()) return null;
             if (r.ok || !r.retry || attempt >= 3) return r;
             if (onWait) onWait(attempt + 1);
@@ -989,22 +1028,34 @@ The call has just been answered. When the receptionist greets you, say why you'r
     };
 
     // Answer: the call connects; the caller waits for the trainee's greeting (and says "Hello?" if there's none).
+    // A line's call you place (P.out) rings on the other end first (dialOut).
     window.fddPracticeAnswer = function () {
         const my = P; if (!pcOn() || my.answered) return;
+        if (my.pack && my.out) { const V = voice(); if (V && my.speak) V.unlock(); return dialOut(my); }
+        pcConnect(my);
+    };
+    function pcConnect(my) {
         my.answered = true; my.t0 = Date.now(); startTimer();
         if (window.LiveCall) window.LiveCall.stopRing();
+        const first = my.pack && my.out;   // they picked up: they speak first
         if (my.transport === 'live') startLive(my);
         else {
             const V = voice(); if (V && my.speak) V.unlock();
             if (liveOK() && livePref() && pcLiveWhy) my.voiceNote = `🎙 ${pcLiveWhy} This call uses the standard voice: ${V && V.canListen ? 'talk (🎙) or type your reply' : 'type your reply'}.`;
-            pcStatus('Connected. Greet the caller the way you answer the firm\'s phone.');
-            // No greeting in 6 s: "Hello?" (not while they're in the middle of saying one)
-            my.kick = setTimeout(() => { const b = $id('fdd-pc-in'); if (P === my && !my.ended && !my.msgs.length && !my.busy && !(b && b.value.trim())) callerSays('Hello?', false); }, 6000);
+            if (first) { my.opened = true; pcStatus(''); }
+            else {
+                pcStatus(my.pack ? 'Connected. Greet the caller.' : 'Connected. Greet the caller the way you answer the firm\'s phone.');
+                // No greeting in 6 s: "Hello?" (not while they're in the middle of saying one)
+                my.kick = setTimeout(() => { const b = $id('fdd-pc-in'); if (P === my && !my.ended && !my.msgs.length && !my.busy && !(b && b.value.trim())) callerSays('Hello?', false); }, 6000);
+            }
         }
+        if (my.pack) { const br = $id('fdd-panel').querySelector('.fdd-brief'); if (br) br.open = false; }
         pcIdCard(); pcControls(); pcTr();
-        if (my.transport === 'standard' && my.hands) pcListen(true);   // hands-free: say the greeting
+        if (first && my.transport === 'standard') callerSays(my.call.opening, false);
+        else if (first) return;
+        else if (my.transport === 'standard' && my.hands) pcListen(true);   // hands-free: say the greeting
         else { const b = $id('fdd-pc-in'); if (b) b.focus({ preventScroll: true }); }
-    };
+    }
 
     // Live voice (live-call.js): the caller hears the trainee and talks back. If it can't start,
     // is busy, or drops, the call carries on with the standard voice, transcript and all.
@@ -1013,6 +1064,9 @@ The call has just been answered. When the receptionist greets you, say why you'r
         my.speakerOn = speakerPref();
         window.LiveCall.start({
             callId: my.call.id, speaker: my.speakerOn,
+            // a line's call: on a call you place, they pick up and speak first; a silence after you answer is nobody's receptionist
+            pickup: my.pack && my.out ? '(Your phone rings and you pick up.)' : '',
+            nudge: my.pack ? '(The call is connected, but the other person hasn\'t said anything yet.)' : '',
             onState: (st) => {
                 if (P !== my || my.ended || my.transport !== 'live') return;
                 if (st === 'live') { my.liveUp = my.usedLive = true; pcStatus(liveTalkHint(my)); pcControls(); }
@@ -1036,6 +1090,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
     const textless = (m) => String(m).replace(/[;,]?\s*(?:so\s+)?(?:this call|the drill|the call)\s+runs as text[^.]*\.?/gi, '.').replace(/\s*,?\s*or run (?:it|this call) as text/gi, '').replace(/\.{2,}/g, '.').replace(/\s+\./g, '.').trim();
     function toStandard(my, why, code) {
         my.transport = 'standard'; my.liveUp = false;
+        if (my.pack && my.msgs.some(m => m.who === 'caller' && m.spoken)) my.opened = true;   // a line's caller already opened on live voice
         if (window.LiveCall && window.LiveCall.active()) window.LiveCall.stop();
         why = code === 'DROPPED' ? (/busy/i.test(why) ? 'The live voice service got busy.' : 'The live line dropped.') : textless(why || 'Live voice isn\'t available.');
         // Not set up, no microphone, the day's live minutes used up, a refused region: not again
@@ -1065,7 +1120,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         if (!my.speak || !V || !V.canSpeak) return fin();
         if (V.isListening()) { V.stopListening(); pcControls(); }   // the microphone waits while the caller talks
         pcStatus('The caller is talking…');
-        V.speak(text, { gender: my.call.voice, name: (my.call.gives || {}).name, onDone: fin,
+        V.speak(text, { gender: my.call.voice || my.call.gender, name: (my.call.gives || {}).name || my.call.name, onDone: fin,
             onNoVoice: () => { if (P === my && !my.noVoice) { my.noVoice = true; my.speak = false; pcControls(); } } });
     }
     function callerSays(text, end) {
@@ -1092,11 +1147,12 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const now = Date.now();
         my.msgs.push({ who: 'you', text, at: now, start: Math.min(now, my.replyStart || now), spoken: my.micUsed });
         my.replyStart = null; my.micUsed = false;
+        if (my.pack && !my.opened) { my.opened = true; pcTr(); pcStatus(''); return callerSays(my.call.opening, false); }   // a line's caller opens with their own words
         my.busy = true; pcTr(); pcStatus(''); pcControls();
         const reqNo = ++my.req;
-        const r = await askWithRetry('caller', callerPrompt(my.call), apiMessages(my), false,
+        const r = await askWithRetry('caller', my.pack ? packs().callerPrompt(my.call) : callerPrompt(my.call), apiMessages(my), false,
             () => P !== my || my.ended || my.req !== reqNo,
-            (n) => pcStatus(`The line is busy… retrying (${n} of 3).`, true));
+            (n) => pcStatus(`The line is busy… retrying (${n} of 3).`, true), my.pack ? packs().aiModule(my.call) : '');
         if (!r) return;
         my.busy = false;
         if (!r.ok) {
@@ -1217,6 +1273,13 @@ The call has just been answered. When the receptionist greets you, say why you'r
     const callerId = (c) => (String((c.gives || {}).callback || '').match(/\(?\d{3}\)?[\s.-]*\d{3}-\d{4}/) || [])[0] || 'Unknown number';
     function pcIdCard() {
         const el = $id('fdd-pc-id'); if (!el || !P) return;
+        if (P.pack) {
+            const ring = !P.answered && (!P.out || P.dialing);
+            el.className = 'fdd-pc-id' + (ring ? ' ringing' : '');
+            el.innerHTML = `<div class="av">${P.answered ? '👤' : '📞'}</div><div class="who"><b>${P.answered ? 'On the line' : P.out ? (P.dialing ? 'Calling…' : 'Your call') : 'Incoming call…'}</b><span>${esc(packWho(P))}${P.answered ? ` · ${P.transport === 'live' ? '🎙 live voice' : 'standard voice'}` : ''}</span></div>
+                ${P.answered || P.dialing ? '' : `<button class="answer" onclick="fddPracticeAnswer()">${P.out ? '📞 Call' : '📞 Answer'}</button>`}`;
+            return;
+        }
         const ringing = !P.answered;
         el.className = 'fdd-pc-id' + (ringing ? ' ringing' : '');
         el.innerHTML = `<div class="av">${ringing ? '📞' : '👤'}</div><div class="who"><b>${ringing ? 'Incoming call…' : 'On the line'}</b><span>Caller ID: ${esc(callerId(P.call))}${P.answered ? ` · ${P.transport === 'live' ? '🎙 live voice' : 'standard voice'}` : ''}</span></div>
@@ -1276,15 +1339,14 @@ The call has just been answered. When the receptionist greets you, say why you'r
 
     function practiceHTML() {
         const l = P;
-        return `<div id="fdd-pc-id"></div>
+        return `${l.pack ? briefHTML(l) : ''}<div id="fdd-pc-id"></div>
             <p id="fdd-pc-status" class="${l.warn ? 'warn' : ''}">${esc(l.status)}</p>
             <div class="fdd-sec" style="padding:8px 10px"><div class="fdd-tx" id="fdd-pc-tr"></div>
               <div class="fdd-comp"><button class="mic" id="fdd-pc-talk" onclick="fddPracticeTalk()" disabled>🎙</button><textarea id="fdd-pc-in" maxlength="1000" placeholder="${voice() && voice().canListen ? 'Press 🎙 and talk, or type what you say to the caller…' : 'Type what you say to the caller…'}" onkeydown="fddPracticeKey(event)" oninput="fddPracticeInput(this)"></textarea>
                 <button class="send" id="fdd-pc-send" onclick="fddPracticeSend()" disabled>Send</button></div>
               <div class="fdd-ctl" id="fdd-pc-ctl"></div></div>
             <button class="fdd-hang" onclick="fddPracticeHangUp()">✆ Hang up</button>
-            ${findHTML(l, 'Find the file')}
-            ${directoryHTML()}`;
+            ${!l.pack || l.call.doc ? findHTML(l, 'Find the file') + directoryHTML() : ''}`;
     }
 
     /* ---------- practice: what's checked from the call itself ---------- */
@@ -1417,9 +1479,10 @@ The call has just been answered. When the receptionist greets you, say why you'r
             <p id="fdd-pc-go-note" style="margin:6px 0 0;font-size:11.5px;color:#92400e">${esc(pcGoNote())}</p>
             <details class="fdd-sec" style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript</summary><div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div></details>`;
     }
-    const pcGoNote = () => P && !P.selected ? 'No file matched yet: the debrief counts the file as not found. Search above, or choose “No matching case on file”.' : '';
+    const pcGoNote = () => !P ? '' : [(!P.pack || P.call.doc) && !P.selected ? 'No file matched yet: the debrief counts the file as not found. Search above, or choose “No matching case on file”.' : '',
+        P.pack && P.graded && packs().noteOf(P.call) && noteWritten(P).length < 30 ? 'Write the note first: it\'s graded with the call.' : ''].filter(Boolean).join(' ');
     function pcWrapButton() { const n = $id('fdd-pc-go-note'); if (n) n.textContent = pcGoNote(); }
-    window.fddPracticeNote = function (v) { if (P) P.note = cut(v, 1500); };
+    window.fddPracticeNote = function (v) { if (P) { P.note = cut(v, P.pack ? 3000 : 1500); if (P.pack) pcWrapButton(); } };
 
     /* ---------- practice: the RECEPTION MOCK CALL scorecard ---------- */
     // 14 items, each 0-5. 'auto': checked from the call (above); 'ai': from the review of the transcript.
@@ -1531,6 +1594,7 @@ Reply with exactly this JSON:
     // can't be had, those five stay on screen with a way to try again, and the call is saved once it comes.
     window.fddPracticeReview = async function () {
         const my = P; if (!my || !my.ended || my.reviewing || my.review) return;
+        if (my.pack) return packReview(my);
         my.auto = autoChecks(my); my.result = pcScore(my);
         my.reviewing = true; my.reviewError = null; screen = 'pcdebrief'; paint();
         const top = () => { const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0; };
@@ -1616,6 +1680,245 @@ Reply with exactly this JSON:
             <div id="fdd-pc-hist" style="margin-top:10px">${historyHTML()}</div>`;
     }
 
+
+    /* =========================================================
+       CALL LINES (call-packs.js): Standard Training's ☎ Reception, 🗓 Calendar
+       Management and 📋 Intake Mock Calls, Case Management, Property Damage and
+       EA / PA. A line's call runs on the same phone as a Core callers practice
+       call (P.pack: live voice, or the standard voice), as practice (a caller you
+       pick, with the brief and the goals) or graded (a random caller you don't
+       know until the debrief). The caller speaks first on a call you place; on a
+       call you answer, they open once you've greeted them. After the call: the
+       file (Standard Training calls are about Training Library files), the note
+       the line asks for, and a debrief on the call's goals (/api/call-ai); then
+       it's saved with the results (mode 'line' or 'graded').
+       ========================================================= */
+    const packs = () => window.CALL_PACKS || null;
+    let lnView = null;   // the home screen's call-lines tab: a program, or Reception / Intake / Calendaring across them
+    let LN = null;       // the line on the 'line' screen: { program, line, graded }
+    let lnRecent = [];   // the last few callers taken on a line, so a random call doesn't repeat right away
+    function defaultView() {
+        const p = String((window.lshProgram && window.lshProgram()) || '').toLowerCase();
+        return p === 'cm' || p === 'md' ? 'CM' : p === 'pd' ? 'PD' : p === 'ea' ? 'EA' : 'FT';
+    }
+    const lineCalls = (l) => packs() ? packs().callsIn(l.program, l.line) : [];
+    const lineArg = (l) => esc(JSON.stringify([l.program, l.line]));
+    const programLabel = (k) => ((packs() && packs().programOf(k)) || {}).label || k;
+    // The three Standard Training lines, by the Core callers' practice call.
+    function ftButtonsHTML() {
+        const K = packs(); if (!K) return '';
+        return `<div class="fdd-ftl">${K.linesOf('FT').map(l => `<button onclick="fddOpenLine(${lineArg(l)})">${esc(l.icon)} ${esc(l.line)}</button>`).join('')}</div>`;
+    }
+    function linesHomeHTML() {
+        const K = packs(); if (!K) return '';
+        const view = lnView || defaultView();
+        const rows = K.linesIn(view).map(l => `<div class="fdd-line"><span class="nm">${esc(l.icon)} ${esc(l.line)}${view === l.program ? '' : ` <span class="fdd-tag">${esc(l.program === 'FT' ? 'Standard' : l.program)}</span>`}<small>${lineCalls(l).length} calls</small></span>
+            <button onclick="fddOpenLine(${lineArg(l)})">Practice</button><button class="g" onclick="fddLineGraded(${lineArg(l)})">Graded</button></div>`).join('');
+        // Calendaring: the calendars the calls are booked on (the CMS's Attorney's Calendar; the Portal's two calendar simulators)
+        const row = (name, what, open) => `<div class="fdd-line"><span class="nm">${name}<small>${what}</small></span>${open}</div>`;
+        const portal = (path) => `<a href="https://cm-training-activity.pages.dev${path}" target="_blank" rel="noopener">Open ↗</a>`;
+        const cal = view !== 'calendaring' ? '' : (typeof window.openAttorneyCalendar === 'function' ? row('🗓 Attorney\'s Calendar', 'book, move and cancel on the attorney\'s week', '<button onclick="fddClose();openAttorneyCalendar()">Open</button>') : '')
+            + row('📅 Google Calendar Simulator', 'Standard Training\'s Calendar Management, on the Portal', portal('/simulators/gcal.html?program=FT'))
+            + row('🗓 Calendaring Simulator', 'a week full of conflicts, on the Portal', portal('/simulators/calendar.html'));
+        return `<div class="fdd-sec"><h4>📞 Call lines</h4>
+            <div class="fdd-seg fdd-views">${K.VIEWS.map(v => `<button class="${v.k === view ? 'on' : ''}" onclick="fddLinesView('${esc(v.k)}')">${esc(v.icon)} ${esc(v.label)}</button>`).join('')}</div>
+            ${rows}${cal}
+            <p style="margin:6px 0 0;font-size:11.5px;color:#64748b;line-height:1.45"><b>Practice:</b> pick a caller, with your brief and what you're scored on; it's saved with your results. <b>Graded:</b> a random caller you don't know until the debrief; it counts in your course.</p></div>`;
+    }
+    window.fddLinesView = function (k) { lnView = k; paint(); };
+    const findLine = (program, line) => (packs() ? packs().LINES : []).find(l => l.program === program && l.line === line) || null;
+    window.fddOpenLine = function (program, line, graded) {
+        if (Array.isArray(program)) [program, line] = program;
+        const l = findLine(program, line); if (!l) return;
+        LN = { program: l.program, line: l.line, graded: !!graded };
+        if (P && P.pack) endPractice();
+        screen = 'line'; paint();
+        const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0;
+    };
+    window.fddLineGraded = function (program, line) {
+        if (Array.isArray(program)) [program, line] = program;
+        const l = findLine(program, line); if (!l) return;
+        LN = { program: l.program, line: l.line, graded: true };
+        fddLineCall(null, 'graded');
+    };
+    function lineHTML() {
+        const K = packs(), l = LN && findLine(LN.program, LN.line);
+        if (!K || !l) return `<p>That line isn't available.</p><button class="fdd-go" onclick="fddHome()">← All call lines</button>`;
+        const calls = lineCalls(l), course = l.program === 'FT' ? 'your Standard Training progress' : `your ${programLabel(l.program)} progress`;
+        return `<div class="fdd-sec"><h4>${esc(l.icon)} ${esc(l.line)} · ${esc(programLabel(l.program))}</h4>
+                <button class="fdd-go${LN.graded ? ' alt' : ''}" onclick="fddLineCall(null,'graded')">🎯 Graded call · a random caller</button>
+                <p style="margin:4px 0 8px;font-size:11.5px;color:#64748b;line-height:1.45">You don't know who's calling until the debrief${l.program === 'FT' ? ': find their file in the CMS while you talk' : ''}. It counts toward ${esc(course)}.</p>
+                <button class="fdd-go" style="background:#475569" onclick="fddLineCall(null,'practice')">📞 Random practice call</button></div>
+            <div class="fdd-sec"><h4>Practice a caller (${calls.length})</h4>
+                ${calls.map(c => `<div class="fdd-row" onclick="fddLineCall('${esc(c.id)}','practice')"><span class="nm">${esc(c.title)}<br><span class="mt">${esc(c.name)} · ${esc(c.role)}</span></span>
+                    <span class="mt">${c.dir === 'out' ? '<span class="fdd-tag">You call</span> ' : ''}${esc(c.level || '')}</span></div>`).join('')}</div>
+            ${l.tips ? `<details class="fdd-sec fdd-dir"><summary>Tips for this line</summary><ul>${l.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}
+            <button class="fdd-go" onclick="fddHome()">← All call lines</button>`;
+    }
+    // A call on the line: one caller (practice), or a random one (graded or practice).
+    window.fddLineCall = function (id, mode) {
+        const K = packs(), l = LN && findLine(LN.program, LN.line); if (!K || !l) return;
+        const pool = lineCalls(l);
+        let call = id ? K.find(id) : null;
+        if (!call) { let choices = pool.filter(c => !lnRecent.includes(c.id)); if (!choices.length) choices = pool; call = choices[Math.floor(Math.random() * choices.length)]; }
+        if (!call) return;
+        const unsaved = call.doc && typeof hasCaseContent === 'function' && hasCaseContent() && typeof currentCaseId !== 'undefined' && currentCaseId === null;
+        if (unsaved && !confirm('The call opens case files in the editor, which clears the unsaved case that\'s there now. Start anyway?')) return;
+        lnRecent = [call.id, ...lnRecent].slice(0, Math.max(0, Math.min(5, pool.length - 1)));
+        const box = $id('fdd-live'); if (box) window.fddSetLive(box.checked);
+        const V = voice(), note = K.noteOf(call);
+        hangUp(); stopTimer(); D = null; endPractice();
+        P = { pack: true, graded: mode === 'graded', call, out: call.dir === 'out', transport: liveOK() && livePref() && Date.now() > pcLiveOff ? 'live' : 'standard',
+            answered: false, dialing: false, opened: false, ringAt: Date.now(), t0: null, t1: null, msgs: [],
+            speak: !!(V && V.canSpeak && pcPref('SPEAK', true)), hands: !!(V && V.canListen && pcPref('HANDS', true)),
+            selected: null, q: '', note: note ? note.template : '', draft: '', busy: false, closing: false, ended: false, req: 0, muted: false, replyStart: null, micUsed: false,
+            status: call.dir === 'out' ? 'Ready when you are: press 📞 Call.' : 'Incoming call… press 📞 Answer.', warn: false, voiceNote: '', program: call.program };
+        document.body.classList.add('fdd-on');
+        if (typeof closeCallsPanel === 'function') closeCallsPanel();
+        screen = 'practice'; paint();
+        const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0;
+        if (!P.out && window.LiveCall) window.LiveCall.ring(3);
+    };
+    // Who the phone shows: on a graded call nobody in particular until the debrief.
+    const packWho = (l) => l.graded && !l.review ? (l.out ? l.call.role.replace(/\s*\(you are calling [^)]*\)/i, '') : 'Unknown caller') : `${l.call.name} · ${l.call.role.replace(/\s*\(you are calling [^)]*\)/i, '')}`;
+    // The brief, above the phone: your role, what you know, the file or summary you work from, and (practice) the goals.
+    function briefHTML(l) {
+        const K = packs(), c = l.call, doc = K.docOf(c), file = K.caseOf(c), note = K.noteOf(c), tips = K.tipsOf(c);
+        const docLine = !doc ? '' : l.graded
+            ? `<p class="fdd-bnote">🗂 The call is about one of the Training Library files: get the caller's name, verify them and find their file (search below or at the top).</p>`
+            : `<p class="fdd-bnote">🗂 The call is about <b>${esc(doc.title)}</b>. <button class="fdd-chip" onclick="fddPick('${esc(doc.id)}')">Open ${esc(doc.id)}</button></p>`;
+        return `<details class="fdd-sec fdd-brief" ${l.answered ? '' : 'open'}><summary>${esc(K.iconOf(c))} ${esc(c.line)} · ${l.graded ? 'graded call' : 'practice'}${l.graded ? '' : `: ${esc(c.title)}`}</summary>
+            <p>${esc(l.graded && doc ? 'You answer the phone at LSH Training Law Group (fictional). The call is about one of the firm\'s Training Library files.' : c.you)}</p>
+            <p><b>${l.graded ? 'When' : 'What you know'}:</b> ${esc(c.facts)}</p>
+            ${docLine}
+            ${file ? `<details class="fdd-file"><summary>📂 ${esc(file.label)}</summary><pre>${esc(file.text)}</pre></details>` : ''}
+            ${l.graded ? '<p class="fdd-bnote">What you\'re scored on is in your debrief.</p>' : `<b>You're scored on</b><ol>${c.goals.map(g => `<li>${esc(g)}</li>`).join('')}${note ? `<li>Documentation: ${esc(note.title)}</li>` : ''}</ol>`}
+            ${tips ? `<b>Tips</b><ul>${tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+            ${note ? `<p class="fdd-bnote">📝 After the call you write the ${esc(note.title.toLowerCase())}.</p>` : ''}</details>`;
+    }
+    // A call you place: it rings on the other end, then they pick up and speak first.
+    function dialOut(my) {
+        if (my.dialing) return;
+        my.dialing = true; pcStatus('Ringing…'); pcIdCard();
+        if (window.LiveCall) window.LiveCall.ring(2);
+        setTimeout(() => { if (P === my && !my.ended && !my.answered) pcConnect(my); }, 4400);
+    }
+    const noteWritten = (l) => { const n = packs().noteOf(l.call); let t = String(l.note || ''); if (n) n.template.split('\n').forEach(x => { if (x.trim()) t = t.split(x.trim()).join(' '); }); return t.replace(/\s+/g, ' ').trim(); };
+    function packWrapHTML() {
+        const l = P, K = packs(), c = l.call, note = K.noteOf(c), secs = Math.round(((l.t1 || Date.now()) - (l.t0 || Date.now())) / 1000);
+        let n = 0;
+        return `<div class="fdd-fb mid" style="margin-bottom:10px"><b>${l.ended === 'caller' ? 'The caller hung up.' : l.ended === 'time' ? 'The call reached its time limit.' : 'Call ended.'}</b> ⏱ ${fmtSec(secs)}. ${note ? 'Document it, then get your debrief.' : 'Get your debrief.'}</div>
+            ${c.doc ? findHTML(l, `${++n} · Which file was this call about?`) : ''}
+            <div class="fdd-sec"><h4>${++n} · 📝 ${esc(note ? note.title : 'Call note (optional)')}</h4>
+                <p style="margin:0 0 6px;font-size:11.5px;color:#475569">Write it the way it would go into the file. It's graded against what was actually said, so don't add anything you weren't told.</p>
+                <textarea class="fdd-note fdd-pk-note" id="fdd-pc-note" maxlength="3000" oninput="fddPracticeNote(this.value)">${esc(l.note)}</textarea></div>
+            <button class="fdd-go alt" id="fdd-pc-go" onclick="fddPracticeReview()">Get my debrief →</button>
+            <p id="fdd-pc-go-note" style="margin:6px 0 0;font-size:11.5px;color:#92400e">${esc(pcGoNote())}</p>
+            <details class="fdd-sec" style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript</summary><div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div></details>`;
+    }
+    const packTranscript = (l) => l.msgs.map(m => m.who === 'caller' ? `${l.call.name.toUpperCase()}: ${m.text}` : m.who === 'you' ? `TRAINEE: ${m.text}` : `(${m.text})`).join('\n');
+    async function packReview(my) {
+        const K = packs(), c = my.call, note = K.noteOf(c), written = noteWritten(my);
+        if (my.graded && note && written.length < 30) { pcStatus(''); alert(`Write the ${note.title.toLowerCase()} first: it's graded with the call.`); return; }
+        my.secs = Math.max(0, Math.round(((my.t1 || Date.now()) - (my.t0 || Date.now())) / 1000));
+        my.spoken = !!(my.usedLive || my.msgs.some(m => m.who === 'you' && m.spoken));
+        my.reviewing = true; my.reviewError = null; screen = 'pcdebrief'; paint();
+        const top = () => { const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0; };
+        top();
+        let tx = packTranscript(my); if (tx.length > 14000) tx = '…' + tx.slice(-14000);
+        const prompt = K.gradePrompt(c, { transcript: tx, secs: my.secs, spoken: my.spoken, note: written.length >= 30 ? my.note : '', picked: c.doc ? { id: my.selected } : null });
+        const r = await askWithRetry('review', K.GRADE_SYSTEM, [{ role: 'user', text: prompt }], true, () => P !== my, null, K.aiModule(c));
+        if (!r) return;
+        my.reviewing = false;
+        const g = r.ok ? K.parseGrade(r.text) : null;
+        if (!g) { my.reviewError = r.ok ? 'The debrief came back unreadable.' : r.error; paint(); return; }
+        my.review = g; paint(); top();
+        savePack(my);
+    }
+    async function savePack(l) {
+        const K = packs(), c = l.call, g = l.review, file = c.doc ? { id: c.doc, picked: l.selected || null, ok: l.selected === c.doc } : null;
+        const detail = { pack: true, id: c.id, program: c.program, line: c.line, title: c.title, caller: c.name, role: c.role, mode: l.graded ? 'graded' : 'practice',
+            voice: l.usedLive ? 'live' : 'standard', secs: l.secs, score: g.score, verdict: g.verdict, goals: g.goals, strengths: g.strengths, improve: g.improve, betterLine: g.betterLine,
+            file, course: K.courseOf(c), turns: l.msgs.filter(m => m.who === 'you').length, note: cut(noteWritten(l) ? l.note : '', 3000), transcript: '' };
+        const full = packTranscript(l);
+        detail.transcript = full.length > 9000 ? '…' + full.slice(-9000) : full;
+        l.saved = 'saving'; paintSaved();
+        try {
+            const res = await fetch('/api/drill-results', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ mode: l.graded ? 'graded' : 'line', program: c.program, calls: 1, details: [detail], score: g.score,
+                    findPct: file && file.ok ? 100 : 0, authPct: 0, actionPct: 0, avgSeconds: l.secs })
+            });
+            const data = await res.json().catch(() => ({}));
+            l.saved = data && data.success ? 'saved' : 'failed';
+        } catch (e) { l.saved = 'failed'; }
+        paintSaved(); loadHistory();
+    }
+    // The debrief: the score, each goal met or not yet, what worked, what's next, and a better line.
+    function goalsHTML(goals) {
+        return `<ul class="fdd-goals">${(goals || []).map(g => `<li><span class="${g.met ? 'ok' : 'no'}">${g.met ? '✓' : '○'}</span><div>${esc(g.goal)}${g.note ? `<small>${esc(g.note)}</small>` : ''}</div></li>`).join('')}</ul>`;
+    }
+    function reviewHTML(g) {
+        const li = (x) => x && x.length ? `<ul>${x.map(v => `<li>${esc(v)}</li>`).join('')}</ul>` : '';
+        return `<div class="fdd-sec fdd-rv"><h4>Debrief</h4>${g.verdict ? `<p style="margin:0 0 6px"><b>${esc(g.verdict)}</b></p>` : ''}
+            ${g.strengths && g.strengths.length ? `<div style="font-weight:700;color:#047857">What worked</div>${li(g.strengths)}` : ''}
+            ${g.improve && g.improve.length ? `<div style="font-weight:700;color:#b45309">Not yet: next time</div>${li(g.improve)}` : ''}
+            ${g.betterLine ? `<div class="better"><b>Try saying:</b> “${esc(g.betterLine)}”</div>` : ''}</div>`;
+    }
+    function packDebriefHTML() {
+        const l = P, K = packs(), c = l.call, g = l.review, doc = K.docOf(c);
+        const status = l.reviewing ? `<div class="fdd-fb mid"><b>📝 Grading your call…</b> It takes a few seconds.</div>`
+            : !g ? `<div class="fdd-fb bad"><b>The debrief didn't load.</b> ${esc(l.reviewError || '')} The call is saved once it comes through.
+                <button class="fdd-go alt" onclick="fddPracticeReview()">Try again</button><button class="fdd-go" onclick="fddPracticeBackToWrap()">← Back to the wrap-up</button></div>` : '';
+        const again = l.graded ? `<button class="fdd-go alt" onclick="fddLineCall(null,'graded')">🎯 Next graded call</button>`
+            : `<button class="fdd-go alt" onclick="fddLineCall('${esc(c.id)}','practice')">↻ Try this call again</button><button class="fdd-go" style="background:#475569" onclick="fddLineCall(null,'practice')">📞 Another caller on this line</button>`;
+        return `<div class="fdd-sec" style="text-align:center"><div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#64748b;text-transform:uppercase">${esc(K.iconOf(c))} ${esc(c.line)} · ${l.graded ? 'graded call' : 'practice'}</div>
+                <div class="fdd-score">${g ? g.score + '/100' : '…'}</div>
+                <div style="color:#334155;font-weight:700">${esc(c.title)}</div>
+                <div style="color:#64748b">${esc(c.name)} · ${esc(c.role)}${doc ? ` · ${esc(doc.id)}` : ''} · ⏱ ${fmtSec(l.secs || 0)}${l.usedLive ? ' · live voice' : ''}</div>
+                <div id="fdd-pc-saved" style="font-size:11.5px"></div></div>
+            ${status}
+            ${doc ? `<div class="fdd-fb ${l.selected === doc.id ? 'ok' : 'bad'}">${l.selected === doc.id ? '✓' : '✗'} <b>File:</b> ${esc(doc.title)}${l.selected === doc.id ? '' : ` (you ${l.selected ? `picked ${esc(l.selected === 'none' ? 'not in the system' : l.selected)}` : 'didn\'t match a file'})`}</div>` : ''}
+            ${g ? `<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(g.goals)}</div>${reviewHTML(g)}` : ''}
+            <details class="fdd-sec"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript${noteWritten(l) ? ' and your note' : ''}</summary>
+                <div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div>${noteWritten(l) ? `<p style="margin:6px 0 0;font-size:12px;white-space:pre-wrap"><b>Your note:</b>\n${esc(l.note)}</p>` : ''}</details>
+            ${g ? again : ''}
+            <button class="fdd-go" onclick="fddOpenLine('${esc(c.program)}', ${esc(JSON.stringify(c.line))})">← ${esc(c.line)}</button>
+            <div id="fdd-pc-hist" style="margin-top:10px">${historyHTML()}</div>`;
+    }
+    // A saved line call (🎧 Saved calls).
+    function savedPackHTML(row, d, back) {
+        const score = Number(row.score) || 0;
+        return `<div class="fdd-sec" style="text-align:center"><div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#64748b;text-transform:uppercase">${esc(d.line || '')} · ${d.mode === 'graded' ? 'graded call' : 'practice'} · ${esc(row.full_name || row.username)}</div>
+                <div class="fdd-score">${score}/100</div>
+                <div style="color:#334155;font-weight:700">${esc(d.title || '')}</div>
+                <div style="color:#64748b">${esc(String(row.created_at || '').slice(0, 16))} · ${esc(d.caller || '')}${d.secs != null ? ` · ⏱ ${fmtSec(Number(d.secs) || 0)}` : ''}${d.voice === 'live' ? ' · live voice' : ''}</div></div>
+            ${d.file ? `<div class="fdd-fb ${d.file.ok ? 'ok' : 'bad'}">${d.file.ok ? '✓' : '✗'} <b>File:</b> ${esc(d.file.id)}${d.file.ok ? '' : ` (picked ${esc(d.file.picked || 'none')})`}</div>` : ''}
+            ${Array.isArray(d.goals) && d.goals.length ? `<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(d.goals)}</div>` : ''}
+            ${reviewHTML({ verdict: d.verdict, strengths: d.strengths, improve: d.improve, betterLine: d.betterLine })}
+            ${d.note ? `<div class="fdd-sec"><h4>The note</h4><p style="margin:0;white-space:pre-wrap">${esc(d.note)}</p></div>` : ''}
+            <div class="fdd-sec"><h4>Transcript</h4><div class="fdd-saved-tx">${esc(d.transcript || 'No transcript was saved with this call.')}</div></div>
+            ${back}`;
+    }
+    const isLineRow = (r) => r.mode === 'line' || r.mode === 'graded';
+    const rowType = (r) => r.mode === 'practice' ? '<span class="fdd-tag">Practice call</span>' : r.mode === 'line' ? `<span class="fdd-tag">${esc(r.line || 'Line')} · practice</span>`
+        : r.mode === 'graded' ? `<span class="fdd-tag g">${esc(r.line || 'Line')} · graded</span>` : `Drill · ${r.calls}`;
+    // A link from another platform: ?calls=1 opens the Call Simulator, &program= or &flow= picks the tab
+    // (standard, cms, pd, ea-pa, reception, intake, calendaring), &line= opens a line, &mode=graded marks its graded call.
+    function openFromLink() {
+        const q = new URLSearchParams(location.search), K = packs();
+        const want = q.get('calls') || q.get('line') || q.get('flow');
+        if (!want || !K) return false;
+        openFrontDeskDrill();
+        const view = K.viewOf(q.get('flow')) || K.viewOf(q.get('program'));
+        if (view) lnView = view;
+        const lines = view ? K.linesIn(view) : K.LINES;
+        const l = q.get('line') && (lines.find(x => x.line.toLowerCase() === q.get('line').toLowerCase()) || K.LINES.find(x => x.line.toLowerCase() === q.get('line').toLowerCase()));
+        if (l) fddOpenLine(l.program, l.line, q.get('mode') === 'graded');
+        else paint();
+        return true;
+    }
+
     // The sidebar button goes in after the Training Library button exists.
     const origApply = window.applySessionUI;
     if (typeof origApply === 'function') {
@@ -1624,7 +1927,7 @@ Reply with exactly this JSON:
             buildUI();
             const signedIn = typeof hasAuthorizedAccess === 'function' && hasAuthorizedAccess();
             if (!signedIn && $id('fdd-panel')) { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on', 'fdd-open'); fitCase(); $id('fdd-panel').classList.remove('open'); }
-            else if (signedIn && new URLSearchParams(location.search).get('drill') && !window.__fddOpened) { window.__fddOpened = true; setTimeout(openFrontDeskDrill, 80); }
+            else if (signedIn && !window.__fddOpened && /[?&](drill|calls|line|flow)=/.test(location.search)) { window.__fddOpened = true; setTimeout(() => { if (!openFromLink()) openFrontDeskDrill(); }, 80); }
             return r;
         };
     }

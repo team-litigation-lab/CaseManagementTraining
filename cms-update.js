@@ -14,7 +14,7 @@
 
    When it reloads: at a quiet moment, so nobody loses work. Right away in
    a background tab; otherwise after a minute with no typing, clicking or
-   scrolling. Never while a window, the Reception Simulator or a call is
+   scrolling. Never while a window, the Call Simulator or a call is
    open, while a Training Library case has unsaved edits, or while there's
    typing in a field that isn't part of the case (sign-in, a calendar
    entry…). The case in the editor is kept (persistCurrentEditorState in

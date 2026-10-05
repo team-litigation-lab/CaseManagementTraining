@@ -152,7 +152,7 @@
         if (document.body.classList.contains('intake-mode')) notes.push('Intake mode');
         if (window.mockSnapshot) { try { const m = window.mockSnapshot(); if (m && m.mockId) notes.push('a case file from the library'); } catch (e) {} }
         if (q('#nm-modal.open')) { out.panel = '📝 New Intake'; notes.unshift(txt(q('#nm-modal h3'))); }
-        else if (q('#fdd-panel.open')) { out.panel = '📞 Reception Simulator'; notes.unshift(txt(q('#fdd-panel .fdd-h b')).replace(/^📞\s*/, '')); }
+        else if (q('#fdd-panel.open')) { out.panel = '📞 Call Simulator'; notes.unshift(txt(q('#fdd-panel .fdd-h b')).replace(/^📞\s*/, '')); }
         else if (q('#case-library-modal.open')) { out.panel = '🔍 Case Library'; notes.unshift(txt(q('#cl-tabs button.on'))); }
         else {
             const m = [...document.querySelectorAll('.modal-overlay.open')].filter(e => e.id !== 'live-view-modal').pop();

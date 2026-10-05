@@ -1,10 +1,12 @@
 import { json, requireSession, buildFullName } from '../_utils.js';
 
-// Front Desk results (front-desk-drill.js in the CMS). One row per completed
-// drill (mode 'drill') or practice call (mode 'practice'): which calls the
-// trainee got, how they did at finding the case, authenticating the caller
-// and handling the call, and how long it took. Trainees read their own
-// history; Admins read everyone's.
+// Call Simulator results (front-desk-drill.js in the CMS). One row per completed
+// drill (mode 'drill') or Core callers practice call (mode 'practice'): which
+// calls the trainee got, how they did at finding the case, authenticating the
+// caller and handling the call, and how long it took; or one call on a line
+// (call-packs.js): a practice call (mode 'line') or a graded one (mode
+// 'graded'), its details naming the program, line and call. Trainees read
+// their own history; Admins read everyone's.
 //
 // The table is created on first use (CREATE TABLE IF NOT EXISTS is a cheap
 // no-op after that), and the mode column is added to a table made before it
@@ -36,6 +38,10 @@ async function ensureTable(db) {
     }
 }
 const pct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+const MODES = ['drill', 'practice', 'line', 'graded'];
+// A line call's line and title, for the lists (an Admin's list leaves the details out).
+const LINE_COLS = `CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].line') END AS line,
+    CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].title') END AS title`;
 
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);
@@ -52,9 +58,9 @@ export async function onRequestGet({ request, env }) {
         return json({ success: true, result: row });
     }
     const { results } = isAdmin
-        ? await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, created_at
+        ? await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, ${LINE_COLS}, created_at
                                 FROM front_desk_drills ORDER BY created_at DESC LIMIT 1000`).all()
-        : await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details, created_at
+        : await env.DB.prepare(`SELECT id, username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details, ${LINE_COLS}, created_at
                                 FROM front_desk_drills WHERE username = ? ORDER BY created_at DESC LIMIT 100`).bind(session.username).all();
     return json({ success: true, isAdmin, results: results || [] });
 }
@@ -76,7 +82,7 @@ export async function onRequestPost({ request, env }) {
         `INSERT INTO front_desk_drills (username, full_name, batch_id, program, mode, calls, score, find_pct, auth_pct, action_pct, avg_seconds, details)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(session.username, buildFullName(userRow) || session.fullName || session.username, session.batchId || null,
-        String(body.program || '').slice(0, 20) || null, body.mode === 'practice' ? 'practice' : 'drill', calls, pct(body.score), pct(body.findPct), pct(body.authPct), pct(body.actionPct),
+        String(body.program || '').slice(0, 20) || null, MODES.includes(body.mode) ? body.mode : 'drill', calls, pct(body.score), pct(body.findPct), pct(body.authPct), pct(body.actionPct),
         Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), details).run();
     return json({ success: true });
 }

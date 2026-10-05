@@ -1,8 +1,8 @@
 import { json, requireSession } from '../_utils.js';
-import { drillCall, createLiveToken, liveSetup, LIVE_MODELS, LIVE_WS } from '../_live.js';
+import { drillCall, packCall, liveModule, createLiveToken, liveSetup, LIVE_MODELS, LIVE_WS } from '../_live.js';
 import { gatewayOn, gatewayPost } from '../_ai.js';
 
-// Live Front Desk Drill calls (see functions/_live.js).
+// Live voice calls: the Front Desk Drill's and the Call Simulator lines' (see functions/_live.js).
 //
 // POST { callId, failed: [ids] } → a single-use token for one live call, and the
 //   call's id. `failed` lists earlier tries of this call that Google refused
@@ -90,8 +90,8 @@ export async function onRequestPost({ request, env }) {
         return json({ success: true });
     }
 
-    const call = drillCall(String(body.callId || ''));
-    if (!call) return json({ success: false, error: 'Unknown drill call.' }, 400);
+    const call = drillCall(String(body.callId || '')) || packCall(String(body.callId || ''));
+    if (!call) return json({ success: false, error: 'Unknown call.' }, 400);
     const useGateway = gatewayOn(env);   // the Portal's shared keys and budget (functions/_ai.js); this site's own keys otherwise
     const pool = useGateway ? [{ slot: 'gateway', key: '' }] : keyPool(env);
     if (!pool.length) return json({ success: false, code: 'NOT_CONFIGURED', error: 'Live voice calls aren\'t set up on this site yet (GEMINI_API_KEY). This call runs as text.' }, 503);
@@ -130,7 +130,7 @@ export async function onRequestPost({ request, env }) {
             let r;
             try {
                 if (useGateway) {
-                    const g = await gatewayPost(env, { action: 'live-token', module: 'cms', user: session.username, setup: liveSetup(call, model), model, maxMinutes: maxMinutes(env) });
+                    const g = await gatewayPost(env, { action: 'live-token', module: liveModule(call), user: session.username, setup: liveSetup(call, model), model, maxMinutes: maxMinutes(env) });
                     r = g.data && g.data.success ? { ok: true, token: g.data.token } : { ok: false, status: g.status === 401 || g.status === 501 ? 502 : g.status, error: (g.data && g.data.error) || `AI gateway error ${g.status}` };
                 } else r = await createLiveToken(k.key, call, model, Date.now(), maxMinutes(env), env);
             } catch (e) { r = { ok: false, status: 502, error: String(e && e.message || e) }; }

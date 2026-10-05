@@ -83,7 +83,7 @@ const MOCK_FIRM = {
         'Urgent (route now, not by message): a client in danger or in crisis, a deadline or court date in the next 7 days, a settlement offer with a time limit, a statute of limitations close, a subpoena or a process server, or anyone threatening legal action against the firm.'
     ],
     // The reception SOP (Job Description & SOPs: Receptionist). The practice calls' debrief grades by it,
-    // and the Reception Simulator lists it with the rules.
+    // and the Call Simulator lists it with the rules.
     sop: [
         'Answer at once: the one-ring policy.',
         'Open every call with the spiel: "Thank you for calling Legal Support Help. This is (your name)." (In these practice calls the firm is also called LSH Training Law Group.)',
