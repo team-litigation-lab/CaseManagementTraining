@@ -120,10 +120,12 @@ export async function rootFolder(env, db, link) {
     return id;
 }
 // The case's folder inside it. A new folder means its files are copied again.
-export async function caseFolder(env, db, link, caseKey, name) {
+// (parent: a folder inside the case's, e.g. its Litigation folder, recorded under its own key "<case key>/Litigation";
+// made again, with its files, if it's deleted, or its case folder is.)
+export async function caseFolder(env, db, link, caseKey, name, parent) {
     const row = await db.prepare(`SELECT folder_id FROM drive_case_folders WHERE username = ? AND case_key = ?`).bind(link.username, caseKey).first();
     if (row && await liveFolder(env, db, link, row.folder_id)) return { id: row.folder_id, fresh: false };
-    const id = await makeFolder(env, db, link, name, await rootFolder(env, db, link));
+    const id = await makeFolder(env, db, link, name, parent || await rootFolder(env, db, link));
     await db.batch([
         db.prepare(`INSERT INTO drive_case_folders (username, case_key, folder_id, folder_name) VALUES (?, ?, ?, ?)
             ON CONFLICT(username, case_key) DO UPDATE SET folder_id = excluded.folder_id, folder_name = excluded.folder_name`).bind(link.username, caseKey, id, name),
