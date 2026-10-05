@@ -146,9 +146,9 @@ Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. Th
 - **Spreading the load:** each new call goes to the key with the fewest calls in progress. When a call ends (or the page closes), its place is freed.
 - **When a key is busy:** if Google refuses a call (busy, out of quota, model unavailable), the drill tries the next key, then the next model. Only when none takes the call does that one call run as text. The next call tries live again, so a trainee is never stuck.
 - **Paid price:** Gemini Live costs about $0.005 per minute of the trainee's audio and $0.018 per minute of the caller's. That is about $0.023 per minute of call when the caller talks the whole time, so a 3-minute call costs a few cents. Ten trainees each doing an 8-call drill is roughly 80 calls, about 240 minutes, **roughly $5–6**. Google's billing page has the exact amounts.
-- **Time limit:** every call hangs up at a time limit (6 minutes by default), with a warning 30 seconds before. A forgotten open call can't keep running.
+- **Time limit:** every call hangs up at 4 minutes, with a warning 30 seconds before. A forgotten open call can't keep running.
 - **Optional caps:** set these Cloudflare variables (plain text):
-  - `LIVE_MAX_MINUTES`: the time limit per call (1–15; default 6).
+  - `LIVE_MAX_MINUTES`: a shorter time limit per call (1–4; the default, and the most, is 4).
   - `LIVE_CALLS_PER_KEY`: the most calls at once on one key. Calls past it run as text. Use it to stay under a free-tier limit on concurrent calls.
   - `LIVE_DAILY_MINUTES`: the whole site's live minutes in any 24 hours. Past it, the drill runs as text until minutes free up. This is a spending cap.
 - **Usage for Admins:** the drill panel shows **🎙 Live voice calls**:

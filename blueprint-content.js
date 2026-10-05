@@ -360,7 +360,7 @@
               tip: 'A change takes effect on the next deploy.' },
             { icon: '🎚', title: 'Settings: limits and bindings', points: [
                 'CALL_AI_LIMIT: AI requests per person per 10 minutes (150 if not set).',
-                'LIVE_MAX_MINUTES (6), LIVE_CALLS_PER_KEY, LIVE_DAILY_MINUTES and LIVE_MODEL: the live voice limits.',
+                'LIVE_MAX_MINUTES (4, the most), LIVE_CALLS_PER_KEY, LIVE_DAILY_MINUTES and LIVE_MODEL: the live voice limits.',
                 'Bindings in wrangler.toml, nothing to set by hand: DB (the D1 database), DOCUMENTS (the R2 bucket), GEMINI_RELAY (EA-PA\'s relay).',
                 'CLOUDFLARE_API_TOKEN in the repository\'s GitHub secrets is used only by the Migrate D1 workflow.'],
               where: 'Cloudflare → the Pages project → Variables and Secrets · wrangler.toml.',
