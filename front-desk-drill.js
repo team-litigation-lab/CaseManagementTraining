@@ -246,7 +246,9 @@
     .fdd-ftl{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
     .fdd-ftl button{flex:1 1 auto;font-size:11.5px;font-weight:800;border:1px solid #0f2148;background:#eef2ff;color:#0f2148;border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left}
     .fdd-ftl button:hover{background:#0f2148;color:#fff}
-    .fdd-views button{font-size:10.5px;padding:4px 9px}
+    .fdd-pick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 8px}
+    .fdd-pick select{flex:1 1 180px;min-width:0;padding:7px 8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px;font-weight:700;color:#0f2148;background:#fff}
+    .fdd-pick span{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b}
     .fdd-line{display:flex;align-items:center;gap:6px;padding:7px 0;border-top:1px solid #f1f5f9}
     .fdd-line .nm{flex:1;min-width:0;font-weight:700;font-size:12.5px;color:#0f2148}
     .fdd-line .nm small{display:block;font-weight:500;font-size:10.5px;color:#64748b}
@@ -600,7 +602,7 @@
     }
     function historyHTML() {
         if (!history) return `<p style="color:#64748b;font-size:12px">Loading results…</p>`;
-        const rows = history.results || [];
+        const all = history.results || [], rows = filterRows(all), filtered = rows.length !== all.length || rf.line !== 'all' || rf.mode !== 'all';
         if (history.isAdmin && isAdmin()) {   // not in Trainee view
             const by = {};
             rows.forEach(r => { (by[r.username] = by[r.username] || []).push(r); });
@@ -611,11 +613,11 @@
                 return { u, name: rs[0].full_name || u, batch: rs[0].batch_id || '', n, practice: rs.filter(r => r.mode === 'practice').length, lines: rs.filter(isLineRow).length, graded: rs.filter(r => r.mode === 'graded').length,
                     score: avg('score'), best: Math.max(...rs.map(r => r.score)), find: cavg('find_pct'), auth: cavg('auth_pct'), act: cavg('action_pct'), secs: avg('avg_seconds'), last: rs[0].created_at };
             }).sort((a, b) => b.score - a.score);
-            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} calls and drills)</h4>${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}${t.lines ? `<br><span style="color:#64748b">${t.lines} line call${t.lines === 1 ? '' : 's'}${t.graded ? ` (${t.graded} graded)` : ''}</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}</td><td>${t.auth}</td><td>${t.act}</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : '<p style="color:#64748b;font-size:12px;margin:0">No drills completed yet.</p>'}</div>` + savedListHTML(rows, true);
+            return `${liveUsageHTML()}<div class="fdd-sec"><h4>Team results (${rows.length} calls and drills)</h4>${filterHTML()}${team.length ? `<table class="fdd-tbl"><thead><tr><th>Trainee</th><th>Runs</th><th>Avg</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
+                ${team.map(t => `<tr><td><b>${esc(t.name)}</b><br><span style="color:#64748b">${esc(t.batch)}</span></td><td>${t.n}${t.practice ? `<br><span style="color:#64748b">${t.practice} practice</span>` : ''}${t.lines ? `<br><span style="color:#64748b">${t.lines} line call${t.lines === 1 ? '' : 's'}${t.graded ? ` (${t.graded} graded)` : ''}</span>` : ''}</td><td><b>${t.score}%</b><br><span style="color:#64748b">best ${t.best}%</span></td><td>${t.find}</td><td>${t.auth}</td><td>${t.act}</td><td>${t.secs}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${filtered ? 'No calls match.' : 'No drills completed yet.'}</p>`}</div>` + savedListHTML(rows, true);
         }
-        return `<div class="fdd-sec"><h4>My results</h4>${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Type</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
-            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${rowType(r)}</td><td><b>${r.score}%</b></td>${isLineRow(r) ? '<td>—</td><td>—</td><td>—</td>' : `<td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td>`}<td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : 'No calls yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>` + savedListHTML(rows, false);
+        return `<div class="fdd-sec"><h4>My results</h4>${all.length ? filterHTML() : ''}${rows.length ? `<table class="fdd-tbl"><thead><tr><th>Date</th><th>Type</th><th>Score</th><th>Find</th><th>Auth</th><th>Handle</th><th>Sec/call</th></tr></thead><tbody>
+            ${rows.slice(0, 15).map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td><td>${rowType(r)}</td><td><b>${r.score}%</b></td>${isLineRow(r) ? '<td>—</td><td>—</td><td>—</td>' : `<td>${r.find_pct}%</td><td>${r.auth_pct}%</td><td>${r.action_pct}%</td>`}<td>${r.avg_seconds}</td></tr>`).join('')}</tbody></table>` : `<p style="color:#64748b;font-size:12px;margin:0">${history.error ? 'Couldn\'t load results.' : filtered ? 'No calls match.' : 'No calls yet. Your scores will appear here and on your trainer\'s team view.'}</p>`}</div>` + savedListHTML(rows, false);
     }
 
     // 🎧 Saved calls: the Call Simulator's practice calls, newest first (an Admin's lists everyone's), each opening
@@ -1721,7 +1723,9 @@ Reply with exactly this JSON:
             + row('📅 Google Calendar Simulator', 'Standard Training\'s Calendar Management, on the Portal', portal('/simulators/gcal.html?program=FT'))
             + row('🗓 Calendaring Simulator', 'a week full of conflicts, on the Portal', portal('/simulators/calendar.html'));
         return `<div class="fdd-sec"><h4>📞 Call lines</h4>
-            <div class="fdd-seg fdd-views">${K.VIEWS.map(v => `<button class="${v.k === view ? 'on' : ''}" onclick="fddLinesView('${esc(v.k)}')">${esc(v.icon)} ${esc(v.label)}</button>`).join('')}</div>
+            <div class="fdd-pick"><span>Calls</span><select id="fdd-calls-view" aria-label="Which calls" onchange="fddLinesView(this.value)">
+                <optgroup label="By program">${K.VIEWS.filter(v => v.program).map(v => `<option value="${esc(v.k)}" ${v.k === view ? 'selected' : ''}>${esc(v.icon)} ${esc(K.programOf(v.k).label)}</option>`).join('')}</optgroup>
+                <optgroup label="Across programs">${K.VIEWS.filter(v => !v.program).map(v => `<option value="${esc(v.k)}" ${v.k === view ? 'selected' : ''}>${esc(v.icon)} ${esc(v.label)}</option>`).join('')}</optgroup></select></div>
             ${rows}${cal}
             <p style="margin:6px 0 0;font-size:11.5px;color:#64748b;line-height:1.45"><b>Practice:</b> pick a caller, with your brief and what you're scored on; it's saved with your results. <b>Graded:</b> a random caller you don't know until the debrief; it counts in your course.</p></div>`;
     }
@@ -1901,6 +1905,25 @@ Reply with exactly this JSON:
             ${back}`;
     }
     const isLineRow = (r) => r.mode === 'line' || r.mode === 'graded';
+    // The results, kept apart for grading: one program's or one line's calls (or the Core callers'), graded or practice.
+    let rf = { line: 'all', mode: 'all' };
+    function filterRows(rows) {
+        return rows.filter(r => {
+            const line = rf.line === 'all' || (rf.line === 'core' ? !isLineRow(r) : rf.line.startsWith('P:') ? isLineRow(r) && r.program === rf.line.slice(2) : isLineRow(r) && `${r.program}|${r.line}` === rf.line);
+            const mode = rf.mode === 'all' || (rf.mode === 'graded' ? r.mode === 'graded' : r.mode !== 'graded');
+            return line && mode;
+        });
+    }
+    function filterHTML() {
+        const K = packs(), opt = (v, l, cur) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`;
+        return `<div class="fdd-pick"><span>Show</span><select id="fdd-rf-line" aria-label="Which calls" onchange="fddResultsFilter('line', this.value)">${opt('all', 'All calls', rf.line)}${opt('core', '☎ Core callers (front desk)', rf.line)}
+            ${K ? K.PROGRAMS.map(p => `<optgroup label="${esc(p.icon + ' ' + p.label)}">${opt('P:' + p.k, 'All ' + p.label + ' calls', rf.line)}${K.linesOf(p.k).map(l => opt(p.k + '|' + l.line, l.icon + ' ' + l.line, rf.line)).join('')}</optgroup>`).join('') : ''}</select>
+            <select id="fdd-rf-mode" aria-label="Practice or graded" style="flex:0 1 150px" onchange="fddResultsFilter('mode', this.value)">${opt('all', 'Practice and graded', rf.mode)}${opt('graded', '🎯 Graded only', rf.mode)}${opt('practice', 'Practice only', rf.mode)}</select></div>`;
+    }
+    window.fddResultsFilter = function (k, v) {
+        rf[k] = v;
+        if (screen === 'pcdebrief') { const h = $id('fdd-pc-hist'); if (h) h.innerHTML = historyHTML(); } else paint();
+    };
     const rowType = (r) => r.mode === 'practice' ? '<span class="fdd-tag">Practice call</span>' : r.mode === 'line' ? `<span class="fdd-tag">${esc(r.line || 'Line')} · practice</span>`
         : r.mode === 'graded' ? `<span class="fdd-tag g">${esc(r.line || 'Line')} · graded</span>` : `Drill · ${r.calls}`;
     // A link from another platform: ?calls=1 opens the Call Simulator, &program= or &flow= picks the tab

@@ -6,14 +6,15 @@
 //   Calendaring tabs list what they should;
 // - a link from another platform (?calls=1&program=FT&line=…&mode=graded) opens the Call Simulator on that line;
 // - the home screen: the Core callers' practice call with ☎ Reception, 🗓 Calendar Management and 📋 Intake Mock Calls
-//   buttons, and the call lines with Practice and Graded on each line, by program and across them;
+//   buttons, and the call lines with Practice and Graded on each line, picked in the Calls dropdown by program and across them;
 // - a practice call (FT Calendar Management, about MC-05): the brief has the caller, the goals and the file; the caller
 //   opens with their own words once greeted; their next lines come from /api/call-ai with their script, under the
 //   line's AI budget; the wrap-up has the file and the line's note; the debrief is graded on the call's goals with the
 //   file and the note, and the call is saved as a line call with its course;
 // - a graded call you place (EA/PA Executive Calls): they pick up and speak first; the goals aren't shown before the
 //   call; the note is required; saved as graded; a graded call you answer shows an unknown caller;
-// - the results: line calls are listed with their line, and a saved line call opens with its goals and transcript.
+// - the results: line calls are listed with their line; the Show dropdowns keep them apart for grading (graded only, one
+//   line, a program, the Core callers); a saved line call opens with its goals and transcript.
 // Usage: node .github/scripts/call-lines.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -106,18 +107,18 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     await page.evaluate(() => fddHome()); await page.waitForTimeout(200);
     const home = await page.evaluate(() => ({ title: document.querySelector('#fdd-panel .fdd-h b').textContent,
         ft: [...document.querySelectorAll('.fdd-ftl button')].map(b => b.textContent.trim()),
-        tabs: [...document.querySelectorAll('.fdd-views button')].map(b => b.textContent.trim()),
+        tabs: [...document.querySelectorAll('#fdd-calls-view option')].map(o => o.textContent.trim()),
         lines: [...document.querySelectorAll('.fdd-line')].map(r => [r.querySelector('.nm').childNodes[0].textContent.trim(), [...r.querySelectorAll('button')].map(b => b.textContent).join('|')]) }));
     if (!/Call Simulator/.test(home.title)) fail(`the panel is titled "${home.title}"`);
     if (home.ft.join(' / ') !== '☎ Reception Mock Calls / 🗓 Calendar Management Mock Calls / 📋 Intake Mock Calls') fail(`the Core callers' Standard buttons: ${home.ft.join(' / ')}`);
-    if (home.tabs.length !== 7 || !home.tabs.includes('🧑‍💼 EA / PA') || !home.tabs.includes('📋 Intake')) fail(`the call lines' tabs: ${home.tabs.join(', ')}`);
+    if (home.tabs.length !== 7 || !home.tabs.includes('🧑‍💼 EA / PA') || !home.tabs.includes('📋 Intake') || !home.tabs.includes('📘 Standard Training')) fail(`the Calls dropdown: ${home.tabs.join(', ')}`);
     if (home.lines.length !== 3 || home.lines.some(l => l[1] !== 'Practice|Graded')) fail(`the Standard tab's lines don't each have Practice and Graded: ${JSON.stringify(home.lines)}`);
-    await page.click('.fdd-views button:has-text("EA / PA")');
+    await page.selectOption('#fdd-calls-view', 'EA');
     if (await page.locator('.fdd-line').count() !== 6) fail('the EA / PA tab doesn\'t list its 6 lines');
-    await page.click('.fdd-views button:has-text("Intake")');
+    await page.selectOption('#fdd-calls-view', 'intake');
     const intake = await page.evaluate(() => [...document.querySelectorAll('.fdd-line .nm')].map(n => n.textContent.replace(/\s+/g, ' ').trim()));
     if (intake.length !== 3 || !intake.some(t => /EA/.test(t)) || !intake.some(t => /CM/.test(t))) fail(`the Intake tab should list the intake lines of every program: ${intake}`);
-    await page.click('.fdd-views button:has-text("Calendaring")');
+    await page.selectOption('#fdd-calls-view', 'calendaring');
     if (!(await page.locator('.fdd-line:has-text("Attorney\'s Calendar")').count()) || !(await page.locator('.fdd-line:has-text("Google Calendar Simulator") a[href*="/simulators/gcal.html"]').count())) fail('the Calendaring tab doesn\'t offer the Attorney\'s Calendar and the Google Calendar Simulator');
 
     // 3. a practice call: Karen Holt wants to move MC-05's deposition (FT Calendar Management)
@@ -159,7 +160,7 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
 
     // 4. a graded call you place: Elias, the Friday 4:00 PM call (EA / PA Executive Calls)
     await page.evaluate(() => fddHome());
-    await page.click('.fdd-views button:has-text("EA / PA")');
+    await page.selectOption('#fdd-calls-view', 'EA');
     await page.evaluate(() => { const pool = CALL_PACKS.callsIn('EA', 'Executive Calls'), i = pool.findIndex(c => c.id === 'ea_ex_friday'); window.__rnd = Math.random; Math.random = () => (i + 0.5) / pool.length; });
     await page.click('.fdd-line:has-text("Executive Calls") button:has-text("Graded")');
     await page.evaluate(() => { Math.random = window.__rnd; });
@@ -194,12 +195,24 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
 
     // 5. the results: line calls with their line; a saved line call opens with its goals
     results = [
-        { id: 7, username: 'ci', full_name: 'CI Trainee', mode: 'graded', calls: 1, score: 82, find_pct: 0, auth_pct: 0, action_pct: 0, avg_seconds: 75, created_at: '2026-10-05 10:00:00', line: 'Executive Calls', title: fri.title, details: JSON.stringify([d2]) },
-        { id: 6, username: 'ci', full_name: 'CI Trainee', mode: 'line', calls: 1, score: 82, find_pct: 100, auth_pct: 0, action_pct: 0, avg_seconds: 61, created_at: '2026-10-05 09:00:00', line: 'Calendar Management Mock Calls', title: depo.title, details: JSON.stringify([d1]) }
+        { id: 7, username: 'ci', full_name: 'CI Trainee', program: 'EA', mode: 'graded', calls: 1, score: 82, find_pct: 0, auth_pct: 0, action_pct: 0, avg_seconds: 75, created_at: '2026-10-05 10:00:00', line: 'Executive Calls', title: fri.title, details: JSON.stringify([d2]) },
+        { id: 6, username: 'ci', full_name: 'CI Trainee', program: 'FT', mode: 'line', calls: 1, score: 82, find_pct: 100, auth_pct: 0, action_pct: 0, avg_seconds: 61, created_at: '2026-10-05 09:00:00', line: 'Calendar Management Mock Calls', title: depo.title, details: JSON.stringify([d1]) }
     ];
     await page.evaluate(() => fddHome()); await page.waitForTimeout(400);
     const hist = await page.evaluate(() => ({ text: document.querySelector('.fdd-b').textContent, views: document.querySelectorAll('.fdd-view').length }));
     if (!/Executive Calls · graded/i.test(hist.text) || !/Calendar Management Mock Calls · practice/i.test(hist.text) || hist.views !== 2) fail(`the results don't list the line calls: ${hist.text.slice(-400)}`);
+    // kept apart for grading: graded only, one line, the Core callers
+    const shown = () => page.evaluate(() => [...document.querySelectorAll('.fdd-sec')].find(s => s.querySelector('h4') && /My results/.test(s.querySelector('h4').textContent)).querySelectorAll('tbody tr').length);
+    await page.selectOption('#fdd-rf-mode', 'graded');
+    const gradedOnly = await shown();
+    await page.selectOption('#fdd-rf-mode', 'all'); await page.selectOption('#fdd-rf-line', 'FT|Calendar Management Mock Calls');
+    const ftLine = await shown(), ftText = await page.textContent('.fdd-b');
+    await page.selectOption('#fdd-rf-line', 'P:EA');
+    const eaAll = await shown();
+    await page.selectOption('#fdd-rf-line', 'core');
+    const core = await shown(), none = /No calls match/.test(await page.textContent('.fdd-b'));
+    if (gradedOnly !== 1 || ftLine !== 1 || !/Calendar Management Mock Calls · practice/i.test(ftText) || eaAll !== 1 || core !== 0 || !none) fail(`the results dropdowns don't keep the calls apart: ${JSON.stringify({ gradedOnly, ftLine, eaAll, core, none })}`);
+    await page.selectOption('#fdd-rf-line', 'all');
     await page.click('.fdd-view >> nth=1');
     await page.waitForSelector('.fdd-goals', { timeout: 5000 }).catch(() => fail('a saved line call doesn\'t open with its goals'));
     if (!/KAREN HOLT:/.test(await page.textContent('.fdd-saved-tx'))) fail('a saved line call doesn\'t show its transcript');
