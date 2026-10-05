@@ -93,7 +93,7 @@
     let S = {
         open: false, view: 'week', anchor: null, data: null, loadedKey: '', loading: false, error: '',
         hidden: {}, showDeadlines: true, weekends: false, scope: 'mine',
-        panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | {kind:'import', imp} | null
+        panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | null
         feedPick: null,   // Sync: the calendars the subscribe link covers (null: all)
         mode: 'firm',     // 'firm': the Firm Calendar (the case's Calendar tab) | 'attorney': 🗓 Attorney's Calendar (Calendaring), on its own
         dayCache: {}, lastSync: null, poll: null,
@@ -576,7 +576,6 @@
             <span id="fc-live" class="fc-live"></span>
             <div style="margin-left:auto;display:flex;gap:8px">
                 <button class="fc-btn primary" onclick="fcNew()">+ New event</button>
-                <button class="fc-btn" data-fc="import" onclick="fcImport()" title="Add the events in an .ics file (exported from Google Calendar, Outlook, a court's e-filing site…) to the firm's calendar">⬆ Import .ics</button>
                 <button class="fc-btn" onclick="fcSubscribe()">🔗 Sync to Google / Outlook</button>
             </div>`;
         renderStatus();
@@ -711,7 +710,6 @@
         side.style.display = 'block';
         if (S.panel.kind === 'detail') side.innerHTML = detailHtml(S.panel.ev);
         else if (S.panel.kind === 'subscribe') side.innerHTML = subscribeHtml();
-        else if (S.panel.kind === 'import') side.innerHTML = importHtml(S.panel.imp);
         else { side.innerHTML = formHtml(S.panel.form); checkAvailability(); }
     }
     function findEvent(id) {
@@ -735,7 +733,7 @@
             : e.source === 'case' ? 'A date on the saved case. Change it on the case itself.'
             : e.source === 'template' ? `On the attorney's weekly schedule (every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][e.weekday]}).${me().admin ? ' An edit changes it every week, for everyone.' : ' Book around it.'}`
             : `${e.replaces ? (e.shared ? 'The firm-wide version of ' : `${e.mine ? 'Your' : esc(e.ownerName) + '\'s'} version of `) + (/^std-/.test(e.replaces) ? 'the attorney\'s standing event' : 'a shared event') + (e.mine ? ': delete it to bring the original back. ' : '. ') : ''}`
-                + `${e.imported ? 'Imported from an .ics file by ' : 'Scheduled by '}${esc(e.mine ? 'you' : e.ownerName)}${e.shared ? ' · shared with every trainee' : ''}${e.updatedAt ? ' · ' + esc(String(e.updatedAt).slice(0, 16)) + ' UTC' : ''}`;
+                + `Scheduled by ${esc(e.mine ? 'you' : e.ownerName)}${e.shared ? ' · shared with every trainee' : ''}${e.updatedAt ? ' · ' + esc(String(e.updatedAt).slice(0, 16)) + ' UTC' : ''}`;
         return `<div class="det">
             <div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><h3>${esc(evTitle(e))}</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
             <div style="height:4px;border-radius:4px;background:${c.color};margin:6px 0 10px"></div>
@@ -860,33 +858,6 @@
                     <a class="fc-btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name + ' (LSH)')}">Add to Outlook</a></div></div>`}
             <button class="fc-btn danger" style="margin-top:10px" onclick="fcRotate()">↻ Reset links</button></div>`;
     }
-    // ⬆ Import .ics: pick the calendar, choose the file, see what's in it, then add it
-    function importHtml(imp) {
-        const calList = cals().map(c => ({ id: c.id, label: c.name.replace('Atty. ', ''), color: c.color }));
-        const p = imp.preview, sum = p && p.summary;
-        const when = (e) => `${fmtDate(e.date)} ${e.allDay ? 'all day' : fmtTime(e.start) + '–' + fmtTime(e.end)}`;
-        const skipped = sum ? [sum.already ? `${sum.already} already imported` : '', sum.outside ? `${sum.outside} outside 6 months back – 2 years ahead` : '',
-            sum.cancelled ? `${sum.cancelled} cancelled` : '', sum.invalid ? `${sum.invalid} without a start time` : '', sum.tooMany ? `${sum.tooMany} over your 500-event limit` : ''].filter(Boolean) : [];
-        return `<div class="det" data-fc="import-panel">
-            <div style="display:flex;justify-content:space-between;align-items:center"><h3>⬆ Import an .ics file</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
-            <label class="fl">On whose calendar</label>
-            <div class="pills">${calList.map(x => { const on = imp.calendar === x.id; return `<button type="button" class="pill ${on ? 'on' : ''}" style="${on ? 'background:' + x.color : ''}" onclick="fcImportSet('calendar','${x.id}')">${esc(x.label)}</button>`; }).join('')}</div>
-            ${me().admin && imp.calendar !== ATTY ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;margin-top:10px"><input type="checkbox" ${imp.shared ? 'checked' : ''} onchange="fcImportSet('shared',this.checked)"> Share firm-wide (every trainee sees them)</label>` : ''}
-            <label class="fl">The file</label>
-            <label class="fc-btn" style="display:inline-block;cursor:pointer">📄 Choose an .ics file<input type="file" id="fc-ics" accept=".ics,text/calendar" style="display:none" onchange="fcImportFile(this)"></label>
-            ${imp.fileName ? `<span class="fc-sub" style="margin-left:8px">${esc(imp.fileName)}</span>` : ''}
-            ${imp.busy ? '<div class="fc-sub" style="margin-top:10px">Reading the file…</div>' : ''}
-            ${imp.error ? `<div class="avail bad" style="margin-top:10px">${esc(imp.error)}</div>` : ''}
-            ${p && p.schedule ? `<div class="avail ok" style="margin-top:10px" data-fc="import-summary"><b>${p.add} appointment${p.add === 1 ? '' : 's'} a week</b> become the attorney's weekly schedule, every week, for everyone${sum.replaces ? ` (in place of the ${sum.replaces} there now)` : ''}.
-                ${sum.otherWeeks ? `<div style="margin-top:4px">Left out: ${sum.otherWeeks} one-off event${sum.otherWeeks === 1 ? '' : 's'} from other weeks.</div>` : ''}
-                <ul>${p.preview.map(e => `<li>${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][e.weekday]} ${e.allDay ? 'all day' : fmtTime(e.start) + '–' + fmtTime(e.end)} · ${esc(e.title)}${e.caseRef ? ` <span class="fc-sub">(${esc(e.caseRef)})</span>` : ''}</li>`).join('')}${p.add > p.preview.length ? `<li>…and ${p.add - p.preview.length} more</li>` : ''}</ul></div>
-                <div style="display:flex;gap:8px;margin-top:12px"><button class="fc-btn primary" data-fc="import-go" onclick="fcImportGo()">Set the weekly schedule (${p.add})</button><button class="fc-btn" onclick="fcClose()">Cancel</button></div>`
-            : p ? `<div class="avail ${p.add ? 'ok' : 'bad'}" style="margin-top:10px" data-fc="import-summary">${p.add ? `<b>${p.add} event${p.add === 1 ? '' : 's'}</b> to add${sum.first ? `, ${esc(fmtDate(sum.first))}${sum.last !== sum.first ? ' – ' + esc(fmtDate(sum.last)) : ''}` : ''}${sum.repeating ? ` (${sum.repeating} repeating event${sum.repeating === 1 ? '' : 's'} spread out by date)` : ''}.` : 'Nothing new to add from this file.'}
-                ${skipped.length ? `<div style="margin-top:4px">Left out: ${esc(skipped.join(', '))}.</div>` : ''}
-                ${p.preview.length ? `<ul>${p.preview.map(e => `<li>${esc(when(e))} · ${esc(e.title)}${e.type !== 'Other' ? ` <span class="fc-sub">(${esc(e.type)})</span>` : ''}</li>`).join('')}${p.add > p.preview.length ? `<li>…and ${p.add - p.preview.length} more</li>` : ''}</ul>` : ''}</div>
-                ${p.add ? `<div style="display:flex;gap:8px;margin-top:12px"><button class="fc-btn primary" data-fc="import-go" onclick="fcImportGo()">Import ${p.add} event${p.add === 1 ? '' : 's'} to ${esc(cal(imp.calendar).name)}</button><button class="fc-btn" onclick="fcClose()">Cancel</button></div>` : ''}` : ''}
-        </div>`;
-    }
 
     /* ---------- actions ---------- */
     function setAnchorToday() { S.anchor = S.data ? S.data.today : firmToday(); }
@@ -970,54 +941,6 @@
         const all = cals().map(c => c.id), cur = (S.feedPick || all).filter(x => all.includes(x));
         S.feedPick = id === '*' ? (cur.length === all.length ? [] : all) : cur.includes(id) ? cur.filter(x => x !== id) : all.filter(x => x === id || cur.includes(x));
         renderSide();
-    };
-    window.fcImport = function () {
-        const firstShown = cals().find(c => c.id !== 'firm' && !S.hidden[c.id]);
-        const c = caseDefaults().calendar || (firstShown ? firstShown.id : 'firm');   // the open case's attorney, if a case is open
-        S.panel = { kind: 'import', imp: { calendar: c, shared: false, text: '', fileName: '', preview: null, error: '', busy: false } }; render();
-    };
-    async function importPost(dryRun) {
-        const imp = S.panel && S.panel.kind === 'import' ? S.panel.imp : null; if (!imp || !imp.text) return null;
-        imp.busy = true; imp.error = ''; renderSide();
-        try {
-            const res = await fetch('/api/calendar', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'import', ics: imp.text, calendar: imp.calendar, shared: !!imp.shared, dryRun }) });
-            const data = await res.json().catch(() => ({}));
-            imp.busy = false;
-            if (!data.success) { imp.error = data.error || 'Could not read that file.'; imp.preview = null; renderSide(); return null; }
-            return data;
-        } catch (e) { imp.busy = false; imp.error = 'Could not reach the server. Try again.'; renderSide(); return null; }
-    }
-    window.fcImportSet = async function (k, v) {
-        const imp = S.panel && S.panel.imp; if (!imp) return;
-        imp[k] = v;
-        if (imp.text) { const d = await importPost(true); if (d) imp.preview = d; }
-        renderSide();
-    };
-    window.fcImportFile = function (input) {
-        const file = input.files && input.files[0]; if (!file) return;
-        const imp = S.panel && S.panel.imp; if (!imp) return;
-        if (file.size > 1024 * 1024) { imp.error = 'That file is too big (up to 1 MB). Export a shorter date range.'; imp.preview = null; renderSide(); return; }
-        const reader = new FileReader();
-        reader.onload = async () => {
-            imp.text = String(reader.result || ''); imp.fileName = file.name; imp.preview = null;
-            const d = await importPost(true); if (d) imp.preview = d;
-            renderSide();
-        };
-        reader.onerror = () => { imp.error = 'Could not read that file.'; renderSide(); };
-        reader.readAsText(file);
-    };
-    window.fcImportGo = async function () {
-        const imp = S.panel && S.panel.imp; if (!imp) return;
-        if (imp.preview && imp.preview.schedule && !confirm(`Set the attorney's weekly schedule from this file? It takes the place of the schedule there now, every week, for everyone.`)) return;
-        const d = await importPost(false); if (!d) return;
-        toast(d.schedule ? `Weekly schedule set: ${d.added} appointment${d.added === 1 ? '' : 's'} a week.` : `${d.added} event${d.added === 1 ? '' : 's'} imported to ${cal(d.calendar).name}'s calendar.`, 'success', 5000);
-        if (d.schedule) S.dayCache = {};
-        if (channel) channel.postMessage('changed');
-        const first = d.summary && d.summary.first;
-        S.panel = null;
-        if (first && (first < range()[0] || first > range()[1])) S.anchor = first;
-        await load(true); render();
     };
     window.fcNew = function (opts) {
         const over = caseDefaults();

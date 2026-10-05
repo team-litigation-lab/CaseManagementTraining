@@ -100,25 +100,6 @@ export async function resetTemplate(db) {
     await ensureTemplate(db);
     await db.batch([db.prepare(`DELETE FROM calendar_template WHERE calendar = 'attorney'`)].concat(SEED.map(r => seedInsert(db, r))));
 }
-// An imported appointment (Firm Calendar → ⬆ Import .ics onto the Attorney's Calendar) that is one of the schedule's
-// own: its type and case file, from the same title, or the same case number in its notes (Case: LSH-…).
-const caseNo = (notes) => (/Case:\s*(LSH-[A-Z0-9-]+)/i.exec(String(notes || '')) || [])[1] || '';
-export function seedFor(title, notes) {
-    const t = String(title || '').trim().toLowerCase(), n = caseNo(notes).toUpperCase();
-    const hit = SEED.find(r => r[4].toLowerCase() === t) || (n ? SEED.find(r => caseNo(r[8]).toUpperCase() === n) : null);
-    return hit ? { type: hit[3], caseRef: hit[5], caseLabel: hit[6], sameTitle: hit[4].toLowerCase() === t } : null;
-}
-// The schedule replaced by these rows (an Admin's import), in batches a Pages Function can run.
-export async function replaceTemplate(db, rows, who) {
-    await ensureTemplate(db);
-    const ins = rows.map(r => db.prepare(
-        `INSERT INTO calendar_template (calendar, weekday, start_time, end_time, all_day, title, type, location, case_ref, case_label, notes, updated_by)
-         VALUES ('attorney', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.weekday, r.allDay ? '' : r.start, r.allDay ? '' : r.end, r.allDay ? 1 : 0, r.title, r.type,
-        r.location || '', r.caseRef || '', r.caseLabel || '', r.notes || '', who || null));
-    const first = [db.prepare(`DELETE FROM calendar_template WHERE calendar = 'attorney'`)].concat(ins.slice(0, 39));
-    await db.batch(first);
-    for (let i = 39; i < ins.length; i += 40) await db.batch(ins.slice(i, i + 40));
-}
 export async function templateRows(db) {
     const { results } = await db.prepare(`SELECT * FROM calendar_template ORDER BY weekday, start_time, id`).all();
     return results || [];

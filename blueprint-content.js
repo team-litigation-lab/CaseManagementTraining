@@ -80,7 +80,7 @@
                 '📅 Calendar tab: each attorney\'s calendar and the Firm / Staff calendar, already busy, as at a real firm.',
                 'An event scheduled from the case is linked to it and goes on the case\'s attorney\'s calendar.',
                 'It shows conflicts and the next free times, and flags weekends and times outside business hours.',
-                '✎ Edit any event (a standing one is saved as your version). ⬆ Import .ics; 🔗 Sync the calendars you pick.',
+                '✎ Edit any event (a standing one is saved as your version). 🔗 Sync the calendars you pick.',
                 '🗓 Attorney\'s Calendar (sidebar): the Calendaring week, the same every week.',
                 '⏱ The timer, under the search bars: ▶ Start timer and Billable / Non-billable. The ⏱ Time tab has your timesheet.'],
               where: 'The case\'s 📅 Calendar and ⏱ Time tabs · the timer under the search bars at the top right of the case.',
@@ -248,7 +248,7 @@
               shot: 'blueprint/trainer-intake-folder.jpg', shotAlt: 'The Intake folder: typed intakes with their scores, and an uploaded intake sheet' },
             { icon: '📅', title: 'Firm Calendar, time and drill results', points: [
                 '📅 Firm Calendar: the attorneys\' calendars and the Firm / Staff calendar. An attorney\'s Google Calendar can be connected.',
-                '🗓 Attorney\'s Calendar: the Calendaring week. ✎ Edit, add to or ⬆ Import .ics to set its weekly schedule: every week, for everyone.',
+                '🗓 Attorney\'s Calendar: the Calendaring week. ✎ Edit or add to its weekly schedule: every week, for everyone.',
                 '⏱ Time tab → 👥 All trainees: everyone\'s time for the week, with totals, and ⬇ Export CSV.',
                 '📞 Reception Simulator: every trainee\'s drill results and scores.'],
               where: 'Sidebar → Trainer tools → 📅 Firm Calendar · Sidebar → 🗓 Attorney\'s Calendar · the case\'s ⏱ Time tab.',

@@ -3,8 +3,7 @@ import {
     CALENDARS, CALENDAR_IDS, EVENT_TYPES, conflictsFor, freeSlots, cleanEvent, isDate, addDays, daysBetween, firmToday,
     ensureCalendarTables, rowToEvent, visibleEvents, importTrainingEvents, replaceable
 } from '../_calendar.js';
-import { parseICS, weeklySchedule } from '../_ics.js';
-import { ATTORNEY_CAL, resetTemplate, replaceTemplate, seedFor } from '../_attorney_calendar.js';
+import { ATTORNEY_CAL, resetTemplate } from '../_attorney_calendar.js';
 import { ensureGoogleTables, googleStatus } from '../_google_calendar.js';
 
 // Firm Calendar (firm-calendar.js): the attorneys' calendars inside the CMS.
@@ -33,19 +32,13 @@ import { ensureGoogleTables, googleStatus } from '../_google_calendar.js';
 //          appointment on the Attorney's Calendar's weekly schedule (functions/_attorney_calendar.js):
 //          it changes every week, for everyone. {action: 'template-reset'}: back to the schedule as it came.
 //   DELETE /api/calendar?template=<id>   Admins: take an appointment off the weekly schedule.
-//   POST   /api/calendar  {action: 'import', ics, calendar, shared?, dryRun?}   the events
-//          in an .ics file (functions/_ics.js), put on one of the firm's calendars as the
-//          caller's events. dryRun: only say what would be added. An Admin's import onto the
-//          Attorney's Calendar sets its weekly schedule instead (each appointment on its day of the
-//          week, every week, in place of the schedule there now). Events already imported
-//          from the file (same UID and time) are skipped, so importing it again adds nothing twice.
+//   (⬆ Import .ics was taken out: {action: 'import'} answers 410. What it had added was undone once:
+//   undoImports in functions/_calendar.js.)
 //   DELETE /api/calendar?id=<id>
 //
 // The tables are created on first use: see ensureCalendarTables in functions/_calendar.js.
 const MAX_WINDOW_DAYS = 120;
 const MAX_EVENTS_PER_USER = 500;
-const MAX_ICS_BYTES = 1024 * 1024;
-const INSERT_BATCH = 40;   // statements per D1 batch (a Pages Function may run only so many queries)
 
 // Date deadlines on the cases the caller can see (same rule as the case list):
 // Date of Loss, SOL, Complaint Filed, Discovery Cut-off, Trial Date.
@@ -158,7 +151,7 @@ export async function onRequestPost({ request, env }) {
     if (body && body.action === 'feed') {
         return json({ success: true, feedToken: await feedToken(env.DB, session.username, !!body.rotate) });
     }
-    if (body && body.action === 'import') return importIcs(env.DB, session, body, admin);
+    if (body && body.action === 'import') return json({ success: false, error: 'Importing .ics files was taken out of the calendar.' }, 410);
     if (body && (body.action === 'template' || body.action === 'template-reset')) {
         if (!admin) return json({ success: false, error: 'Only an Admin changes the attorney\'s weekly schedule. Add your own appointment instead.' }, 403);
         if (body.action === 'template-reset') { await resetTemplate(env.DB); return json({ success: true }); }
@@ -217,62 +210,6 @@ export async function onRequestPost({ request, env }) {
     }
     const row = await env.DB.prepare(`SELECT * FROM calendar_events WHERE id = ?`).bind(savedId).first();
     return json({ success: true, event: rowToEvent(row, session), doubleBooked: conflicts.length ? conflicts : undefined });
-}
-
-// ⬆ Import .ics: the file's events onto one of the firm's calendars, as the caller's own events.
-async function importIcs(db, session, body, admin) {
-    const ics = String(body.ics || '');
-    if (!ics.trim()) return json({ success: false, error: 'Choose an .ics file.' }, 400);
-    if (ics.length > MAX_ICS_BYTES) return json({ success: false, error: 'That file is too big (up to 1 MB). Export a shorter date range.' }, 413);
-    if (!/BEGIN:VCALENDAR/i.test(ics) || !/BEGIN:VEVENT/i.test(ics)) return json({ success: false, error: 'That isn\'t a calendar file with events in it (.ics).' }, 400);
-    const calendar = CALENDAR_IDS.includes(body.calendar) ? body.calendar : null;
-    if (!calendar) return json({ success: false, error: 'Pick whose calendar the events go on.' }, 400);
-    if (calendar === ATTORNEY_CAL && admin) return importSchedule(db, session, ics, !!body.dryRun);
-    const shared = admin && !!body.shared;
-    const parsed = parseICS(ics, { today: firmToday() });
-    const { results } = await db.prepare(`SELECT ext_uid FROM calendar_events WHERE owner_username = ? AND ext_uid <> ''`).bind(session.username).all();
-    const have = new Set((results || []).map(r => r.ext_uid));
-    const fresh = parsed.events.filter(e => !have.has(e.extUid));
-    const count = await db.prepare(`SELECT COUNT(*) AS n FROM calendar_events WHERE owner_username = ?`).bind(session.username).first();
-    const room = Math.max(0, MAX_EVENTS_PER_USER - ((count && count.n) || 0));
-    const take = fresh.slice(0, room);
-    const summary = { found: parsed.found, events: parsed.events.length, already: parsed.events.length - fresh.length, tooMany: fresh.length - take.length,
-        repeating: parsed.repeating, cancelled: parsed.cancelled, outside: parsed.outside, invalid: parsed.invalid,
-        first: take.length ? take.reduce((m, e) => (e.date < m ? e.date : m), take[0].date) : null,
-        last: take.length ? take.reduce((m, e) => (e.date > m ? e.date : m), take[0].date) : null };
-    if (body.dryRun) {
-        return json({ success: true, dryRun: true, add: take.length, summary,
-            preview: take.slice().sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)).slice(0, 40)
-                .map(e => ({ title: e.title, type: e.type, date: e.date, start: e.start, end: e.end, allDay: e.allDay, location: e.location })) });
-    }
-    const name = session.fullName || session.username;
-    const stmts = take.map(e => db.prepare(
-        `INSERT INTO calendar_events (id, owner_username, owner_name, shared, calendar, invitees, title, type, date, start_time, end_time, all_day,
-            location, case_ref, case_label, notes, ext_uid) VALUES (?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?, ?, ?, '', '', ?, ?)`
-    ).bind(crypto.randomUUID(), session.username, name, shared ? 1 : 0, calendar, e.title, e.type, e.date, e.start, e.end, e.allDay ? 1 : 0,
-        e.location, e.notes, e.extUid));
-    for (let i = 0; i < stmts.length; i += INSERT_BATCH) await db.batch(stmts.slice(i, i + INSERT_BATCH));
-    return json({ success: true, added: take.length, calendar, summary });
-}
-
-// An Admin's import onto the Attorney's Calendar: the file is the attorney's week. Its appointments, each on its
-// day of the week, become the weekly schedule (every week, for everyone) in place of the one there now.
-async function importSchedule(db, session, ics, dryRun) {
-    const parsed = weeklySchedule(ics);
-    const rows = parsed.rows.map(r => {
-        const s = seedFor(r.title, r.notes);
-        return s ? Object.assign({}, r, { type: s.sameTitle ? s.type : r.type, caseRef: s.caseRef, caseLabel: s.caseLabel }) : r;
-    });
-    if (!rows.length) return json({ success: false, error: 'There are no appointments in that file.' }, 400);
-    const now = await db.prepare(`SELECT COUNT(*) AS n FROM calendar_template`).first();
-    const summary = { found: parsed.found, cancelled: parsed.cancelled, invalid: parsed.invalid, twice: parsed.twice, otherWeeks: parsed.otherWeeks,
-        week: parsed.week, replaces: (now && now.n) || 0, cases: rows.filter(r => r.caseRef).length };
-    if (dryRun) {
-        return json({ success: true, dryRun: true, schedule: true, add: rows.length, summary,
-            preview: rows.slice(0, 40).map(r => ({ weekday: r.weekday, title: r.title, type: r.type, start: r.start, end: r.end, allDay: r.allDay, caseRef: r.caseRef || '' })) });
-    }
-    await replaceTemplate(db, rows, session.fullName || session.username);
-    return json({ success: true, schedule: true, added: rows.length, calendar: ATTORNEY_CAL, summary });
 }
 
 // An appointment on the Attorney's Calendar's weekly schedule (Admins): every week, for everyone.
