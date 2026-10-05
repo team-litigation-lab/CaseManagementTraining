@@ -367,7 +367,7 @@
     function adrSummary() {
         const out = $id('adr-summary'), box = $id('kx-adr'); if (!out || !box) return;
         const rows = Array.from(box.querySelectorAll(':scope > .kx-row'));
-        if (!rows.length) { out.innerHTML = '<span class="kx-hint" style="margin:0;">No ADR on this case yet. Add one when a mediation or arbitration is proposed or ordered.</span>'; return; }
+        if (!rows.length) { out.innerHTML = '<span class="kx-hint" style="margin:0;">No ADR on this case yet.</span>'; return; }
         const now = today(), items = rows.map(r => ({ type: textIn(r, '[data-adr="type"]'), status: textIn(r, '[data-adr="status"]'), date: textIn(r, '[data-adr="date"]'), day: dayOf(textIn(r, '[data-adr="date"]')),
             time: textIn(r, '[data-adr="time"]'), where: textIn(r, '[data-adr="where"]'), brief: textIn(r, '[data-adr="brief"]'), briefDay: dayOf(textIn(r, '[data-adr="brief"]')) }));
         const counts = {}; items.forEach(x => { counts[x.status] = (counts[x.status] || 0) + 1; });

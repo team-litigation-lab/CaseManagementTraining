@@ -135,7 +135,7 @@
         const tiles = mocks.map((p, i) => `<figure class="pdp-tile pdp-mock"><button type="button" class="pdp-img" data-pdp="open" data-mock="${i}" title="${esc(p.caption || '')}. Click to enlarge.">${photoSvg(mc, p, i)}</button><figcaption>${esc(p.caption || p.area)}</figcaption></figure>`)
             .concat(mine.map((p, i) => `<figure class="pdp-tile"><button type="button" class="pdp-img" data-pdp="open" data-i="${i}" title="${esc(p.name || '')}. Click to enlarge."><img src="${esc(fileUrl(p.key))}" alt="${esc(p.caption || 'Property damage photo')}" loading="lazy"></button>
                 <figcaption>${esc(p.caption || p.name || 'Photo')}${edit ? `<span class="pdp-acts no-print"><button type="button" data-pdp="caption" data-i="${i}" title="Change the caption">✎</button><button type="button" data-pdp="remove" data-i="${i}" title="Remove the photo">✕</button></span>` : ''}</figcaption></figure>`));
-        box.innerHTML = tiles.length ? tiles.join('') : `<div class="pdp-empty">📷 No photos yet.${edit ? ' ⬆ Add Photos adds photos of the vehicles, the damage and the scene.' : ''}</div>`;
+        box.innerHTML = tiles.length ? tiles.join('') : '<div class="pdp-empty">📷 No photos yet.</div>';
     }
     function closeView() { const m = $id('pdp-modal'); if (m) m.remove(); }
     function open(btn) {
