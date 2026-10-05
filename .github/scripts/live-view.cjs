@@ -23,7 +23,7 @@
 // second, and not at all while its tab is hidden; "● Live" shows while the screen is less than 2 s
 // behind; a hidden trainee tab sends nothing; nothing extra is sent while nobody watches (counted).
 // Checks (browser, the screen): 🖥 Screen shows their page in a sandboxed frame at their window's size:
-// what they typed in boxes and fields, the option they chose, the Reception Simulator panel open over the
+// what they typed in boxes and fields, the option they chose, the Call Simulator panel open over the
 // case, how far a box is scrolled and the mouse pointer, with passwords blank; markup put on the trainee's
 // page (an onerror image, a script, a javascript: link) and a crafted screen sent straight to the API never
 // run on the Admin's page or in the frame; a screen too big to mirror and an older trainee page say so and
@@ -367,11 +367,11 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     f = await inFrame(() => { const r = { ok: /aaaaaaaaa a/.test((document.getElementById('client-name-field') || {}).textContent || '') }; return r; }, null, 4000, 100);
     if (!f.ok) fail('what the trainee typed last didn\'t reach the Admin\'s screen');
 
-    // the Reception Simulator open over the case, a box scrolled, the mouse pointer
+    // the Call Simulator open over the case, a box scrolled, the mouse pointer
     await trainee.evaluate(() => openFrontDeskDrill());
-    await trainee.waitForSelector('#fdd-panel.open', { timeout: 5000 }).catch(() => fail('the Reception Simulator didn\'t open on the trainee\'s page'));
+    await trainee.waitForSelector('#fdd-panel.open', { timeout: 5000 }).catch(() => fail('the Call Simulator didn\'t open on the trainee\'s page'));
     await trainee.waitForTimeout(400);
-    const scrollTo = await trainee.evaluate(() => {   // the Reception Simulator's body if it scrolls, else the case
+    const scrollTo = await trainee.evaluate(() => {   // the Call Simulator's body if it scrolls, else the case
         const can = (el) => el && el.scrollHeight - el.clientHeight >= 160;
         const el = [document.querySelector('#fdd-panel .fdd-b'), document.querySelector('.tab-pane.active'), document.getElementById('capture-area')].find(can);
         if (!el) return null;
@@ -385,8 +385,8 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
         r.ok = r.panel && want && Math.abs(r.top - want.top) <= 2 && !!r.dot && r.dot[0] === '321px' && r.dot[1] === '234px' && r.dot[2] === 'block';
         return r;
     }, scrollTo, 6000);
-    if (!f.ok) fail(`the mirrored screen doesn't show the open Reception Simulator, how far they scrolled (${JSON.stringify(scrollTo)}) or the pointer: ${JSON.stringify(f)}`);
-    if (!/Reception Simulator/.test(await admin.textContent('#lv-now'))) fail('the live view\'s "Now" doesn\'t say the Reception Simulator is open');
+    if (!f.ok) fail(`the mirrored screen doesn't show the open Call Simulator, how far they scrolled (${JSON.stringify(scrollTo)}) or the pointer: ${JSON.stringify(f)}`);
+    if (!/Call Simulator/.test(await admin.textContent('#lv-now'))) fail('the live view\'s "Now" doesn\'t say the Call Simulator is open');
     // the pointer and scrolling alone go without a new copy of the page
     const moveFrom = (bodies[tia] || []).length;
     await trainee.mouse.move(500, 400); await trainee.waitForTimeout(700); await trainee.mouse.move(520, 410);

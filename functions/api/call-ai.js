@@ -6,8 +6,9 @@ import { callAI, aiStatus } from '../_ai.js';
 // users only. The keys take turns and rest when they hit a limit (functions/_ai.js),
 // so a whole class can call at the same time.
 //
-// POST { purpose: 'caller' | 'review', system, messages: [{ role: 'user'|'model', text }], json }
+// POST { purpose: 'caller' | 'review', system, messages: [{ role: 'user'|'model', text }], json, module }
 //   → { success, text } (429 when the keys are busy: the page retries)
+//   module: where a Call Simulator line's call counts in the Portal's shared AI budget (functions/_ai.js)
 // GET (Admins): which routes are set up and whether any key is resting.
 //
 // Each user gets CALL_AI_LIMIT requests per 10 minutes (default 150; one practice
@@ -59,7 +60,7 @@ export async function onRequestPost({ request, env }) {
         return json({ success: false, error: 'You\'re making calls very fast. Wait a minute and try again.' }, 429);
     }
     const r = await callAI(env, {
-        system, messages, feature: purpose, user: auth.session.username,
+        system, messages, feature: purpose, user: auth.session.username, module: String((body && body.module) || ''),
         json: purpose === 'review' && !!body.json,
         maxTokens: purpose === 'review' ? 2000 : 260
     });

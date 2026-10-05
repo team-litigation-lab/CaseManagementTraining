@@ -110,7 +110,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/livecall.cjs
-      - name: Reception Simulator (answering a practice call by microphone)
+      - name: Call Simulator (answering a practice call by microphone)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/reception-mic.cjs
@@ -118,6 +118,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/reception-wrapup.cjs
+      - name: Call Simulator lines (every program's calls, links, Practice and Graded, the debrief on the goals)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/call-lines.cjs
       - name: Case header (Client's Name, the SSN beside Contact, the Client's ID card)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

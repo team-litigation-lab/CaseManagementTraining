@@ -21,7 +21,7 @@
             { icon: '🔑', title: 'Signing in and finding your way', points: [
                 'Register once with your full name, Batch ID and a username. Your trainer approves you.',
                 'Then sign in with just your username, or straight from your training platform by name.',
-                'The sidebar, top to bottom: your training program, My cases, 📝 New Intake and 📞 Reception Simulator.',
+                'The sidebar, top to bottom: your training program, My cases, 📝 New Intake and 📞 Call Simulator.',
                 'Top right: 📄 Download Case Summary, 📊 My Dashboard and 🧭 Blueprint. The date and time are right above the case.'],
               where: 'The sidebar on the left (Log Out at the bottom) · the buttons at the top right.',
               tip: 'Your trainer gives you the Batch ID: B and the day your batch started (MMDDYY), e.g. B100526.',
@@ -86,14 +86,14 @@
               where: 'The case\'s 📅 Calendar and ⏱ Time tabs · the timer under the search bars at the top right of the case.',
               tip: 'Start the timer when you open a case, and say what you did when you stop it.',
               shot: 'blueprint/trainee-calendar.jpg', shotAlt: 'The case\'s Calendar tab: the attorneys\' week, already busy' },
-            { icon: '📞', title: 'Reception Simulator', points: [
+            { icon: '📞', title: 'Call Simulator', points: [
                 'Practice calls: a caller phones in, and you take the whole call in your own words.',
                 'Verify the caller before you share anything: full name, date of birth, date of loss and one more identifier.',
                 'Find their file by ear: the search understands names spelled the way they sound.',
                 'The scored drill: 5, 8, 12 or all the calls, each one scored, with feedback at the end.'],
-              where: 'Sidebar → 📞 Reception Simulator.',
+              where: 'Sidebar → 📞 Call Simulator.',
               tip: 'Never give advice or a case value on a call. Take a complete message instead.',
-              shot: 'blueprint/trainee-reception.jpg', shotAlt: 'The Reception Simulator: Take a practice call, and the scored drill' },
+              shot: 'blueprint/trainee-reception.jpg', shotAlt: 'The Call Simulator: Take a practice call, and the scored drill' },
             { icon: '📊', title: 'My Dashboard and the case summary', points: [
                 '📊 My Dashboard: automatic reviews of the cases you saved, with what\'s missing and how complete each one is.',
                 'Your trends over time, for completeness and for the writing in your notes.',
@@ -136,7 +136,7 @@
                 'The role decides which tabs of a case file a trainee can edit. It shows in the sidebar\'s Training program box.',
                 'reception: Front Desk, view only plus Notes and Tasks · intake: the header, Profile, Parties, Police, Insurance · cm: all but Litigation and Case Costs.',
                 'md: Treatment, Lost Wages, Demand, Liens · ea: Doc Hub · pd: Parties, Police, Insurance, Property Damage. All but reception also get Doc Hub, Notes and Tasks.',
-                'Straight to a tool: &drill=1 (Reception Simulator), &intake=1 (Intake folder), &mock=MC-04 (one file).'],
+                'Straight to a tool: &drill=1 (Call Simulator), &intake=1 (Intake folder), &mock=MC-04 (one file).'],
               where: 'The end of the CMS address you send the class, e.g. ?program=reception&drill=1.',
               tip: 'No program on the link: case files are view only until the trainee picks one in the sidebar.',
               shot: 'blueprint/trainer-program-link.jpg', shotAlt: 'A case file opened with the Front Desk link: the banner says it is view only for Receptionist / Front Desk' },
@@ -186,7 +186,7 @@
                 '☎ Caller scenarios and 📜 reception call scripts on each file are for trainers only.',
                 '⬇ PDF: a trainer copy, with the answer keys (never hand it out), or the case files only.'],
               where: 'Sidebar → Trainer tools → 📚 Training Library.',
-              tip: 'Run a mock call from a file\'s call script before the trainees try the Reception Simulator.',
+              tip: 'Run a mock call from a file\'s call script before the trainees try the Call Simulator.',
               shot: 'blueprint/trainer-library.jpg', shotAlt: 'The Training Library: the case files by program, with the PDF buttons' },
             { icon: '🪪', title: 'The case header', points: [
                 'The client\'s details at the top of every case: Client\'s Name, Contact, SSN, DOB, Attorney, Case Manager and Target Settlement.',
@@ -205,15 +205,15 @@
               where: 'Training Library → ☎ Caller scenarios · Master Control → Monitoring.',
               tip: 'Feedback: two strengths, one thing to fix, and the line they could have said.',
               shot: 'blueprint/trainer-caller-scenarios.jpg', shotAlt: 'A case file\'s Caller scenarios panel, with its reception call scripts' },
-            { icon: '📞', title: 'Reception Simulator', points: [
+            { icon: '📞', title: 'Call Simulator', points: [
                 'Practice call: a caller picked at random; the trainee takes the whole call in their own words, by voice or typing.',
                 'Scored drill: a run of calls, step by step, 100 points each: find the file 30, authenticate 40, handle the call 30.',
                 'After a practice call the trainee matches the file (the search finds names spelled the way they sound), checks the authentication and gets a debrief.',
                 'Authentication is ticked from the call itself: full name, date of birth, date of loss and one more identifier on file.',
                 'Its home screen shows you the team table: runs, average and best, seconds per call.'],
-              where: 'Sidebar → 📞 Reception Simulator.',
+              where: 'Sidebar → 📞 Call Simulator.',
               tip: 'Take one practice call yourself before the class does, to check the caller and the debrief.',
-              shot: 'blueprint/trainer-reception.jpg', shotAlt: 'The Reception Simulator\'s team table and saved calls' },
+              shot: 'blueprint/trainer-reception.jpg', shotAlt: 'The Call Simulator\'s team table and saved calls' },
             { icon: '🧾', title: 'The RECEPTION MOCK CALL scorecard', points: [
                 'The debrief rates 14 items, 0 to 5 each; the score is the share of points on the items that apply.',
                 'Checked from the call: the introduction, authentication, the closing spiel, time (the first ring, about 3 s) and dead air or fillers.',
@@ -228,7 +228,7 @@
                 'Trainer Notes: on each entry of a trainee\'s feed. The trainee reads them on their own 📊 My Dashboard.',
                 'Ping → Send as a task, for something they should do on the case.'],
               where: 'Top right → 📊 My Dashboard → the trainee · Master Control → Broadcast & Ping.',
-              tip: '📞 Reception Simulator → 🎧 Saved calls opens any trainee\'s call: the scorecard, the review and the whole transcript.',
+              tip: '📞 Call Simulator → 🎧 Saved calls opens any trainee\'s call: the scorecard, the review and the whole transcript.',
               shot: 'blueprint/trainer-roster.jpg', shotAlt: 'The Trainer Roster: each trainee\'s cases, last day and trends' },
             { icon: '🔍', title: 'Case Library and Latest Updates', points: [
                 '🔍 Open Case Library: every file and every trainee\'s saved cases, with filters and the ☎ firm directory.',
@@ -250,7 +250,7 @@
                 '📅 Firm Calendar: the attorneys\' calendars and the Firm / Staff calendar. An attorney\'s Google Calendar can be connected.',
                 '🗓 Attorney\'s Calendar: the Calendaring week. ✎ Edit or add to its weekly schedule: every week, for everyone.',
                 '⏱ Time tab → 👥 All trainees: everyone\'s time for the week, with totals, and ⬇ Export CSV.',
-                '📞 Reception Simulator: every trainee\'s drill results and scores.'],
+                '📞 Call Simulator: every trainee\'s drill results and scores.'],
               where: 'Sidebar → Trainer tools → 📅 Firm Calendar · Sidebar → 🗓 Attorney\'s Calendar · the case\'s ⏱ Time tab.',
               tip: 'Check the class\'s time sheets at the end of the week.',
               shot: 'blueprint/trainer-firm-calendar.jpg', shotAlt: 'The Firm Calendar: the attorneys\' week' },
@@ -258,8 +258,8 @@
                 'Before: approve pending registrations; pick the day\'s case files; print the trainer copy or the call scripts; take one practice call yourself.',
                 'Opening: post the day\'s announcement; share the program link in the meeting chat; check everyone is online in Monitoring.',
                 'Practice: run facilitated calls one trainee at a time while the rest take practice calls; 👁 Watch live; ping anyone stuck.',
-                'Wrap-up: read the Reception Simulator team table and the trainer roster; give each trainee two strengths and one thing to work on; clear the announcement and delete test cases.'],
-              where: 'Master Control · 📞 Reception Simulator · 📊 My Dashboard.',
+                'Wrap-up: read the Call Simulator team table and the trainer roster; give each trainee two strengths and one thing to work on; clear the announcement and delete test cases.'],
+              where: 'Master Control · 📞 Call Simulator · 📊 My Dashboard.',
               tip: 'Keep the run sheet the same each day, so trainees know what\'s coming.' },
             { icon: '🧭', title: 'Trainee view and presenting', points: [
                 '👁 Trainee view shows the CMS exactly as trainees see it. ⇦ Back to trainer view, in the sidebar, returns.',
@@ -330,7 +330,7 @@
                 'The keys take turns. One at its limit rests a minute (an hour once its daily quota is gone).',
                 'Free limits are per Google Cloud project, so each extra key should come from its own project.',
                 'A call refused for the region is sent again from the US through the EA-PA Worker\'s relay (GEMINI_RELAY).',
-                'The Reception Simulator\'s home shows Admins the live calls now, the last 24 hours and an estimated cost per key.'],
+                'The Call Simulator\'s home shows Admins the live calls now, the last 24 hours and an estimated cost per key.'],
               where: 'Cloudflare → the Pages project → Variables and Secrets.',
               tip: 'Trainees hearing "The line is busy"? Add a key from another Google Cloud project.' },
             { icon: '🔄', title: 'Updates', points: [
@@ -372,7 +372,7 @@
                 'Every training day: nothing left pending in Registrations; the expected trainees online in Monitoring.',
                 'Weekly: Server Logs look right; delete test cases and duplicates in Case Logs.',
                 'Monthly: Cloudflare usage and billing; revoke trainers who have left and change the password; Google Cloud billing for the Gemini keys, with a budget alert.'],
-              where: 'Master Control · 📞 Reception Simulator · Cloudflare and Google Cloud billing.',
+              where: 'Master Control · 📞 Call Simulator · Cloudflare and Google Cloud billing.',
               tip: 'A few minutes a day during a batch keeps the site ready.' },
             { icon: '🛠', title: 'When something breaks', points: [
                 '"The CMS server isn\'t answering": the site\'s server part is down; check the Cloudflare dashboard for the project.',

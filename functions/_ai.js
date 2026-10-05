@@ -76,19 +76,23 @@ export async function geminiFetch(env, url, init) {
 // uses its own GEMINI_API_KEY pool below, as before.
 const PORTAL = 'https://cm-training-activity.pages.dev';
 export const gatewayOn = (env) => !!String((env && env.AI_GATEWAY_SECRET) || '').trim();
-export async function gatewayPost(env, body) {
-    const url = String(env.PORTAL_URL || PORTAL).replace(/\/+$/, '') + '/api/ai-gateway';
+export async function gatewayPost(env, body) { return portalPost(env, '/api/ai-gateway', body); }
+// A server-to-server request to the Portal with the gateway's shared secret (the AI gateway; graded calls, /api/call-results).
+export async function portalPost(env, path, body) {
+    const url = String(env.PORTAL_URL || PORTAL).replace(/\/+$/, '') + path;
     const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Gateway-Key': String(env.AI_GATEWAY_SECRET).trim() }, body: JSON.stringify(body) });
     const data = await res.json().catch(() => null);
     return { status: res.status, data };
 }
 
-// req: { system, messages: [{ role: 'user'|'model', text }], json, maxTokens, feature: 'caller'|'review' }
+// The Portal gateway's budget modules a CMS request may count under (a Call Simulator line's call counts under its line).
+export const GATEWAY_MODULES = ['cms', 'standard', 'reception', 'intake', 'calendaring', 'ea-pa', 'pd'];
+// req: { system, messages: [{ role: 'user'|'model', text }], json, maxTokens, feature: 'caller'|'review', module }
 // → { ok, status, text, model, error }
 export async function callAI(env, req) {
     if (gatewayOn(env)) {
         try {
-            const g = await gatewayPost(env, { module: 'cms', user: req.user || 'cms', system: req.system, messages: req.messages, json: !!req.json, maxTokens: req.maxTokens });
+            const g = await gatewayPost(env, { module: GATEWAY_MODULES.includes(req.module) ? req.module : 'cms', user: req.user || 'cms', system: req.system, messages: req.messages, json: !!req.json, maxTokens: req.maxTokens });
             if (g.data && g.data.success) return { ok: true, status: 200, text: g.data.text, model: g.data.model };
             return { ok: false, status: g.status === 429 ? 429 : g.status === 501 || g.status === 401 ? 502 : (g.status || 502), error: (g.data && g.data.error) || `AI gateway error ${g.status}` };
         } catch (e) { return { ok: false, status: 502, error: 'The shared AI gateway is unreachable: ' + (e && e.message || e) }; }
