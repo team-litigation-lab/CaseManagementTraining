@@ -60,6 +60,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/calendar-more.cjs
+      - name: Attorney's Calendar (the Calendaring activity's weekly schedule, the real calendar API on SQLite, in a browser)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/attorney-calendar.cjs
       - name: Time & Billing (the real time API on SQLite, in a browser)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

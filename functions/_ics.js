@@ -76,7 +76,7 @@ function guessType(title) {
         [/hearing|court|motion|arraignment|status conference|\bcmc\b/, 'Court Hearing'], [/\bime\b|medical|doctor|\bdr\.|therapy|\bmri\b/, 'Medical / IME'],
         [/deadline|\bdue\b|\bsol\b|statute/, 'Deadline'], [/out of office|\booo\b|vacation|holiday|\bpto\b|leave/, 'Out of Office'],
         [/\bcall\b|phone|zoom call/, 'Phone Call'], [/client/, 'Client Meeting'], [/staff|team|huddle|internal|1:1|one-on-one/, 'Internal Meeting'],
-        [/blocked|focus|travel|hold/, 'Blocked Time'], [/meeting|meet\b|consult/, 'Client Meeting']];
+        [/blocked|\bblock\b|lunch break|\bbreak\b|focus|travel|hold/, 'Blocked Time'], [/meeting|meet\b|consult/, 'Client Meeting']];
     const hit = rules.find(([re]) => re.test(t));
     return hit && EVENT_TYPES.includes(hit[1]) ? hit[1] : 'Other';
 }
@@ -133,10 +133,10 @@ function repeats(rule, start, untilDay) {
 
 // The file's events, on the firm's clock: { events: [{ title, type, date, start, end, allDay, location, notes, extUid }],
 // found, repeating, cancelled, outside, invalid }
-export function parseICS(raw, { today }) {
-    const lines = contentLines(raw);
+// The file's VEVENTs: { NAME: line } (EXDATE: the dates left out)
+function vevents(raw) {
     const comps = []; const stack = [];
-    for (const l of lines) {
+    for (const l of contentLines(raw)) {
         if (l.name === 'BEGIN') { stack.push(l.value.toUpperCase()); if (l.value.toUpperCase() === 'VEVENT' && stack.length >= 1) comps.push({}); continue; }
         if (l.name === 'END') { stack.pop(); continue; }
         if (stack[stack.length - 1] !== 'VEVENT') continue;
@@ -145,6 +145,10 @@ export function parseICS(raw, { today }) {
         if (l.name === 'EXDATE') (c.EXDATE = c.EXDATE || []).push(...l.value.split(',').map(v => when({ value: v, params: l.params })).filter(Boolean));
         else if (!c[l.name]) c[l.name] = l;
     }
+    return comps;
+}
+export function parseICS(raw, { today }) {
+    const comps = vevents(raw);
     const from = addDays(today, -183), to = addDays(today, 730), repeatTo = addDays(today, 366);
     const stats = { found: comps.length, repeating: 0, cancelled: 0, outside: 0, invalid: 0 };
     // changed occurrences of a repeating event (RECURRENCE-ID) replace those occurrences
@@ -200,4 +204,59 @@ export function parseICS(raw, { today }) {
         }
     }
     return Object.assign({ events: out }, stats);
+}
+
+// The file as a weekly schedule (an Admin's import onto the Attorney's Calendar, functions/_attorney_calendar.js):
+// each appointment on its day of the week, on the firm's clock. A weekly repeat goes on the days it repeats on
+// (BYDAY), a daily one on every day. One-off events are the week the file shows: those in its busiest week, the
+// week the most events start in (a calendar export also carries old one-offs from other weeks, left out). Cancelled events and changed occurrences
+// (RECURRENCE-ID) are left out, and an appointment listed twice is taken once.
+// { rows: [{ weekday, start, end, allDay, title, type, location, notes }], found, cancelled, invalid, twice, otherWeeks, week }
+export function weeklySchedule(raw) {
+    const comps = vevents(raw);
+    const stats = { found: comps.length, cancelled: 0, invalid: 0, twice: 0, otherWeeks: 0, week: null };
+    const dow = (d) => new Date(d + 'T00:00:00Z').getUTCDay();
+    const monday = (d) => addDays(d, -((dow(d) + 6) % 7));
+    const items = [];
+    for (const c of comps) {
+        if (c.STATUS && /CANCELLED/i.test(c.STATUS.value)) { stats.cancelled++; continue; }
+        if (c['RECURRENCE-ID']) continue;
+        const start = when(c.DTSTART);
+        if (!start || (!start.allDay && Number.isNaN(msOf(start)))) { stats.invalid++; continue; }
+        const title = text(c.SUMMARY && c.SUMMARY.value).slice(0, 140) || '(No title)';
+        const rule = {}; String((c.RRULE && c.RRULE.value) || '').split(';').forEach(p => { const [k, v] = p.split('='); if (k && v) rule[k.toUpperCase()] = v.toUpperCase(); });
+        let first, startT = '', endT = '';
+        if (start.allDay) first = start.date;
+        else {
+            const endW = when(c.DTEND);
+            let len = endW && !endW.allDay ? Math.round((msOf(endW) - msOf(start)) / 60000) : c.DURATION ? durationMin(c.DURATION.value) : 30;
+            if (!(len > 0)) len = 30;
+            const a = wallIn(msOf(start), FIRM_TZ), b = wallIn(msOf(start) + len * 60000, FIRM_TZ);
+            first = a.date; startT = a.time === '23:59' ? '23:30' : a.time; endT = b.date > a.date ? '23:59' : b.time;
+            if (endT <= startT) endT = '23:59';
+        }
+        // the days: BYDAY moves with the start if the firm's clock puts it on another day than the file's zone does
+        const shift = (dow(first) - dow(start.allDay ? start.date : start.wall.slice(0, 10)) + 7) % 7;
+        const byday = (v) => v.split(',').map(x => DOW[x.slice(-2)]).filter(x => x != null).map(d => (d + shift) % 7);
+        const repeating = rule.FREQ === 'WEEKLY' || rule.FREQ === 'DAILY';
+        const days = rule.FREQ === 'WEEKLY' && rule.BYDAY ? byday(rule.BYDAY) : rule.FREQ === 'DAILY' ? (rule.BYDAY ? byday(rule.BYDAY) : [0, 1, 2, 3, 4, 5, 6]) : [dow(first)];
+        items.push({ repeating, week: monday(first), days, start: startT, end: endT, allDay: !!start.allDay, title,
+            location: text(c.LOCATION && c.LOCATION.value).slice(0, 200), notes: text(c.DESCRIPTION && c.DESCRIPTION.value).slice(0, 3800) });
+    }
+    // the file's week: the one the most events start in, repeating ones too (the later one if two tie)
+    const perWeek = {};
+    items.forEach(i => { perWeek[i.week] = (perWeek[i.week] || 0) + 1; });
+    stats.week = Object.keys(perWeek).sort((a, b) => perWeek[b] - perWeek[a] || b.localeCompare(a))[0] || null;
+    const rows = [], seen = new Set();
+    for (const i of items) {
+        if (!i.repeating && i.week !== stats.week) { stats.otherWeeks++; continue; }
+        for (const weekday of [...new Set(i.days)].sort()) {
+            const key = `${weekday}|${i.start}|${i.end}|${i.title.toLowerCase()}`;
+            if (seen.has(key)) { stats.twice++; continue; }
+            seen.add(key);
+            if (rows.length < MAX_EVENTS) rows.push({ weekday, start: i.start, end: i.end, allDay: i.allDay, title: i.title, type: guessType(i.title), location: i.location, notes: i.notes });
+        }
+    }
+    rows.sort((x, y) => x.weekday - y.weekday || x.start.localeCompare(y.start));
+    return Object.assign({ rows }, stats);
 }

@@ -28,7 +28,7 @@
                  1. #sb-program: the training program (training-library.js puts its select here)
                  2. #sb-cases: My cases (trainees) / Case Library (Admins), from case-library.js; Admins also get
                     Open Case Library and Latest Updates
-                 3. #sb-work: New Intake and the Reception Simulator (front-desk-drill.js adds it)
+                 3. #sb-work: New Intake, the Reception Simulator (front-desk-drill.js adds it after New Intake), the Attorney's Calendar
                  Download Case Summary, My Dashboard and the Blueprint are at the top right (#top-actions); the date and time
                  are above the case (#case-clock-row); the billable timer is in the case header under the search bars (time-tracker.js).
                  4. #sb-trainer (Admins only): Training Library, Intake Folder, Firm Calendar
@@ -47,6 +47,8 @@
                 <!-- New Intake: pick the case type, fill in its intake form; saving it grades it and creates the new case (intake-form.js).
                      Styled like the Training Library and Front Desk cards (.side-card in styles.css). -->
                 <button id="nm-open-btn" onclick="openNewIntake()" class="side-card side-card-orange">📝 New Intake</button>
+                <!-- The Calendaring activity: the attorney's week, the same every week (firm-calendar.js, functions/_attorney_calendar.js) -->
+                <button id="ac-open-btn" onclick="openAttorneyCalendar()" class="side-card side-card-blue">🗓 Attorney's Calendar</button>
             </div>
             <div id="sb-trainer" class="sb-group">
                 <p class="sb-head">Trainer tools</p>

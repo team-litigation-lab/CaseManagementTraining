@@ -1,3 +1,4 @@
+import { ensureTemplate, templateRows, templateEvents } from './_attorney_calendar.js';
 // Firm Calendar: shared logic for /api/calendar and /api/calendar-feed.
 //
 // The fictional firm (LSH Training Law Group, mock-cases.js) has one calendar per
@@ -18,9 +19,13 @@ export const CALENDARS = [
     { id: 'reyes', name: 'Atty. Marcus Reyes', role: 'Lead Attorney (Pre-Litigation)', ext: '201', color: '#2563eb' },
     { id: 'brooks', name: 'Atty. Elena Brooks', role: 'Lead Attorney (Litigation)', ext: '202', color: '#7c3aed' },
     { id: 'okafor', name: 'Atty. David Okafor', role: 'Associate Attorney / Intake Attorney', ext: '203', color: '#059669' },
-    { id: 'firm', name: 'Firm / Staff', role: 'Firm meetings, case managers, office', ext: '', color: '#64748b' }
+    { id: 'firm', name: 'Firm / Staff', role: 'Firm meetings, case managers, office', ext: '', color: '#64748b' },
+    // the Calendaring activity's own calendar (functions/_attorney_calendar.js), shown on its own: 🗓 Attorney's Calendar
+    { id: 'attorney', name: 'Attorney\'s Calendar', role: 'Calendaring: the attorney\'s week, the same every week', ext: '', color: '#c2410c', separate: true }
 ];
 export const CALENDAR_IDS = CALENDARS.map(c => c.id);
+// The Firm Calendar's own calendars (the Attorney's Calendar is a calendar of its own)
+export const FIRM_CALENDAR_IDS = CALENDARS.filter(c => !c.separate).map(c => c.id);
 
 export const EVENT_TYPES = [
     'Deposition', 'Mediation', 'Court Hearing', 'Trial', 'Client Meeting', 'Medical / IME',
@@ -175,7 +180,9 @@ export function cleanEvent(body) {
         start = b.start; end = b.end;
     }
     const type = EVENT_TYPES.includes(b.type) ? b.type : 'Other';
-    const invite = [...new Set((Array.isArray(b.invite) ? b.invite : []).filter(c => CALENDAR_IDS.includes(c) && c !== calendar))];
+    // (the Attorney's Calendar stands alone: it isn't invited to the Firm Calendar's events, nor they to it)
+    const apart = (id) => !!(CALENDARS.find(c => c.id === id) || {}).separate;
+    const invite = [...new Set((Array.isArray(b.invite) ? b.invite : []).filter(c => CALENDAR_IDS.includes(c) && c !== calendar && !apart(c) && !apart(calendar)))];
     return {
         event: {
             calendar, invite, title, type, date: b.date, start, end, allDay,
@@ -275,6 +282,7 @@ const LATER_COLUMNS = [['replaces', `TEXT NOT NULL DEFAULT ''`], ['ext_uid', `TE
 let columnsChecked = false;
 export async function ensureCalendarTables(db) {
     for (const sql of DDL) await db.prepare(sql).run();
+    await ensureTemplate(db);
     if (columnsChecked) return;
     const { results } = await db.prepare(`PRAGMA table_info(calendar_events)`).all();
     const have = new Set((results || []).map(c => c.name));
@@ -387,7 +395,8 @@ export async function visibleEvents(db, session, from, to, { scope = 'mine', use
     const { results } = await db.prepare(sql + ' ORDER BY date, start_time').bind(...args).all();
     const rows = (results || []).map(r => rowToEvent(r, session));
     const replaced = new Set(rows.filter(e => e.replaces && (e.owner === viewer || e.shared)).map(e => e.replaces));
-    return standingEvents(from, to).concat(rows.filter(e => e.date >= from && e.date <= to)).filter(e => !replaced.has(e.id));
+    const weekly = templateEvents(await templateRows(db), from, to, session);   // the Attorney's Calendar's weekly schedule
+    return standingEvents(from, to).concat(weekly, rows.filter(e => e.date >= from && e.date <= to)).filter(e => !replaced.has(e.id));
 }
 // The event a "your version" edit stands in for, when the user may make one: an attorney's standing
 // event, or an event someone else shared firm-wide. null otherwise.

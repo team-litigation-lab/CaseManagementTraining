@@ -384,7 +384,7 @@ const SAVED = [
         oldButtons: [...document.querySelectorAll('#sidebar-actions button')].filter(b => /save case|archive|update saved|close case/i.test(b.textContent)).length,
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
-    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,fdd-open-btn' || side.hidden.length || side.oldButtons
+    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || side.hidden.length || side.oldButtons
         // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
         || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
     // The page's frame: the sidebar (and its logo) runs to the top, the announcements strip is over the main area only and has no
@@ -497,7 +497,7 @@ const SAVED = [
         tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
     const work = await admin.evaluate(() => [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id));
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
-    if (work.join() !== 'nm-open-btn,fdd-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's sidebar should have New Intake then 📞 Reception Simulator: ${work.join()}`);
+    if (work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Reception Simulator') fail(`an Admin's sidebar should have New Intake, 📞 Reception Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
     const adminTop = await admin.evaluate(() => [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id));
     if (adminTop.join() !== 'download-summary-btn,dash-open-btn,lbp-open-btn') fail(`an Admin's top right should be Download Case Summary, My Dashboard, Blueprint: ${adminTop.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
