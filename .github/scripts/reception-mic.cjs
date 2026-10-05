@@ -92,7 +92,7 @@ function fakeSpeech() {
     await page.waitForSelector('#fdd-panel.open', { timeout: 3000 }).catch(() => fail('📞 Call Simulator did not open the panel'));
 
     // 2. a practice call: hands-free listens from the greeting; what's said is sent when the trainee pauses
-    await page.click('button:has-text("Take a practice call")');
+    await page.click('#fdd-core-calls .fdd-row >> nth=0');
     await page.click('#fdd-pc-id button:has-text("Answer")');
     await until(() => !!window.__srActive, 'the microphone to listen for the greeting');
     let s = await st();
@@ -142,7 +142,7 @@ function fakeSpeech() {
 
     // 8. a blocked microphone: says so, and the call goes on typed
     await page.evaluate(() => { window.__srMode = 'block'; });
-    await page.click('button:has-text("Take a practice call")').catch(() => {});
+    await page.click('#fdd-core-calls .fdd-row >> nth=0').catch(() => {});
     await page.waitForSelector('#fdd-pc-id button:has-text("Answer")', { timeout: 3000 }).catch(() => {});
     if (await page.isVisible('#fdd-pc-id button:has-text("Answer")')) {
         await page.click('#fdd-pc-id button:has-text("Answer")');
