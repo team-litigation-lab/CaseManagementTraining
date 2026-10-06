@@ -7,6 +7,8 @@
 //     isn't one the CMS editor offers (it would load blank), or a critical note
 //     is empty or longer than 500 characters; a property damage claim option, or a
 //     PD photo's area, isn't one the CMS has;
+//   - an MVA file has no crash in case-photos.js CRASH, or a crash there names a
+//     type, setting, color, area or vehicle it can't draw;
 //   - a drill call points at a case that doesn't exist, has an unknown auth
 //     code, an answer index outside its options, or no caller voice ('f'/'m');
 //   - a caller the key says is verified gave details that don't match the file
@@ -47,8 +49,12 @@ if (!LIEN_TYPES.length || !LIEN_STATUSES.length) bad('Could not read LIEN_TYPES 
 const pdCard = (html.match(/id="kx-pd-claim"[\s\S]*?data-k="notes"/) || [''])[0];
 const pdOpts = (k) => ((pdCard.match(new RegExp(`<select[^>]*data-k="${k}"[^>]*>([\\s\\S]*?)</select>`)) || ['', ''])[1].match(/<option[^>]*>[^<]*</g) || []).map(o => o.replace(/<option[^>]*>|</g, '').replace(/&#39;|&apos;/g, "'"));
 const PD = { against: pdOpts('against'), liability: pdOpts('liability'), status: pdOpts('status'), outcome: pdOpts('outcome') };
-const PD_AREAS = Object.keys(Function(`return ${(fs.readFileSync(path.join(ROOT, 'pd-photos.js'), 'utf8').match(/const AREAS = (\{[\s\S]*?\});/) || ['', '{}'])[1]}`)());
-if (Object.values(PD).some(l => !l.length) || !PD_AREAS.length) bad('Could not read the property damage claim options (index.html #kx-pd-claim) or the photo areas (pd-photos.js AREAS); update check-data.mjs');
+// the library's mock photos (case-photos.js): the photo areas it draws and how each vehicle-crash file's crash happened
+const photoCtx = {};
+vm.createContext(photoCtx);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'case-photos.js'), 'utf8'), photoCtx);
+const { AREAS: PD_AREAS = [], CRASH = {}, PAINT = {} } = photoCtx.LSHCasePhotos || {};
+if (Object.values(PD).some(l => !l.length) || !PD_AREAS.length) bad('Could not read the property damage claim options (index.html #kx-pd-claim) or the photo areas (case-photos.js AREAS); update check-data.mjs');
 if (Object.values(ADR).some(l => !l.length)) bad('Could not read the ADR options (ADR_TYPES, ADR_SET_BY, ADR_STATUSES, ADR_ATTEND) from case-sections.js; update check-data.mjs');
 const SPECIALTIES = ((app.match(/<select id="sel-\$\{id\}"[\s\S]*?<\/select>/) || [''])[0].match(/<option[^>]*>([^<]*)</g) || []).map(o => o.replace(/<option[^>]*>|</g, ''));
 const PROGRAMS = new Set(MOCK_PROGRAMS.map(p => p.id));
@@ -95,7 +101,7 @@ for (const c of MOCK_CASES) {
     }
     for (const ph of c.pdPhotos || []) {
         if (!['client', 'other'].includes(ph.vehicle)) bad(`${where}: a PD photo's vehicle must be client or other`);
-        if (!PD_AREAS.includes(ph.area)) bad(`${where}: PD photo area "${ph.area}" isn't one pd-photos.js draws (${PD_AREAS.join(', ')})`);
+        if (!PD_AREAS.includes(ph.area)) bad(`${where}: PD photo area "${ph.area}" isn't one case-photos.js draws (${PD_AREAS.join(', ')})`);
         if (ph.vehicle === 'other' && !(c.pd && c.pd.tp)) bad(`${where}: a photo of the other vehicle, but the file has no other vehicle (pd.tp)`);
     }
     for (const a of c.adr || []) {
@@ -172,6 +178,31 @@ for (const [w, v] of Object.entries(MOCK_NAME_SOUNDS)) {
     if (!/^[A-Z][a-z]+$/.test(w)) bad(`MOCK_NAME_SOUNDS: "${w}" must be one capitalized word`);
     if (!v || !has(v.say) || !has(v.heard)) bad(`MOCK_NAME_SOUNDS.${w}: needs say and heard`);
     else if (v.heard.toLowerCase() === w.toLowerCase()) bad(`MOCK_NAME_SOUNDS.${w}: heard is the same as the spelling`);
+}
+
+// every MVA file has its crash (case-photos.js CRASH: the scene and, without a pd block, its vehicle photos), and every crash is a file's
+const CRASH_TYPES = ['rear-end', 't-bone', 'head-on', 'sideswipe', 'backing', 'pedestrian', 'chain', 'hit-and-run', 'left-turn'];
+const SETTINGS = ['intersection', 'highway', 'road', 'parking', 'gas station', 'crosswalk'];
+for (const c of MOCK_CASES) if (c.caseType === 'MVA' && !CRASH[c.id]) bad(`${c.id}: an MVA file needs its crash in case-photos.js CRASH (for the crash-scene photo)`);
+for (const [id, cr] of Object.entries(CRASH)) {
+    const c = MOCK_CASES.find(x => x.id === id), where = `case-photos.js CRASH ${id}`;
+    if (!c) { bad(`${where}: no such mock case`); continue; }
+    if (!CRASH_TYPES.includes(cr.type)) bad(`${where}: type "${cr.type}" isn't one it draws (${CRASH_TYPES.join(', ')})`);
+    if (!SETTINGS.includes(cr.setting)) bad(`${where}: setting "${cr.setting}" isn't one it draws (${SETTINGS.join(', ')})`);
+    if (!cr.place) bad(`${where}: where did it happen (place)?`);
+    for (const who of ['client', 'other', 'third']) {
+        const v = cr[who]; if (!v) continue;
+        if (v.color && !PAINT[v.color]) bad(`${where}: ${who}'s color "${v.color}" isn't one it paints (${Object.keys(PAINT).join(', ')})`);
+        if (v.hit && !PD_AREAS.includes(v.hit)) bad(`${where}: ${who} hit at "${v.hit}" isn't an area (${PD_AREAS.join(', ')})`);
+        if (!v.label && !(c.pd && (who === 'client' ? c.pd.client : who === 'other' ? c.pd.tp : null))) bad(`${where}: ${who} needs a label (the file's pd block doesn't describe it)`);
+    }
+    const needsVehicles = { pedestrian: ['other'], 'hit-and-run': ['client'], chain: ['client', 'other', 'third'] }[cr.type] || ['client', 'other'];
+    for (const who of needsVehicles) if (!cr[who]) bad(`${where}: a ${cr.type} crash needs the ${who} vehicle`);
+    if (!(c.pdPhotos || []).length && !(cr.photos || []).length) bad(`${where}: a file without pdPhotos needs its vehicle photos (photos)`);
+    for (const ph of cr.photos || []) {
+        if (!['client', 'other'].includes(ph.vehicle) || !cr[ph.vehicle]) bad(`${where}: a photo of the ${ph.vehicle} vehicle, which the crash doesn't have`);
+        if (!PD_AREAS.includes(ph.area)) bad(`${where}: photo area "${ph.area}" isn't an area (${PD_AREAS.join(', ')})`);
+    }
 }
 
 console.log(`Checked ${MOCK_CASES.length} mock cases and ${DRILL_CALLS.length} drill calls.`);

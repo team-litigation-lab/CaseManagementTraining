@@ -319,12 +319,24 @@ The top of the case is the client's demographics. Each box has its label above i
 The **SSN** and the **DOB** are typed in the header. Once there is one, the header's SSN shows only its **last 4** (`•••-••-1234`), as the front desk verifies a caller: with the last 4, never reading the whole number out. **👁** shows the whole number for 30 seconds (**🙈 Hide** hides it sooner), and each look is logged: Master Control → Monitoring → **Server Logs** lists it as **SSN Viewed**, with who, when and the case (`case-alerts.js`, `/api/case-activity`). An empty SSN box stays open for typing; after typing, it hides when you leave it. Only the view is masked: the saved SSN keeps every digit. The Profile tab no longer shows them: its SSN and DOB boxes are kept, hidden, and they're the ones that are saved (the header's are second views of them, `data-mirror` in `app.js`), so cases saved before keep every field where it was.
 
 **Client's ID** is the card in the middle of the header (`client-id.js`). In a narrower window the right side (case number, status, search) gives up room first, then the ID card, and the client's boxes least; if the header still doesn't fit, the case is shown smaller (`case-fit.js` counts the header too).
-- **A Training Library client** has a **mock ID** made from their file: name, date of birth, address, and an ID number of its own. It's marked *SPECIMEN · for training only · not a government ID*, follows no real state's design, and has a drawn silhouette, not a photo. A trainee's saved work on a library file shows that client's mock ID too.
+- **A Training Library client** has a **mock ID** made from their file: name, date of birth, address, and an ID number of its own. It's marked *SPECIMEN · for training only · not a government ID* and follows no real state's design. Its photo is the client's **portrait**: a realistic photo once an Admin has made one (see [📷 The Training Library's photos](#-the-training-librarys-photos)), until then a drawn one (she or he as the file says, the age from the date of birth). A trainee's saved work on a library file shows that client's mock ID too.
 - **Any other client:** **⬆ Upload ID** takes a photo or scan of their ID (JPG, PNG or WebP).
   - The photo is redrawn at most 1,600 px on its long side as a JPG before it's sent. That keeps it under the 2 MB upload limit and leaves the photo's location data behind.
   - It's kept in the site's file storage (R2, through `/api/upload`, like Doc Hub files) and saved with the case by its key.
   - Save the case to keep it.
 - **Click the card** to see it larger. For an uploaded ID, the larger view has **Replace** and **Remove**.
+
+## 📷 The Training Library's photos
+
+Every library client's mock ID has a portrait, and every vehicle-crash file (all the MVA files, the motorcycle crash MC-08 and the pedestrian MC-36) has a crash-scene photo and a photo of each damaged vehicle, in the Property Damage tab. The people, the files and the vehicles are fictional, and every photo stays marked as a mock (*SPECIMEN*; *AI-made training photo* on a realistic one).
+
+- **Realistic photos** are made by Gemini's image model, from a description built from the file (`library-photos.js`): the client's age, she or he, skin tone and hair; how the crash happened, where, and each vehicle's color, year, make and model and where it was hit. No injured people, no readable plates.
+  - **One photo:** an Admin opens it larger (click the ID card, or a photo in the Property Damage tab): **✨ Make a realistic photo** (**↻ Make a new realistic photo** to try again), **⬆ Use my own photo**, or **↺ Back to the drawing**.
+  - **Every missing one:** Master Control → Overview → **📷 Training Library photos** counts them and **✨ Make the missing photos** makes them, three at a time (about 20 seconds each; keep the page open). It stops at once if Gemini can't make pictures (no key, no billing, the limit), and says why.
+  - A **minor's ID** keeps the drawn portrait. The **same client in two files** (same name and date of birth, e.g. MC-01 and MC-21) has one ID photo, the first file's.
+- **Until a file has one**, its photo is drawn from the file (`case-photos.js`). `.github/scripts/check-data.mjs` fails the build when an MVA file has no crash in `case-photos.js` `CRASH`, or a crash names something it can't draw.
+- **What it takes:** a `GEMINI_API_KEY` secret (any numbered one too) on the Pages project, from a Google AI Studio project **with billing on**: Google makes images only on a paid key, and bills each one to that project (a few cents). `GEMINI_IMAGE_MODELS` (comma-separated) names the image models to try first; otherwise the current Gemini image models are tried in turn. A site with only the Portal's AI gateway (`AI_GATEWAY_SECRET`) asks the gateway.
+- **Where they're kept:** the documents bucket, under `library-photos/<file>/<photo>` (`functions/api/library-photos.js`: the list and the photos for anyone signed in; making, keeping and removing for Admins). Gemini's picture becomes a JPG (at most 1,280 px) in the Admin's browser before it's kept. Browsers keep a copy, and a new photo has a new address, so it shows at once.
 
 ## 📅 Case dates move together (`case-dates.js`)
 
@@ -454,7 +466,7 @@ Both sit under the case's top bar, above the tabs, so they're seen on every tab 
 **Property Damage Photos** (Property Damage tab, `pd-photos.js`)
 - **⬆ Add Photos** adds photos of the vehicles, the damage and the scene (several at once, 20 a case). Each is made smaller before it's sent (a JPG at most 1,600 px, its location data left behind), kept in the site's file storage and named by the convention: `<Case ID>_<Last-First>_PD-Photo_<date>.jpg` (the second that day …-2; renamed with the Case ID on Save like other files). ✎ gives a photo a caption, ✕ removes it, a click shows it larger. They're in Doc Hub's ☁ Google Drive backup.
 - The list is saved with the case by id (`#kx-pd-photos`).
-- The Training Library's car-accident files show **mock photos** drawn from the file: each vehicle (its year, make, model and plate) with the damage where it was hit, marked *SPECIMEN · mock training photo*. Nothing to add, caption or remove on a view-only file.
+- The Training Library's vehicle-crash files show **mock photos** made from the file: first the **crash scene** (how it happened, where, the vehicles where they stopped), then **each vehicle** (its year, make, model and plate) with the damage where it was hit, marked *SPECIMEN · mock training photo*. They're realistic once an Admin has made them, drawn until then (see [📷 The Training Library's photos](#-the-training-librarys-photos)). Nothing to add, caption or remove on a view-only file.
 
 **Settlement (BI/UM)** (tab)
 - **BI** and **UM/UIM** are separate claims, so each has its own card. BI is the at-fault party's carrier; UM/UIM is the client's own policy, and its card says which coverage.

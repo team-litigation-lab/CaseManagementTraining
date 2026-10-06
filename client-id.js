@@ -42,6 +42,15 @@
     function hash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
     // A long line is squeezed to fit its space rather than running off the card.
     const fit = (text, chars, width) => String(text).length > chars ? ` textLength="${width}" lengthAdjust="spacingAndGlyphs"` : '';
+    // The ID's photo (84×104 at 16,52): the realistic photo when the library has one (library-photos.js), else the
+    // drawn portrait (case-photos.js), else a silhouette.
+    const realPhoto = (mc) => window.lshLibraryPhotos ? window.lshLibraryPhotos.url(mc, 'id') : null;
+    function photo(mc, hue) {
+        const real = realPhoto(mc);
+        if (real) return `<image href="${esc(real)}" x="16" y="52" width="84" height="104" preserveAspectRatio="xMidYMid slice"/>`;
+        if (window.LSHCasePhotos) return `<g transform="translate(16 52)">${window.LSHCasePhotos.portrait(mc, 84, 104)}</g>`;
+        return `<g fill="hsl(${hue},28%,52%)"><circle cx="58" cy="90" r="20"/><ellipse cx="58" cy="152" rx="36" ry="32"/></g>`;
+    }
     function mockIdSvg(mc) {
         const c = mc.client || {}, h = hash(mc.id + '|' + c.name);
         const words = String(c.name || '').trim().split(/\s+/).filter(Boolean);
@@ -63,7 +72,7 @@
 <text x="16" y="33" font-size="7" font-weight="700" fill="#bae6fd" letter-spacing=".5">MOCK · FOR TRAINING ONLY · NOT A GOVERNMENT ID</text>
 <text x="324" y="27" font-size="9" font-weight="900" fill="#fbbf24" text-anchor="end" letter-spacing="1">LSH</text>
 <rect x="16" y="52" width="84" height="104" rx="6" fill="hsl(${hue},45%,86%)"/>
-<g clip-path="url(#cidc-${esc(mc.id)})" fill="hsl(${hue},28%,52%)"><circle cx="58" cy="90" r="20"/><ellipse cx="58" cy="152" rx="36" ry="32"/></g>
+<g clip-path="url(#cidc-${esc(mc.id)})">${photo(mc, hue)}</g>
 <text x="16" y="178" font-size="15" fill="#1e3a8a" font-family="'Segoe Script','Brush Script MT','Lucida Handwriting',cursive"${fit(sign, 12, 92)}>${esc(sign)}</text>
 ${L(114, 58, 'ID NO.')}${V(114, 71, idNo, 13, null, '#b91c1c')}
 ${L(114, 86, 'LN')}${V(114, 98, last.toUpperCase(), 12, [18, 210])}
@@ -97,7 +106,7 @@ ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2,
     function render() {
         const box = $id('client-id-card'); if (!box) return;
         const mc = libId() && mockCase(libId()), f = mc ? null : savedFile();
-        const sig = mc ? 'mock:' + mc.id : f ? 'file:' + f.key : 'none:' + canUpload();
+        const sig = mc ? 'mock:' + mc.id + '|' + (realPhoto(mc) || '') : f ? 'file:' + f.key : 'none:' + canUpload();
         if (box.dataset.sig === sig) return;
         box.dataset.sig = sig;
         if (mc) box.innerHTML = `<button type="button" class="cid-thumb" onclick="lshClientId.open()" title="Client's ID (a mock ID for training). Click to enlarge.">${mockIdSvg(mc)}</button>`;
@@ -111,7 +120,7 @@ ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2,
         closeView();
         const mc = libId() && mockCase(libId()), f = mc ? null : savedFile();
         if (!mc && !f) return;
-        const body = mc ? `<div class="cid-big">${mockIdSvg(mc)}</div><p class="cid-note">A mock ID made from the Training Library file, for practice. It's a specimen, not a real ID.</p>`
+        const body = mc ? `<div class="cid-big">${mockIdSvg(mc)}</div><p class="cid-note">A mock ID made from the Training Library file, for practice. It's a specimen, not a real ID${realPhoto(mc) ? '; its photo is AI-made, of a fictional person' : ''}.</p>${window.lshLibraryPhotos ? window.lshLibraryPhotos.adminBar(mc, 'id') : ''}`
             : `<div class="cid-big"><img src="${esc(fileUrl(f.key))}" alt="Client's ID"></div>
                <p class="cid-note">${f.name ? `<b title="${f.orig ? 'Original file: ' + esc(f.orig) : ''}">${esc(f.name)}</b><br>` : ''}Uploaded${f.at ? ' ' + esc(new Date(f.at).toLocaleDateString()) : ''}${f.by ? ' by ' + esc(f.by) : ''}. It's kept with the case once the case is saved.</p>
                ${canUpload() ? '<div class="cid-actions"><button type="button" onclick="lshClientId.pick()">⬆ Replace</button><button type="button" class="cid-remove" onclick="lshClientId.remove()">🗑 Remove</button></div>' : ''}`;
@@ -119,6 +128,8 @@ ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2,
             <div class="cid-box"><div class="cid-head"><b>🪪 Client's ID</b><button type="button" class="cid-x" onclick="lshClientId.close()" aria-label="Close">✕</button></div>${body}</div></div>`);
     }
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $id('cid-modal')) closeView(); });
+    // a realistic photo was made, changed or removed (or the list came in): show it
+    document.addEventListener('lsh-library-photos', () => { render(); if ($id('cid-modal') && libId() && mockCase(libId())) open(); });
 
     /* ---------- uploading ---------- */
     // A photo from a phone can be several MB: it is redrawn at most 1,600 px on its long side as a JPG
