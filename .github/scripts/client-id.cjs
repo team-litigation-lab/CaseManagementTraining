@@ -9,7 +9,9 @@
 //     typing in either changes the other, a case saved before (fixtures/case-before-keyed.json)
 //     shows its SSN in both, and it isn't saved twice (the saved fields keep their positions);
 //   - Client's ID: every Training Library client has a mock ID (well-formed, with their
-//     name, date of birth and SPECIMEN on it) that opens larger and closes with Escape; a
+//     name, date of birth and SPECIMEN on it, its signature clear of the address, an adult's
+//     built-in photo (a file in mock-id-photos/ that loads, the same for the same client in every
+//     file) and a minor's drawn portrait) that opens larger and closes with Escape; a
 //     saved case that's work on a library file shows that client's; any other case offers
 //     Upload ID: a large photo is made smaller and sent as a JPG, the card shows it, it's
 //     saved with the case and comes back when the case is opened again, Remove takes it off,
@@ -21,7 +23,7 @@
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd();
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const server = http.createServer((req, res) => {
     let f = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname)); if (f.endsWith('/')) f += 'index.html';
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
@@ -99,12 +101,41 @@ const failures = []; const fail = (m) => failures.push(m);
     // every library client has a well-formed mock ID with their name on it
     const all = await page.evaluate(() => MOCK_CASES.map(c => {
         const svg = lshClientId.mockIdSvg(c.id), doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
-        const text = doc.documentElement.textContent, last = c.client.name.trim().split(/\s+/).pop().toUpperCase();
+        const text = doc.documentElement.textContent, last = c.client.name.replace(/\s*\(.*$/, '').replace(/^Estate of\s+/i, '').trim().split(/\s+/).pop().toUpperCase();
         return { id: c.id, ok: !doc.querySelector('parsererror') && doc.documentElement.nodeName === 'svg' && text.includes(last) && text.includes('SPECIMEN') && (!c.client.dob || text.includes(c.client.dob)), no: (/T\d{8}/.exec(text) || [''])[0] };
     }));
     const bad = all.filter(x => !x.ok).map(x => x.id);
     if (all.length < 40 || bad.length) fail(`mock IDs that aren't right: ${bad.join(', ')} (of ${all.length})`);
     if (new Set(all.map(x => x.no)).size !== all.length) fail('two library clients have the same mock ID number');
+
+    // the signature stays under the photo and never reaches the address column (x 114), whatever the name's length; an adult's
+    // mock ID has a built-in photo (a file in mock-id-photos/ that loads), the same one for the same client in every file; a
+    // minor's keeps the drawn portrait
+    const looks = await page.evaluate(async () => {
+        const host = document.createElement('div'); host.style.cssText = 'position:absolute;left:-9999px;top:0;width:340px'; document.body.appendChild(host);
+        const sigs = [], hrefs = new Set(), noPhoto = [], minorPhoto = [], byPerson = {};
+        for (const c of MOCK_CASES) {
+            host.innerHTML = lshClientId.mockIdSvg(c.id);
+            const sig = host.querySelector('text[font-family*="cursive"]'), b = sig.getBBox();
+            sigs.push({ id: c.id, left: b.x, right: b.x + b.width });
+            const img = host.querySelector('image'), href = img && img.getAttribute('href'), minor = LSHCasePhotos.looksOf(c).minor;
+            if (minor) { if (img) minorPhoto.push(c.id); continue; }
+            if (!href) { noPhoto.push(c.id); continue; }
+            hrefs.add(href);
+            const who = c.client.name.replace(/\s*\(.*$/, '') + '|' + c.client.dob;
+            (byPerson[who] = byPerson[who] || new Set()).add(href);
+        }
+        host.remove();
+        const broken = [];
+        for (const h of hrefs) { const r = await fetch(h).catch(() => null); if (!r || !r.ok || !/image\/jpeg/.test(r.headers.get('content-type') || '')) broken.push(h); }
+        return { sigs, noPhoto, minorPhoto, broken, split: Object.entries(byPerson).filter(([, v]) => v.size > 1).map(([k]) => k) };
+    });
+    const crowded = looks.sigs.filter(x => x.left < 14 || x.right > 112).map(x => `${x.id} (${Math.round(x.left)}–${Math.round(x.right)})`);
+    if (crowded.length) fail(`signatures that reach the address column or the card's edge: ${crowded.join(', ')}`);
+    if (looks.noPhoto.length) fail(`adult library clients with no photo on their mock ID (add one to mock-id-photos/ and its name to ID_PHOTOS): ${looks.noPhoto.join(', ')}`);
+    if (looks.minorPhoto.length) fail(`a minor's mock ID has a photo (it keeps the drawn portrait): ${looks.minorPhoto.join(', ')}`);
+    if (looks.broken.length) fail(`mock ID photos that don't load: ${looks.broken.join(', ')}`);
+    if (looks.split.length) fail(`the same client has different photos in different files: ${looks.split.join(', ')}`);
 
     // a blank case: typing the SSN in either place changes both
     await page.evaluate(() => closeCase()); await page.waitForTimeout(300);

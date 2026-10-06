@@ -61,6 +61,10 @@
         const id = owner(mc, kind), v = index[id] && index[id][kind];
         return v ? `/api/library-photos?img=${encodeURIComponent(id + '/' + kind)}&v=${encodeURIComponent(v)}` : null;
     }
+    // A photo is in place when the library has one (made or uploaded), or, for an ID, when the client has a built-in
+    // synthetic photo (client-id.js, mock-id-photos/): ✨ Make the missing photos leaves those alone.
+    const builtIn = (mc, kind) => kind === 'id' && window.lshClientId && window.lshClientId.builtInPhoto ? window.lshClientId.builtInPhoto(mc) : null;
+    const placed = (mc, kind) => !!(url(mc, kind) || builtIn(mc, kind));
     // Every photo a file can have: its client's ID (unless a minor's, or the same client's earlier file has it),
     // the crash scene, each vehicle.
     function slots(mc) {
@@ -194,7 +198,7 @@
             <button type="button" data-lp="make">${has ? '↻ Make a new realistic photo' : '✨ Make a realistic photo'}</button>
             <button type="button" data-lp="upload">⬆ Use my own photo</button>
             ${has ? '<button type="button" data-lp="remove">↺ Back to the drawing</button>' : ''}
-            <span class="lp-status" role="status">${shared ? `Shared with ${esc(owner(mc, kind))} (the same client).` : ''}</span></div>`;
+            <span class="lp-status" role="status">${shared ? `Shared with ${esc(owner(mc, kind))} (the same client).` : !has && builtIn(mc, kind) ? 'Shown now: the built-in photo; a photo made or uploaded here replaces it.' : ''}</span></div>`;
     }
     async function run(bar, what, fn) {
         const status = bar.querySelector('.lp-status');
@@ -234,10 +238,10 @@
         if (!isAdmin()) { box.innerHTML = ''; return; }
         const el = parts().summary;
         if (!index) { el.innerHTML = `<p class="lp-note">${loading ? 'Loading…' : 'The photo list couldn\'t be loaded.'}</p><button type="button" class="lp-btn" onclick="lshLibraryPhotos.load(true)">↻ Load</button>`; uploads(); return; }
-        const all = cases().flatMap(slots), have = all.filter(s => url(s.mc, s.kind)), missing = all.filter(s => !url(s.mc, s.kind));
-        const count = (k) => { const a = all.filter(s => k.test(s.kind)); return `${a.filter(s => url(s.mc, s.kind)).length} of ${a.length}`; };
+        const all = cases().flatMap(slots), have = all.filter(s => placed(s.mc, s.kind)), missing = all.filter(s => !placed(s.mc, s.kind));
+        const count = (k) => { const a = all.filter(s => k.test(s.kind)); return `${a.filter(s => placed(s.mc, s.kind)).length} of ${a.length}`; };
         el.innerHTML = `<p class="lp-note">Realistic photos for the Training Library's files (made by Gemini, or your own): <b>${have.length} of ${all.length}</b> in place
-            (client IDs ${count(/^id$/)} · crash scenes ${count(/^scene$/)} · vehicles ${count(/^v\d/)}). A file without one shows its drawn photo; a minor's ID keeps the drawn portrait.
+            (client IDs ${count(/^id$/)} · crash scenes ${count(/^scene$/)} · vehicles ${count(/^v\d/)}; an ID counts its built-in photo). A file without one shows its drawn photo; a minor's ID keeps the drawn portrait.
             One photo at a time: open it larger in the file (the ID card, or the Property Damage tab's photos).</p>
             <div class="lp-row">${bulk ? `<span class="lp-note"><b>Making photos: ${bulk.done} of ${bulk.total} done${bulk.failed ? `, ${bulk.failed} not made` : ''}…</b></span><button type="button" class="lp-btn" onclick="lshLibraryPhotos.stop()">■ Stop</button>`
                 : missing.length ? `<button type="button" class="lp-btn lp-go" onclick="lshLibraryPhotos.makeMissing()">✨ Make the ${missing.length} missing photo${missing.length === 1 ? '' : 's'}</button>` : '<span class="lp-note">✅ Every photo is in place.</span>'}
@@ -282,7 +286,7 @@
         if (!staged.length) { p.upload.innerHTML = ''; return; }
         const all = cases().flatMap(slots);
         const group = (title, test) => `<optgroup label="${esc(title)}">${all.filter(s => test.test(s.kind)).map(s =>
-            `<option value="${esc(slotKey(s))}">${esc(slotLabel(s))}${url(s.mc, s.kind) ? ' ✓' : ''}</option>`).join('')}</optgroup>`;
+            `<option value="${esc(slotKey(s))}">${esc(slotLabel(s))}${placed(s.mc, s.kind) ? ' ✓' : ''}</option>`).join('')}</optgroup>`;
         const options = '<option value="">— Which photo is this? —</option>' + group('Client IDs', /^id$/) + group('Crash scenes', /^scene$/) + group('Vehicle photos', /^v\d/);
         const ready = staged.filter(x => x.slot).length;
         p.upload.innerHTML = `<div class="lp-up-head"><b>Photos to upload (${staged.length})</b> · choose what each one is for. ✓ = it has a photo now, which this one replaces.</div>
@@ -330,7 +334,7 @@
     async function makeMissing() {
         if (!isAdmin() || bulk) return;
         await load(true);
-        const todo = cases().flatMap(slots).filter(s => !url(s.mc, s.kind));
+        const todo = cases().flatMap(slots).filter(s => !placed(s.mc, s.kind));
         if (!todo.length) { panel(); return; }
         if (!confirm(`Make ${todo.length} realistic photo${todo.length === 1 ? '' : 's'} with Gemini?\n\nIt takes about ${Math.max(1, Math.ceil(todo.length * 20 / 3 / 60))} minute(s); keep this page open. Google bills each photo to the Gemini key's project.`)) return;
         bulk = { stop: false, done: 0, failed: 0, total: todo.length, last: '' };

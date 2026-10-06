@@ -21,7 +21,7 @@
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd();
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const server = http.createServer((req, res) => {
     let f = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname)); if (f.endsWith('/')) f += 'index.html';
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
@@ -121,31 +121,39 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     if (/blood/.test(prompt('MC-19', 'scene')) && !/No injured people, no blood/.test(prompt('MC-19', 'scene'))) fail('a pedestrian scene should show no injured people');
 
     // 2. a file without realistic photos: the drawings
-    await openCase('MC-01');
-    let v = await page.evaluate(() => {
+    // (an adult's ID shows its built-in photo, mock-id-photos/, until an Admin makes a realistic one; a minor's the drawing)
+    const inspect = () => page.evaluate(() => {
         const card = document.querySelector('#client-id-card svg'), tiles = [...document.querySelectorAll('#pd-photo-grid .pdp-mock')];
         // the portrait as drawn on the page: its face sits in the ID's photo box, at that size (the card's CSS mustn't resize it)
         const face = card && card.querySelector('ellipse[fill$="-face)"]'), cr = card && card.getBoundingClientRect(), fr = face && face.getBoundingClientRect();
         const fit = !!(fr && cr && fr.width / cr.width > 0.06 && fr.width / cr.width < 0.13 && fr.left - cr.left > 0.08 * cr.width && fr.right - cr.left < 0.3 * cr.width);
-        return { card: !!card, image: !!(card && card.querySelector('image')), portrait: !!(card && card.querySelector('[id^="pt"]')) && fit, tiles: tiles.length, photos: MOCK_CASES.find(c => c.id === 'MC-01').pdPhotos.length,
+        const mc = MOCK_CASES.find(c => c.id === (window.mockCurrentId && window.mockCurrentId()));
+        return { card: !!card, realistic: !!(card && card.querySelector('image[href*="/api/library-photos"]')), builtIn: !!(card && card.querySelector('image[href^="mock-id-photos/"]')),
+            portrait: !!(card && card.querySelector('[id^="pt"]')) && fit, tiles: tiles.length, photos: mc && mc.pdPhotos ? mc.pdPhotos.length : 0,
             sceneFirst: !!(tiles[0] && tiles[0].classList.contains('pdp-scene') && /CRASH SCENE/.test(tiles[0].textContent)), images: document.querySelectorAll('#pd-photo-grid image').length };
     });
-    if (!v.card || v.image || !v.portrait) fail(`MC-01's ID should show the drawn portrait, in its photo box: ${JSON.stringify(v)}`);
+    await openCase('MC-01');
+    let v = await inspect();
+    if (!v.card || v.realistic || !v.builtIn || v.portrait) fail(`MC-01's ID (an adult) should show its built-in photo, not a realistic one or the drawing: ${JSON.stringify(v)}`);
     if (v.tiles !== v.photos + 1 || !v.sceneFirst || v.images) fail(`MC-01's Property Damage photos should be the crash scene and then each vehicle, drawn: ${JSON.stringify(v)}`);
+    await openCase('MC-10');
+    v = await inspect();
+    if (!v.card || v.realistic || v.builtIn || !v.portrait) fail(`MC-10's ID (a minor) should show the drawn portrait, in its photo box: ${JSON.stringify(v)}`);
+    await openCase('MC-01');
 
     // 3. once the list has realistic photos, they show (with the same labels); the same client shares hers; a minor's stays drawn
     state = { 'MC-01': { id: 'a1', scene: 'a2', v0: 'a3' }, 'MC-10': { id: 'x9' } };
     await page.evaluate(() => lshLibraryPhotos.load(true)); await settle(600);
     v = await page.evaluate(() => {
-        const img = document.querySelector('#client-id-card svg image'), tiles = [...document.querySelectorAll('#pd-photo-grid .pdp-mock')];
+        const img = document.querySelector('#client-id-card svg image[href*="/api/library-photos"]'), tiles = [...document.querySelectorAll('#pd-photo-grid .pdp-mock')];
         return { id: img ? img.getAttribute('href') : '', t0: !!tiles[0].querySelector('image') && /STAND-IN/.test(tiles[0].textContent) && /SPECIMEN/.test(tiles[0].textContent), t1: !!tiles[1].querySelector('image'), t2: !!tiles[2].querySelector('image') };
     });
     if (!/img=MC-01%2Fid&(amp;)?v=a1/.test(v.id) || !v.t0 || !v.t1 || v.t2) fail(`MC-01's realistic photos don't show in place of the drawings: ${JSON.stringify(v)}`);
     await openCase('MC-21');
-    v = await page.evaluate(() => { const img = document.querySelector('#client-id-card svg image'); return img ? img.getAttribute('href') : ''; });
+    v = await page.evaluate(() => { const img = document.querySelector('#client-id-card svg image[href*="/api/library-photos"]'); return img ? img.getAttribute('href') : ''; });
     if (!/MC-01%2Fid/.test(v)) fail(`MC-21 (the same Maria Santos) doesn't show MC-01's ID photo: ${v}`);
     await openCase('MC-10');
-    v = await page.evaluate(() => !!document.querySelector('#client-id-card svg image'));
+    v = await page.evaluate(() => !!document.querySelector('#client-id-card svg image[href*="/api/library-photos"]'));
     if (v) fail('a minor\'s ID showed a realistic photo');
     await page.click('#client-id-card .cid-thumb'); await settle(200);
     v = await page.evaluate(() => { const m = document.getElementById('cid-modal'); return { note: m ? m.textContent : '', make: !!(m && m.querySelector('[data-lp="make"]')) }; });
@@ -159,21 +167,23 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     if (!v || v.join('|') !== 'make:✨ Make a realistic photo|upload:⬆ Use my own photo') fail(`the ID's larger view should offer Make and Use my own photo: ${JSON.stringify(v)}`);
     posts.length = 0; puts.length = 0;
     await page.click('#cid-modal [data-lp="make"]');
-    await page.waitForFunction(() => document.querySelector('#client-id-card svg image'), null, { timeout: 8000 }).catch(() => {});
+    await page.waitForFunction(() => document.querySelector('#client-id-card svg image[href*="/api/library-photos"]'), null, { timeout: 8000 }).catch(() => {});
     await settle(300);
-    v = await page.evaluate(() => ({ card: (document.querySelector('#client-id-card svg image') || { getAttribute: () => '' }).getAttribute('href'), modal: !!document.querySelector('#cid-modal svg image'),
+    v = await page.evaluate(() => ({ card: (document.querySelector('#client-id-card svg image[href*="/api/library-photos"]') || { getAttribute: () => '' }).getAttribute('href'), modal: !!document.querySelector('#cid-modal svg image[href*="/api/library-photos"]'),
         buttons: [...document.querySelectorAll('#cid-modal .lp-admin button')].map(b => b.dataset.lp).join() }));
     const p0 = posts[0] || {};
     if (p0.caseId !== 'MC-04' || p0.kind !== 'id' || p0.aspect !== '3:4' || !/year-old man/.test(p0.prompt || '')) fail(`Make didn't ask for MC-04's ID photo: ${JSON.stringify(p0).slice(0, 300)}`);
     if (puts.length !== 1 || puts[0].img !== 'MC-04/id' || puts[0].type !== 'image/jpeg' || !puts[0].jpeg || puts[0].model !== 'gemini-ci-image') fail(`Gemini's picture wasn't kept as a JPG: ${JSON.stringify(puts)}`);
     if (!/MC-04%2Fid/.test(v.card) || !v.modal || v.buttons !== 'make,upload,remove') fail(`the new photo doesn't show on the card and in the view (with Back to the drawing): ${JSON.stringify(v)}`);
     await page.click('#cid-modal [data-lp="remove"]'); await settle(500);
-    v = await page.evaluate(() => !!document.querySelector('#client-id-card svg image'));
+    v = await page.evaluate(() => !!document.querySelector('#client-id-card svg image[href*="/api/library-photos"]'));
     if (deletes.join() !== 'MC-04/id' || v) fail(`Back to the drawing didn't remove the photo: ${deletes.join()} ${v}`);
+    v = await page.evaluate(() => !!document.querySelector('#client-id-card svg image[href^="mock-id-photos/"]'));
+    if (!v) fail("after Back to the drawing, an adult's ID should show its built-in photo");
     puts.length = 0;
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#cid-modal [data-lp="upload"]')]);
     await chooser.setFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PNG_B64, 'base64') });
-    await page.waitForFunction(() => document.querySelector('#client-id-card svg image'), null, { timeout: 8000 }).catch(() => {});
+    await page.waitForFunction(() => document.querySelector('#client-id-card svg image[href*="/api/library-photos"]'), null, { timeout: 8000 }).catch(() => {});
     if (puts.length !== 1 || !puts[0].jpeg || puts[0].model !== 'upload') fail(`Use my own photo didn't keep it as a JPG: ${JSON.stringify(puts)}`);
     postMode = '402';
     await page.click('#cid-modal [data-lp="make"]'); await settle(600);
@@ -189,7 +199,8 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     state = {}; postMode = '402'; posts.length = 0;
     await page.evaluate(() => lshLibraryPhotos.load(true)); await settle(300);
     v = await page.evaluate(() => (document.getElementById('lp-panel') || {}).textContent || '');
-    if (!new RegExp(`0 of ${data.slots}`).test(v) || !/Make the \d+ missing photos/.test(v)) fail(`Master Control's photo panel doesn't count the photos: ${v.slice(0, 300)}`);
+    const builtIns = await page.evaluate(() => MOCK_CASES.flatMap(c => lshLibraryPhotos.slots(c)).filter(s => s.kind === 'id' && lshClientId.builtInPhoto(s.mc)).length);
+    if (builtIns < 30 || !new RegExp(`${builtIns} of ${data.slots}`).test(v) || !new RegExp(`Make the ${data.slots - builtIns} missing photos`).test(v)) fail(`Master Control's photo panel doesn't count the photos (an ID's built-in photo counts; ${builtIns}): ${v.slice(0, 300)}`);
     await page.evaluate(() => lshLibraryPhotos.makeMissing()); await settle(800);
     v = await page.evaluate(() => (document.getElementById('lp-panel') || {}).textContent || '');
     if (posts.length > 3 || !/billing/.test(v)) fail(`making every photo should stop at once without billing (and say why): ${posts.length} asked; ${v.slice(-200)}`);
@@ -197,7 +208,7 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     await page.evaluate(() => lshLibraryPhotos.makeMissing());
     await page.waitForFunction(() => /Every photo is in place/.test((document.getElementById('lp-panel') || {}).textContent || ''), null, { timeout: 120000 }).catch(() => {});
     v = await page.evaluate(() => (document.getElementById('lp-panel') || {}).textContent || '');
-    if (posts.length !== data.slots || puts.length !== data.slots || !/Every photo is in place/.test(v)) fail(`Make the missing photos didn't make each one once: ${posts.length} asked, ${puts.length} kept of ${data.slots}; ${v.slice(0, 200)}`);
+    if (posts.length !== data.slots - builtIns || puts.length !== data.slots - builtIns || posts.filter(p => p.kind === 'id').length !== data.ids - builtIns || !/Every photo is in place/.test(v)) fail(`Make the missing photos didn't make each missing one once (and leave the IDs' built-in photos): ${posts.length} asked, ${puts.length} kept of ${data.slots - builtIns}; ${v.slice(0, 200)}`);
 
     // 6. ⬆ Upload photos…: several at once, each for the photo the Admin picks
     state = {}; puts.length = 0;
@@ -224,14 +235,14 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     const kept = puts.map(p => p.img).sort().join();
     if (kept !== 'MC-01/id,MC-01/scene,MC-04/id,MC-26/id' || !puts.every(p => p.jpeg && p.type === 'image/jpeg' && p.model === 'upload')) fail(`Save didn't keep each upload as a JPG for its photo: ${JSON.stringify(puts)}`);
     await page.evaluate(() => exitMasterControl()); await openCase('MC-26');
-    v = await page.evaluate(() => (document.querySelector('#client-id-card svg image') || { getAttribute: () => '' }).getAttribute('href'));
+    v = await page.evaluate(() => (document.querySelector('#client-id-card svg image[href*="/api/library-photos"]') || { getAttribute: () => '' }).getAttribute('href'));
     if (!/MC-26%2Fid/.test(v)) fail(`an uploaded ID photo doesn't show on the client's card: ${v}`);
 
     // 7. a trainee sees the photos, with no Admin buttons
     const tp = await open('Trainee');
     await tp.evaluate(async () => { await openMockCase('MC-04', { silent: true }); }); await tp.waitForTimeout(900);
     await tp.evaluate(() => document.querySelector('#client-id-card .cid-thumb').click()); await tp.waitForTimeout(200);
-    v = await tp.evaluate(() => ({ photo: !!document.querySelector('#cid-modal svg image'), admin: !!document.querySelector('.lp-admin'), panel: (document.getElementById('lp-panel') || {}).innerHTML || '' }));
+    v = await tp.evaluate(() => ({ photo: !!document.querySelector('#cid-modal svg image[href*="/api/library-photos"]'), admin: !!document.querySelector('.lp-admin'), panel: (document.getElementById('lp-panel') || {}).innerHTML || '' }));
     if (!v.photo || v.admin || v.panel) fail(`a trainee should see the realistic photo without Admin buttons: ${JSON.stringify(v)}`);
 
     await browser.close(); server.close();

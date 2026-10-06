@@ -4,7 +4,11 @@
    Client's ID (#kx-client-id, in the middle of the case header):
      - A Training Library client (mock-cases.js) has a mock ID made from their
        file: name, date of birth, address and an ID number. It is marked
-       SPECIMEN · TRAINING ONLY and follows no real issuer's design.
+       SPECIMEN · TRAINING ONLY and follows no real issuer's design. Its photo is, in
+       this order: the realistic photo an Admin made (library-photos.js), the built-in
+       synthetic photo in mock-id-photos/ (adults only; a minor's ID keeps the drawn
+       portrait), the drawn portrait (case-photos.js). The signature is kept in its
+       own box under the photo, so it can't run into the address.
      - Any other client: ⬆ Upload ID takes a photo or scan of their ID (JPG, PNG
        or WebP, made smaller here before it's sent). It is kept in the site's
        file storage (/api/upload, R2, as Doc Hub files are) and saved with the
@@ -42,29 +46,56 @@
     function hash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
     // A long line is squeezed to fit its space rather than running off the card.
     const fit = (text, chars, width) => String(text).length > chars ? ` textLength="${width}" lengthAdjust="spacingAndGlyphs"` : '';
-    // The ID's photo (84×104 at 16,52): the realistic photo when the library has one (library-photos.js), else the
-    // drawn portrait (case-photos.js), else a silhouette.
+    // The name as it belongs on an ID: not the file's note about who signs for the client ("(minor), by her father…").
+    const idName = (n) => String(n || '').replace(/\s*\(.*$/, '').replace(/^Estate of\s+/i, '').trim();
+    // Built-in photos for the library's adults: mock-id-photos/<name>-<birth year>.jpg, synthetic faces (no real person; see that
+    // folder's README), one per person so a client who is in several files looks the same in each. A minor has none.
+    const ID_PHOTOS = new Set(`
+        marcus-lee-2000 schuyler-beauchamp-2000 jose-hernandez-1994 andre-coleman-1991
+        rhys-beaumont-1991 bjorn-courthope-1988 ahmed-rahman-1985 james-wilson-1983
+        carlos-mendoza-1977 derek-thompson-1975 brian-o-neill-1972 samuel-boateng-1970
+        cian-masserene-1970 robert-chen-1969 walter-grant-1968 tomas-rivera-1964
+        jose-hernandez-1962 william-harris-1958 james-wilson-1956 george-hammond-1949
+        harold-jenkins-1948 keisha-brown-1995 brittany-kirkcudbright-1996 niamh-cholmondeley-1998
+        mireille-featherstonhaugh-1994 olivia-bennett-1993 aisha-patel-1992 emily-nguyen-1990
+        tanya-reed-1990 maria-santos-1988 latoya-jackson-1987 hannah-pierce-1987
+        rachel-donovan-1986 nicole-adams-1984 denise-carter-1981 ngozi-okonkwo-1979
+        maria-santos-1971 siobhan-masserene-1968 linda-garcia-1961 saoirse-shaughnessy-1955
+        patricia-lewis-1946`.split(/\s+/).filter(Boolean));
+    const photoSlug = (who, dob) => `${who} ${String(dob || '').slice(-4)}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    function builtInPhoto(mc) {
+        if (window.LSHCasePhotos && window.LSHCasePhotos.looksOf(mc).minor) return null;
+        const c = mc.client || {}, slug = photoSlug(idName(c.name), c.dob);
+        return ID_PHOTOS.has(slug) ? `mock-id-photos/${slug}.jpg` : null;
+    }
+    // The ID's photo (84×104 at 16,52): the realistic photo when the library has one (library-photos.js), else the built-in
+    // photo, else the drawn portrait (case-photos.js), else a silhouette.
     const realPhoto = (mc) => window.lshLibraryPhotos ? window.lshLibraryPhotos.url(mc, 'id') : null;
     function photo(mc, hue) {
-        const real = realPhoto(mc);
-        if (real) return `<image href="${esc(real)}" x="16" y="52" width="84" height="104" preserveAspectRatio="xMidYMid slice"/>`;
+        const img = realPhoto(mc) || builtInPhoto(mc);
+        if (img) return `<image href="${esc(img)}" x="16" y="52" width="84" height="104" preserveAspectRatio="xMidYMid slice"/>`;
         if (window.LSHCasePhotos) return `<g transform="translate(16 52)">${window.LSHCasePhotos.portrait(mc, 84, 104)}</g>`;
         return `<g fill="hsl(${hue},28%,52%)"><circle cx="58" cy="90" r="20"/><ellipse cx="58" cy="152" rx="36" ry="32"/></g>`;
     }
     function mockIdSvg(mc) {
         const c = mc.client || {}, h = hash(mc.id + '|' + c.name);
-        const words = String(c.name || '').trim().split(/\s+/).filter(Boolean);
+        const words = idName(c.name).split(/\s+/).filter(Boolean);
         const last = words.length > 1 ? words.pop() : (words[0] || ''), first = words.length ? words.join(' ') : '';
         const md = /^(\d{2})\/(\d{2})\//.exec(c.dob || ''), mmdd = md ? `${md[1]}/${md[2]}` : '01/15';
         const idNo = 'T' + String(h % 100000000).padStart(8, '0');
         const addr = String(c.address || ''), cut = addr.indexOf(',');
         const line1 = (cut > 0 ? addr.slice(0, cut) : addr).toUpperCase(), line2 = (cut > 0 ? addr.slice(cut + 1).trim() : '').toUpperCase();
-        const hue = h % 360, sign = `${first} ${last}`.trim().slice(0, 22);
+        const hue = h % 360, sign = `${first} ${last}`.trim();
+        // The signature lives in its own box under the photo (x 16–100) and can't reach the address: it is sized for a wide
+        // script font, squeezed if it still won't fit, and clipped to the box as a last resort.
+        const SIG_W = 80, sigSize = Math.max(8, Math.min(15, SIG_W / (Math.max(sign.length, 1) * 0.62)));
+        const sigFit = sign.length * sigSize * 0.62 > SIG_W ? ` textLength="${SIG_W}" lengthAdjust="spacingAndGlyphs"` : '';
         const L = (x, y, t) => `<text x="${x}" y="${y}" font-size="6.5" font-weight="700" fill="#64748b" letter-spacing=".6">${t}</text>`;
         const V = (x, y, t, size, w, color) => `<text x="${x}" y="${y}" font-size="${size}" font-weight="800" fill="${color || '#0f172a'}"${w ? fit(t, w[0], w[1]) : ''}>${esc(t)}</text>`;
         return `<svg viewBox="0 0 340 214" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mock ID for ${esc(c.name)} (training specimen)" font-family="Arial, Helvetica, sans-serif">
 <defs><linearGradient id="cidg-${esc(mc.id)}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0f2fe"/><stop offset="1" stop-color="#ecfdf5"/></linearGradient>
-<clipPath id="cidc-${esc(mc.id)}"><rect x="16" y="52" width="84" height="104" rx="6"/></clipPath></defs>
+<clipPath id="cidc-${esc(mc.id)}"><rect x="16" y="52" width="84" height="104" rx="6"/></clipPath>
+<clipPath id="cids-${esc(mc.id)}"><rect x="16" y="162" width="84" height="18"/></clipPath></defs>
 <rect width="340" height="214" rx="12" fill="url(#cidg-${esc(mc.id)})" stroke="#94a3b8"/>
 <g fill="none" stroke="#0ea5e9" stroke-opacity=".14">${[70, 92, 114, 136, 158, 180].map(y => `<path d="M0 ${y} C 60 ${y - 14}, 120 ${y + 14}, 180 ${y} S 300 ${y - 14}, 340 ${y}"/>`).join('')}</g>
 <path d="M0 12 a12 12 0 0 1 12 -12 h316 a12 12 0 0 1 12 12 v28 h-340 z" fill="#0c4a6e"/>
@@ -73,7 +104,9 @@
 <text x="324" y="27" font-size="9" font-weight="900" fill="#fbbf24" text-anchor="end" letter-spacing="1">LSH</text>
 <rect x="16" y="52" width="84" height="104" rx="6" fill="hsl(${hue},45%,86%)"/>
 <g clip-path="url(#cidc-${esc(mc.id)})">${photo(mc, hue)}</g>
-<text x="16" y="178" font-size="15" fill="#1e3a8a" font-family="'Segoe Script','Brush Script MT','Lucida Handwriting',cursive"${fit(sign, 12, 92)}>${esc(sign)}</text>
+<rect x="16" y="52" width="84" height="104" rx="6" fill="none" stroke="#64748b" stroke-opacity=".5"/>
+<g clip-path="url(#cids-${esc(mc.id)})"><text x="18" y="176" font-size="${sigSize}" fill="#1e3a8a" font-family="'Segoe Script','Brush Script MT','Lucida Handwriting',cursive"${sigFit}>${esc(sign)}</text></g>
+<path d="M16 180 H100" stroke="#94a3b8" stroke-width=".6"/>
 ${L(114, 58, 'ID NO.')}${V(114, 71, idNo, 13, null, '#b91c1c')}
 ${L(114, 86, 'LN')}${V(114, 98, last.toUpperCase(), 12, [18, 210])}
 ${L(114, 112, 'FN')}${V(114, 124, first.toUpperCase(), 12, [18, 210])}
@@ -201,6 +234,6 @@ ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2,
         if (f) new MutationObserver(later).observe(f, { childList: true, characterData: true, subtree: true });
         render();
     }
-    window.lshClientId = { open, close: closeView, pick, remove, render, mockIdSvg: (id) => { const mc = mockCase(id); return mc ? mockIdSvg(mc) : ''; } };
+    window.lshClientId = { open, close: closeView, pick, remove, render, builtInPhoto, mockIdSvg: (id) => { const mc = mockCase(id); return mc ? mockIdSvg(mc) : ''; } };
     if (document.readyState === 'complete') start(); else window.addEventListener('load', start);
 })();
