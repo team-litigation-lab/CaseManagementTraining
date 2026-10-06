@@ -246,9 +246,6 @@
     .fdd-rub b{color:#0f2148}.fdd-rub .nt{display:block;font-size:11.3px;color:#475569;margin-top:2px}
     .fdd-rub .how{font-size:9px;font-weight:800;text-transform:uppercase;border-radius:4px;padding:0 4px;margin-left:5px;background:#e0f2fe;color:#0369a1;vertical-align:1px}
     .fdd-rub .how.ai{background:#f3e8ff;color:#7e22ce}
-    .fdd-ftl{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
-    .fdd-ftl button{flex:1 1 auto;font-size:11.5px;font-weight:800;border:1px solid #0f2148;background:#eef2ff;color:#0f2148;border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left}
-    .fdd-ftl button:hover{background:#0f2148;color:#fff}
     .fdd-pick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 8px}
     .fdd-pick select{flex:1 1 180px;min-width:0;padding:7px 8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px;font-weight:700;color:#0f2148;background:#fff}
     .fdd-pick span{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b}
@@ -581,24 +578,10 @@
         if (b) b.disabled = !(cur && cur.selected && cur.auth && cur.action != null);
     }
 
+    // The home screen is the call lines, and nothing else: every program's calls, Practice and Graded. (The Core callers'
+    // practice call and the scored drill are no longer offered there; a call's debrief still shows the results.)
     function homeHTML() {
-        const total = (window.DRILL_CALLS || []).length;
-        const lv = [[1, 'Level 1 · warm-up'], [2, 'Level 2'], [3, 'Level 3 · tricky']];
-        return `${liveOK() ? `<label class="fdd-live-opt" style="margin:0 0 10px"><input type="checkbox" id="fdd-live" ${livePref() ? 'checked' : ''} onchange="fddSetLive(this.checked)"><span><b>🎙 Live voice calls.</b> The phone rings, you answer and talk, and the caller talks back like a real call. Use a headset and allow the microphone. Turn this off to type (practice calls) or read (drill) instead.</span></label>`
-                : `<p class="fdd-live-opt" style="margin:0 0 10px">🎙 Live voice calls need Chrome or Edge with a microphone. In this browser you type (practice calls) or read (drill).</p>`}
-            <div class="fdd-sec"><h4>📞 Core callers · practice call (no script)</h4>
-            <div class="fdd-seg">${lv.map(([n, l]) => `<button class="${pcLevel === n ? 'on' : ''}" onclick="fddPracticeLevel(${n}, this)">${l} (${coreCalls(n).length})</button>`).join('')}</div>
-            <div id="fdd-core-calls">${coreListHTML()}</div>
-            ${ftButtonsHTML()}</div>
-            ${linesHomeHTML()}
-            <div class="fdd-sec"><h4>📋 Scored drill · step by step</h4>
-            <p style="margin:0 0 6px;line-height:1.5;font-size:12.3px">A run of calls where you <b>ask</b> for identifiers, <b>find</b> the case, <b>authenticate</b> the caller (some get it wrong on purpose) and pick how to <b>handle</b> the call. On a live call, just ask out loud: what you ask is ticked as you say it. Scored per call: find 30 · authenticate 40 (decision 30 + asking the right identifiers 10) · handle 30. The calls come in sets of ${DRILL_SET}, the same calls in the same order for everyone: ${total} calls across ${(window.MOCK_CASES || []).length} case files. The firm directory and front-desk rules are below.</p>
-            <div style="display:flex;gap:8px;align-items:center"><select id="fdd-set" aria-label="Which calls" style="padding:8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12.5px;min-width:0" onchange="fddDrillSet(this.value)">
-                ${Array.from({ length: drillSets() }, (_, i) => { const c = drillSetCalls(i + 1); return `<option value="${i + 1}" ${drillSet === i + 1 ? 'selected' : ''}>Set ${i + 1} · ${esc(c[0].id)}–${esc(c[c.length - 1].id)} (${c.length} calls)</option>`; }).join('')}
-                <option value="0" ${drillSet === 0 ? 'selected' : ''}>All ${total} calls</option></select>
-            <button class="fdd-go" style="margin:0;flex:1" onclick="fddStart()">▶ Take the first call</button></div></div>
-            ${directoryHTML()}
-            ${historyHTML()}`;
+        return linesHomeHTML() || '<p style="color:#64748b;font-size:12px">The call lines aren\'t available.</p>';
     }
 
     window.fddDrillSet = function (v) { drillSet = parseInt(v, 10) || 0; };
@@ -1739,11 +1722,6 @@ Reply with exactly this JSON:
     const nextOn = (l, mode, id) => { const list = callsFor(l, mode), i = list.findIndex(c => c.id === id); return i >= 0 ? list[i + 1] || null : null; };
     const lineArg = (l) => esc(JSON.stringify([l.program, l.line]));
     const programLabel = (k) => ((packs() && packs().programOf(k)) || {}).label || k;
-    // The three Standard Training lines, by the Core callers' practice call.
-    function ftButtonsHTML() {
-        const K = packs(); if (!K) return '';
-        return `<div class="fdd-ftl">${K.linesOf('FT').map(l => `<button onclick="fddOpenLine(${lineArg(l)})">${esc(l.icon)} ${esc(l.line)}</button>`).join('')}</div>`;
-    }
     function linesHomeHTML() {
         const K = packs(); if (!K) return '';
         const view = lnView || defaultView();
@@ -1789,7 +1767,11 @@ Reply with exactly this JSON:
         const practice = `<div class="fdd-sec fdd-practice-calls"><h4>📞 Practice calls (${calls.length})</h4>
                 ${calls.map(c => `<div class="fdd-row" data-call="${esc(c.id)}" onclick="fddLineCall('${esc(c.id)}','practice')"><span class="nm">${esc(c.title)}<br><span class="mt">${esc(c.name)} · ${esc(c.role)}</span></span>
                     <span class="mt">${out(c)}${esc(c.level || '')}</span>${bestHTML(c.id, 'practice')}</div>`).join('')}</div>`;
+        // live voice or typing, chosen here (the home screen is only the call lines)
+        const live = liveOK() ? `<label class="fdd-live-opt" style="margin:0 0 10px"><input type="checkbox" id="fdd-live" ${livePref() ? 'checked' : ''} onchange="fddSetLive(this.checked)"><span><b>🎙 Live voice calls.</b> The phone rings, you answer and talk, and the caller talks back like a real call. Use a headset and allow the microphone. Turn this off to type instead.</span></label>`
+            : `<p class="fdd-live-opt" style="margin:0 0 10px">🎙 Live voice calls need Chrome or Edge with a microphone. In this browser you type instead.</p>`;
         return `<div class="fdd-sec" style="padding-bottom:8px"><h4 style="margin:0">${esc(l.icon)} ${esc(l.line)} · ${esc(programLabel(l.program))}</h4></div>
+            ${live}
             ${LN.graded ? graded + practice : practice + graded}
             ${l.tips ? `<details class="fdd-sec fdd-dir"><summary>Tips for this line</summary><ul>${l.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}
             <button class="fdd-go" onclick="fddHome()">← All call lines</button>`;

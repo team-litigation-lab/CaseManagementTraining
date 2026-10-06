@@ -112,8 +112,7 @@ const failures = []; const fail = (m) => failures.push(m);
     // helpers: a practice call from a given caller; say a line and wait for the caller's answer
     const callFrom = async (id) => {
         await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(250);
-        await page.evaluate((cid) => fddPracticeLevel(DRILL_CALLS.find(d => d.id === cid).level), id);   // the caller's level, then the caller
-        await page.click(`#fdd-core-calls .fdd-row[data-call="${id}"]`);
+        await page.evaluate((cid) => fddPracticeStart(cid), id);   // the Core caller (no longer listed on the home screen)
     };
     const say = async (text) => {
         const n = await page.locator('#fdd-pc-tr .fdd-msg.c:not(.typing)').count();

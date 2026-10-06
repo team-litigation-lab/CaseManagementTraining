@@ -8,7 +8,7 @@
 //   numbered graded calls first (no caller named, in an order of their own, the same each time), then its practice calls;
 // - it opens on the Cases System: Master Control and My Dashboard step aside, and an Admin who signs in on a ?calls=1
 //   link stays on the Call Simulator (Master Control doesn't open over it);
-// - the home screen: the Core callers listed by level (no random caller, no description), with ☎ Reception, 🗓 Calendar
+// - the home screen: the call lines only (no Core callers, scored drill, directory or results), with ☎ Reception, 🗓 Calendar
 //   Management and 📋 Intake Mock Calls buttons; the scored drill in fixed sets of 8; and the call lines with Practice and
 //   Graded on each line, picked in the Calls dropdown by program and across them;
 // - a practice call (FT Calendar Management, about MC-05): the brief has the caller, the goals and the file; the caller
@@ -132,30 +132,17 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     if (cases.mc || cases.dash || cases.active || !cases.panel) fail(`the Call Simulator doesn't open on the Cases System: ${JSON.stringify(cases)}`);
     if (!/Call Simulator/.test(await page.textContent('#fdd-open-btn'))) fail('the sidebar button isn\'t 📞 Call Simulator');
 
-    // 2. the home screen: the Core callers with the three Standard lines, and every line with Practice and Graded
+    // 2. the home screen: the call lines and nothing else, every line with Practice and Graded
     await page.evaluate(() => fddHome()); await page.waitForTimeout(200);
     const home = await page.evaluate(() => ({ title: document.querySelector('#fdd-panel .fdd-h b').textContent,
-        ft: [...document.querySelectorAll('.fdd-ftl button')].map(b => b.textContent.trim()),
+        secs: [...document.querySelectorAll('#fdd-panel .fdd-b > .fdd-sec, #fdd-panel .fdd-b > details, #fdd-panel .fdd-b > label, #fdd-panel .fdd-b > p')].map(e => (e.querySelector('h4') || e).textContent.trim().slice(0, 40)),
+        gone: ['#fdd-core-calls', '#fdd-set', '#fdd-live', '.fdd-ftl', '#fdd-rf-line', '.fdd-tbl'].filter(q => document.querySelector('#fdd-panel ' + q)),
         tabs: [...document.querySelectorAll('#fdd-calls-view option')].map(o => o.textContent.trim()),
         lines: [...document.querySelectorAll('.fdd-line')].map(r => [r.querySelector('.nm').childNodes[0].textContent.trim(), [...r.querySelectorAll('button')].map(b => b.textContent).join('|')]) }));
     if (!/Call Simulator/.test(home.title)) fail(`the panel is titled "${home.title}"`);
-    if (home.ft.join(' / ') !== '☎ Reception Mock Calls / 🗓 Calendar Management Mock Calls / 📋 Intake Mock Calls') fail(`the Core callers' Standard buttons: ${home.ft.join(' / ')}`);
+    if (home.secs.length !== 1 || !/Call lines/.test(home.secs[0]) || home.gone.length) fail(`the home screen should be the call lines only: ${JSON.stringify({ secs: home.secs, gone: home.gone })}`);
     if (home.tabs.length !== 7 || !home.tabs.includes('🧑‍💼 EA / PA') || !home.tabs.includes('📋 Intake') || !home.tabs.includes('📘 Standard Training')) fail(`the Calls dropdown: ${home.tabs.join(', ')}`);
     if (home.lines.length !== 3 || home.lines.some(l => l[1] !== 'Practice|Graded')) fail(`the Standard tab's lines don't each have Practice and Graded: ${JSON.stringify(home.lines)}`);
-    // the Core callers: listed by level, each picked (no random caller), without the description
-    const core = async () => page.evaluate(() => { const sec = document.getElementById('fdd-core-calls').closest('.fdd-sec');
-        return { text: sec.textContent, levels: [...sec.querySelectorAll('.fdd-seg button')].map(b => b.textContent.trim()), rows: [...document.querySelectorAll('#fdd-core-calls .fdd-row')].map(r => r.dataset.call),
-            take: !!document.querySelector('.fdd-b button.fdd-go.alt[onclick="fddPracticeStart()"]') }; });
-    const byLevel = (n) => mock.DRILL_CALLS.filter(d => d.level === n).map(d => d.id).join();
-    const c1 = await core();
-    if (c1.levels.join(' / ') !== `Level 1 · warm-up (${byLevel(1).split(',').length}) / Level 2 (${byLevel(2).split(',').length}) / Level 3 · tricky (${byLevel(3).split(',').length})` || c1.rows.join() !== byLevel(1)) fail(`the Core callers aren't listed by level: ${JSON.stringify({ levels: c1.levels, rows: c1.rows })}`);
-    if (c1.take || /random|like on the job|After the call you match the file|RECEPTION MOCK CALL scorecard/i.test(c1.text)) fail('the Core callers still have the random practice call or the description');
-    await page.click('.fdd-seg button:has-text("Level 3")');
-    if ((await core()).rows.join() !== byLevel(3)) fail('Level 3 doesn\'t list the level 3 callers');
-    await page.click('.fdd-seg button:has-text("Level 1")');
-    // the scored drill: fixed sets of 8, in order
-    const sets = await page.evaluate(() => [...document.querySelectorAll('#fdd-set option')].map(o => [o.value, o.textContent.trim()]));
-    if (sets.length !== Math.ceil(mock.DRILL_CALLS.length / 8) + 1 || sets[0][1] !== 'Set 1 · D01–D08 (8 calls)' || sets[1][1] !== 'Set 2 · D09–D16 (8 calls)' || sets[sets.length - 1][0] !== '0') fail(`the drill's sets: ${JSON.stringify(sets)}`);
     await page.selectOption('#fdd-calls-view', 'EA');
     if (await page.locator('.fdd-line').count() !== 6) fail('the EA / PA tab doesn\'t list its 6 lines');
     await page.selectOption('#fdd-calls-view', 'intake');
@@ -171,7 +158,9 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
         await page.waitForFunction((k) => document.querySelectorAll('#fdd-pc-tr .fdd-msg.c:not(.typing)').length > k || document.getElementById('fdd-pc-go'), n, { timeout: 8000 })
             .catch(() => fail(`no answer from the caller after "${text}"`));
     };
-    await page.click('.fdd-ftl button:has-text("Calendar Management")');
+    await page.evaluate(() => { fddHome(); fddLinesView('FT'); });
+    await page.click('.fdd-line:has-text("Calendar Management") button:has-text("Practice")');
+    if (!(await page.$('#fdd-panel .fdd-live-opt'))) fail('a line\'s screen doesn\'t offer the live voice choice');
     await page.click('.fdd-row:has-text("Defense Counsel Wants to Move a Deposition")');
     const brief = await page.evaluate(() => ({ text: document.querySelector('.fdd-brief').textContent, open: document.querySelector('.fdd-brief').open, id: document.getElementById('fdd-pc-id').textContent }));
     const depo = K.find('ft_cal_depo');
@@ -254,24 +243,24 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
         { id: 4, username: 'ci', full_name: 'CI Trainee', program: 'FT', mode: 'drill', calls: 8, score: 70, find_pct: 80, auth_pct: 70, action_pct: 60, avg_seconds: 50, created_at: '2026-10-05 07:00:00', drill_set: 2, details: '[]' }
     ];
     results[0].call_id = 'ea_ex_friday';
-    await page.evaluate(() => fddHome()); await page.waitForTimeout(400);
-    const hist = await page.evaluate(() => ({ text: document.querySelector('.fdd-b').textContent, views: document.querySelectorAll('.fdd-view').length }));
-    if (!/Executive Calls · graded/i.test(hist.text) || !/Calendar Management Mock Calls · practice/i.test(hist.text) || !/Drill · Set 2 · 8/.test(hist.text) || hist.views !== 3) fail(`the results don't list the line calls and the drill's set: ${hist.text.slice(-400)}`);
-    // your best on each call: a Core caller, a line's practice call, a graded call (only as graded)
-    const best = (sel) => page.evaluate((q) => { const r = document.querySelector(q); return r ? ((r.querySelector('.fdd-best') || {}).textContent || '') : null; }, sel);
-    const d01 = await best('#fdd-core-calls .fdd-row[data-call="D01"]');
+    // the results are on a call's debrief (the home screen is only the call lines): take the deposition call again, briefly
     await page.evaluate(() => fddOpenLine('FT', 'Calendar Management Mock Calls'));
-    const depoBest = await best('.fdd-practice-calls .fdd-row[data-call="ft_cal_depo"]'), depoGraded = await best('.fdd-graded-calls .fdd-row[data-call="ft_cal_depo"]');
-    await page.evaluate(() => fddOpenLine('EA', 'Executive Calls', true));
-    const friGraded = await best('.fdd-graded-calls .fdd-row[data-call="ea_ex_friday"]'), friPractice = await best('.fdd-practice-calls .fdd-row[data-call="ea_ex_friday"]');
-    if (d01 !== '✓ 77%' || depoBest !== '✓ 82%' || depoGraded !== '' || friGraded !== '✓ 82%' || friPractice !== '') fail(`the calls don't show your best on them: ${JSON.stringify({ d01, depoBest, depoGraded, friGraded, friPractice })}`);
-    await page.evaluate(() => fddHome()); await page.waitForTimeout(300);
+    await page.click('.fdd-row:has-text("Defense Counsel Wants to Move a Deposition")');
+    await page.click('#fdd-pc-id button:has-text("Answer")');
+    await say('Thank you for calling LSH Training Law Group, this is Jamie. How can I help?');
+    await say('Thank you, goodbye.');
+    await page.waitForSelector('#fdd-pc-go', { timeout: 8000 }).catch(() => fail('the second practice call didn\'t end'));
+    await page.fill('#fdd-pc-note', 'EVENT: Garcia deposition, defense asks to move it. Priority message to Janelle Price (221).');
+    await page.click('#fdd-pc-go');
+    await page.waitForSelector('#fdd-pc-hist .fdd-tbl', { timeout: 8000 }).catch(() => fail('the debrief doesn\'t show the results'));
+    const hist = await page.evaluate(() => ({ text: document.getElementById('fdd-pc-hist').textContent, views: document.querySelectorAll('#fdd-pc-hist .fdd-view').length }));
+    if (!/Executive Calls · graded/i.test(hist.text) || !/Calendar Management Mock Calls · practice/i.test(hist.text) || !/Drill · Set 2 · 8/.test(hist.text) || hist.views !== 3) fail(`the results don't list the line calls and the drill's set: ${hist.text.slice(-400)}`);
     // kept apart for grading: graded only, one line, the Core callers
-    const shown = () => page.evaluate(() => [...document.querySelectorAll('.fdd-sec')].find(s => s.querySelector('h4') && /My results/.test(s.querySelector('h4').textContent)).querySelectorAll('tbody tr').length);
+    const shown = () => page.evaluate(() => [...document.querySelectorAll('#fdd-pc-hist .fdd-sec')].find(s => s.querySelector('h4') && /My results/.test(s.querySelector('h4').textContent)).querySelectorAll('tbody tr').length);
     await page.selectOption('#fdd-rf-mode', 'graded');
     const gradedOnly = await shown();
     await page.selectOption('#fdd-rf-mode', 'all'); await page.selectOption('#fdd-rf-line', 'FT|Calendar Management Mock Calls');
-    const ftLine = await shown(), ftText = await page.textContent('.fdd-b');
+    const ftLine = await shown(), ftText = await page.textContent('#fdd-pc-hist');
     await page.selectOption('#fdd-rf-line', 'P:EA');
     const eaAll = await shown();
     await page.selectOption('#fdd-rf-line', 'core');
@@ -279,12 +268,19 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     await page.selectOption('#fdd-rf-line', 'S:2');
     const set2 = await shown();
     await page.selectOption('#fdd-rf-line', 'S:1');
-    const set1 = await shown(), none = /No calls match/.test(await page.textContent('.fdd-b'));
+    const set1 = await shown(), none = /No calls match/.test(await page.textContent('#fdd-pc-hist'));
     if (gradedOnly !== 1 || ftLine !== 1 || !/Calendar Management Mock Calls · practice/i.test(ftText) || eaAll !== 1 || coreRows !== 2 || set2 !== 1 || set1 !== 0 || !none) fail(`the results dropdowns don't keep the calls apart: ${JSON.stringify({ gradedOnly, ftLine, eaAll, coreRows, set2, set1, none })}`);
     await page.selectOption('#fdd-rf-line', 'all');
-    await page.click('.fdd-view >> nth=1');
+    await page.click('#fdd-pc-hist .fdd-view >> nth=1');
     await page.waitForSelector('.fdd-goals', { timeout: 5000 }).catch(() => fail('a saved line call doesn\'t open with its goals'));
     if (!/KAREN HOLT:/.test(await page.textContent('.fdd-saved-tx'))) fail('a saved line call doesn\'t show its transcript');
+    // your best on each call: a line's practice call, a graded call (only as graded)
+    const best = (sel) => page.evaluate((q) => { const r = document.querySelector(q); return r ? ((r.querySelector('.fdd-best') || {}).textContent || '') : null; }, sel);
+    await page.evaluate(() => fddOpenLine('FT', 'Calendar Management Mock Calls'));
+    const depoBest = await best('.fdd-practice-calls .fdd-row[data-call="ft_cal_depo"]'), depoGraded = await best('.fdd-graded-calls .fdd-row[data-call="ft_cal_depo"]');
+    await page.evaluate(() => fddOpenLine('EA', 'Executive Calls', true));
+    const friGraded = await best('.fdd-graded-calls .fdd-row[data-call="ea_ex_friday"]'), friPractice = await best('.fdd-practice-calls .fdd-row[data-call="ea_ex_friday"]');
+    if (depoBest !== '✓ 82%' || depoGraded !== '' || friGraded !== '✓ 82%' || friPractice !== '') fail(`the calls don't show your best on them: ${JSON.stringify({ depoBest, depoGraded, friGraded, friPractice })}`);
 
     // 6. an Admin signing in on a ?calls=1 link stays on the Call Simulator, over the Cases System: Master Control doesn't open
     const p2 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
