@@ -137,6 +137,7 @@ export async function makeImage(env, { prompt, aspect, user }) {
             const msg = errOf(data) || `error ${res.status}`;
             if (res.status === 429) { quota = true; tried.push(`${model}: ${msg}`); continue; }   // the next key
             if (res.status === 401 || res.status === 403 || (res.status === 400 && /API key/i.test(msg))) { tried.push(`${name}: key rejected`); continue; }
+            if (res.status === 402 || (res.status === 400 && /billing|credit|prepa|payment|free tier/i.test(msg))) { tried.push(`${model}: ${msg}`); continue; }   // no billing on this key's project: the next key may have it
             tried.push(`${model}: ${msg}`); next = true; break;   // not found, not an image model, billing: the next model
         }
         if (!next && !quota) break;

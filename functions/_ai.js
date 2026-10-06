@@ -10,7 +10,9 @@
 // load is spread across all of them. A key that hits its limit rests (a minute for a
 // per-minute limit, an hour for a daily one; a rejected key 10 minutes), and later
 // requests skip it instead of paying for a failed call; the request itself moves on
-// to the next key. Same rules as the EA/PA Worker's pool (worker.js callGemini).
+// to the next key; a key out of credits or with billing off rests an hour and the request
+// moves to the next key. Same rules as the EA/PA Worker's pool (worker.js callGemini) and
+// the Training Portal's AI gateway.
 // The rests live in this Worker instance's memory, which is enough: an instance that
 // doesn't know a key is resting finds out with one 429.
 //
@@ -31,6 +33,10 @@ const keyResting = (name, model) => resting(name + '|*') || resting(name + '|' +
 const restKey = (name, model, ms) => rest.set(name + '|' + model, Date.now() + ms);
 // How long a key rests after a 429: an hour when the daily quota is used up, otherwise a minute.
 const restFor = (msg) => /per.?day|daily/i.test(String(msg || '')) ? 3600000 : 60000;
+// A key out of credits or with billing off (a 402, a 429 about credits, a 400 about billing) rests an hour on every model and
+// the request moves to the next key, which may have them. (Google's ordinary rate-limit message says "check your plan and
+// billing details": that alone is only a rate limit.)
+export const NO_CREDITS = /credit|prepa(?:y|id)|payment|insufficient|spend(?:ing)?[ _-]?(?:cap|limit)|free tier|enable billing|billing (?:account|is (?:not |in)?active|is disabled|disabled|not enabled)/i;
 
 // Distinct keys only (the same key under two names would just fail twice).
 export const keyNames = (env) => Object.keys(env || {}).filter(n => /^GEMINI_API_KEY\d*$/.test(n) && String(env[n] || '').trim()).sort()
@@ -132,6 +138,11 @@ export async function callAI(env, req) {
             }
             const msg = (data.error && data.error.message) || `Gemini error ${res.status}`;
             last = { ok: false, status: res.status, error: msg };
+            if (res.status === 402 || NO_CREDITS.test(msg) && [400, 403, 429].includes(res.status)) {   // out of credits, billing off: the next key
+                restKey(name, '*', 3600000);
+                last = { ok: false, status: 502, error: 'A Gemini key is out of credits or has billing off: ' + msg };
+                continue;
+            }
             if (res.status === 429) { limit = last; restKey(name, model, restFor(msg)); continue; }   // next key, same model
             if ((res.status === 400 && /API key/i.test(msg)) || res.status === 401 || res.status === 403) {
                 restKey(name, '*', 600000);   // rejected key (or the API isn't enabled in its project)
