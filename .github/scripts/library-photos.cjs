@@ -112,6 +112,9 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     if (!/Ford Escape/.test(prompt('MC-01', 'scene')) || !/Honda Civic/.test(prompt('MC-01', 'scene')) || !/rear-ended/.test(prompt('MC-01', 'scene'))) fail(`MC-01's crash scene isn't described from its file: ${prompt('MC-01', 'scene')}`);
     if (!/Honda Civic/.test(prompt('MC-01', 'v0')) || !/the rear\b/.test(prompt('MC-01', 'v0'))) fail(`MC-01's first vehicle photo isn't described from its file: ${prompt('MC-01', 'v0')}`);
     if (!/motorcycle/.test(prompt('MC-08', 'scene')) || !/Tahoe/.test(prompt('MC-08', 'scene'))) fail(`MC-08's motorcycle crash isn't described: ${prompt('MC-08', 'scene')}`);
+    const twice = data.prompts.filter(p => /\b(\w+ \w+) on \1\b|intersection on an intersection/.test(p[2])).map(p => p[0] + ' ' + p[1]);
+    if (twice.length) fail(`descriptions that say the place twice: ${twice.join(', ')}`);
+    if (!/from the shoulder/.test(prompt('MC-14', 'scene'))) fail(`a highway crash should be shot from the shoulder, not a sidewalk: ${prompt('MC-14', 'scene')}`);
     if (/blood/.test(prompt('MC-19', 'scene')) && !/No injured people, no blood/.test(prompt('MC-19', 'scene'))) fail('a pedestrian scene should show no injured people');
 
     // 2. a file without realistic photos: the drawings

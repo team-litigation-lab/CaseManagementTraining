@@ -119,12 +119,12 @@
                     : `a ${D(o)} stopped just past a marked crosswalk it turned into; ${item} lies on the crosswalk and traffic cones mark the spot`,
                 'hit-and-run': `a ${D(c)} pulled over at the curb after a hit-and-run: its ${VIEW[c && c.hit] ? VIEW[c.hit].replace(/^the /, '') : 'side'} is dented and scraped, and the other vehicle is gone`
             }[cr.type] || `a car crash involving a ${D(c)}`;
-            const where = { intersection: /&| and /i.test(place) ? `at the intersection of ${place}` : `at an intersection on ${place}`, highway: `on the shoulder of ${place}, a multi-lane highway`,
+            const where = { intersection: /&| and /i.test(place) ? `at the intersection of ${place}` : /intersection/i.test(place) ? `at ${place}` : `at an intersection on ${place}`, highway: `on the shoulder of ${place}, a multi-lane highway`,
                 road: `on ${place}, a two-lane road`, parking: `in ${place}`, 'gas station': `at the exit of a gas station onto ${place}`, crosswalk: `at the ${place}` }[cr.setting] || `on ${place}`;
             const signal = { red: ', with traffic lights overhead', stop: ', with a stop sign at the corner', walk: ', with pedestrian crossing signals', school: ', with a school-zone sign' }[cr.signal] || '';
             const police = cr.type !== 'hit-and-run' && cr.setting !== 'parking' ? 'A police cruiser with its light bar on is parked behind. ' : '';
             return { aspect: '16:9', prompt: `A realistic smartphone photo of a car-crash scene minutes after it happened, for a mock accident file (a training prop): ${what}, ${where}${signal}. `
-                + `${police}Broken glass and plastic on the road. Daytime, ${hashOf(mc.id) % 3 === 0 ? 'overcast' : 'clear'} sky. A wide shot from the sidewalk at eye level showing where the vehicles stopped. `
+                + `${police}Broken glass and plastic on the road. Daytime, ${hashOf(mc.id) % 3 === 0 ? 'overcast' : 'clear'} sky. A wide shot from ${{ highway: 'the shoulder', road: 'the roadside', parking: 'across the lot', 'gas station': 'the gas station forecourt' }[cr.setting] || 'the sidewalk'} at eye level showing where the vehicles stopped. `
                 + `No injured people, no blood, no recognizable faces, no readable license plates. ${NOT_REAL}` };
         }
         const ph = p.vehiclePhotos(mc)[+String(kind).slice(1)] || {}, v = p.vehicleOf(mc, ph.vehicle === 'other' ? 'other' : 'client') || c || o;
