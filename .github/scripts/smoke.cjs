@@ -231,8 +231,7 @@ const SAVED = [
 
     // the whole drill with the answer key (one call picks its case from the search bar)
     await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(300);
-    await page.selectOption('#fdd-set', '0');   // all the calls
-    await page.click('button:has-text("Take the first call")');
+    await page.evaluate(() => { fddDrillSet('0'); fddStart(); });   // all the calls (the drill isn't on the home screen any more)
     const n = await page.evaluate(() => DRILL_CALLS.length);
     let topSearchUsed = false, spelled = 0;
     const HARD = await page.evaluate(() => Object.keys(MOCK_NAME_SOUNDS));
@@ -275,8 +274,7 @@ const SAVED = [
     // Not asking for the DOL costs the 10 identifier points on a call about a case (the caller has to be verified),
     // or when the name is on more than one file; not on the other calls.
     await page.evaluate(() => fddHome()); await page.waitForTimeout(200);
-    await page.selectOption('#fdd-set', '0');   // all the calls, so both kinds come up
-    await page.click('button:has-text("Take the first call")');
+    await page.evaluate(() => { fddDrillSet('0'); fddStart(); });   // all the calls, so both kinds come up
     const seen = { same: false, single: false };
     for (let k = 0; k < n && !(seen.same && seen.single); k++) {
         const c = await page.evaluate(() => { const el = document.querySelector('.fdd-caller'); return el && DRILL_CALLS.find(d => el.textContent.includes(fddHeardAs(d.opening).slice(1, 30))); });
@@ -299,8 +297,7 @@ const SAVED = [
 
     // A hard-to-say name that isn't spelled and read back costs the 10 identifier points.
     await page.evaluate(() => fddHome()); await page.waitForTimeout(200);
-    await page.selectOption('#fdd-set', '0');   // all the calls
-    await page.click('button:has-text("Take the first call")');
+    await page.evaluate(() => { fddDrillSet('0'); fddStart(); });   // all the calls (the drill isn't on the home screen any more)
     let unspelled = null;
     for (let k = 0; k < n && !unspelled; k++) {
         const c = await page.evaluate(() => { const el = document.querySelector('.fdd-caller'); return el && DRILL_CALLS.find(d => el.textContent.includes(fddHeardAs(d.opening).slice(1, 30))); });
@@ -322,7 +319,7 @@ const SAVED = [
 
     // A practice call on the standard voice: no script, the caller answers what the trainee types.
     await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(300);
-    await page.click('#fdd-core-calls .fdd-row >> nth=0');
+    await page.evaluate(() => fddPracticeStart(DRILL_CALLS.find(d => d.level === 1).id));   // the first Core caller (no longer listed on the home screen)
     if (!(await page.isVisible('#fdd-pc-id button:has-text("Answer")')) || await page.isVisible('.fdd-caller') || await page.isVisible('.fdd-asks')) fail('the practice call doesn\'t ring with an Answer button, or shows the script');
     await page.click('#fdd-pc-id button:has-text("Answer")');
     const pcCall = await page.evaluate(() => { const cid = document.querySelector('#fdd-pc-id span').textContent; return DRILL_CALLS.filter(d => cid.includes((String(d.gives.callback || '').match(/\(?\d{3}\)?[\s.-]*\d{3}-\d{4}/) || [])[0] || 'Unknown number')).map(d => d.id); });

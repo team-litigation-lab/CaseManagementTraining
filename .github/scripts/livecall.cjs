@@ -248,9 +248,10 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.goto(base + '?program=reception', { waitUntil: 'load' });
     await page.waitForTimeout(1200);
     await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(300);
-    if (!(await page.isChecked('#fdd-live'))) fail('the drill doesn\'t offer live voice calls (checked by default)');
-    await page.selectOption('#fdd-set', '1');
-    await page.click('button:has-text("Take the first call")');
+    // the live voice choice is on a line's screen (the home screen is only the call lines); the drill follows it
+    await page.evaluate(() => fddOpenLine('FT', 'Reception Mock Calls'));
+    if (!(await page.isChecked('#fdd-live'))) fail('a line doesn\'t offer live voice calls (checked by default)');
+    await page.evaluate(() => { fddHome(); fddDrillSet('1'); fddStart(); });
     if (!(await page.isVisible('#fdd-phone button:has-text("Answer")'))) fail('the live call doesn\'t ring with an Answer button');
     if (await page.isVisible('.fdd-caller')) fail('the live call shows the caller\'s opening as text');
     await page.click('#fdd-phone button:has-text("Answer")');
@@ -377,7 +378,7 @@ const failures = []; const fail = (m) => failures.push(m);
     liveMode = 'ok';
     await page.evaluate(() => { fddClose(); openFrontDeskDrill(); }); await page.waitForTimeout(300);
     const wsBefore = await page.evaluate(() => window.__ws.length);
-    await page.click('#fdd-core-calls .fdd-row >> nth=0');
+    await page.evaluate(() => fddPracticeStart(DRILL_CALLS.find(d => d.level === 1).id));   // the first Core caller (no longer listed on the home screen)
     await page.click('#fdd-pc-id button:has-text("Answer")');
     await page.waitForFunction(() => /On the call/.test((document.getElementById('fdd-pc-status') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => fail('Answer didn\'t put the practice call on live voice'));
     if (await page.evaluate((n) => window.__ws.length, wsBefore) !== wsBefore + 1) fail('the practice call didn\'t open a live voice connection');
@@ -442,7 +443,7 @@ const failures = []; const fail = (m) => failures.push(m);
     liveMode = 'off'; aiCalls.length = 0;
     await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(1000);
     await page.evaluate(() => openFrontDeskDrill()); await page.waitForTimeout(300);
-    await page.click('#fdd-core-calls .fdd-row >> nth=0');
+    await page.evaluate(() => fddPracticeStart(DRILL_CALLS.find(d => d.level === 1).id));   // the first Core caller (no longer listed on the home screen)
     await page.click('#fdd-pc-id button:has-text("Answer")');
     await page.waitForSelector('.fdd-pc-note:has-text("set up")', { timeout: 5000 }).catch(() => fail('without live voice set up, the practice call doesn\'t say so'));
     await page.fill('#fdd-pc-in', 'Good morning, LSH Training Law Group.');
@@ -450,7 +451,7 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.waitForFunction(() => /I can hold on/.test(document.getElementById('fdd-pc-tr').textContent), null, { timeout: 5000 }).catch(() => fail('without live voice set up, the practice call didn\'t go on with the standard voice'));
     await page.evaluate(() => { fddClose(); openFrontDeskDrill(); }); await page.waitForTimeout(200);
     asks = tokenAsks;
-    await page.click('#fdd-core-calls .fdd-row >> nth=0');
+    await page.evaluate(() => fddPracticeStart(DRILL_CALLS.find(d => d.level === 1).id));   // the first Core caller (no longer listed on the home screen)
     await page.click('#fdd-pc-id button:has-text("Answer")');
     await page.waitForTimeout(300);
     if (tokenAsks !== asks) fail('after live voice was found not set up, the next practice call asked for a live voice token again');
