@@ -457,7 +457,7 @@
                     </div>
                 </div>
                 <!-- Property damage photos (pd-photos.js): uploaded photos (kept in the case's file storage, their keys saved here by id),
-                     or a Training Library file's mock photos (drawn from the file, marked SPECIMEN). Not a .pdf-card: the case summary
+                     or a Training Library file's mock photos (the crash scene and each vehicle: drawn from the file, or realistic once an Admin has made them; marked SPECIMEN). Not a .pdf-card: the case summary
                      walks those cards' fields, and this one's hidden field is the photos' list, not something to print. -->
                 <div id="kx-pd-photos" data-keyed class="pdp-card mt-8">
                     <div class="flex justify-between items-center mb-2">
@@ -833,6 +833,9 @@
                         <div class="admin-stat-label">Manage from Broadcast &amp; Ping</div>
                     </div>
                 </div>
+                <!-- 📷 the Training Library's realistic photos (library-photos.js): how many are made; make the missing ones -->
+                <div class="mc-section-title">📷 Training Library photos</div>
+                <div class="admin-tile lp-panel" id="lp-panel"></div>
             </div>
 
             <!-- REGISTRATIONS (pending only) -->
@@ -1090,6 +1093,9 @@
     <script src="app.js"></script>
   <script src="portal.js"></script>
     <script src="mock-cases.js"></script>
+    <!-- the Training Library's mock photos: drawn from each file (case-photos.js), or realistic once an Admin has made them (library-photos.js) -->
+    <script src="case-photos.js"></script>
+    <script src="library-photos.js"></script>
     <script src="call-packs.js"></script>
     <script src="training-library.js"></script>
     <script src="library-pdf.js"></script>

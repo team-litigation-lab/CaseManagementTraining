@@ -32,6 +32,8 @@ jobs:
         run: node .github/scripts/check-data.mjs
       - name: Gemini key pool, /api/call-ai and practice call results (Google answered by the test)
         run: node .github/scripts/call-ai.mjs
+      - name: The Training Library's realistic photos on the server (/api/library-photos; storage and Gemini answered by the test)
+        run: node .github/scripts/library-photos.mjs
       - name: Build the Pages Functions without deploying
         run: npx --yes wrangler@3 pages functions build --outdir "$RUNNER_TEMP/dist"
 
@@ -162,6 +164,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/case-costs.cjs
+      - name: Training Library photos (client IDs, crash scenes, vehicles; drawn, or realistic once an Admin makes them)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/library-photos.cjs
       - name: Live view (an Admin watches a trainee's screen live, mirrored as it is)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

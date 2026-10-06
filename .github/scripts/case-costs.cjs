@@ -12,7 +12,8 @@
 //     in (and comes back on work saved before it existed); its PD adjuster is in 📇 Contacts;
 //   - property damage photos: ⬆ Add Photos uploads several (made smaller, named <Case ID>_<Last-First>_PD-Photo_<date>.jpg,
 //     the second …-2), caption and remove them, saved by id and loaded back, renamed with the Case ID on Save, in the Google
-//     Drive backup's list; opening one shows it larger; a library file shows its mock photos (SPECIMEN), with nothing to
+//     Drive backup's list; opening one shows it larger; a library file shows its mock photos (the crash scene, then each
+//     vehicle; SPECIMEN), with nothing to
 //     add, caption or remove on a view-only file; opening a photo isn't an edit.
 // Usage: node .github/scripts/case-costs.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -242,7 +243,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR
         const card = window.LSHContacts ? LSHContacts.find(mc.pdClaim.adjuster).find(e => e.name === mc.pdClaim.adjuster) : null;
         // work saved on the file before the PD claim card existed
         const content = buildCaseContentPayload(); delete content.keyed['kx-pd-claim'];
-        return { id: mc.id, want: [mc.pdClaim.adjuster, mc.pdClaim.claim, mc.pdClaim.against], got: [k('adjuster').innerText, k('claim').innerText, k('against').value], tiles, photos: mc.pdPhotos.length,
+        return { id: mc.id, want: [mc.pdClaim.adjuster, mc.pdClaim.claim, mc.pdClaim.against], got: [k('adjuster').innerText, k('claim').innerText, k('against').value], tiles, photos: mc.pdPhotos.length + (LSHCasePhotos.hasScene(mc) ? 1 : 0),
             svg, specimen, dirty: window.mockEditDirty(), card: card ? card.title : null, content };
     });
     if (lib.none) fail('no library file has a property damage claim with photos');

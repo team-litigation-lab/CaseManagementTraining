@@ -9,8 +9,9 @@
 //     typing in either changes the other, a case saved before (fixtures/case-before-keyed.json)
 //     shows its SSN in both, and it isn't saved twice (the saved fields keep their positions);
 //   - Client's ID: every Training Library client has a mock ID (well-formed, with their
-//     name, date of birth and SPECIMEN on it, its signature clear of the address, and the same
-//     photo (a file in mock-id-photos/ that loads) for the same client in every file) that opens larger and closes with Escape; a
+//     name, date of birth and SPECIMEN on it, its signature clear of the address, an adult's
+//     built-in photo (a file in mock-id-photos/ that loads, the same for the same client in every
+//     file) and a minor's drawn portrait) that opens larger and closes with Escape; a
 //     saved case that's work on a library file shows that client's; any other case offers
 //     Upload ID: a large photo is made smaller and sent as a JPG, the card shows it, it's
 //     saved with the case and comes back when the case is opened again, Remove takes it off,
@@ -107,39 +108,34 @@ const failures = []; const fail = (m) => failures.push(m);
     if (all.length < 40 || bad.length) fail(`mock IDs that aren't right: ${bad.join(', ')} (of ${all.length})`);
     if (new Set(all.map(x => x.no)).size !== all.length) fail('two library clients have the same mock ID number');
 
-    // the signature stays under the photo and never reaches the address column (x 114), whatever the name's length, and a
-    // client who is in several files has the same photo in each
+    // the signature stays under the photo and never reaches the address column (x 114), whatever the name's length; an adult's
+    // mock ID has a built-in photo (a file in mock-id-photos/ that loads), the same one for the same client in every file; a
+    // minor's keeps the drawn portrait
     const looks = await page.evaluate(async () => {
         const host = document.createElement('div'); host.style.cssText = 'position:absolute;left:-9999px;top:0;width:340px'; document.body.appendChild(host);
-        const sigs = [], photos = {}, hrefs = new Set(), noPhoto = [];
+        const sigs = [], hrefs = new Set(), noPhoto = [], minorPhoto = [], byPerson = {};
         for (const c of MOCK_CASES) {
             host.innerHTML = lshClientId.mockIdSvg(c.id);
             const sig = host.querySelector('text[font-family*="cursive"]'), b = sig.getBBox();
             sigs.push({ id: c.id, left: b.x, right: b.x + b.width });
-            const img = host.querySelector('image'); if (img) hrefs.add(img.getAttribute('href')); else noPhoto.push(c.id);
-            const photo = host.querySelector('g[transform="translate(16 52)"]').innerHTML.split(c.id).join('#');
+            const img = host.querySelector('image'), href = img && img.getAttribute('href'), minor = LSHCasePhotos.looksOf(c).minor;
+            if (minor) { if (img) minorPhoto.push(c.id); continue; }
+            if (!href) { noPhoto.push(c.id); continue; }
+            hrefs.add(href);
             const who = c.client.name.replace(/\s*\(.*$/, '') + '|' + c.client.dob;
-            (photos[who] = photos[who] || new Set()).add(photo);
+            (byPerson[who] = byPerson[who] || new Set()).add(href);
         }
         host.remove();
         const broken = [];
         for (const h of hrefs) { const r = await fetch(h).catch(() => null); if (!r || !r.ok || !/image\/jpeg/.test(r.headers.get('content-type') || '')) broken.push(h); }
-        return { sigs, noPhoto, broken, count: hrefs.size, split: Object.entries(photos).filter(([, v]) => v.size > 1).map(([k]) => k) };
+        return { sigs, noPhoto, minorPhoto, broken, split: Object.entries(byPerson).filter(([, v]) => v.size > 1).map(([k]) => k) };
     });
     const crowded = looks.sigs.filter(x => x.left < 14 || x.right > 112).map(x => `${x.id} (${Math.round(x.left)}–${Math.round(x.right)})`);
     if (crowded.length) fail(`signatures that reach the address column or the card's edge: ${crowded.join(', ')}`);
-    if (looks.noPhoto.length) fail(`library clients with no photo on their mock ID (add one to mock-id-photos/ and its name to ID_PHOTOS): ${looks.noPhoto.join(', ')}`);
+    if (looks.noPhoto.length) fail(`adult library clients with no photo on their mock ID (add one to mock-id-photos/ and its name to ID_PHOTOS): ${looks.noPhoto.join(', ')}`);
+    if (looks.minorPhoto.length) fail(`a minor's mock ID has a photo (it keeps the drawn portrait): ${looks.minorPhoto.join(', ')}`);
     if (looks.broken.length) fail(`mock ID photos that don't load: ${looks.broken.join(', ')}`);
     if (looks.split.length) fail(`the same client has different photos in different files: ${looks.split.join(', ')}`);
-
-    // the portrait follows the file: the pronouns its summary and narrative use for the client (pooled over the files a person
-    // is in), `portrait: 'm' | 'f'` on the client when it says, and a neutral look when the file doesn't say
-    const kinds = await page.evaluate(() => {
-        const k = (id) => { const c = MOCK_CASES.find(x => x.id === id).client; return lshClientId.portraitKind(c, c.name.replace(/\s*\(.*$/, '')); };
-        return { ahmed: k('MC-32'), hannah: k('MC-16'), mariaFirstFile: k('MC-01'), set: lshClientId.portraitKind({ name: 'Zed Nobody', dob: '01/01/1990', portrait: 'f' }, 'Zed Nobody'),
-            silent: lshClientId.portraitKind({ name: 'Zed Nobody', dob: '01/01/1990' }, 'Zed Nobody') };
-    });
-    if (kinds.ahmed !== 'm' || kinds.hannah !== 'f' || kinds.mariaFirstFile !== 'f' || kinds.set !== 'f' || kinds.silent !== '') fail(`the portrait doesn't follow the file: ${JSON.stringify(kinds)}`);
 
     // a blank case: typing the SSN in either place changes both
     await page.evaluate(() => closeCase()); await page.waitForTimeout(300);

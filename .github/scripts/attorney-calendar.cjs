@@ -13,10 +13,11 @@
 //     schedule is a double-booking with free times offered, and what they book is theirs alone;
 //   - it stands alone: it isn't invited to the Firm Calendar's events, the Firm Calendar's link (cal=all)
 //     leaves it out, and it has its own link (cal=attorney);
-//   - in the page: the sidebar's 🗓 Attorney's Calendar shows that calendar only (no firm calendars,
-//     deadlines or toggle for a trainee), the same appointments next week, no edit buttons on the schedule
-//     for a trainee, + New event books on it (the clash shown, then a free time), the case's Calendar tab
-//     is still the Firm Calendar without it; an Admin (?calendar=attorney, no case open) edits, adds to,
+//   - in the page: the sidebar's 🗓 Attorney's Calendar shows the attorney's week together with the firm's
+//     calendars (Reyes, Brooks, Okafor, Firm / Staff; no toggle or schedule tools for a trainee), the same
+//     appointments next week, no edit buttons on the schedule for a trainee, + New event books on the
+//     Attorney's Calendar (the clash shown, then a free time; no invitations across), the case's Calendar
+//     tab is the Firm Calendar without the attorney's week; an Admin (?calendar=attorney, no case open) edits, adds to,
 //     removes from and restores the schedule; no <select> or contenteditable added.
 // Usage: node .github/scripts/attorney-calendar.cjs   (from the repository root; needs playwright, Node 22.13+)
 const { chromium } = require('playwright');
@@ -218,15 +219,25 @@ const wd = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
     await page.waitForFunction(() => document.querySelectorAll('#fc-main .ev').length > 5);
     await page.evaluate((d) => fcGoWeek(d), mon); await page.waitForTimeout(700);
     await page.shot('atty-1-trainee-week');
+    // color coded by kind: lunch, the daily review, the no-schedule blocks, client meetings and phone calls each their own color, with a key
+    const colors = await page.evaluate(() => {
+        const by = {}; [...document.querySelectorAll('#fc-main .ev')].forEach(el => { const t = el.querySelector('b').textContent; by[t.replace(/^[^\p{L}\p{N}(]+\s/u, '').split(':')[0].trim()] = el.style.borderColor; });
+        return { by, key: [...document.querySelectorAll('#fc-rail .fc-key-i')].map(k => k.dataset.type) };
+    });
+    const want = ['Lunch Break', 'Daily Case and Email Review', 'No Schedule Block', 'Deposition Preparation', 'Attorney Phone Consultation'].map(k => colors.by[k]);
+    if (want.some(c => !c) || new Set(want).size !== want.length || !['Lunch', 'Daily Review', 'No Schedule', 'Client Meeting', 'Phone Call', 'Internal Meeting'].every(k => colors.key.includes(k))) fail(`the Attorney's Calendar isn't color coded by kind of event, with a key: ${JSON.stringify(colors)}`);
     const head = await page.textContent('#fc-head h2'), rail = await page.textContent('#fc-rail');
     let titles = await grid(page);
     if (head.trim() !== '🗓 Attorney\'s Calendar' || await page.locator('#fc-head [data-fc="mode"]').count()) fail(`a trainee's Attorney's Calendar heading (and no switch to the Firm Calendar): ${head}`);
-    if (!/Attorney's Calendar/.test(rail) || /Marcus Reyes|Elena Brooks|Firm \/ Staff|Weekly schedule/.test(rail)) fail(`the rail should show the Attorney's Calendar only (no firm calendars, no schedule tools for a trainee): ${rail.slice(0, 200)}`);
+    if (!/Attorney's Calendar/.test(rail) || !/Marcus Reyes/.test(rail) || !/Elena Brooks/.test(rail) || !/Firm \/ Staff/.test(rail) || /Weekly schedule/.test(rail)) fail(`the rail should list the Attorney's Calendar and the firm's calendars (no schedule tools for a trainee): ${rail.slice(0, 200)}`);
+    if (rail.indexOf("Attorney's Calendar") > rail.indexOf('Marcus Reyes')) fail('the Attorney\'s Calendar should be listed first');
     const ownTitles = ['Callback: Hannah Pierce'];
-    if (!titles.includes('Deposition Preparation: Niamh Cholmondeley') || titles.some(t => firmOnly.includes(t)) || titles.filter(t => !ownTitles.includes(t)).length !== seeded.length) fail(`the week should show the attorney's schedule only (${titles.length} of ${seeded.length}): ${titles.filter(t => firmOnly.includes(t)).join(', ')}`);
+    const ownInWeek = titles.filter(t => ownTitles.includes(t)).length;
+    if (!titles.includes('Deposition Preparation: Niamh Cholmondeley') || !titles.some(t => firmOnly.includes(t)) || titles.length - ownInWeek !== seeded.length + firmOnly.length) fail(`the week should show the attorney's schedule together with the firm's calendars (${titles.length} on the grid, ${seeded.length} + ${firmOnly.length} expected)`);
     await page.evaluate(() => fcNav(1)); await page.waitForTimeout(700);
     const nextWeek = await grid(page);
-    const sched = (list) => list.filter(t => !ownTitles.includes(t)).sort().join('|');
+    const seededTitles = new Set(seeded.map(e => e.title));
+    const sched = (list) => list.filter(t => seededTitles.has(t)).sort().join('|');   // (the attorney's own schedule; the firm's calendars are checked in the week above)
     if (sched(nextWeek) !== sched(titles)) fail('next week should show the same schedule');
     await page.evaluate(() => fcNav(-1)); await page.waitForTimeout(500);
     // a schedule appointment: no edit buttons for a trainee
@@ -239,7 +250,10 @@ const wd = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
     await page.click('#fc-head button:has-text("+ New event")'); await page.waitForSelector('#fcf-title');
     const form = await page.evaluate(() => ({ pills: [...document.querySelectorAll('#fc-side .pills')].map(p => p.textContent.replace(/\s+/g, ' ').trim()), text: document.querySelector('#fc-side').textContent,
         asTemplate: document.querySelectorAll('#fc-side [data-fc="as-template"]').length }));
-    if (!form.pills.some(p => p === 'Attorney\'s Calendar') || /Also invite|Share firm-wide|Marcus Reyes/.test(form.text) || form.asTemplate) fail(`a trainee's new event should go on the Attorney's Calendar only: ${JSON.stringify(form.pills)}`);
+    const calPills = form.pills.find(p => /^Attorney's Calendar/.test(p)) || '';
+    if (!calPills || !/Marcus Reyes/.test(calPills) || /Also invite/.test(form.text) || /Share firm-wide/.test(form.text) || form.asTemplate) fail(`a trainee's new event should default to the Attorney's Calendar, with the firm's calendars to pick, and no invitations across (no Also invite for the attorney's week): ${JSON.stringify(form.pills)}`);
+    const selected = await page.evaluate(() => (document.querySelector('#fc-side .pills .pill.on[onclick*="fcSet(\'calendar\'"]') || {}).textContent || '');
+    if (!/Attorney's Calendar/.test(selected)) fail(`a new event should be on the Attorney's Calendar by default (${selected})`);
     await page.fill('#fcf-title', 'Callback: Carlos Mendoza'); await page.dispatchEvent('#fcf-title', 'input');
     await page.fill('#fcf-date', addDays(mon, 0)); await page.dispatchEvent('#fcf-date', 'change');
     await page.evaluate(() => { fcSet('start', '15:00'); fcSet('end', '15:30'); });

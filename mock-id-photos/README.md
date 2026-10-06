@@ -1,10 +1,12 @@
 # Mock ID photos
 
-The photos on the Training Library clients' mock IDs (`client-id.js`). Each file is `<name>-<birth year>.jpg`, one per person, so a client who is in several files has the same photo in each.
+The built-in photos on the Training Library's adult clients' mock IDs (`client-id.js`). Each file is `<name>-<birth year>.jpg`, one per person, so a client who is in several files has the same photo in each.
 
 **They are synthetic: the faces are AI-generated and show no real person.** They come from the *Synthetic Faces High Quality* (SFHQ) dataset by David Beniaguev (<https://github.com/SelfishGene/SFHQ-dataset>), released as CC0 1.0 (public domain; no attribution required, given here anyway). The 256 px versions were taken from the Hugging Face copy `pravsels/SFHQ_256` (shards 12, 33, 51, 64, 70 and 80) and used as they are.
 
-Who got which face was decided by the age on the client's file (children, adults, seniors) and by whether the file refers to the client as he or she (the notes, calls and summary). Where a file didn't say, the choice was made from the first name; change any of them by replacing its file. A synthetic face can still resemble a real person by chance; if one ever does, replace its file.
+**Order on a mock ID:** the realistic photo an Admin made (`library-photos.js`) comes first, then the photo here, then the drawn portrait (`case-photos.js`). **A minor has no photo here**: a minor's mock ID keeps the drawn portrait.
+
+Who got which face was decided by the age on the client's file and by whether the file refers to the client as he or she (the notes, calls and summary). Where a file didn't say, the choice was made from the first name; change any of them by replacing its file. A synthetic face can still resemble a real person by chance; if one ever does, replace its file.
 
 To add one: put a 256 px (or larger) square JPG here as `<name>-<birth year>.jpg` (lower case, accents and punctuation turned into `-`) and add that name to `ID_PHOTOS` in `client-id.js`.
 
@@ -31,8 +33,6 @@ To add one: put a 256 px (or larger) square JPG here as `<name>-<birth year>.jpg
 | `james-wilson-1956.jpg` | `SFHQ_pt4_00005419.jpg` |
 | `george-hammond-1949.jpg` | `SFHQ_pt4_00002410.jpg` |
 | `harold-jenkins-1948.jpg` | `SFHQ_pt4_00003551.jpg` |
-| `cian-acheson-2020.jpg` | `SFHQ_pt3_00005980.jpg` |
-| `mstislav-shaughnessy-2015.jpg` | `SFHQ_pt4_00000779.jpg` |
 | `keisha-brown-1995.jpg` | `SFHQ_pt4_00004404.jpg` |
 | `brittany-kirkcudbright-1996.jpg` | `SFHQ_pt4_00000702.jpg` |
 | `niamh-cholmondeley-1998.jpg` | `SFHQ_pt4_00003894.jpg` |
@@ -53,6 +53,3 @@ To add one: put a 256 px (or larger) square JPG here as `<name>-<birth year>.jpg
 | `linda-garcia-1961.jpg` | `SFHQ_pt4_00003542.jpg` |
 | `saoirse-shaughnessy-1955.jpg` | `SFHQ_pt4_00002514.jpg` |
 | `patricia-lewis-1946.jpg` | `SFHQ_pt4_00001827.jpg` |
-| `sofia-morales-2018.jpg` | `SFHQ_pt3_00002693.jpg` |
-| `saoirse-witwicky-2016.jpg` | `SFHQ_pt4_00000305.jpg` |
-| `emma-collins-2015.jpg` | `SFHQ_pt4_00001938.jpg` |
