@@ -378,10 +378,25 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
         sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'boss', fullName: 'Tina Trainer', batchId: 'B1', userType: 'Admin' }));
         localStorage.setItem('LSH_FDD_LIVE_V1', 'off');
     });
-    await p3.goto(base + '?calls=1', { waitUntil: 'load' }); await p3.waitForTimeout(800);
-    await p3.evaluate(() => fddResults()); await p3.waitForTimeout(400);
-    await p3.evaluate(() => fddSavedCall(6));
-    await p3.waitForSelector('.fdd-sc-edit', { timeout: 5000 }).catch(() => fail('a trainer opening a Calendar Management call can\'t score it'));
+    // (CI once saw this page navigate right after it opened: settle first, log any navigation, and if it happens, open the call again)
+    const navs = [];
+    p3.on('framenavigated', f => { if (f === p3.mainFrame()) navs.push(f.url()); });
+    await p3.goto(base + '?calls=1', { waitUntil: 'load' });
+    await p3.waitForLoadState('networkidle').catch(() => {});
+    const ready3 = () => p3.waitForFunction(() => typeof window.fddSavedCall === 'function' && !!document.getElementById('fdd-panel'), null, { timeout: 8000 });
+    await ready3(); await p3.waitForTimeout(400);
+    for (let i = 0; i < 3; i++) {
+        try {
+            await p3.evaluate(() => fddResults()); await p3.waitForTimeout(400);
+            await p3.evaluate(() => fddSavedCall(6));
+            await p3.waitForSelector('.fdd-sc-edit', { timeout: 5000 });
+            break;
+        } catch (e) {
+            if (i === 2 || !/context was destroyed|navigat|Timeout/i.test(e.message)) { fail('a trainer opening a Calendar Management call can\'t score it: ' + e.message.split('\n')[0]); break; }
+            console.log(`the trainer's page navigated (${navs.join(' → ')}); opening the call again`);
+            await p3.waitForLoadState('load').catch(() => {}); await ready3().catch(() => {}); await p3.waitForTimeout(800);
+        }
+    }
     const ed = await p3.evaluate(() => ({ cap: (document.querySelector('.fdd-sc-edit .fdd-sc-cap') || {}).textContent || '', vals: [...document.querySelectorAll('.fdd-sc-edit select')].map(x => x.value).join(),
         fb: [...document.querySelectorAll('.fdd-sc-edit textarea')].map(x => x.value), auto: !!document.querySelector('.fdd-sc-wrap:not(.fdd-sc-edit) .fdd-sc-cap') }));
     if (!/Your scorecard for this call/.test(ed.cap) || ed.vals !== '5,4,4,3,4,5,4' || ed.fb[0] !== 'Feedback on Professional Introduction & Call Control.' || !ed.auto) fail(`the trainer's scorecard doesn't start from the automated one: ${JSON.stringify(ed)}`);
