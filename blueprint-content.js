@@ -22,7 +22,7 @@
                 'Register once with your full name, Batch ID and a username. Your trainer approves you.',
                 'Then sign in with just your username, or straight from your training platform by name.',
                 'The sidebar, top to bottom: your training program, My cases, 📝 New Intake and 📞 Call Simulator.',
-                'Top right: 📄 Download Case Summary, 📊 My Dashboard and 🧭 Blueprint. The date and time are right above the case.'],
+                'Top right: 📄 Download Case Summary, 🏠 Main Portal (back to the LSH Training Portal), 📊 My Dashboard and 🧭 Blueprint. The date and time are right above the case.'],
               where: 'The sidebar on the left (Log Out at the bottom) · the buttons at the top right.',
               tip: 'Your trainer gives you the Batch ID: B and the day your batch started (MMDDYY), e.g. B100526.',
               shot: 'blueprint/trainee-sign-in.jpg', shotAlt: 'The CMS sign-in screen: Trainee Portal, username, Log In' },

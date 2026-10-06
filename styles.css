@@ -58,11 +58,12 @@
     .announcement-ticker.is-alert .ticker-track { color: #fecaca; font-weight: 800; }
     @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 
-    /* the top right of the strip: Download Case Summary, My Dashboard, the Blueprint */
+    /* the top right of the strip: Download Case Summary, Main Portal, My Dashboard, the Blueprint */
     .cls-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .cls-btn { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
         color: #e2e8f0; background: #13284f; border: 1px solid #334155; border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; line-height: 1.2; }
     .cls-btn:hover { border-color: var(--orange); color: #fdba74; }
+    a.cls-btn { display: inline-block; text-decoration: none; }
     @media (max-width: 1000px) { .cls-btn .lbl { display: none; } .cls-btn { padding: 5px 8px; font-size: 13px; } }
 
     /* the date and time, right above the case's Case ID (outside the case) */
