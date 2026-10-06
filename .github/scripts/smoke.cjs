@@ -411,14 +411,16 @@ const SAVED = [
             ttText: tt ? tt.innerText.replace(/\s+/g, ' ').trim() : '',
             autosave: (document.getElementById('autosave-indicator') || {}).textContent };
     });
-    if (frame.top.join() !== 'download-summary-btn,dash-open-btn,lbp-open-btn' || !frame.topInStrip || frame.topRight > 40) fail(`Download Case Summary, My Dashboard and the Blueprint should be at the top right: ${JSON.stringify(frame)}`);
+    if (frame.top.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn,lbp-open-btn' || !frame.topInStrip || frame.topRight > 40) fail(`Download Case Summary, Main Portal, My Dashboard and the Blueprint should be at the top right: ${JSON.stringify(frame)}`);
+    const home = await page.evaluate(() => { const a = document.getElementById('portal-home-btn'); return a && { href: a.getAttribute('href'), text: a.textContent.trim(), cls: a.className, next: a.nextElementSibling && a.nextElementSibling.id, h: Math.round(a.getBoundingClientRect().height), dh: Math.round(document.getElementById('dash-open-btn').getBoundingClientRect().height), top: Math.round(a.getBoundingClientRect().top - document.getElementById('dash-open-btn').getBoundingClientRect().top) }; });
+    if (!home || home.href !== 'https://cm-training-activity.pages.dev/programs.html' || home.text !== '🏠 Main Portal' || home.cls !== 'cls-btn' || home.next !== 'dash-open-btn' || Math.abs(home.h - home.dh) > 2 || Math.abs(home.top) > 2) fail(`🏠 Main Portal should be beside My Dashboard, the same size, back to the Portal's Training Directory: ${JSON.stringify(home)}`);
     if (!frame.clockAbove.aboveCard || Math.abs(frame.clockAbove.rightEdge) > 40 || !frame.clockAbove.overId || frame.clockAbove.inCase) fail(`the date and time should be right above the Case ID, outside the case: ${JSON.stringify(frame.clockAbove)}`);
     if (frame.ttButtons !== 'start,bill' || /timesheet|details/i.test(frame.ttText)) fail(`the header timer should be just Start timer and the Billable dropdown: ${frame.ttButtons} "${frame.ttText}"`);
     if (String(frame.autosave || '').trim()) fail(`the case actions bar still shows a standing note: "${frame.autosave}"`);
     // in a narrow window the top-right buttons show just their icons and stay in view, and the date and time stay over the case
     await page.setViewportSize({ width: 600, height: 800 }); await page.waitForTimeout(300);
     const narrow = await page.evaluate(() => { const main = document.querySelector('#app-shell > main').getBoundingClientRect(), clock = document.querySelector('#case-clock-row .clock-widget').getBoundingClientRect();
-        const btns = ['download-summary-btn', 'dash-open-btn', 'lbp-open-btn'].map(id => document.getElementById(id).getBoundingClientRect());
+        const btns = ['download-summary-btn', 'portal-home-btn', 'dash-open-btn', 'lbp-open-btn'].map(id => document.getElementById(id).getBoundingClientRect());
         return { inView: btns.every(b => b.left >= main.left && b.right <= innerWidth), labels: [...document.querySelectorAll('#top-actions .lbl')].filter(l => l.offsetParent).length, clock: clock.left >= main.left && clock.right <= main.right }; });
     if (!narrow.inView || narrow.labels || !narrow.clock) fail(`a narrow window: the top-right buttons and the date and time should stay in view: ${JSON.stringify(narrow)}`);
     await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(300);
@@ -496,7 +498,7 @@ const SAVED = [
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
     if (work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Call Simulator') fail(`an Admin's sidebar should have New Intake, 📞 Call Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
     const adminTop = await admin.evaluate(() => [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id));
-    if (adminTop.join() !== 'download-summary-btn,dash-open-btn,lbp-open-btn') fail(`an Admin's top right should be Download Case Summary, My Dashboard, Blueprint: ${adminTop.join()}`);
+    if (adminTop.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn,lbp-open-btn') fail(`an Admin's top right should be Download Case Summary, Main Portal, My Dashboard, Blueprint: ${adminTop.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');
