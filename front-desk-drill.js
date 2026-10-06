@@ -1883,6 +1883,8 @@ Reply with exactly this JSON:
         const c = l.course; if (!c) return '';
         const where = c.program === 'FT' && c.lesson ? `your Standard Training, lesson ${c.lesson}` : `your ${programLabel(c.program)} course (${c.line})`;
         return c.counted ? ` It counts toward ${where}${c.best && typeof c.best.score === 'number' ? `: your best there is ${c.best.score}%` : ''}.`
+            : c.reason === 'not-connected' ? ' It isn\'t counting toward your course: this site isn\'t connected to the Training Portal yet. Tell your trainer; they still see it here.'
+            : c.reason === 'no-name' ? ' It isn\'t counting toward your course: your CMS account has no first and last name. Tell your trainer; they still see it here.'
             : ' It couldn\'t reach your course just now; your trainer still sees it here.';
     }
     // The debrief: the score, each goal met or not yet, what worked, what's next, and a better line.

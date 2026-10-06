@@ -99,7 +99,8 @@ function d1(db) {
 const sql = new DatabaseSync(':memory:');
 sql.exec(`CREATE TABLE users (username TEXT PRIMARY KEY, status TEXT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT); CREATE TABLE heartbeats (username TEXT PRIMARY KEY, last_seen TEXT);
     INSERT INTO users (username, status, first_name, last_name) VALUES ('amy','Approved','Amy','Trainee'),('boss','Approved','Big','Boss');
-    INSERT INTO heartbeats VALUES ('amy', datetime('now')),('boss', datetime('now'));`);
+    INSERT INTO users (username, status) VALUES ('anon','Approved');
+    INSERT INTO heartbeats VALUES ('amy', datetime('now')),('boss', datetime('now')),('anon', datetime('now'));`);
 const env = Object.assign({ DB: d1(sql), SESSION_SECRET: 'ci', CALL_AI_LIMIT: '12' }, keysEnv);
 const tok = (u, t = 'Trainee') => utils.createSessionToken({ username: u, userType: t, batchId: 'B1' }, env.SESSION_SECRET);
 const post = async (body, user = 'amy') => {
@@ -190,6 +191,21 @@ check(lineRow && lineRow.call_id === 'ft_cal_depo' && (lines.results || []).ever
     portalReply = { status: 500, json: { success: false, error: 'down' } };
     d1 = await save({ mode: 'graded', program: 'FT', calls: 1, score: 60, details: [detail] });
     check(d1.success && d1.course && d1.course.counted === false, `with the Portal down the call should be saved here and say it didn't count yet: ${JSON.stringify(d1)}`);
+    // a graded call that can't be sent at all says why (it used to say nothing): no gateway secret on this site, or an account with no name; an Admin's test call says nothing
+    portalReply = { status: 200, json: { success: true, course: { key: 'ft:callsim:amy-trainee--b1', best: { score: 60, calls: 1 } } } };
+    const sentBefore = sent.length;
+    const saveAs = async (user, type, env2, body) => { const r = await results.onRequestPost({ request: new Request('https://cms.test/api/drill-results', { method: 'POST', headers: { cookie: 'lsh_session=' + await tok(user, type), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), env: env2 }); return r.json(); };
+    const gradedBody = { mode: 'graded', program: 'FT', calls: 1, score: 66, avgSeconds: 100, details: [detail] };
+    const noSecret = Object.assign({}, env, { PORTAL_URL: 'https://portal.test' });   // (no AI_GATEWAY_SECRET)
+    d1 = await saveAs('amy', 'Trainee', noSecret, gradedBody);
+    check(d1.success && d1.course && d1.course.counted === false && d1.course.reason === 'not-connected' && d1.course.lesson === 5 && d1.course.line === 'Calendar Management Mock Calls', `without the gateway secret the answer should say it isn't connected: ${JSON.stringify(d1)}`);
+    d1 = await saveAs('anon', 'Trainee', gEnv, gradedBody);
+    check(d1.success && d1.course && d1.course.counted === false && d1.course.reason === 'no-name', `an account with no name should be told so: ${JSON.stringify(d1)}`);
+    d1 = await saveAs('boss', 'Admin', noSecret, gradedBody);
+    check(d1.success && !d1.course, `an Admin's test call should say nothing about a course: ${JSON.stringify(d1)}`);
+    check(sent.length === sentBefore, 'a call that can\'t be sent was sent to the Portal');
+    d1 = await saveAs('amy', 'Trainee', gEnv, gradedBody);
+    check(d1.course && d1.course.counted === true, `with the secret and a name the call should count again: ${JSON.stringify(d1)}`);
     globalThis.fetch = realFetch;
 }
 
