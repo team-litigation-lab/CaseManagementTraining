@@ -120,7 +120,7 @@ ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2,
         closeView();
         const mc = libId() && mockCase(libId()), f = mc ? null : savedFile();
         if (!mc && !f) return;
-        const body = mc ? `<div class="cid-big">${mockIdSvg(mc)}</div><p class="cid-note">A mock ID made from the Training Library file, for practice. It's a specimen, not a real ID${realPhoto(mc) ? '; its photo is AI-made, of a fictional person' : ''}.</p>${window.lshLibraryPhotos ? window.lshLibraryPhotos.adminBar(mc, 'id') : ''}`
+        const body = mc ? `<div class="cid-big">${mockIdSvg(mc)}</div><p class="cid-note">A mock ID made from the Training Library file, for practice. It's a specimen, not a real ID${realPhoto(mc) ? '; its photo is a stand-in for the fictional client' : ''}.</p>${window.lshLibraryPhotos ? window.lshLibraryPhotos.adminBar(mc, 'id') : ''}`
             : `<div class="cid-big"><img src="${esc(fileUrl(f.key))}" alt="Client's ID"></div>
                <p class="cid-note">${f.name ? `<b title="${f.orig ? 'Original file: ' + esc(f.orig) : ''}">${esc(f.name)}</b><br>` : ''}Uploaded${f.at ? ' ' + esc(new Date(f.at).toLocaleDateString()) : ''}${f.by ? ' by ' + esc(f.by) : ''}. It's kept with the case once the case is saved.</p>
                ${canUpload() ? '<div class="cid-actions"><button type="button" onclick="lshClientId.pick()">⬆ Replace</button><button type="button" class="cid-remove" onclick="lshClientId.remove()">🗑 Remove</button></div>' : ''}`;

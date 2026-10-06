@@ -7,12 +7,15 @@
 //     client's age, she or he; the vehicles' makes and models) and a minor's ID is never made;
 //   - a file without realistic photos shows the drawings (the ID's portrait; the Property Damage tab's crash scene
 //     first, then each vehicle); once the list has them, the realistic photos show in their place, with the same labels
-//     ("AI-made"), and the same client in another file shows the same ID photo; a minor's ID stays drawn;
+//     ("stand-in"), and the same client in another file shows the same ID photo; a minor's ID stays drawn;
 //   - an Admin, from a photo's larger view: ✨ Make a realistic photo (Gemini's picture becomes a JPG and is kept, and
 //     the card and the view show it), ↺ Back to the drawing, ⬆ Use my own photo; a failure (no billing) is shown and
 //     the buttons work again;
 //   - Master Control → 📷 Training Library photos: the counts; ✨ Make the missing photos makes every one, and stops
 //     at once when Gemini can't (no billing);
+//   - ⬆ Upload photos…: several at once; a file named for its photo (MC-26.png, MC-21-id.png → the same client's
+//     MC-01, MC-01-scene.png) picks it, a minor's ID isn't offered, one photo a slot (choosing a taken one frees the
+//     other), ✕ drops one, Save keeps each as a JPG for its slot and the card shows it;
 //   - a trainee sees the photos but no Admin buttons.
 // Usage: node .github/scripts/library-photos.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -135,7 +138,7 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     await page.evaluate(() => lshLibraryPhotos.load(true)); await settle(600);
     v = await page.evaluate(() => {
         const img = document.querySelector('#client-id-card svg image'), tiles = [...document.querySelectorAll('#pd-photo-grid .pdp-mock')];
-        return { id: img ? img.getAttribute('href') : '', t0: !!tiles[0].querySelector('image') && /AI-MADE/.test(tiles[0].textContent) && /SPECIMEN/.test(tiles[0].textContent), t1: !!tiles[1].querySelector('image'), t2: !!tiles[2].querySelector('image') };
+        return { id: img ? img.getAttribute('href') : '', t0: !!tiles[0].querySelector('image') && /STAND-IN/.test(tiles[0].textContent) && /SPECIMEN/.test(tiles[0].textContent), t1: !!tiles[1].querySelector('image'), t2: !!tiles[2].querySelector('image') };
     });
     if (!/img=MC-01%2Fid&(amp;)?v=a1/.test(v.id) || !v.t0 || !v.t1 || v.t2) fail(`MC-01's realistic photos don't show in place of the drawings: ${JSON.stringify(v)}`);
     await openCase('MC-21');
@@ -192,11 +195,39 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     if (posts.length > 3 || !/billing/.test(v)) fail(`making every photo should stop at once without billing (and say why): ${posts.length} asked; ${v.slice(-200)}`);
     postMode = 'ok'; posts.length = 0; puts.length = 0;
     await page.evaluate(() => lshLibraryPhotos.makeMissing());
-    await page.waitForFunction(() => /Every photo is made/.test((document.getElementById('lp-panel') || {}).textContent || ''), null, { timeout: 120000 }).catch(() => {});
+    await page.waitForFunction(() => /Every photo is in place/.test((document.getElementById('lp-panel') || {}).textContent || ''), null, { timeout: 120000 }).catch(() => {});
     v = await page.evaluate(() => (document.getElementById('lp-panel') || {}).textContent || '');
-    if (posts.length !== data.slots || puts.length !== data.slots || !/Every photo is made/.test(v)) fail(`Make the missing photos didn't make each one once: ${posts.length} asked, ${puts.length} kept of ${data.slots}; ${v.slice(0, 200)}`);
+    if (posts.length !== data.slots || puts.length !== data.slots || !/Every photo is in place/.test(v)) fail(`Make the missing photos didn't make each one once: ${posts.length} asked, ${puts.length} kept of ${data.slots}; ${v.slice(0, 200)}`);
 
-    // 6. a trainee sees the photos, with no Admin buttons
+    // 6. ⬆ Upload photos…: several at once, each for the photo the Admin picks
+    state = {}; puts.length = 0;
+    await page.evaluate(() => { openAdminDashboard(); lshLibraryPhotos.load(true); }); await settle(600);
+    const png = (name) => ({ name, mimeType: 'image/png', buffer: Buffer.from(PNG_B64, 'base64') });
+    let [up] = await Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => lshLibraryPhotos.pickUploads())]);
+    await up.setFiles([png('MC-26.png'), png('face-two.png'), png('MC-10.png'), png('MC-21-id.png'), png('extra.png')]);
+    await settle(300);
+    const rows = () => page.evaluate(() => [...document.querySelectorAll('#lp-upload select[data-lp-up="slot"]')].map(s => s.value));
+    v = await rows();
+    if (JSON.stringify(v) !== JSON.stringify(['MC-26/id', '', '', 'MC-01/id', ''])) fail(`files named for their photo didn't pick it (a minor's ID never; MC-21 is MC-01's client): ${JSON.stringify(v)}`);
+    v = await page.evaluate(() => { const o = [...document.querySelectorAll('#lp-upload select[data-i="0"] option')].map(x => x.value); return { minor: o.includes('MC-10/id'), shared: o.includes('MC-21/id'), scene: o.includes('MC-01/scene'), n: o.length }; });
+    if (v.minor || v.shared || !v.scene || v.n !== data.slots + 1) fail(`the upload list should offer every photo but a minor's ID (and a shared client's once): ${JSON.stringify(v)}`);
+    await page.selectOption('#lp-upload select[data-i="1"]', 'MC-04/id'); await settle(100);
+    await page.selectOption('#lp-upload select[data-i="2"]', 'MC-26/id'); await settle(100);
+    v = await rows();
+    if (v[0] !== '' || v[2] !== 'MC-26/id') fail(`choosing a photo another upload had should take it from that one: ${JSON.stringify(v)}`);
+    await page.selectOption('#lp-upload select[data-i="2"]', 'MC-01/scene'); await page.selectOption('#lp-upload select[data-i="0"]', 'MC-26/id'); await settle(100);
+    await page.click('#lp-upload [data-lp-up="drop"][data-i="4"]'); await settle(100);
+    v = await page.evaluate(() => ({ rows: document.querySelectorAll('#lp-upload .lp-up-row').length, save: (document.querySelector('#lp-upload [data-lp-up="save"]') || {}).textContent }));
+    if (v.rows !== 4 || !/Save 4 photos/.test(v.save || '')) fail(`✕ should drop a photo, and Save count the chosen ones: ${JSON.stringify(v)}`);
+    await page.click('#lp-upload [data-lp-up="save"]');
+    await page.waitForFunction(() => !document.querySelector('#lp-upload .lp-up-row'), null, { timeout: 10000 }).catch(() => {});
+    const kept = puts.map(p => p.img).sort().join();
+    if (kept !== 'MC-01/id,MC-01/scene,MC-04/id,MC-26/id' || !puts.every(p => p.jpeg && p.type === 'image/jpeg' && p.model === 'upload')) fail(`Save didn't keep each upload as a JPG for its photo: ${JSON.stringify(puts)}`);
+    await page.evaluate(() => exitMasterControl()); await openCase('MC-26');
+    v = await page.evaluate(() => (document.querySelector('#client-id-card svg image') || { getAttribute: () => '' }).getAttribute('href'));
+    if (!/MC-26%2Fid/.test(v)) fail(`an uploaded ID photo doesn't show on the client's card: ${v}`);
+
+    // 7. a trainee sees the photos, with no Admin buttons
     const tp = await open('Trainee');
     await tp.evaluate(async () => { await openMockCase('MC-04', { silent: true }); }); await tp.waitForTimeout(900);
     await tp.evaluate(() => document.querySelector('#client-id-card .cid-thumb').click()); await tp.waitForTimeout(200);
