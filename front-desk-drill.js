@@ -262,6 +262,14 @@
     .fdd-file summary{cursor:pointer;font-weight:700;font-size:12px;color:#0f2148}
     .fdd-file pre{white-space:pre-wrap;font:inherit;font-size:11.5px;line-height:1.5;max-height:260px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:8px;margin:6px 0 0}
     .fdd-pk-note{min-height:210px;max-height:none;font-family:'IBM Plex Mono',monospace;font-size:12px}
+    .fdd-sc-wrap{padding:0;overflow:hidden}
+    .fdd-sc{width:100%;border-collapse:collapse;table-layout:fixed;font-family:Cambria,Georgia,'Times New Roman',serif;font-size:12px;font-weight:700;color:#4f6228}
+    .fdd-sc th{background:#63a537;color:#fff;text-align:left;padding:5px 7px;font-size:12.5px;border:1px solid #3f6f22}
+    .fdd-sc th:nth-child(2),.fdd-sc td.n{text-align:center;width:48px}.fdd-sc th:nth-child(1){width:42%}
+    .fdd-sc td{padding:5px 7px;border:1px solid #9cb98a;vertical-align:top;line-height:1.35}
+    .fdd-sc tbody tr:nth-child(odd){background:#eaf4d7}.fdd-sc tbody tr:nth-child(even){background:#fff}
+    .fdd-sc td.n{color:#1f2d10}.fdd-sc td.fb{font-family:'Inter',system-ui,sans-serif;font-weight:500;font-size:11.3px;color:#334155}
+    .fdd-sc tr.avg td{background:#eaf4d7;border-top:2px solid #63a537}
     .fdd-goals{list-style:none;margin:0;padding:0}
     .fdd-goals li{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12.3px;line-height:1.4}
     .fdd-goals li span{font-weight:900;width:16px;flex-shrink:0}.fdd-goals li span.ok{color:#047857}.fdd-goals li span.no{color:#b45309}
@@ -1806,7 +1814,7 @@ Reply with exactly this JSON:
     const packWho = (l) => l.graded && !l.review ? (l.out ? l.call.role.replace(/\s*\(you are calling [^)]*\)/i, '') : 'Unknown caller') : `${l.call.name} · ${l.call.role.replace(/\s*\(you are calling [^)]*\)/i, '')}`;
     // The brief, above the phone: your role, what you know, the file or summary you work from, and (practice) the goals.
     function briefHTML(l) {
-        const K = packs(), c = l.call, doc = K.docOf(c), file = K.caseOf(c), note = K.noteOf(c), tips = K.tipsOf(c);
+        const K = packs(), c = l.call, doc = K.docOf(c), file = K.caseOf(c), note = K.noteOf(c), tips = K.tipsOf(c), sc = K.scorecardOf(c);
         const docLine = !doc ? '' : l.graded
             ? `<p class="fdd-bnote">🗂 The call is about one of the Training Library files: get the caller's name, verify them and find their file (search below or at the top).</p>`
             : `<p class="fdd-bnote">🗂 The call is about <b>${esc(doc.title)}</b>. <button class="fdd-chip" onclick="fddPick('${esc(doc.id)}')">Open ${esc(doc.id)}</button></p>`;
@@ -1816,6 +1824,7 @@ Reply with exactly this JSON:
             ${docLine}
             ${file ? `<details class="fdd-file"><summary>📂 ${esc(file.label)}</summary><pre>${esc(file.text)}</pre></details>` : ''}
             ${l.graded ? '<p class="fdd-bnote">What you\'re scored on is in your debrief.</p>' : `<b>You're scored on</b><ol>${c.goals.map(g => `<li>${esc(g)}</li>`).join('')}${note ? `<li>Documentation: ${esc(note.title)}</li>` : ''}</ol>`}
+            ${sc ? `<p class="fdd-bnote fdd-sc-brief">📊 Your debrief is the firm's ${esc(sc.title)} scorecard, each rated 0 to 5: ${sc.metrics.map(m => esc(m.name)).join(' · ')}.</p>` : ''}
             ${tips ? `<b>Tips</b><ul>${tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
             ${note ? `<p class="fdd-bnote">📝 After the call you write the ${esc(note.title.toLowerCase())}.</p>` : ''}</details>`;
     }
@@ -1853,7 +1862,7 @@ Reply with exactly this JSON:
         const r = await askWithRetry('review', K.GRADE_SYSTEM, [{ role: 'user', text: prompt }], true, () => P !== my, null, K.aiModule(c));
         if (!r) return;
         my.reviewing = false;
-        const g = r.ok ? K.parseGrade(r.text) : null;
+        const g = r.ok ? K.parseGrade(r.text, c) : null;
         if (!g) { my.reviewError = r.ok ? 'The debrief came back unreadable.' : r.error; paint(); return; }
         my.review = g; paint(); top();
         savePack(my);
@@ -1862,7 +1871,7 @@ Reply with exactly this JSON:
         const K = packs(), c = l.call, g = l.review, file = c.doc ? { id: c.doc, picked: l.selected || null, ok: l.selected === c.doc } : null;
         const detail = { pack: true, id: c.id, program: c.program, line: c.line, title: c.title, caller: c.name, role: c.role, mode: l.graded ? 'graded' : 'practice',
             voice: l.usedLive ? 'live' : 'standard', secs: l.secs, score: g.score, verdict: g.verdict, goals: g.goals, strengths: g.strengths, improve: g.improve, betterLine: g.betterLine,
-            file, course: K.courseOf(c), turns: l.msgs.filter(m => m.who === 'you').length, note: cut(noteWritten(l) ? l.note : '', 3000), transcript: '' };
+            scorecard: g.scorecard || null, file, course: K.courseOf(c), turns: l.msgs.filter(m => m.who === 'you').length, note: cut(noteWritten(l) ? l.note : '', 3000), transcript: '' };
         const full = packTranscript(l);
         detail.transcript = full.length > 9000 ? '…' + full.slice(-9000) : full;
         l.saved = 'saving'; paintSaved();
@@ -1884,6 +1893,15 @@ Reply with exactly this JSON:
         const where = c.program === 'FT' && c.lesson ? `your Standard Training, lesson ${c.lesson}` : `your ${programLabel(c.program)} course (${c.line})`;
         return c.counted ? ` It counts toward ${where}${c.best && typeof c.best.score === 'number' ? `: your best there is ${c.best.score}%` : ''}.`
             : ' It couldn\'t reach your course just now; your trainer still sees it here.';
+    }
+    // The firm's scorecard (FT Calendar Management), laid out as the trainers' sheet: each metric rated 0-5 with its
+    // feedback, then the weighted average (out of 5; the call's score is it as a %).
+    function scorecardHTML(sc) {
+        if (!sc || !Array.isArray(sc.rows) || !sc.rows.length) return '';
+        const n = (v, d) => { const x = Math.max(0, Math.min(5, Number(v) || 0)); return d ? String(Math.round(x * 10) / 10) : String(Math.round(x)); };
+        return `<div class="fdd-sec fdd-sc-wrap"><table class="fdd-sc"><thead><tr><th>${esc(sc.title || 'SCORECARD')}</th><th>Score</th><th>FEEDBACK</th></tr></thead>
+            <tbody>${sc.rows.map(r => `<tr><td>${esc(r.metric)}</td><td class="n">${n(r.score)}</td><td class="fb">${esc(r.feedback || '')}</td></tr>`).join('')}
+            <tr class="avg"><td>WEIGHTED AVERAGE</td><td class="n">${n(sc.average, 1)}</td><td class="fb">out of 5${sc.pct != null ? ` · ${Math.round(Number(sc.pct) || 0)}%` : ''}</td></tr></tbody></table></div>`;
     }
     // The debrief: the score, each goal met or not yet, what worked, what's next, and a better line.
     function goalsHTML(goals) {
@@ -1911,7 +1929,7 @@ Reply with exactly this JSON:
                 <div id="fdd-pc-saved" style="font-size:11.5px"></div></div>
             ${status}
             ${doc ? `<div class="fdd-fb ${l.selected === doc.id ? 'ok' : 'bad'}">${l.selected === doc.id ? '✓' : '✗'} <b>File:</b> ${esc(doc.title)}${l.selected === doc.id ? '' : ` (you ${l.selected ? `picked ${esc(l.selected === 'none' ? 'not in the system' : l.selected)}` : 'didn\'t match a file'})`}</div>` : ''}
-            ${g ? `<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(g.goals)}</div>${reviewHTML(g)}` : ''}
+            ${g ? `${scorecardHTML(g.scorecard)}<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(g.goals)}</div>${reviewHTML(g)}` : ''}
             <details class="fdd-sec"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript${noteWritten(l) ? ' and your note' : ''}</summary>
                 <div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div>${noteWritten(l) ? `<p style="margin:6px 0 0;font-size:12px;white-space:pre-wrap"><b>Your note:</b>\n${esc(l.note)}</p>` : ''}</details>
             ${g ? again : ''}
@@ -1926,6 +1944,7 @@ Reply with exactly this JSON:
                 <div style="color:#334155;font-weight:700">${esc(d.title || '')}</div>
                 <div style="color:#64748b">${esc(String(row.created_at || '').slice(0, 16))} · ${esc(d.caller || '')}${d.secs != null ? ` · ⏱ ${fmtSec(Number(d.secs) || 0)}` : ''}${d.voice === 'live' ? ' · live voice' : ''}</div></div>
             ${d.file ? `<div class="fdd-fb ${d.file.ok ? 'ok' : 'bad'}">${d.file.ok ? '✓' : '✗'} <b>File:</b> ${esc(d.file.id)}${d.file.ok ? '' : ` (picked ${esc(d.file.picked || 'none')})`}</div>` : ''}
+            ${scorecardHTML(d.scorecard)}
             ${Array.isArray(d.goals) && d.goals.length ? `<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(d.goals)}</div>` : ''}
             ${reviewHTML({ verdict: d.verdict, strengths: d.strengths, improve: d.improve, betterLine: d.betterLine })}
             ${d.note ? `<div class="fdd-sec"><h4>The note</h4><p style="margin:0;white-space:pre-wrap">${esc(d.note)}</p></div>` : ''}

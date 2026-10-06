@@ -72,7 +72,7 @@
           line: "Calendar Management Mock Calls",
           icon: "🗓",
           course: {"lesson":5},
-          rubric: ["Greeting & Verification: Professional greeting; verifies the caller and that they are authorized before discussing any date.","Calendar accuracy: Reads the right event from the file and states the date, day, time, time zone and location exactly; never invents availability.","Scheduling boundaries: Doesn't agree to move court dates or depositions; offers only real options; confirms and reads back what was booked.","Documentation & follow-up: The calendar entry and note are complete (event, date/time/time zone, location, attendees, who confirmed, reminder, routing)."],
+          scorecard: {"title":"CALENDAR MANAGEMENT MOCK CALL","metrics":[{"name":"Professional Introduction & Call Control","weight":1,"about":"Opens with the firm's name and their own name and offers to help; calm, warm and confident; leads the call one question at a time, keeps it on track and handles pushback or a hold without losing control."},{"name":"Client Comprehension & Flow Control","weight":1,"about":"Understands what the caller actually needs (which appointment, why, and their limits on days and times); asks clarifying questions and sums the request up; moves the call in order (verify, find, schedule, confirm) without dead air or asking the same thing twice."},{"name":"Information Verification & Accuracy","weight":1,"about":"Verifies the caller and that they're authorized (full name, date of birth and one more identifier on file) before discussing any appointment; every day, date, time, time zone, place and name they give matches the case file exactly; never guesses."},{"name":"Slot Identification & Scheduling Rule Compliance","weight":1,"about":"Finds the right event on the file and only real open slots; follows the firm's scheduling rules: never agrees to move a court date or deposition at the front desk, doesn't double-book, checks the time against the client's other appointments and the staff member's availability and time zone, and routes urgent dates (within 7 days) right away."},{"name":"Alternative Time Offering","weight":1,"about":"When the requested time doesn't work, offers specific real alternatives (day, date, time and time zone) instead of a flat no, checks them against the caller's limits, and when nothing fits sets a clear next step (a callback or a message to the attorney or case manager)."},{"name":"Calendar Creation & Attorney Reminder Setup","weight":1,"about":"Creates or updates the calendar entry with a specific title (for example \"Client Consultation Meeting – [Client Name]\"), the day, date, time, time zone, place or dial-in and who attends, and sets the reminder for the attorney or case manager, flagging what they must decide."},{"name":"Notes, Recap & Call Closing","weight":1,"about":"Reads the booking or message back (day, date, time, time zone, place, callback number) and gets the caller's OK; closes politely with what happens next; the case note is accurate to what was said and complete."}]},
           tips: ["Always say the day, date, time and time zone.","Read the booking back to the caller.","Court dates and depositions are never agreed at the front desk.","Log the calendar entry and a Note."],
           note: {"title":"Calendar entry and case note","template":"EVENT:\nDATE / TIME (time zone):\nLOCATION / DIAL-IN:\nWHO ATTENDS:\nCONFIRMED WITH (name / number):\nREMINDER / FOLLOW-UP:\nROUTED TO / ACTION TAKEN:\nCASE NOTE (what was said, by whom):\nYOUR INITIALS:"} },
         { program: "FT",
@@ -1487,7 +1487,10 @@
     const linesOf = (program) => LINES.filter(l => l.program === program);
     const callsIn = (program, line) => CALLS.filter(c => c.program === program && (!line || c.line === line));
     const programOf = (k) => PROGRAMS.find(p => p.k === String(k || '').toUpperCase()) || null;
-    const rubricOf = (c) => c.rubric || (lineOf(c) || {}).rubric || null;
+    // A line graded on the firm's own scorecard (FT Calendar Management, as on FT Day 6): each metric rated 0-5 with
+    // feedback, as the firm's RECEPTION MOCK CALL scorecard is; the call's score is their weighted average out of 5, as a %.
+    const scorecardOf = (c) => c.scorecard || (lineOf(c) || {}).scorecard || null;
+    const rubricOf = (c) => c.rubric || (lineOf(c) || {}).rubric || (scorecardOf(c) ? scorecardOf(c).metrics.map(m => `${m.name}: ${m.about}`) : null);
     const tipsOf = (c) => c.tips || (lineOf(c) || {}).tips || null;
     const noteOf = (c) => c.note || (lineOf(c) || {}).note || null;
     const iconOf = (c) => (lineOf(c) || {}).icon || '📞';
@@ -1556,7 +1559,7 @@ ${start}`;
     const GRADE_SYSTEM = 'You are an experienced legal-support trainer grading a practice phone call. Be fair, specific and encouraging: refer to what the trainee actually said, and frame gaps as "not yet, here is the better way". The transcript may come from speech recognition, so ignore small transcription slips. Write to the trainee as "you". Never mention AI, models or prompts. Reply with JSON only.';
     // call: the call; r: { transcript (text), secs, note, spoken, picked: { id, right } (FT: the file they matched) }
     function gradePrompt(c, r) {
-        const doc = docOf(c), file = caseOf(c), note = noteOf(c), rubric = rubricOf(c);
+        const doc = docOf(c), file = caseOf(c), note = noteOf(c), sc = scorecardOf(c), rubric = sc ? null : rubricOf(c);
         const picked = !doc ? '' : `\nTHE FILE THE TRAINEE MATCHED IN THE CMS: ${r.picked && r.picked.id ? (r.picked.id === 'none' ? 'none (they said the caller isn\'t in the system)' : r.picked.id) : 'none'}${r.picked && r.picked.id === doc.id ? ' (the right file)' : ` (the caller's file is ${doc.id})`}`;
         return `SCENARIO: ${c.title}
 THE CALLER: ${c.name}, ${c.role} (${c.dir === 'out' ? 'the trainee placed the call' : 'they called the trainee'})
@@ -1573,28 +1576,49 @@ THE TRAINEE'S ${note.title.toUpperCase()} (written after the call):
 ${r.note}
 
 Also grade the documentation: accurate to what was actually said on the call (penalize invented or wrong details) and complete for this kind of call. Add it as a final goal "Documentation: ${note.title}" in the goals list.` : ''}${rubric ? `
-Weigh the overall score across these areas for this kind of call: ${rubric.join(' | ')}.` : ''}
-Any legal advice, case valuation, guarantee, or disclosure of confidential or privileged information to someone not entitled to it should pull the score well below 70.
+Weigh the overall score across these areas for this kind of call: ${rubric.join(' | ')}.` : ''}${sc ? `
+THE FIRM'S SCORECARD (${sc.title}): rate every metric from 0 to 5 for this call${note ? ' and the trainee\'s note' : ''} (5: what a senior calendar assistant would do; 4: good, small gaps; 3: acceptable; 2: needs work; 1: poor; 0: not done at all), with one or two sentences of feedback that point to what the trainee said or missed:
+${sc.metrics.map((m, i) => `${i + 1}. ${m.name}: ${m.about}`).join('\n')}
+A metric the call gave no chance to show (for example, no new time was needed): score it on the nearest thing the call did need, say so in its feedback, and don't mark the trainee down for what the call never asked of them.
+The call's score is the weighted average of these ratings out of 5, as a percentage, so "score" must match it.` : ''}
+Any legal advice, case valuation, guarantee, or disclosure of confidential or privileged information to someone not entitled to it should pull the score well below 70${sc ? ' (score the metrics it breaks accordingly)' : ''}.
 
 Return ONLY JSON:
-{"score": 0-100, "verdict": "one sentence overall", "goals": [{"goal": "…", "met": true|false, "note": "what they did or missed, quoting briefly"}], "strengths": ["…"], "improve": ["concrete next step", "…"], "betterLine": "one line the trainee could have said at the hardest moment"}`;
+{"score": 0-100, "verdict": "one sentence overall", ${sc ? `"metrics": [${sc.metrics.map(m => `{"metric": "${m.name}", "rating": 0-5, "feedback": "…"}`).join(', ')}], ` : ''}"goals": [{"goal": "…", "met": true|false, "note": "what they did or missed, quoting briefly"}], "strengths": ["…"], "improve": ["concrete next step", "…"], "betterLine": "one line the trainee could have said at the hardest moment"}`;
     }
     const clip = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
-    function parseGrade(text) {
+    // c (the call), when given, reads its scorecard: every metric must come back rated 0-5; the score is their weighted
+    // average out of 5, as a percentage.
+    function parseGrade(text, c) {
         const t = String(text || '').replace(/```(?:json)?/gi, '');
         const a = t.indexOf('{'), b = t.lastIndexOf('}');
         if (a < 0 || b <= a) return null;
         let j; try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
-        if (!j || typeof j !== 'object' || !isFinite(Number(j.score)) || !Array.isArray(j.goals)) return null;
+        const sc = c ? scorecardOf(c) : null;
+        if (!j || typeof j !== 'object' || (!sc && !isFinite(Number(j.score))) || !Array.isArray(j.goals)) return null;
         const list = (v) => (Array.isArray(v) ? v : v ? [v] : []).map(x => clip(x, 300)).filter(Boolean).slice(0, 4);
+        const pct = (v) => Math.max(0, Math.min(100, Math.round(Number(v))));
+        let card = null;
+        if (sc) {
+            const rate = (m) => m.rating != null ? m.rating : m.score;
+            const got = (Array.isArray(j.metrics) ? j.metrics : []).filter(m => m && typeof m === 'object' && rate(m) != null && String(rate(m)).trim() !== '' && isFinite(Number(rate(m))));
+            const key = (v) => String(v || '').toLowerCase().replace(/[^a-z]/g, '');
+            const rows = sc.metrics.map((m, i) => {
+                const x = got.find(g => key(g.metric || g.name) === key(m.name)) || (got.length === sc.metrics.length && !(got[i].metric || got[i].name) ? got[i] : null);
+                return x ? { metric: m.name, weight: m.weight, score: Math.max(0, Math.min(5, Math.round(Number(rate(x))))), feedback: clip(x.feedback || x.note, 400) } : null;
+            });
+            if (rows.some(r => !r)) return null;
+            const w = rows.reduce((a, r) => a + r.weight, 0), avg = rows.reduce((a, r) => a + r.weight * r.score, 0) / w;
+            card = { title: sc.title, outOf: 5, rows, average: Math.round(avg * 10) / 10, pct: pct(avg / 5 * 100) };
+        }
         return {
-            score: Math.max(0, Math.min(100, Math.round(Number(j.score)))), verdict: clip(j.verdict, 400),
+            score: card ? card.pct : pct(j.score), verdict: clip(j.verdict, 400), scorecard: card,
             goals: j.goals.filter(g => g && typeof g === 'object' && g.goal).slice(0, 12).map(g => ({ goal: clip(g.goal, 200), met: g.met === true || g.met === 'true', note: clip(g.note, 300) })),
             strengths: list(j.strengths), improve: list(j.improve), betterLine: clip(j.betterLine, 400)
         };
     }
 
-    const API = { PROGRAMS, VIEWS, viewOf, linesIn, LINES, CALLS, DOCS, CASES, FT_FIRM, find, lineOf, linesOf, callsIn, programOf, rubricOf, tipsOf, noteOf, iconOf, docOf, caseOf, scriptOf, blurb,
+    const API = { PROGRAMS, VIEWS, viewOf, linesIn, LINES, CALLS, DOCS, CASES, FT_FIRM, find, lineOf, linesOf, callsIn, programOf, rubricOf, scorecardOf, tipsOf, noteOf, iconOf, docOf, caseOf, scriptOf, blurb,
         aiModule, courseOf, callerPrompt, livePrompt, GRADE_SYSTEM, gradePrompt, parseGrade };
     if (typeof window !== 'undefined') window.CALL_PACKS = API;
     if (typeof module !== 'undefined' && module.exports) module.exports = API;
