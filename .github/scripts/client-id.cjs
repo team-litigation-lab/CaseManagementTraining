@@ -10,7 +10,7 @@
 //     shows its SSN in both, and it isn't saved twice (the saved fields keep their positions);
 //   - Client's ID: every Training Library client has a mock ID (well-formed, with their
 //     name, date of birth and SPECIMEN on it, its signature clear of the address, and the same
-//     photo for the same client in every file, masculine, feminine or neutral as the file says) that opens larger and closes with Escape; a
+//     photo (a file in mock-id-photos/ that loads) for the same client in every file) that opens larger and closes with Escape; a
 //     saved case that's work on a library file shows that client's; any other case offers
 //     Upload ID: a large photo is made smaller and sent as a JPG, the card shows it, it's
 //     saved with the case and comes back when the case is opened again, Remove takes it off,
@@ -22,7 +22,7 @@
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd();
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const server = http.createServer((req, res) => {
     let f = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname)); if (f.endsWith('/')) f += 'index.html';
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('not found'); }
@@ -109,22 +109,27 @@ const failures = []; const fail = (m) => failures.push(m);
 
     // the signature stays under the photo and never reaches the address column (x 114), whatever the name's length, and a
     // client who is in several files has the same photo in each
-    const looks = await page.evaluate(() => {
+    const looks = await page.evaluate(async () => {
         const host = document.createElement('div'); host.style.cssText = 'position:absolute;left:-9999px;top:0;width:340px'; document.body.appendChild(host);
-        const sigs = [], photos = {};
+        const sigs = [], photos = {}, hrefs = new Set(), noPhoto = [];
         for (const c of MOCK_CASES) {
             host.innerHTML = lshClientId.mockIdSvg(c.id);
             const sig = host.querySelector('text[font-family*="cursive"]'), b = sig.getBBox();
             sigs.push({ id: c.id, left: b.x, right: b.x + b.width });
+            const img = host.querySelector('image'); if (img) hrefs.add(img.getAttribute('href')); else noPhoto.push(c.id);
             const photo = host.querySelector('g[transform="translate(16 52)"]').innerHTML.split(c.id).join('#');
             const who = c.client.name.replace(/\s*\(.*$/, '') + '|' + c.client.dob;
             (photos[who] = photos[who] || new Set()).add(photo);
         }
         host.remove();
-        return { sigs, split: Object.entries(photos).filter(([, v]) => v.size > 1).map(([k]) => k) };
+        const broken = [];
+        for (const h of hrefs) { const r = await fetch(h).catch(() => null); if (!r || !r.ok || !/image\/jpeg/.test(r.headers.get('content-type') || '')) broken.push(h); }
+        return { sigs, noPhoto, broken, count: hrefs.size, split: Object.entries(photos).filter(([, v]) => v.size > 1).map(([k]) => k) };
     });
     const crowded = looks.sigs.filter(x => x.left < 14 || x.right > 112).map(x => `${x.id} (${Math.round(x.left)}–${Math.round(x.right)})`);
     if (crowded.length) fail(`signatures that reach the address column or the card's edge: ${crowded.join(', ')}`);
+    if (looks.noPhoto.length) fail(`library clients with no photo on their mock ID (add one to mock-id-photos/ and its name to ID_PHOTOS): ${looks.noPhoto.join(', ')}`);
+    if (looks.broken.length) fail(`mock ID photos that don't load: ${looks.broken.join(', ')}`);
     if (looks.split.length) fail(`the same client has different photos in different files: ${looks.split.join(', ')}`);
 
     // the portrait follows the file: the pronouns its summary and narrative use for the client (pooled over the files a person

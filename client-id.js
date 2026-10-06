@@ -4,11 +4,12 @@
    Client's ID (#kx-client-id, in the middle of the case header):
      - A Training Library client (mock-cases.js) has a mock ID made from their
        file: name, date of birth, address and an ID number. It is marked
-       SPECIMEN · TRAINING ONLY and follows no real issuer's design. Its photo is a
-       portrait drawn from the client's age (the same person looks the same in
-       every file; masculine or feminine as the file's pronouns say, neutral if it
-       doesn't, or as `portrait: 'm' | 'f'` on the client sets it). A client with
-       `photo: '<image url>'` in mock-cases.js shows that picture instead. The signature is kept in its own box under the photo.
+       SPECIMEN · TRAINING ONLY and follows no real issuer's design. Its photo is
+       a synthetic face (no real person) from mock-id-photos/, one per person, so a
+       client who is in several files has the same photo in each; a client with
+       `photo: '<image url>'` in mock-cases.js shows that picture, and one with
+       no photo gets a drawn portrait. The signature is kept in its own box under
+       the photo.
      - Any other client: ⬆ Upload ID takes a photo or scan of their ID (JPG, PNG
        or WebP, made smaller here before it's sent). It is kept in the site's
        file storage (/api/upload, R2, as Doc Hub files are) and saved with the
@@ -149,6 +150,24 @@ ${specs}
     }
     // The name as it belongs on an ID: not the file's note about who signs for the client ("(minor), by her father…").
     const idName = (n) => String(n || '').replace(/\s*\(.*$/, '').replace(/^Estate of\s+/i, '').trim();
+    // Photos for the Training Library's clients: mock-id-photos/<name>-<birth year>.jpg, synthetic faces (see that folder's README).
+    // A client with no file here (or with `photo: '<image url>'` in mock-cases.js, which wins) gets the drawn portrait instead.
+    const ID_PHOTOS = new Set(`
+        marcus-lee-2000 schuyler-beauchamp-2000 jose-hernandez-1994 andre-coleman-1991
+        rhys-beaumont-1991 bjorn-courthope-1988 ahmed-rahman-1985 james-wilson-1983
+        carlos-mendoza-1977 derek-thompson-1975 brian-o-neill-1972 samuel-boateng-1970
+        cian-masserene-1970 robert-chen-1969 walter-grant-1968 tomas-rivera-1964
+        jose-hernandez-1962 william-harris-1958 james-wilson-1956 george-hammond-1949
+        harold-jenkins-1948 cian-acheson-2020 mstislav-shaughnessy-2015 keisha-brown-1995
+        brittany-kirkcudbright-1996 niamh-cholmondeley-1998 mireille-featherstonhaugh-1994 olivia-bennett-1993
+        aisha-patel-1992 emily-nguyen-1990 tanya-reed-1990 maria-santos-1988
+        latoya-jackson-1987 hannah-pierce-1987 rachel-donovan-1986 nicole-adams-1984
+        denise-carter-1981 ngozi-okonkwo-1979 maria-santos-1971 siobhan-masserene-1968
+        linda-garcia-1961 saoirse-shaughnessy-1955 patricia-lewis-1946 sofia-morales-2018
+        saoirse-witwicky-2016 emma-collins-2015`.split(/\s+/).filter(Boolean));
+    const photoSlug = (who, dob) => `${who} ${String(dob || '').slice(-4)}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    function photoUrl(c, who) { const sl = photoSlug(who, c.dob); return c.photo || (ID_PHOTOS.has(sl) ? `mock-id-photos/${sl}.jpg` : ''); }
+
     // Which portrait to draw: client.portrait ('m' or 'f') when the file sets it; otherwise the pronouns the file's summary and
     // narrative use for the client, over all the files that person is in. '' (the file doesn't say) draws a neutral look.
     function portraitKind(c, who) {
@@ -189,7 +208,7 @@ ${specs}
 <text x="16" y="20" font-size="13.5" font-weight="900" fill="#fff" letter-spacing="1.2">IDENTIFICATION CARD</text>
 <text x="16" y="33" font-size="7" font-weight="700" fill="#bae6fd" letter-spacing=".5">MOCK · FOR TRAINING ONLY · NOT A GOVERNMENT ID</text>
 <text x="324" y="27" font-size="9" font-weight="900" fill="#fbbf24" text-anchor="end" letter-spacing="1">LSH</text>
-<g clip-path="url(#cidc-${esc(mc.id)})"><g transform="translate(16 52)">${c.photo ? `<image href="${esc(c.photo)}" width="84" height="104" preserveAspectRatio="xMidYMid slice"/>` : portraitSvg(hash(who + '|' + (c.dob || '')), esc(mc.id), age, portraitKind(c, who))}</g></g>
+<g clip-path="url(#cidc-${esc(mc.id)})"><g transform="translate(16 52)">${photoUrl(c, who) ? `<image href="${esc(photoUrl(c, who))}" width="84" height="104" preserveAspectRatio="xMidYMid slice"/>` : portraitSvg(hash(who + '|' + (c.dob || '')), esc(mc.id), age, portraitKind(c, who))}</g></g>
 <rect x="16" y="52" width="84" height="104" rx="6" fill="none" stroke="#64748b" stroke-opacity=".5"/>
 <g clip-path="url(#cids-${esc(mc.id)})"><text x="18" y="176" font-size="${sigSize}" fill="#1e3a8a" font-family="'Segoe Script','Brush Script MT','Lucida Handwriting',cursive"${sigFit}>${esc(sign)}</text></g>
 <path d="M16 180 H100" stroke="#94a3b8" stroke-width=".6"/>
