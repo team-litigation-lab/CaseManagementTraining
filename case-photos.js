@@ -463,7 +463,7 @@ ${finish(id, W, H)}`}
 </svg>`;
     }
     const photoImage = (href, w, h) => `<image href="${esc(href)}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice"/>`;
-    const mark = (href) => href ? 'MOCK · AI-MADE TRAINING PHOTO' : 'MOCK · TRAINING PHOTO';
+    const mark = (href) => href ? 'MOCK · STAND-IN TRAINING PHOTO' : 'MOCK · TRAINING PHOTO';
 
     /* ---------- one vehicle and its damage (the property damage photos) ---------- */
     // p: { vehicle: 'client' | 'other', area, caption } — at the tow yard, the damaged side toward the camera.

@@ -5,11 +5,14 @@
    the crash scene and each damaged vehicle, can be a realistic photo made by
    Gemini's image model (functions/api/library-photos.js). Until a file has
    one, its drawn photo (case-photos.js) shows. Every photo keeps its mock
-   labels (SPECIMEN; "AI-made training photo"), and the people in them are
+   labels (SPECIMEN; "stand-in training photo"), and the people in them are
    fictional. A minor's ID keeps the drawn portrait.
      - Admins: a photo's larger view has ✨ Make a realistic photo (↻ Make a
        new one), ⬆ Use my own photo and ↺ Back to the drawing; Master Control
-       → Overview → 📷 Training Library photos makes every missing one.
+       → Overview → 📷 Training Library photos makes every missing one, and
+       ⬆ Upload photos… takes several of your own at once: choose the client
+       (or crash scene, or vehicle) for each; a file named MC-26.jpg,
+       MC-01-scene.jpg or MC-01-v0.jpg picks its own.
      - The description Gemini gets is built here from the file (the client's
        age and look from case-photos.js looksOf; the crash and the vehicles
        from CRASH and the file's pd block).
@@ -58,6 +61,10 @@
         const id = owner(mc, kind), v = index[id] && index[id][kind];
         return v ? `/api/library-photos?img=${encodeURIComponent(id + '/' + kind)}&v=${encodeURIComponent(v)}` : null;
     }
+    // A photo is in place when the library has one (made or uploaded), or, for an ID, when the client has a built-in
+    // synthetic photo (client-id.js, mock-id-photos/): ✨ Make the missing photos leaves those alone.
+    const builtIn = (mc, kind) => kind === 'id' && window.lshClientId && window.lshClientId.builtInPhoto ? window.lshClientId.builtInPhoto(mc) : null;
+    const placed = (mc, kind) => !!(url(mc, kind) || builtIn(mc, kind));
     // Every photo a file can have: its client's ID (unless a minor's, or the same client's earlier file has it),
     // the crash scene, each vehicle.
     function slots(mc) {
@@ -191,7 +198,7 @@
             <button type="button" data-lp="make">${has ? '↻ Make a new realistic photo' : '✨ Make a realistic photo'}</button>
             <button type="button" data-lp="upload">⬆ Use my own photo</button>
             ${has ? '<button type="button" data-lp="remove">↺ Back to the drawing</button>' : ''}
-            <span class="lp-status" role="status">${shared ? `Shared with ${esc(owner(mc, kind))} (the same client).` : ''}</span></div>`;
+            <span class="lp-status" role="status">${shared ? `Shared with ${esc(owner(mc, kind))} (the same client).` : !has && builtIn(mc, kind) ? 'Shown now: the built-in photo; a photo made or uploaded here replaces it.' : ''}</span></div>`;
     }
     async function run(bar, what, fn) {
         const status = bar.querySelector('.lp-status');
@@ -217,25 +224,117 @@
         }
     });
 
-    /* ---------- Master Control → Overview: every missing photo ---------- */
+    /* ---------- Master Control → Overview: the counts, every missing photo, your own photos ---------- */
     let bulk = null;   // { stop, done, failed, total }
+    // The panel has two parts: the counts and ✨ Make (redrawn whenever the list changes) and the photos being
+    // uploaded (kept while the list changes).
+    function parts() {
+        const box = $id('lp-panel'); if (!box) return null;
+        if (!$id('lp-summary')) box.innerHTML = '<div id="lp-summary"></div><div id="lp-upload"></div>';
+        return { summary: $id('lp-summary'), upload: $id('lp-upload') };
+    }
     function panel() {
         const box = $id('lp-panel'); if (!box) return;
         if (!isAdmin()) { box.innerHTML = ''; return; }
-        if (!index) { box.innerHTML = `<p class="lp-note">${loading ? 'Loading…' : 'The photo list couldn\'t be loaded.'}</p><button type="button" class="lp-btn" onclick="lshLibraryPhotos.load(true)">↻ Load</button>`; return; }
-        const all = cases().flatMap(slots), have = all.filter(s => url(s.mc, s.kind)), missing = all.filter(s => !url(s.mc, s.kind));
-        const count = (k) => { const a = all.filter(s => k.test(s.kind)); return `${a.filter(s => url(s.mc, s.kind)).length} of ${a.length}`; };
-        box.innerHTML = `<p class="lp-note">Realistic photos made by Gemini for the Training Library's files: <b>${have.length} of ${all.length}</b> made
-            (client IDs ${count(/^id$/)} · crash scenes ${count(/^scene$/)} · vehicles ${count(/^v\d/)}). A file without one shows its drawn photo; a minor's ID keeps the drawn portrait.
+        const el = parts().summary;
+        if (!index) { el.innerHTML = `<p class="lp-note">${loading ? 'Loading…' : 'The photo list couldn\'t be loaded.'}</p><button type="button" class="lp-btn" onclick="lshLibraryPhotos.load(true)">↻ Load</button>`; uploads(); return; }
+        const all = cases().flatMap(slots), have = all.filter(s => placed(s.mc, s.kind)), missing = all.filter(s => !placed(s.mc, s.kind));
+        const count = (k) => { const a = all.filter(s => k.test(s.kind)); return `${a.filter(s => placed(s.mc, s.kind)).length} of ${a.length}`; };
+        el.innerHTML = `<p class="lp-note">Realistic photos for the Training Library's files (made by Gemini, or your own): <b>${have.length} of ${all.length}</b> in place
+            (client IDs ${count(/^id$/)} · crash scenes ${count(/^scene$/)} · vehicles ${count(/^v\d/)}; an ID counts its built-in photo). A file without one shows its drawn photo; a minor's ID keeps the drawn portrait.
             One photo at a time: open it larger in the file (the ID card, or the Property Damage tab's photos).</p>
-            ${bulk ? `<p class="lp-note"><b>Making photos: ${bulk.done} of ${bulk.total} done${bulk.failed ? `, ${bulk.failed} not made` : ''}…</b></p><button type="button" class="lp-btn" onclick="lshLibraryPhotos.stop()">■ Stop</button>`
-                : missing.length ? `<button type="button" class="lp-btn lp-go" onclick="lshLibraryPhotos.makeMissing()">✨ Make the ${missing.length} missing photo${missing.length === 1 ? '' : 's'}</button>` : '<p class="lp-note">✅ Every photo is made.</p>'}
+            <div class="lp-row">${bulk ? `<span class="lp-note"><b>Making photos: ${bulk.done} of ${bulk.total} done${bulk.failed ? `, ${bulk.failed} not made` : ''}…</b></span><button type="button" class="lp-btn" onclick="lshLibraryPhotos.stop()">■ Stop</button>`
+                : missing.length ? `<button type="button" class="lp-btn lp-go" onclick="lshLibraryPhotos.makeMissing()">✨ Make the ${missing.length} missing photo${missing.length === 1 ? '' : 's'}</button>` : '<span class="lp-note">✅ Every photo is in place.</span>'}
+            <button type="button" class="lp-btn" onclick="lshLibraryPhotos.pickUploads()">⬆ Upload photos…</button></div>
             <div class="lp-log" id="lp-log">${bulk && bulk.last ? esc(bulk.last) : ''}</div>`;
+        uploads();
     }
+
+    /* ---------- ⬆ Upload photos: several at once, each for the client (or scene, or vehicle) the Admin picks ---------- */
+    // A file named for its photo picks it by itself: MC-26.jpg (the client's ID), MC-01-scene.jpg, MC-01-v0.jpg.
+    let staged = [];   // [{ file, src (a blob: URL), slot: 'MC-26/id' | '', error }]
+    let saving = null; // { done, total }
+    const slotKey = (s) => `${s.mc.id}/${s.kind}`;
+    function slotLabel(s) {
+        if (s.kind === 'id') { const L = P().looksOf(s.mc); return `${s.mc.id} · ${(s.mc.client || {}).name} (${L.age}, ${L.female ? 'woman' : 'man'})`; }
+        return s.kind === 'scene' ? `${s.mc.id} · crash scene` : s.label;
+    }
+    function guessSlot(name, all) {
+        const m = /MC[-_ ]?(\d{2,3})(?:[-_ ]?(id|scene|v\d{1,2}))?(?![\w])/i.exec(String(name || ''));
+        if (!m) return '';
+        const mc = mockCase('MC-' + m[1].padStart(2, '0')); if (!mc) return '';
+        const kind = (m[2] || 'id').toLowerCase(), key = `${owner(mc, kind)}/${kind}`;
+        return all.some(s => slotKey(s) === key) ? key : '';
+    }
+    function pickUploads() {
+        if (!isAdmin()) return;
+        const input = document.createElement('input');
+        input.type = 'file'; input.multiple = true; input.accept = 'image/jpeg,image/png,image/webp';
+        input.onchange = () => {
+            const all = cases().flatMap(slots);
+            for (const f of [...(input.files || [])]) {
+                const slot = guessSlot(f.name, all);
+                if (slot) staged.forEach(x => { if (x.slot === slot) x.slot = ''; });   // one photo a slot: the newest
+                staged.push({ file: f, src: URL.createObjectURL(f), slot, error: '' });
+            }
+            uploads();
+        };
+        input.click();
+    }
+    function uploads() {
+        const p = parts(); if (!p) return;
+        if (!staged.length) { p.upload.innerHTML = ''; return; }
+        const all = cases().flatMap(slots);
+        const group = (title, test) => `<optgroup label="${esc(title)}">${all.filter(s => test.test(s.kind)).map(s =>
+            `<option value="${esc(slotKey(s))}">${esc(slotLabel(s))}${placed(s.mc, s.kind) ? ' ✓' : ''}</option>`).join('')}</optgroup>`;
+        const options = '<option value="">— Which photo is this? —</option>' + group('Client IDs', /^id$/) + group('Crash scenes', /^scene$/) + group('Vehicle photos', /^v\d/);
+        const ready = staged.filter(x => x.slot).length;
+        p.upload.innerHTML = `<div class="lp-up-head"><b>Photos to upload (${staged.length})</b> · choose what each one is for. ✓ = it has a photo now, which this one replaces.</div>
+            ${staged.map((x, i) => `<div class="lp-up-row"><img src="${esc(x.src)}" alt=""><div class="lp-up-main"><div class="lp-up-name">${esc(x.file.name)}</div>
+                <select data-lp-up="slot" data-i="${i}"${saving ? ' disabled' : ''}>${options.replace(`value="${esc(x.slot)}"`, `value="${esc(x.slot)}" selected`)}</select>
+                ${x.error ? `<div class="lp-log">⚠ ${esc(x.error)}</div>` : ''}</div>
+                <button type="button" class="lp-btn" data-lp-up="drop" data-i="${i}" title="Don't upload this one"${saving ? ' disabled' : ''}>✕</button></div>`).join('')}
+            <div class="lp-row">${saving ? `<span class="lp-note"><b>Saving ${saving.done} of ${saving.total}…</b></span>`
+                : `<button type="button" class="lp-btn lp-go" data-lp-up="save"${ready ? '' : ' disabled'}>💾 Save ${ready} photo${ready === 1 ? '' : 's'}</button><button type="button" class="lp-btn" data-lp-up="clear">Clear</button>`}</div>`;
+    }
+    async function saveUploads() {
+        if (saving || !isAdmin()) return;
+        const todo = staged.filter(x => x.slot);
+        if (!todo.length) return;
+        saving = { done: 0, total: todo.length }; uploads();
+        for (const x of todo) {
+            const [id, kind] = x.slot.split('/');
+            try {
+                await keep(id, kind, await toJpeg(x.src), 'upload');
+                URL.revokeObjectURL(x.src); staged = staged.filter(y => y !== x);
+            } catch (e) {
+                x.error = e && e.message || String(e);
+                if ([401, 403].includes(e && e.status)) break;   // signed out: the rest would fail too
+            }
+            saving.done++; uploads();
+        }
+        const failed = staged.filter(x => x.error).length;
+        saving = null; uploads();
+        toast(failed ? `📷 ${todo.length - failed} photo(s) saved, ${failed} not saved.` : `📷 ${todo.length} photo${todo.length === 1 ? '' : 's'} saved.`, failed ? 'warning' : 'success', 5000);
+    }
+    document.addEventListener('change', (e) => {
+        const sel = e.target.closest && e.target.closest('#lp-upload [data-lp-up="slot"]'); if (!sel) return;
+        const x = staged[+sel.dataset.i]; if (!x) return;
+        if (sel.value) staged.forEach(y => { if (y !== x && y.slot === sel.value) y.slot = ''; });   // one photo a slot
+        x.slot = sel.value; x.error = '';
+        uploads();
+    });
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('#lp-upload [data-lp-up]'); if (!btn || btn.tagName === 'SELECT') return;
+        const act = btn.dataset.lpUp;
+        if (act === 'save') saveUploads();
+        else if (act === 'clear') { staged.forEach(x => URL.revokeObjectURL(x.src)); staged = []; uploads(); }
+        else if (act === 'drop') { const x = staged[+btn.dataset.i]; if (x) { URL.revokeObjectURL(x.src); staged.splice(+btn.dataset.i, 1); uploads(); } }
+    });
     async function makeMissing() {
         if (!isAdmin() || bulk) return;
         await load(true);
-        const todo = cases().flatMap(slots).filter(s => !url(s.mc, s.kind));
+        const todo = cases().flatMap(slots).filter(s => !placed(s.mc, s.kind));
         if (!todo.length) { panel(); return; }
         if (!confirm(`Make ${todo.length} realistic photo${todo.length === 1 ? '' : 's'} with Gemini?\n\nIt takes about ${Math.max(1, Math.ceil(todo.length * 20 / 3 / 60))} minute(s); keep this page open. Google bills each photo to the Gemini key's project.`)) return;
         bulk = { stop: false, done: 0, failed: 0, total: todo.length, last: '' };
@@ -266,6 +365,6 @@
         if (box && 'IntersectionObserver' in window) new IntersectionObserver((es) => { if (es.some(e => e.isIntersecting) && isAdmin()) { if (!index) load(); panel(); } }).observe(box);
     }
 
-    window.lshLibraryPhotos = { load, url, slots, promptFor, adminBar, make, remove, makeMissing, stop: () => { if (bulk) bulk.stop = true; }, owner };
+    window.lshLibraryPhotos = { load, url, slots, promptFor, adminBar, make, remove, makeMissing, stop: () => { if (bulk) bulk.stop = true; }, owner, pickUploads };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
