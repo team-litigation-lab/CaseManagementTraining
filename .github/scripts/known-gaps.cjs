@@ -168,7 +168,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     if (ui.overlay || ui.confirm || ui.fns !== 'undefinedundefinedundefined' || ui.lockText || ui.overview) fail(`Lock / Unlock is still on the page: ${JSON.stringify(ui)}`);
     if (!ui.pause || !ui.cleanup || ui.vacuum) fail(`Access Control should have Pause and 🧹 Clear old data, and no vacuum: ${JSON.stringify(ui)}`);
     // Admin: the saved calls list and a call opened
-    await m.evaluate(() => { exitMasterControl && exitMasterControl(); openFrontDeskDrill(); }); await m.waitForTimeout(800);
+    await m.evaluate(() => { exitMasterControl && exitMasterControl(); openFrontDeskDrill(); fddResults(); }); await m.waitForTimeout(800);   // 📊 Results and saved calls, under the call lines
     const listA = await m.evaluate(() => { const p = document.getElementById('fdd-panel'); return { saved: /Saved calls/.test(p.textContent), name: /Tia Trainee/.test(p.textContent), view: p.querySelectorAll('.fdd-view').length }; });
     if (!listA.saved || !listA.name || listA.view !== 1) fail(`an Admin's Call Simulator has no saved calls list: ${JSON.stringify(listA)}`);
     else { await m.click('#fdd-panel .fdd-view'); await m.waitForTimeout(600); }
@@ -180,7 +180,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     await m.close();
     // a trainee: their own saved calls, and their trainer's note read only
     const t = await open({ username: 'tia', fullName: 'Tia Trainee', batchId: 'B300926', userType: 'Trainee' }, false);
-    await t.evaluate(() => openFrontDeskDrill()); await t.waitForTimeout(800);
+    await t.evaluate(() => { openFrontDeskDrill(); fddResults(); }); await t.waitForTimeout(800);
     const listT = await t.evaluate(() => { const p = document.getElementById('fdd-panel'); return { saved: /Saved calls/.test(p.textContent), view: p.querySelectorAll('.fdd-view').length }; });
     if (!listT.saved || listT.view !== 1) fail(`a trainee's Call Simulator has no saved calls: ${JSON.stringify(listT)}`);
     await t.evaluate(() => { fddClose(); openTraineeDashboard(); }); await t.waitForTimeout(800);

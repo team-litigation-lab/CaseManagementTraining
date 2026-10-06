@@ -549,7 +549,7 @@
             const data = await res.json();
             history = data && data.success ? data : { results: [], isAdmin: false };
         } catch (e) { history = { results: [], isAdmin: false, error: true }; }
-        if (screen === 'home' || screen === 'summary' || screen === 'line') paint();
+        if (screen === 'home' || screen === 'results' || screen === 'summary' || screen === 'line') paint();
         else if (screen === 'pcdebrief') { const h = $id('fdd-pc-hist'); if (h) h.innerHTML = historyHTML(); }
     }
     window.fddHome = function () { hangUp(); stopTimer(); D = null; endPractice(); screen = 'home'; document.body.classList.remove('fdd-on'); loadHistory(); paint(); };
@@ -561,14 +561,14 @@
         if (screen === 'line' && !LN) screen = 'home';
         const title = screen === 'call' ? `Call ${D.i + 1} of ${D.calls.length}` : screen === 'summary' ? 'Drill complete'
             : screen === 'practice' ? (P.pack && P.graded ? 'Graded call' : 'Practice call') : screen === 'pcwrap' ? 'Wrap up the call' : screen === 'pcdebrief' ? 'Call debrief' : screen === 'saved' ? 'Saved call'
-            : screen === 'line' ? esc(LN.line) : 'Call Simulator';
+            : screen === 'line' ? esc(LN.line) : screen === 'results' ? 'Results and saved calls' : 'Call Simulator';
         const t0 = screen === 'call' ? D.cur.t0 : screen === 'practice' ? P.t0 : null;
         const clock = screen === 'call' || screen === 'practice' ? `<span class="t" id="fdd-timer">${t0 ? fmtSec(Math.round((Date.now() - t0) / 1000)) : '0:00'}</span>` : '';
         const hide = ['call', 'practice', 'pcwrap'].includes(screen) ? `<button onclick="fddMinimize()" title="Hide to read the case">▭ Case</button>` : '';
         p.innerHTML = `<div class="fdd-h"><b>📞 ${title}</b>${clock}${hide}<button onclick="fddClose()">✕</button></div>
             <div class="fdd-b">${screen === 'call' ? callHTML() : screen === 'summary' ? summaryHTML() : screen === 'practice' ? practiceHTML()
                 : screen === 'pcwrap' ? (P.pack ? packWrapHTML() : pcWrapHTML()) : screen === 'pcdebrief' ? (P.pack ? packDebriefHTML() : pcDebriefHTML()) : screen === 'saved' ? savedCallHTML()
-                : screen === 'line' ? lineHTML() : homeHTML()}</div>`;
+                : screen === 'line' ? lineHTML() : screen === 'results' ? resultsHTML() : homeHTML()}</div>`;
         if (['call', 'practice', 'pcwrap'].includes(screen)) paintResults();
         if (screen === 'practice') { pcIdCard(); pcControls(); pcTr(); const box = $id('fdd-pc-in'); if (box) box.value = P.draft || ''; }
         if (screen === 'pcdebrief') paintSaved();
@@ -578,11 +578,16 @@
         if (b) b.disabled = !(cur && cur.selected && cur.auth && cur.action != null);
     }
 
-    // The home screen is the call lines, and nothing else: every program's calls, Practice and Graded. (The Core callers'
-    // practice call and the scored drill are no longer offered there; a call's debrief still shows the results.)
+    // The home screen is the call lines: every program's calls, Practice and Graded, and under them only the way to the
+    // results (My results, an Admin's team table, 🎧 Saved calls). The Core callers' practice call and the scored drill
+    // are no longer offered there.
     function homeHTML() {
-        return linesHomeHTML() || '<p style="color:#64748b;font-size:12px">The call lines aren\'t available.</p>';
+        return (linesHomeHTML() || '<p style="color:#64748b;font-size:12px">The call lines aren\'t available.</p>')
+            + '<button class="fdd-go" style="background:#475569" onclick="fddResults()">📊 Results and saved calls</button>';
     }
+    // The results on a screen of their own (a call's debrief shows them too).
+    window.fddResults = function () { hangUp(); stopTimer(); D = null; endPractice(); screen = 'results'; document.body.classList.remove('fdd-on'); loadHistory(); paint(); };
+    const resultsHTML = () => `${historyHTML()}<button class="fdd-go" onclick="fddHome()">← Call lines</button>`;
 
     window.fddDrillSet = function (v) { drillSet = parseInt(v, 10) || 0; };
     // The Core callers at the level picked, each with the start of what they call about and your best score on them.
@@ -648,7 +653,7 @@
         } catch (e) { SAVED = { id, error: e.message || 'Couldn\'t load that call.' }; }
         if (screen === 'saved') { paint(); const b = $id('fdd-panel').querySelector('.fdd-b'); if (b) b.scrollTop = 0; }
     };
-    window.fddSavedBack = function () { SAVED = null; screen = 'home'; paint(); };
+    window.fddSavedBack = function () { SAVED = null; screen = 'results'; paint(); };
     function savedCallHTML() {
         const back = `<button class="fdd-go" onclick="fddSavedBack()">← Back to the results</button>`;
         if (!SAVED || SAVED.loading) return `<p style="color:#64748b;font-size:12px">Loading the call…</p>${back}`;
@@ -907,7 +912,7 @@
             <div class="fdd-sec"><h4>Call by call</h4><table class="fdd-tbl"><thead><tr><th>Call</th><th>Find</th><th>Auth</th><th>IDs</th><th>Handle</th><th>Time</th><th>Score</th></tr></thead><tbody>
             ${D.results.map(r => `<tr><td>${esc(r.id)} · ${esc(r.mock || 'new')}</td><td>${r.find ? '✓' : '✗'}</td><td>${r.authOk ? '✓' : '✗'}</td><td>${r.idsOk ? '✓' : '✗'}</td><td>${r.actOk ? '✓' : '✗'}</td><td>${fmtSec(r.secs)}</td><td><b>${r.score}</b></td></tr>`).join('')}</tbody></table></div>
             <button class="fdd-go alt" onclick="fddStart()">▶ Another drill</button>
-            <button class="fdd-go" onclick="fddHome()">My results</button>`;
+            <button class="fdd-go" onclick="fddResults()">My results</button>`;
     }
 
     /* ---------- practice calls (no script) ---------- */
@@ -1688,7 +1693,7 @@ Reply with exactly this JSON:
                 <div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div>${l.note ? `<p style="margin:6px 0 0;font-size:12px"><b>Your note:</b> ${esc(l.note)}</p>` : ''}</details>
             ${coreNext(c) ? `<button class="fdd-go alt" onclick="fddPracticeStart('${esc(coreNext(c).id)}')">📞 Next caller: ${esc(coreNext(c).id)}</button>` : ''}
             <button class="fdd-go" style="background:#475569" onclick="fddPracticeStart('${esc(c.id)}')">↻ Take this call again</button>
-            <button class="fdd-go" onclick="fddHome()">My results</button>
+            <button class="fdd-go" onclick="fddResults()">My results</button>
             <div id="fdd-pc-hist" style="margin-top:10px">${historyHTML()}</div>`;
     }
 

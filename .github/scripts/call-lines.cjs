@@ -8,7 +8,8 @@
 //   numbered graded calls first (no caller named, in an order of their own, the same each time), then its practice calls;
 // - it opens on the Cases System: Master Control and My Dashboard step aside, and an Admin who signs in on a ?calls=1
 //   link stays on the Call Simulator (Master Control doesn't open over it);
-// - the home screen: the call lines only (no Core callers, scored drill, directory or results), with ☎ Reception, 🗓 Calendar
+// - the home screen: the call lines only (no Core callers, scored drill or directory) and the button to 📊 Results and saved
+//   calls (on a screen of their own), with ☎ Reception, 🗓 Calendar
 //   Management and 📋 Intake Mock Calls buttons; the scored drill in fixed sets of 8; and the call lines with Practice and
 //   Graded on each line, picked in the Calls dropdown by program and across them;
 // - a practice call (FT Calendar Management, about MC-05): the brief has the caller, the goals and the file; the caller
@@ -137,10 +138,11 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     const home = await page.evaluate(() => ({ title: document.querySelector('#fdd-panel .fdd-h b').textContent,
         secs: [...document.querySelectorAll('#fdd-panel .fdd-b > .fdd-sec, #fdd-panel .fdd-b > details, #fdd-panel .fdd-b > label, #fdd-panel .fdd-b > p')].map(e => (e.querySelector('h4') || e).textContent.trim().slice(0, 40)),
         gone: ['#fdd-core-calls', '#fdd-set', '#fdd-live', '.fdd-ftl', '#fdd-rf-line', '.fdd-tbl'].filter(q => document.querySelector('#fdd-panel ' + q)),
+        results: [...document.querySelectorAll('#fdd-panel .fdd-b > button')].map(b => b.textContent.trim()),
         tabs: [...document.querySelectorAll('#fdd-calls-view option')].map(o => o.textContent.trim()),
         lines: [...document.querySelectorAll('.fdd-line')].map(r => [r.querySelector('.nm').childNodes[0].textContent.trim(), [...r.querySelectorAll('button')].map(b => b.textContent).join('|')]) }));
     if (!/Call Simulator/.test(home.title)) fail(`the panel is titled "${home.title}"`);
-    if (home.secs.length !== 1 || !/Call lines/.test(home.secs[0]) || home.gone.length) fail(`the home screen should be the call lines only: ${JSON.stringify({ secs: home.secs, gone: home.gone })}`);
+    if (home.secs.length !== 1 || !/Call lines/.test(home.secs[0]) || home.gone.length || home.results.join() !== '📊 Results and saved calls') fail(`the home screen should be the call lines only, with the way to the results: ${JSON.stringify({ secs: home.secs, gone: home.gone, buttons: home.results })}`);
     if (home.tabs.length !== 7 || !home.tabs.includes('🧑‍💼 EA / PA') || !home.tabs.includes('📋 Intake') || !home.tabs.includes('📘 Standard Training')) fail(`the Calls dropdown: ${home.tabs.join(', ')}`);
     if (home.lines.length !== 3 || home.lines.some(l => l[1] !== 'Practice|Graded')) fail(`the Standard tab's lines don't each have Practice and Graded: ${JSON.stringify(home.lines)}`);
     await page.selectOption('#fdd-calls-view', 'EA');
@@ -274,6 +276,13 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     await page.click('#fdd-pc-hist .fdd-view >> nth=1');
     await page.waitForSelector('.fdd-goals', { timeout: 5000 }).catch(() => fail('a saved line call doesn\'t open with its goals'));
     if (!/KAREN HOLT:/.test(await page.textContent('.fdd-saved-tx'))) fail('a saved line call doesn\'t show its transcript');
+    // 📊 Results and saved calls: the same list on its own screen; ← Back from a saved call returns there
+    await page.evaluate(() => fddResults()); await page.waitForTimeout(400);
+    const own = await page.evaluate(() => ({ title: document.querySelector('#fdd-panel .fdd-h b').textContent, views: document.querySelectorAll('#fdd-panel .fdd-view').length, lines: !!document.querySelector('.fdd-line') }));
+    if (!/Results and saved calls/.test(own.title) || own.views !== 3 || own.lines) fail(`📊 Results and saved calls doesn't show the results on their own screen: ${JSON.stringify(own)}`);
+    await page.click('#fdd-panel .fdd-view >> nth=1'); await page.waitForSelector('.fdd-goals', { timeout: 5000 }).catch(() => {});
+    await page.evaluate(() => fddSavedBack()); await page.waitForTimeout(200);
+    if (!/Results and saved calls/.test(await page.textContent('#fdd-panel .fdd-h b'))) fail('← Back from a saved call doesn\'t return to the results');
     // your best on each call: a line's practice call, a graded call (only as graded)
     const best = (sel) => page.evaluate((q) => { const r = document.querySelector(q); return r ? ((r.querySelector('.fdd-best') || {}).textContent || '') : null; }, sel);
     await page.evaluate(() => fddOpenLine('FT', 'Calendar Management Mock Calls'));

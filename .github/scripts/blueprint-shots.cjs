@@ -134,7 +134,8 @@ const SHOTS = {
     'trainer-library': { who: ADMIN, go: async (p) => { await p.evaluate(() => openTrainingLibrary()); } },
     'trainer-case-header': { who: ADMIN, go: caseTab('MC-01', 'profile'), clip: { x: 280, y: 0, width: 1000, height: 560 } },
     'trainer-caller-scenarios': { who: ADMIN, go: async (p) => { await caseTab('MC-01', 'profile')(p); await p.evaluate(() => openCallsPanel()); } },
-    'trainer-reception': { who: ADMIN, go: async (p) => { await p.evaluate(() => openFrontDeskDrill()); await p.waitForTimeout(600); await p.evaluate(() => fddOpenLine('FT', 'Reception Mock Calls', true)); } },
+    'trainer-reception': { who: ADMIN, go: async (p) => { await p.evaluate(() => { openFrontDeskDrill(); fddResults(); }); await p.waitForTimeout(600);
+        await p.evaluate(() => { const h = [...document.querySelectorAll('#fdd-panel h4')].find(e => /Team results/.test(e.textContent)); if (h) h.scrollIntoView({ block: 'start' }); }); } },
     'trainer-roster': { who: ADMIN, go: async (p) => { await p.evaluate(() => openTraineeDashboard()); } },
     'trainer-case-library': { who: ADMIN, go: async (p) => { await p.evaluate(() => openCaseLibrary()); await p.fill('#cl-search', 'garcia'); } },
     'trainer-intake-folder': { who: ADMIN, go: async (p) => { await p.evaluate(() => openIntakeFolder()); } },
