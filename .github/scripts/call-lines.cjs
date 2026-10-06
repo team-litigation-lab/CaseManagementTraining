@@ -17,7 +17,8 @@
 //   line's AI budget; the wrap-up has the file and the line's note; the debrief is graded on the call's goals with the
 //   file and the note, and the call is saved as a line call with its course; it's scored on the firm's Calendar Management
 //   scorecard (FT Day 6's sheet: each metric rated 0-5 with feedback, then the weighted average; the call's score is it as a %),
-//   kept with the call and shown again when the saved call opens; no other line has a scorecard;
+//   kept with the call and shown again when the saved call opens; no other line has a scorecard; what the trainee booked on the
+//   CMS calendar during the call is kept with it (🗓 Calendar output);
 // - a graded call you place (EA/PA Executive Calls): they pick up and speak first; the goals aren't shown before the
 //   call; the note is required; saved as graded; the next one is the next number; a graded call you answer shows an
 //   unknown caller;
@@ -107,6 +108,12 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
         }
         if (u.pathname === '/api/drill-results' && u.searchParams.get('id')) { const r = results.find(x => String(x.id) === u.searchParams.get('id')); return r ? j({ success: true, result: r }) : j({ success: false, error: 'not found' }, 404); }
         if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: false, results });
+        if (u.pathname === '/api/calendar' && u.searchParams.get('list') === 'mine') {
+            const now = new Date().toISOString().slice(0, 19).replace('T', ' ');   // (D1's datetime('now'): UTC, no zone)
+            return j({ success: true, events: [
+                { id: 'old', calendar: 'attorney', title: 'Booked last week', type: 'Client Meeting', date: '2026-09-28', start: '09:00', end: '09:30', createdAt: '2026-09-20 10:00:00', updatedAt: '2026-09-20 10:00:00' },
+                { id: 'new', calendar: 'attorney', title: 'Deposition move request – Linda Garcia', type: 'Phone Call', date: '2026-10-06', start: '10:00', end: '10:15', location: 'Phone', caseLabel: 'MC-05 · Linda Garcia', notes: 'Karen Holt asks for 10/13; priority message to Janelle Price (221).', invite: [{ name: 'Janelle Price' }], createdAt: now, updatedAt: now }] });
+        }
         if (u.pathname === '/api/call-ai') {
             const b = JSON.parse(route.request().postData());
             if (b.purpose === 'review') {
@@ -217,6 +224,7 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     await page.waitForTimeout(300);
     const s1 = saved[saved.length - 1], d1 = s1 && s1.details[0];
     if (!d1 || !d1.scorecard || d1.scorecard.average !== 4.1 || d1.scorecard.rows.length !== 7 || d1.score !== 83) fail('the practice call was saved without its scorecard');
+    if (!d1 || !Array.isArray(d1.calendar) || d1.calendar.length !== 1 || d1.calendar[0].title !== 'Deposition move request – Linda Garcia' || d1.calendar[0].invite[0] !== 'Janelle Price') fail(`the call wasn't saved with what was booked on the calendar during it (and only that): ${JSON.stringify(d1 && d1.calendar)}`);
     if (!s1 || s1.mode !== 'line' || s1.program !== 'FT' || s1.score !== 83 || s1.findPct !== 100 || !d1.pack || d1.id !== 'ft_cal_depo' || d1.line !== 'Calendar Management Mock Calls' || d1.course.lesson !== 5 || !/Garcia deposition/.test(d1.note) || !/KAREN HOLT:/.test(d1.transcript)) fail(`the practice call wasn't saved as a line call: ${JSON.stringify(s1 && { mode: s1.mode, program: s1.program, score: s1.score, d: d1 && { id: d1.id, line: d1.line, course: d1.course } })}`);
 
     // 4. a graded call you place: Elias, the Friday 4:00 PM call (EA / PA Executive Calls)
@@ -307,6 +315,9 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     if (!/KAREN HOLT:/.test(await page.textContent('.fdd-saved-tx'))) fail('a saved line call doesn\'t show its transcript');
     const ssc = await sheetOf();
     if (!ssc || ssc.rows.length !== 8 || ssc.rows[7].join('|') !== 'WEIGHTED AVERAGE|4.1|out of 5 · 83%') fail(`a saved Calendar Management call doesn't show its scorecard: ${JSON.stringify(ssc)}`);
+    const out1 = await page.evaluate(() => { const h = [...document.querySelectorAll('.fdd-b h4')].find(x => /Calendar output/.test(x.textContent)); return h ? h.parentElement.innerText : ''; });
+    if (!/Deposition move request – Linda Garcia/.test(out1) || !/10:00 AM–10:15 AM ET · Attorney's Calendar · Phone Call/.test(out1) || !/Garcia deposition, defense asks/.test(out1) || /Open .*calendar/.test(out1)) fail(`a saved call's calendar output is wrong (or a trainee gets the trainer's button): ${out1}`);
+    if (await page.$('.fdd-sc-edit')) fail('a trainee can change the scorecard');
     // 📊 Results and saved calls: the same list on its own screen; ← Back from a saved call returns there
     await page.evaluate(() => fddResults()); await page.waitForTimeout(400);
     const own = await page.evaluate(() => ({ title: document.querySelector('#fdd-panel .fdd-h b').textContent, views: document.querySelectorAll('#fdd-panel .fdd-view').length, lines: !!document.querySelector('.fdd-line') }));
@@ -342,7 +353,62 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     if (!signedIn.panel || signedIn.mc) fail(`an Admin signing in on a ?calls=1 link: ${JSON.stringify(signedIn)} (the Call Simulator should stay open, without Master Control over the case)`);
     await p2.close();
 
+    // 7. a trainer opens a trainee's Calendar Management call: scores it on the same sheet (from the automated scores), sees the
+    //    trainee's calendar output and opens their calendar; the trainee then reads the trainer's scorecard with the call
+    const p3 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    p3.on('pageerror', e => fail(`page error (trainer): ${e.message}`));
+    if (process.env.TAILWIND_JS) await p3.route('https://cdn.tailwindcss.com/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(process.env.TAILWIND_JS, 'utf8') }));
+    const scored = [], calReqs = [];
+    const savedRow = results.find(r => r.id === 6);
+    await p3.route('**/api/**', route => {
+        const u = new URL(route.request().url()), m = route.request().method(), j = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+        if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
+        if (u.pathname === '/api/drill-results' && m === 'POST') {
+            const b = JSON.parse(route.request().postData()); scored.push(b);
+            const rows = K.scorecardOf(depo).metrics.map((x, i) => ({ metric: x.name, weight: 1, score: b.rows[i].score, feedback: b.rows[i].feedback })), avg = rows.reduce((a, r) => a + r.score, 0) / 7;
+            return j({ success: true, trainer: { title: 'CALENDAR MANAGEMENT MOCK CALL', outOf: 5, rows, average: Math.round(avg * 10) / 10, pct: Math.round(avg / 5 * 100), by: 'Tina Trainer', at: '2026-10-06T15:00:00.000Z' } });
+        }
+        if (u.pathname === '/api/drill-results' && u.searchParams.get('id')) return j({ success: true, result: savedRow });
+        if (u.pathname === '/api/drill-results') return j({ success: true, isAdmin: true, results: results.map(r => Object.assign({}, r, { details: undefined })) });
+        if (u.pathname === '/api/calendar') { calReqs.push(u.search); return j({ success: true, events: [], today: '2026-10-06', synced: {}, me: { username: 'boss', name: 'Tina Trainer', admin: true } }); }
+        if (u.pathname === '/api/live-call') return j({ success: false });
+        return j({ success: true });
+    });
+    await p3.addInitScript(() => {
+        sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'boss', fullName: 'Tina Trainer', batchId: 'B1', userType: 'Admin' }));
+        localStorage.setItem('LSH_FDD_LIVE_V1', 'off');
+    });
+    await p3.goto(base + '?calls=1', { waitUntil: 'load' }); await p3.waitForTimeout(800);
+    await p3.evaluate(() => fddResults()); await p3.waitForTimeout(400);
+    await p3.evaluate(() => fddSavedCall(6));
+    await p3.waitForSelector('.fdd-sc-edit', { timeout: 5000 }).catch(() => fail('a trainer opening a Calendar Management call can\'t score it'));
+    const ed = await p3.evaluate(() => ({ cap: (document.querySelector('.fdd-sc-edit .fdd-sc-cap') || {}).textContent || '', vals: [...document.querySelectorAll('.fdd-sc-edit select')].map(x => x.value).join(),
+        fb: [...document.querySelectorAll('.fdd-sc-edit textarea')].map(x => x.value), auto: !!document.querySelector('.fdd-sc-wrap:not(.fdd-sc-edit) .fdd-sc-cap') }));
+    if (!/Your scorecard for this call/.test(ed.cap) || ed.vals !== '5,4,4,3,4,5,4' || ed.fb[0] !== 'Feedback on Professional Introduction & Call Control.' || !ed.auto) fail(`the trainer's scorecard doesn't start from the automated one: ${JSON.stringify(ed)}`);
+    await p3.selectOption('.fdd-sc-edit select[data-i="3"]', '5');
+    if (await p3.textContent('#fdd-sc-avg') !== '4.4' || !/89%/.test(await p3.textContent('#fdd-sc-pct'))) fail(`the trainer's weighted average doesn't follow the scores: ${await p3.textContent('#fdd-sc-avg')}`);
+    await p3.fill('.fdd-sc-edit textarea[data-i="3"]', 'Offered only real slots.');
+    await p3.click('.fdd-sc-edit button:has-text("Save my scorecard")'); await p3.waitForTimeout(500);
+    const sv = scored[0] || {};
+    if (sv.action !== 'trainer-scorecard' || sv.id !== 6 || !Array.isArray(sv.rows) || sv.rows.map(r => r.score).join() !== '5,4,4,5,4,5,4' || sv.rows[3].feedback !== 'Offered only real slots.') fail(`the trainer's scorecard wasn't sent: ${JSON.stringify(sv)}`);
+    if (!/Trainer's scorecard · Tina Trainer/.test(await p3.textContent('.fdd-sc-edit .fdd-sc-cap')) || !/Saved/.test(await p3.textContent('#fdd-sc-msg'))) fail('the trainer\'s saved scorecard isn\'t shown as saved');
+    const out3 = await p3.evaluate(() => { const h = [...document.querySelectorAll('.fdd-b h4')].find(x => /Calendar output/.test(x.textContent)); return h ? h.parentElement.innerText : ''; });
+    if (!/Deposition move request – Linda Garcia/.test(out3) || !/Open CI Trainee's calendar/.test(out3)) fail(`the trainer doesn't see the trainee's calendar output with a way to open their calendar: ${out3}`);
+    await p3.click('button:has-text("Open CI Trainee\'s calendar")'); await p3.waitForTimeout(900);
+    const calOpen = await p3.evaluate(() => ({ chip: (document.querySelector('[data-fc="user"]') || {}).textContent || '', mini: (document.getElementById('fdd-mini') || {}).textContent || '', panel: document.getElementById('fdd-panel').classList.contains('open') }));
+    if (!calReqs.some(q => /scope=all/.test(q) && /user=ci(&|$)/.test(q) && /from=2026-10-05/.test(q)) || !/CI Trainee's calendar/.test(calOpen.chip) || calOpen.panel || !/Back to the saved call/.test(calOpen.mini)) fail(`opening the trainee's calendar: ${JSON.stringify({ calReqs, calOpen })}`);
+    await p3.evaluate(() => fddRestore());
+    if (!/Back to the call/.test(await p3.textContent('#fdd-mini'))) fail('the panel\'s mini button doesn\'t go back to its own words');
+    await p3.close();
+    // the trainee reads the trainer's scorecard (above the automated one), and can't change it
+    const scoredDetails = JSON.parse(savedRow.details); scoredDetails[0].trainer = { title: 'CALENDAR MANAGEMENT MOCK CALL', outOf: 5, rows: K.scorecardOf(depo).metrics.map((x, i) => ({ metric: x.name, weight: 1, score: [5, 4, 4, 5, 4, 5, 4][i], feedback: i === 3 ? 'Offered only real slots.' : '' })), average: 4.4, pct: 89, by: 'Tina Trainer', at: '2026-10-06T15:00:00.000Z' };
+    savedRow.details = JSON.stringify(scoredDetails); savedRow.trainer_pct = 89;
+    await page.evaluate(() => fddSavedCall(6)); await page.waitForSelector('.fdd-sc-trainer', { timeout: 5000 }).catch(() => {});
+    const tv = await page.evaluate(() => ({ caps: [...document.querySelectorAll('.fdd-sc-cap')].map(x => x.textContent), edit: !!document.querySelector('.fdd-sc-edit'), txt: (document.querySelector('.fdd-sc-trainer') || {}).innerText || '' }));
+    if (tv.edit || tv.caps.length !== 2 || !/Trainer's scorecard · Tina Trainer · 2026-10-06/.test(tv.caps[0]) || !/Automated scorecard/.test(tv.caps[1]) || !/Offered only real slots\./.test(tv.txt) || !/WEIGHTED AVERAGE\s*4\.4\s*out of 5 · 89%/.test(tv.txt)) fail(`the trainee doesn't read the trainer's scorecard with the call: ${JSON.stringify(tv)}`);
+    await page.evaluate(() => fddResults()); await page.waitForTimeout(300);
+
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log(`Call lines test passed (${K.CALLS.length} calls on ${K.LINES.length} lines; links, Practice and Graded, the caller's opening, the debrief on the goals, the Calendar Management scorecard, saved line calls).`);
+    console.log(`Call lines test passed (${K.CALLS.length} calls on ${K.LINES.length} lines; links, Practice and Graded, the caller's opening, the debrief on the goals, the Calendar Management scorecard, the trainer's scorecard and the calendar output, saved line calls).`);
 })().catch(e => { console.error(e); process.exit(1); });

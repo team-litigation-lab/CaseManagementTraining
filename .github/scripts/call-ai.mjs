@@ -7,7 +7,7 @@
 //   - the endpoint: sign-in required, the per-user rate limit, bad bodies, the review's
 //     JSON mode, and the Admin status check;
 //   - results are saved as 'practice' or 'drill', including in a table made before the
-//     mode column existed.
+//     mode column existed; a trainer's scorecard on a call graded on one (Admin only).
 // Usage: node .github/scripts/call-ai.mjs   (from the repository root; Node 22.13+ for node:sqlite)
 import path from 'path';
 import { pathToFileURL } from 'url';
@@ -167,6 +167,28 @@ const team = await (await results.onRequestGet({ request: new Request('https://c
 const teamGraded = (team.results || []).find(r => r.mode === 'graded');
 check(team.isAdmin && teamGraded && teamGraded.line === 'Executive Calls' && teamGraded.call_id === 'ea_ex_friday' && teamGraded.details === undefined, `an Admin's list doesn't name a graded call's line and call (or carries its details): ${JSON.stringify(teamGraded)}`);
 check(lineRow && lineRow.call_id === 'ft_cal_depo' && (lines.results || []).every(r => r.mode !== 'drill' || r.call_id == null), 'a line call doesn\'t say which call it was, or a drill has a call');
+
+// 7b. a call graded on a scorecard (FT Calendar Management): a trainer scores it too, on the same metrics (0-5 each, with
+//     feedback); the trainee reads it with the call; the lists give the trainer's %; the call's own score stays the automated one
+{
+    const card = { title: 'CALENDAR MANAGEMENT MOCK CALL', outOf: 5, average: 3, pct: 60, rows: ['A', 'B', 'C'].map(m => ({ metric: m, weight: 1, score: 3, feedback: 'auto' })) };
+    [st] = await saveResult({ mode: 'line', program: 'FT', calls: 1, score: 60, details: [{ pack: true, id: 'ft_cal_prep', line: 'Calendar Management Mock Calls', title: 'Prep', scorecard: card, calendar: [{ title: 'Prep – Linda Garcia', date: '2026-10-02' }] }] });
+    const list = async (u, type) => (await (await results.onRequestGet({ request: new Request('https://cms.test/api/drill-results', { headers: { cookie: 'lsh_session=' + await tok(u, type) } }), env })).json()).results || [];
+    const row = (await list('amy')).find(r => r.call_id === 'ft_cal_prep'), lineOnly = (await list('amy')).find(r => r.call_id === 'ft_cal_depo');
+    const score = async (body, u = 'boss', type = 'Admin') => { const r = await results.onRequestPost({ request: new Request('https://cms.test/api/drill-results', { method: 'POST', headers: { cookie: 'lsh_session=' + await tok(u, type), 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ action: 'trainer-scorecard' }, body)) }), env }); return [r.status, await r.json()]; };
+    const rows = [{ score: 5, feedback: 'Great opening' }, { score: 4, feedback: '' }, { score: 3, feedback: 'Read it back' }];
+    [st] = await score({ id: row.id, rows }, 'amy', 'Trainee'); check(st === 403, `a trainee scored a call (${st})`);
+    [st] = await score({ id: row.id, rows: rows.slice(1) }); check(st === 400, `a trainer's scorecard missing a metric was taken (${st})`);
+    [st] = await score({ id: row.id, rows: [{ score: 6 }, rows[1], rows[2]] }); check(st === 400, `a score of 6 was taken (${st})`);
+    [st] = await score({ id: lineOnly.id, rows }); check(st === 404, `a call without a scorecard was scored (${st})`);
+    let tr; [st, tr] = await score({ id: row.id, rows });
+    check(st === 200 && tr.trainer && tr.trainer.average === 4 && tr.trainer.pct === 80 && tr.trainer.by === 'boss' && tr.trainer.rows[0].metric === 'A' && tr.trainer.rows[2].feedback === 'Read it back', `the trainer's scorecard came back wrong: ${st} ${JSON.stringify(tr)}`);
+    const one = await (await results.onRequestGet({ request: new Request('https://cms.test/api/drill-results?id=' + row.id, { headers: { cookie: 'lsh_session=' + await tok('amy') } }), env })).json();
+    const d = JSON.parse(one.result.details)[0];
+    check(d.trainer && d.trainer.pct === 80 && d.scorecard.pct === 60 && d.calendar[0].title === 'Prep – Linda Garcia' && one.result.score === 60, `the trainee's call doesn't carry the trainer's scorecard beside the automated one: ${JSON.stringify(d)}`);
+    const after = (await list('amy')).find(r => r.call_id === 'ft_cal_prep'), teamRow = (await list('boss', 'Admin')).find(r => r.call_id === 'ft_cal_prep');
+    check(after.trainer_pct === 80 && teamRow.trainer_pct === 80 && lineOnly.trainer_pct == null, `the lists don't give the trainer's %: ${JSON.stringify({ after: after.trainer_pct, team: teamRow.trainer_pct })}`);
+}
 
 // 8. a graded call counts in the trainee's course: it's sent to the Portal (/api/call-results, the gateway's secret) with the
 //    trainee's name and batch and the call; practice calls aren't; the Portal down still saves the call here

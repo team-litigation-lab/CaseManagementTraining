@@ -102,6 +102,7 @@
     let S = {
         open: false, view: 'week', anchor: null, data: null, loadedKey: '', loading: false, error: '',
         hidden: {}, showDeadlines: true, weekends: false, scope: 'mine',
+        user: null,       // Admins: one trainee's calendar ({ username, name }: their appointments only, from the Call Simulator)
         colorBy: (() => { try { return localStorage.getItem(COLOR_KEY) === 'type' ? 'type' : 'calendar'; } catch (e) { return 'calendar'; } })(),   // the Firm Calendar's colors
         panel: null,      // {kind:'form', form} | {kind:'detail', ev} | {kind:'subscribe'} | null
         feedPick: null,   // Sync: the calendars the subscribe link covers (null: all)
@@ -175,11 +176,11 @@
     }
     async function load(force) {
         const [from, to] = range();
-        const key = `${from}|${to}|${S.scope}`;
+        const key = `${from}|${to}|${S.scope}|${S.user ? S.user.username : ''}`;
         if (!force && S.loadedKey === key && S.data) { render(); loadGoogleEvents(false); return; }
         S.loading = true; S.error = ''; renderStatus();
         try {
-            const res = await fetch(`/api/calendar?from=${from}&to=${to}${S.scope === 'all' ? '&scope=all' : ''}`, { credentials: 'include' });
+            const res = await fetch(`/api/calendar?from=${from}&to=${to}${S.scope === 'all' ? '&scope=all' : ''}${S.scope === 'all' && S.user ? '&user=' + encodeURIComponent(S.user.username) : ''}`, { credentials: 'include' });
             const data = await res.json();
             if (!data || !data.success) throw new Error((data && data.error) || 'Could not load the calendar.');
             S.data = data; S.loadedKey = key; S.lastSync = new Date(); S.dayCache = {};
@@ -585,7 +586,8 @@
             <div class="fc-title">${esc(title())}</div>
             ${['week', 'month', 'agenda'].map(v => `<button class="fc-btn ${S.view === v ? 'on' : ''}" onclick="fcView('${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}
             ${S.view === 'week' ? `<button class="fc-btn" onclick="fcWeekends()">${S.weekends ? 'Hide' : 'Show'} weekend</button>` : ''}
-            ${admin ? `<button class="fc-btn ${S.scope === 'all' ? 'on' : ''}" onclick="fcScope()" title="Admins: show the events every trainee scheduled">👥 All trainees</button>` : ''}
+            ${admin && S.user ? `<span class="fc-btn on" data-fc="user" title="Only this trainee's appointments (and the attorney's schedule)">👤 ${esc(S.user.name || S.user.username)}'s calendar <a href="#" onclick="fcScope(); return false" style="margin-left:4px;color:inherit;text-decoration:none" aria-label="Back to your calendar">✕</a></span>`
+                : admin ? `<button class="fc-btn ${S.scope === 'all' ? 'on' : ''}" onclick="fcScope()" title="Admins: show the events every trainee scheduled">👥 All trainees</button>` : ''}
             ${admin ? `<button class="fc-btn" data-fc="mode" onclick="fcMode('${attyMode() ? 'firm' : 'attorney'}')">${attyMode() ? '📅 Firm Calendar' : '🗓 Attorney\'s Calendar'}</button>` : ''}
             <span id="fc-live" class="fc-live"></span>
             <div style="margin-left:auto;display:flex;gap:8px">
@@ -911,7 +913,7 @@
     window.fcView = function (v) { S.view = v; S._scrolled = false; render(); load(); };
     window.fcGoWeek = function (d) { S.view = 'week'; S.anchor = d; S._scrolled = false; render(); load(); };
     window.fcWeekends = function () { S.weekends = !S.weekends; render(); };
-    window.fcScope = function () { S.scope = S.scope === 'all' ? 'mine' : 'all'; load(true); };
+    window.fcScope = function () { S.scope = S.scope === 'all' || S.user ? 'mine' : 'all'; S.user = null; render(); load(true); };
     window.fcLayer = function (id) { S.hidden[id] = !S.hidden[id]; render(); if (id === 'google') loadGoogleEvents(false); };
     window.fcDeadlines = function () { S.showDeadlines = !S.showDeadlines; render(); };
     window.fcColorBy = function (by) { S.colorChosen = true; S.colorBy = by === 'type' ? 'type' : 'calendar'; try { localStorage.setItem(COLOR_KEY, S.colorBy); } catch (e) {} render(); };
@@ -925,7 +927,12 @@
         if (S.mode !== mode) { S.mode = mode; S.panel = null; S.feedPick = null; S._scrolled = false; }
     }
     window.fcMode = function (m) { setMode(m); if (S.open) { render(); load(true); } };
-    window.openAttorneyCalendar = function () {
+    // opts.user (Admins): open one trainee's calendar ({ username, name }), on opts.date's week.
+    window.openAttorneyCalendar = function (opts) {
+        const sess = typeof getSession === 'function' ? getSession() : null;   // (before the first load there's no S.data.me; the server checks it anyway)
+        const admin = me().admin || (!S.data && !!sess && sess.userType === 'Admin' && !(window.isTraineeView && window.isTraineeView()));
+        if (opts && opts.user && admin) { S.scope = 'all'; S.user = { username: String(opts.user.username || ''), name: String(opts.user.name || '') }; }
+        if (opts && /^\d{4}-\d{2}-\d{2}$/.test(opts.date || '')) { S.anchor = opts.date; S.view = 'week'; S._scrolled = false; }
         pendingMode = 'attorney';
         if (S.open) { pendingMode = null; window.fcMode('attorney'); return; }
         window.openFirmCalendar();

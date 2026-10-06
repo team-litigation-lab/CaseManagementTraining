@@ -270,6 +270,12 @@
     .fdd-sc tbody tr:nth-child(odd){background:#eaf4d7}.fdd-sc tbody tr:nth-child(even){background:#fff}
     .fdd-sc td.n{color:#1f2d10}.fdd-sc td.fb{font-family:'Inter',system-ui,sans-serif;font-weight:500;font-size:11.3px;color:#334155}
     .fdd-sc tr.avg td{background:#eaf4d7;border-top:2px solid #63a537}
+    .fdd-sc-cap{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#475569;padding:8px 10px 6px}
+    .fdd-sc-edit select{width:44px;font:inherit;font-weight:800;padding:2px;border:1px solid #9cb98a;border-radius:4px;background:#fff;color:#1f2d10}
+    .fdd-sc-edit textarea{width:100%;box-sizing:border-box;font:500 11.3px/1.35 'Inter',system-ui,sans-serif;color:#334155;border:1px solid #cbd5e1;border-radius:4px;padding:3px 5px;resize:vertical;min-height:34px}
+    .fdd-sc-trainer .fdd-sc-cap,.fdd-sc-edit .fdd-sc-cap{color:#0f2148}
+    .fdd-cal-out{list-style:none;margin:0;padding:0}.fdd-cal-out li{border:1px solid #e2e8f0;border-left:3px solid #c2410c;border-radius:6px;padding:6px 9px;margin:0 0 6px;font-size:12px;line-height:1.4}
+    .fdd-cal-out li span{display:block;color:#475569;font-size:11.5px}.fdd-cal-out li small{display:block;color:#64748b;font-size:11px;white-space:pre-wrap;margin-top:2px}
     .fdd-goals{list-style:none;margin:0;padding:0}
     .fdd-goals li{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12.3px;line-height:1.4}
     .fdd-goals li span{font-weight:900;width:16px;flex-shrink:0}.fdd-goals li span.ok{color:#047857}.fdd-goals li span.no{color:#b45309}
@@ -361,7 +367,7 @@
     // Hide the panel to read the case behind it; the floating button brings it back. (On a wide screen the
     // case moves over while the panel is open, so both are in view: body.fdd-open, fitCase.)
     window.fddMinimize = function () { $id('fdd-panel').classList.remove('open'); document.body.classList.remove('fdd-open'); fitCase(); $id('fdd-mini').style.display = 'block'; };
-    window.fddRestore = function () { $id('fdd-panel').classList.add('open'); document.body.classList.add('fdd-open'); fitCase(); $id('fdd-mini').style.display = 'none'; };
+    window.fddRestore = function () { $id('fdd-panel').classList.add('open'); document.body.classList.add('fdd-open'); fitCase(); $id('fdd-mini').style.display = 'none'; $id('fdd-mini').textContent = '📞 Back to the call'; };
     // While the panel is open (body.fdd-open) the case moves over beside it on a wide screen, the sidebar stepping
     // aside and the case shown a little smaller when there isn't room (case-fit.js); hiding or closing the panel
     // puts it all back.
@@ -646,7 +652,7 @@
         const calls = rows.filter(r => r.mode === 'practice' || isLineRow(r)).slice(0, team ? 40 : 15);
         if (!calls.length) return '';
         return `<div class="fdd-sec"><h4>🎧 Saved calls</h4><table class="fdd-tbl"><thead><tr><th>Date</th>${team ? '<th>Trainee</th>' : ''}<th>Call</th><th>Score</th><th></th></tr></thead><tbody>
-            ${calls.map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td>${team ? `<td><b>${esc(r.full_name || r.username)}</b><br><span style="color:#64748b">${esc(r.batch_id || '')}</span></td>` : ''}<td>${rowType(r)}${r.title ? `<br><span style="color:#64748b">${esc(r.title)}</span>` : ''}</td><td><b>${Number(r.score) || 0}%</b></td>
+            ${calls.map(r => `<tr><td>${esc(String(r.created_at || '').slice(0, 16))}</td>${team ? `<td><b>${esc(r.full_name || r.username)}</b><br><span style="color:#64748b">${esc(r.batch_id || '')}</span></td>` : ''}<td>${rowType(r)}${r.title ? `<br><span style="color:#64748b">${esc(r.title)}</span>` : ''}</td><td><b>${Number(r.score) || 0}%</b>${r.trainer_pct != null ? `<br><span style="color:#0f2148" title="The trainer's scorecard">👤 ${Number(r.trainer_pct) || 0}%</span>` : ''}</td>
                 <td><button class="fdd-view" onclick="fddSavedCall(${Number(r.id)})">View</button></td></tr>`).join('')}</tbody></table></div>`;
     }
     let SAVED = null;   // the saved call being read
@@ -1872,6 +1878,7 @@ Reply with exactly this JSON:
         const detail = { pack: true, id: c.id, program: c.program, line: c.line, title: c.title, caller: c.name, role: c.role, mode: l.graded ? 'graded' : 'practice',
             voice: l.usedLive ? 'live' : 'standard', secs: l.secs, score: g.score, verdict: g.verdict, goals: g.goals, strengths: g.strengths, improve: g.improve, betterLine: g.betterLine,
             scorecard: g.scorecard || null, file, course: K.courseOf(c), turns: l.msgs.filter(m => m.who === 'you').length, note: cut(noteWritten(l) ? l.note : '', 3000), transcript: '' };
+        if (g.scorecard) detail.calendar = await calendarOutput(l);
         const full = packTranscript(l);
         detail.transcript = full.length > 9000 ? '…' + full.slice(-9000) : full;
         l.saved = 'saving'; paintSaved();
@@ -1896,13 +1903,76 @@ Reply with exactly this JSON:
     }
     // The firm's scorecard (FT Calendar Management), laid out as the trainers' sheet: each metric rated 0-5 with its
     // feedback, then the weighted average (out of 5; the call's score is it as a %).
-    function scorecardHTML(sc) {
+    const scN = (v, d) => { const x = Math.max(0, Math.min(5, Number(v) || 0)); return d ? String(Math.round(x * 10) / 10) : String(Math.round(x)); };
+    function scorecardHTML(sc, caption, cls) {
         if (!sc || !Array.isArray(sc.rows) || !sc.rows.length) return '';
-        const n = (v, d) => { const x = Math.max(0, Math.min(5, Number(v) || 0)); return d ? String(Math.round(x * 10) / 10) : String(Math.round(x)); };
-        return `<div class="fdd-sec fdd-sc-wrap"><table class="fdd-sc"><thead><tr><th>${esc(sc.title || 'SCORECARD')}</th><th>Score</th><th>FEEDBACK</th></tr></thead>
-            <tbody>${sc.rows.map(r => `<tr><td>${esc(r.metric)}</td><td class="n">${n(r.score)}</td><td class="fb">${esc(r.feedback || '')}</td></tr>`).join('')}
-            <tr class="avg"><td>WEIGHTED AVERAGE</td><td class="n">${n(sc.average, 1)}</td><td class="fb">out of 5${sc.pct != null ? ` · ${Math.round(Number(sc.pct) || 0)}%` : ''}</td></tr></tbody></table></div>`;
+        return `<div class="fdd-sec fdd-sc-wrap ${cls || ''}">${caption ? `<div class="fdd-sc-cap">${caption}</div>` : ''}<table class="fdd-sc"><thead><tr><th>${esc(sc.title || 'SCORECARD')}</th><th>Score</th><th>FEEDBACK</th></tr></thead>
+            <tbody>${sc.rows.map(r => `<tr><td>${esc(r.metric)}</td><td class="n">${scN(r.score)}</td><td class="fb">${esc(r.feedback || '')}</td></tr>`).join('')}
+            <tr class="avg"><td>WEIGHTED AVERAGE</td><td class="n">${scN(sc.average, 1)}</td><td class="fb">out of 5${sc.pct != null ? ` · ${Math.round(Number(sc.pct) || 0)}%` : ''}</td></tr></tbody></table></div>`;
     }
+    const AUTO_CAP = '🤖 Automated scorecard';
+    const trainerCap = (t) => `👤 Trainer's scorecard${t.by ? ` · ${esc(t.by)}` : ''}${t.at ? ` · ${esc(String(t.at).slice(0, 10))}` : ''}`;
+    // An Admin scores a trainee's call on the same sheet: each metric 0-5 with feedback (it starts from their own scores
+    // if they've scored it, or the automated ones), the weighted average as they go; 💾 saves it with the call.
+    function trainerEditHTML(row, d) {
+        const auto = d.scorecard, base = d.trainer || auto, sel = (i, v) => `<select class="fdd-sc-in" data-i="${i}" aria-label="Score" onchange="fddTrainerAvg()">${[0, 1, 2, 3, 4, 5].map(x => `<option value="${x}" ${Number(v) === x ? 'selected' : ''}>${x}</option>`).join('')}</select>`;
+        return `<div class="fdd-sec fdd-sc-wrap fdd-sc-edit"><div class="fdd-sc-cap">${d.trainer ? trainerCap(d.trainer) + ' · change it below' : '👤 Your scorecard for this call: it starts from the automated scores; change any of them'}</div>
+            <table class="fdd-sc"><thead><tr><th>${esc(auto.title || 'SCORECARD')}</th><th>Score</th><th>FEEDBACK</th></tr></thead>
+            <tbody>${auto.rows.map((r, i) => `<tr><td>${esc(r.metric)}</td><td class="n">${sel(i, (base.rows[i] || r).score)}</td><td class="fb"><textarea class="fdd-sc-fb" data-i="${i}" maxlength="600" rows="2" aria-label="Feedback">${esc((base.rows[i] || r).feedback || '')}</textarea></td></tr>`).join('')}
+            <tr class="avg"><td>WEIGHTED AVERAGE</td><td class="n" id="fdd-sc-avg">${scN(base.average, 1)}</td><td class="fb" id="fdd-sc-pct">out of 5 · ${Math.round(Number(base.pct) || 0)}%</td></tr></tbody></table>
+            <div style="display:flex;gap:8px;align-items:center;padding:8px 10px"><button class="fdd-go alt" style="margin:0;width:auto;padding:8px 14px" onclick="fddTrainerSave(${Number(row.id)})">💾 Save my scorecard</button><span id="fdd-sc-msg" style="font-size:11.5px;color:#64748b"></span></div></div>`;
+    }
+    window.fddTrainerAvg = function () {
+        if (!SAVED || !SAVED.d || !SAVED.d.scorecard) return;
+        const rows = SAVED.d.scorecard.rows, vals = [...document.querySelectorAll('.fdd-sc-edit select.fdd-sc-in')].map(x => Number(x.value) || 0);
+        const w = rows.reduce((a, r) => a + (Number(r.weight) || 1), 0), avg = rows.reduce((a, r, i) => a + (Number(r.weight) || 1) * (vals[i] || 0), 0) / w;
+        const a = $id('fdd-sc-avg'), p = $id('fdd-sc-pct');
+        if (a) a.textContent = scN(avg, 1); if (p) p.textContent = `out of 5 · ${Math.round(avg / 5 * 100)}%`;
+    };
+    window.fddTrainerSave = async function (id) {
+        const msg = $id('fdd-sc-msg'), say = (t, bad) => { if (msg) { msg.textContent = t; msg.style.color = bad ? '#b91c1c' : '#64748b'; } };
+        const fbs = [...document.querySelectorAll('.fdd-sc-edit textarea.fdd-sc-fb')];
+        const rows = [...document.querySelectorAll('.fdd-sc-edit select.fdd-sc-in')].map((x, i) => ({ score: Number(x.value), feedback: fbs[i] ? fbs[i].value : '' }));
+        say('Saving…');
+        try {
+            const res = await fetch('/api/drill-results', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'trainer-scorecard', id, rows }) });
+            const data = await res.json().catch(() => ({}));
+            if (!data || !data.success) throw new Error((data && data.error) || 'It wasn\'t saved.');
+            if (SAVED && SAVED.id === id && SAVED.d) SAVED.d.trainer = data.trainer;
+            const r = ((history && history.results) || []).find(x => Number(x.id) === Number(id)); if (r) r.trainer_pct = data.trainer.pct;
+            paint(); say('');
+            const m2 = $id('fdd-sc-msg'); if (m2) m2.textContent = '✓ Saved: the trainee sees it with the call.';
+        } catch (e) { say(e.message || 'It wasn\'t saved.', true); }
+    };
+    // The trainee's calendar output for a Calendar Management call: the appointments they booked or changed on the CMS
+    // calendar (the 🗓 Attorney's Calendar or the Firm Calendar) from the start of the call until it was saved.
+    const CAL_NAMES = { attorney: 'Attorney\'s Calendar', reyes: 'Atty. Marcus Reyes', brooks: 'Atty. Elena Brooks', okafor: 'Atty. David Okafor', firm: 'Firm / Staff' };
+    async function calendarOutput(l) {
+        if (!packs().scorecardOf(l.call) || !l.t0) return null;
+        try {
+            const data = await (await fetch('/api/calendar?list=mine', { credentials: 'include' })).json();
+            if (!data || !data.success) return null;
+            const when = (v) => { const t = Date.parse(String(v || '').replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(v || '')) ? '' : 'Z')); return isFinite(t) ? t : 0; };
+            return (data.events || []).filter(e => Math.max(when(e.createdAt), when(e.updatedAt)) >= l.t0 - 60000).slice(0, 8)
+                .map(e => ({ title: cut(e.title, 160), type: cut(e.type, 40), calendar: cut(e.calendar, 20), date: cut(e.date, 10), start: cut(e.start, 5), end: cut(e.end, 5), allDay: !!e.allDay,
+                    location: cut(e.location, 200), caseLabel: cut(e.caseLabel, 120), notes: cut(e.notes, 600), invite: (Array.isArray(e.invite) ? e.invite : []).slice(0, 8).map(x => cut(typeof x === 'string' ? x : (x && (x.name || x.id)) || '', 60)) }));
+        } catch (e) { return null; }
+    }
+    const t12 = (hm) => { const m = /^(\d\d):(\d\d)$/.exec(hm || ''); if (!m) return ''; const h = +m[1]; return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`; };
+    function calendarOutputHTML(row, d) {
+        const evs = Array.isArray(d.calendar) ? d.calendar : null, admin = isAdmin() && history && history.isAdmin;
+        const day = (evs && evs[0] && evs[0].date) || String(row.created_at || '').slice(0, 10);
+        const open = admin ? `<button class="fdd-chip" onclick='fddTraineeCalendar(${JSON.stringify(String(row.username || ''))}, ${JSON.stringify(String(row.full_name || row.username || ''))}, ${JSON.stringify(day)})'>🗓 Open ${esc(row.full_name || row.username || 'the trainee')}'s calendar</button>` : '';
+        const list = evs && evs.length ? `<ul class="fdd-cal-out">${evs.map(e => `<li><b>${esc(e.title || '(No title)')}</b><span>${esc(e.date || '')}${e.allDay ? ' · all day' : e.start ? ` · ${esc(t12(e.start))}${e.end ? '–' + esc(t12(e.end)) : ''} ET` : ''} · ${esc(CAL_NAMES[e.calendar] || e.calendar || '')}${e.type ? ` · ${esc(e.type)}` : ''}</span>${e.location ? `<span>📍 ${esc(e.location)}</span>` : ''}${e.caseLabel ? `<span>📂 ${esc(e.caseLabel)}</span>` : ''}${e.invite && e.invite.length ? `<span>👥 ${esc(e.invite.join(', '))}</span>` : ''}${e.notes ? `<small>${esc(e.notes)}</small>` : ''}</li>`).join('')}</ul>`
+            : `<p style="margin:0;color:#64748b;font-size:12px">${evs ? 'Nothing was booked or changed on the CMS calendar during this call.' : 'This call was saved before calendar output was kept with it.'}</p>`;
+        return `<div class="fdd-sec"><h4>🗓 Calendar output</h4>${list}${d.note ? `<p style="margin:8px 0 2px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">The calendar entry and note they wrote</p><p style="margin:0;white-space:pre-wrap;font-size:12px">${esc(d.note)}</p>` : ''}${open ? `<div style="margin-top:8px">${open}</div>` : ''}</div>`;
+    }
+    // An Admin opens the trainee's own calendar (the 🗓 Attorney's Calendar with only that trainee's appointments) on the call's week.
+    window.fddTraineeCalendar = function (username, name, date) {
+        if (typeof window.openAttorneyCalendar !== 'function') return;
+        window.fddMinimize(); $id('fdd-mini').textContent = '📞 Back to the saved call';   // the calendar gets the screen
+        window.openAttorneyCalendar({ user: { username, name }, date });
+    };
     // The debrief: the score, each goal met or not yet, what worked, what's next, and a better line.
     function goalsHTML(goals) {
         return `<ul class="fdd-goals">${(goals || []).map(g => `<li><span class="${g.met ? 'ok' : 'no'}">${g.met ? '✓' : '○'}</span><div>${esc(g.goal)}${g.note ? `<small>${esc(g.note)}</small>` : ''}</div></li>`).join('')}</ul>`;
@@ -1929,7 +1999,7 @@ Reply with exactly this JSON:
                 <div id="fdd-pc-saved" style="font-size:11.5px"></div></div>
             ${status}
             ${doc ? `<div class="fdd-fb ${l.selected === doc.id ? 'ok' : 'bad'}">${l.selected === doc.id ? '✓' : '✗'} <b>File:</b> ${esc(doc.title)}${l.selected === doc.id ? '' : ` (you ${l.selected ? `picked ${esc(l.selected === 'none' ? 'not in the system' : l.selected)}` : 'didn\'t match a file'})`}</div>` : ''}
-            ${g ? `${scorecardHTML(g.scorecard)}<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(g.goals)}</div>${reviewHTML(g)}` : ''}
+            ${g ? `${scorecardHTML(g.scorecard, AUTO_CAP)}<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(g.goals)}</div>${reviewHTML(g)}` : ''}
             <details class="fdd-sec"><summary style="cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Transcript${noteWritten(l) ? ' and your note' : ''}</summary>
                 <div class="fdd-tx" style="max-height:none">${trHTML(l.msgs)}</div>${noteWritten(l) ? `<p style="margin:6px 0 0;font-size:12px;white-space:pre-wrap"><b>Your note:</b>\n${esc(l.note)}</p>` : ''}</details>
             ${g ? again : ''}
@@ -1944,10 +2014,12 @@ Reply with exactly this JSON:
                 <div style="color:#334155;font-weight:700">${esc(d.title || '')}</div>
                 <div style="color:#64748b">${esc(String(row.created_at || '').slice(0, 16))} · ${esc(d.caller || '')}${d.secs != null ? ` · ⏱ ${fmtSec(Number(d.secs) || 0)}` : ''}${d.voice === 'live' ? ' · live voice' : ''}</div></div>
             ${d.file ? `<div class="fdd-fb ${d.file.ok ? 'ok' : 'bad'}">${d.file.ok ? '✓' : '✗'} <b>File:</b> ${esc(d.file.id)}${d.file.ok ? '' : ` (picked ${esc(d.file.picked || 'none')})`}</div>` : ''}
-            ${scorecardHTML(d.scorecard)}
+            ${d.scorecard ? (isAdmin() && history && history.isAdmin ? trainerEditHTML(row, d) : d.trainer ? scorecardHTML(d.trainer, trainerCap(d.trainer), 'fdd-sc-trainer') : '') : ''}
+            ${scorecardHTML(d.scorecard, AUTO_CAP)}
+            ${d.scorecard ? calendarOutputHTML(row, d) : ''}
             ${Array.isArray(d.goals) && d.goals.length ? `<div class="fdd-sec"><h4>Goals</h4>${goalsHTML(d.goals)}</div>` : ''}
             ${reviewHTML({ verdict: d.verdict, strengths: d.strengths, improve: d.improve, betterLine: d.betterLine })}
-            ${d.note ? `<div class="fdd-sec"><h4>The note</h4><p style="margin:0;white-space:pre-wrap">${esc(d.note)}</p></div>` : ''}
+            ${d.note && !d.scorecard ? `<div class="fdd-sec"><h4>The note</h4><p style="margin:0;white-space:pre-wrap">${esc(d.note)}</p></div>` : ''}
             <div class="fdd-sec"><h4>Transcript</h4><div class="fdd-saved-tx">${esc(d.transcript || 'No transcript was saved with this call.')}</div></div>
             ${back}`;
     }
