@@ -15,6 +15,11 @@ import { gatewayOn, portalPost } from '../_ai.js';
 // lesson, CM / PD / EA by line). The answer says where it counted ({ course });
 // if the Portal can't be reached the call is still saved here.
 //
+// A call graded on a scorecard (FT Calendar Management, call-packs.js) keeps it in its details ({ scorecard }); an
+// Admin scores it too: POST { action: 'trainer-scorecard', id, rows: [{ score 0-5, feedback }] } saves the trainer's
+// scorecard with the call ({ trainer: { rows, average, pct, by, at } }), shown beside the automated one. The call's
+// own score stays the automated one.
+//
 // The table is created on first use (CREATE TABLE IF NOT EXISTS is a cheap
 // no-op after that), and the mode column is added to a table made before it
 // existed, so no manual migration is needed. Same DDL for reference:
@@ -51,7 +56,8 @@ const MODES = ['drill', 'practice', 'line', 'graded'];
 const LINE_COLS = `CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].line') END AS line,
     CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].title') END AS title,
     CASE WHEN mode IN ('practice', 'line', 'graded') THEN json_extract(details, '$[0].id') END AS call_id,
-    CASE WHEN mode = 'drill' THEN json_extract(details, '$[0].set') END AS drill_set`;
+    CASE WHEN mode = 'drill' THEN json_extract(details, '$[0].set') END AS drill_set,
+    CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].trainer.pct') END AS trainer_pct`;
 
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);
@@ -81,6 +87,7 @@ export async function onRequestPost({ request, env }) {
     const { session } = auth;
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
+    if (body && body.action === 'trainer-scorecard') return trainerScorecard(env, session, body);
     // A whole drill fits: every call in the pool (61 today), each live call with its transcript (up to 4,000
     // characters, front-desk-drill.js), well inside D1's 2 MB row.
     const calls = Math.max(1, Math.min(100, parseInt(body.calls, 10) || 0));
@@ -97,6 +104,30 @@ export async function onRequestPost({ request, env }) {
         Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), details).run();
     const course = mode === 'graded' ? await sendGraded(env, session, userRow, body) : null;
     return json(course ? { success: true, course } : { success: true });
+}
+
+// The trainer's scorecard on a call that has one: the same metrics, each 0-5 with the trainer's feedback.
+async function trainerScorecard(env, session, body) {
+    if (session.userType !== 'Admin') return json({ success: false, error: 'Only a trainer can score a call.' }, 403);
+    const id = parseInt(body.id, 10);
+    if (!id || !Array.isArray(body.rows)) return json({ success: false, error: 'Which call, and the scores?' }, 400);
+    await ensureTable(env.DB);
+    const row = await env.DB.prepare(`SELECT details FROM front_desk_drills WHERE id = ? AND mode IN ('line', 'graded')`).bind(id).first();
+    let details = null; try { details = JSON.parse((row && row.details) || 'null'); } catch (e) { details = null; }
+    const d = Array.isArray(details) && details[0], auto = d && d.scorecard;
+    if (!auto || !Array.isArray(auto.rows) || !auto.rows.length) return json({ success: false, error: 'That call has no scorecard.' }, 404);
+    if (body.rows.length !== auto.rows.length) return json({ success: false, error: `Score all ${auto.rows.length} metrics.` }, 400);
+    const rows = [];
+    for (let i = 0; i < auto.rows.length; i++) {
+        const x = body.rows[i] || {}, v = Number(x.score);
+        if (x.score === '' || x.score == null || !Number.isFinite(v) || v < 0 || v > 5) return json({ success: false, error: `Give "${auto.rows[i].metric}" a score from 0 to 5.` }, 400);
+        const w = Number(auto.rows[i].weight) > 0 ? Number(auto.rows[i].weight) : 1;
+        rows.push({ metric: String(auto.rows[i].metric || '').slice(0, 120), weight: w, score: Math.round(v), feedback: String(x.feedback == null ? '' : x.feedback).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' ').trim().slice(0, 600) });
+    }
+    const avg = rows.reduce((a, r) => a + r.weight * r.score, 0) / rows.reduce((a, r) => a + r.weight, 0);
+    d.trainer = { title: auto.title, outOf: 5, rows, average: Math.round(avg * 10) / 10, pct: pct(avg / 5 * 100), by: session.fullName || session.username, at: new Date().toISOString() };
+    await env.DB.prepare(`UPDATE front_desk_drills SET details = ? WHERE id = ?`).bind(JSON.stringify(details), id).run();
+    return json({ success: true, trainer: d.trainer });
 }
 
 // A graded call, to the Portal (it counts in the course). At most 6 seconds; a failure only means it didn't count yet.
