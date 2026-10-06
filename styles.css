@@ -945,3 +945,12 @@
     .pdp-empty { grid-column: 1 / -1; font-size: 12.5px; color: #94a3b8; font-style: italic; padding: 10px 2px; }
     .cid-box.pdp-box { width: min(900px, 100%); }
     .pdp-big svg, .pdp-big img { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 6px; }
+    /* the Training Library's realistic photos (library-photos.js): an Admin's buttons in a photo's larger view, the Master Control panel */
+    .lp-admin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+    .lp-admin button, .lp-btn { font-size: 11px; font-weight: 800; text-transform: uppercase; border-radius: 6px; padding: 8px 12px; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #0f172a; }
+    .lp-admin button[data-lp="make"], .lp-btn.lp-go { background: #0c4a6e; border-color: #0c4a6e; color: #fff; }
+    .lp-admin button:disabled { opacity: .55; cursor: wait; }
+    .lp-status { font-size: 11.5px; color: #475569; flex: 1 1 220px; }
+    .lp-note { font-size: 12px; color: #475569; margin: 6px 0 10px; line-height: 1.45; }
+    .lp-panel { text-align: left; }
+    .lp-log { font-size: 11.5px; color: #b91c1c; margin-top: 8px; }
