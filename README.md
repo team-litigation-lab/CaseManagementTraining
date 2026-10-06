@@ -636,7 +636,7 @@ A card lists the cases the contact is on: the client, the case number and what t
 3. **📝 New Intake**, **📞 Call Simulator** (the Front Desk practice calls and drill) and **🗓 Attorney's Calendar** (the Calendaring activity).
 4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar.
 
-**The strip at the top** (over the case, not the sidebar): the announcements, and at its right **📄 Download Case Summary**, **📊 My Dashboard** and **🧭 Blueprint** (`#top-actions`; in a narrow window they show just their icons). It no longer says "LEGAL SUPPORT HELP TRAINING INTERFACE - … PORTAL".
+**The strip at the top** (over the case, not the sidebar): the announcements, and at its right **📄 Download Case Summary**, **🏠 Main Portal** (back to the LSH Training Portal's Training Directory), **📊 My Dashboard** and **🧭 Blueprint** (`#top-actions`; in a narrow window they show just their icons). It no longer says "LEGAL SUPPORT HELP TRAINING INTERFACE - … PORTAL".
 
 **The date and time** (with the time zone picker) are right above the case's Case ID, outside the case (`#case-clock-row`). They stay outside `#capture-area` on purpose: a case's dropdowns are saved by position, counted from the top of the page, so the picker keeps its place in front of the case's.
 
