@@ -98,7 +98,7 @@
         if (btn.dataset.mock != null) {
             const x = mockShots(mc)[+btn.dataset.mock]; if (!x) return;
             inner = shotSvg(mc, x); cap = x.caption;
-            meta = (realOf(mc, x.kind) ? 'A realistic, AI-made photo for practice: the file, its people and its vehicles are fictional.' : 'A mock photo drawn from the Training Library file, for practice: not a real photo.')
+            meta = (realOf(mc, x.kind) ? 'A realistic stand-in photo for practice: the file, its people and its vehicles are fictional.' : 'A mock photo drawn from the Training Library file, for practice: not a real photo.')
                 + (LP() ? LP().adminBar(mc, x.kind) : '');
         } else {
             const p = list()[+btn.dataset.i]; if (!p) return;
