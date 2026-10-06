@@ -3,6 +3,7 @@
 //   - keys take turns (any numbered GEMINI_API_KEY); a rate-limited key rests and the
 //     request moves to the next key;
 //   - a rejected key rests; a busy (503) key hands over; a missing model falls through;
+//   - a key out of credits or with billing off hands over to the next key and rests on every model;
 //   - a refused region: explained, or (with the EA-PA relay bound) sent again from the US;
 //   - the endpoint: sign-in required, the per-user rate limit, bad bodies, the review's
 //     JSON mode, and the Admin status check;
@@ -68,6 +69,25 @@ ai._resetAi(); calls = [];
 behavior = () => ({ status: 429, json: { error: { message: 'quota exceeded per minute' } } });
 const r4 = await ai.callAI(keysEnv, req());
 check(!r4.ok && r4.status === 429, `all keys limited should be 429: ${JSON.stringify(r4)}`);
+
+// 4b. a key out of credits or with billing off hands over to the next key, and rests on every model (as the Portal's
+//     gateway); Google's ordinary rate-limit message ("check your plan and billing details") is only a rate limit
+for (const [label, st, msg] of [['out of prepaid credits (429)', 429, 'Your prepayment credits are depleted. Please manage your project and billing.'],
+    ['billing off (400)', 400, 'Gemini API free tier is not available in your country. Please enable billing on your project.'], ['402', 402, 'Payment required'],
+    ['billing account disabled (403)', 403, 'Billing account is disabled for project 123.']]) {
+    ai._resetAi(); calls = [];
+    behavior = (key) => key === 'k0' ? { status: st, json: { error: { message: msg } } } : { status: 200, json: ok('from ' + key) };
+    const outs = []; for (let i = 0; i < 4; i++) outs.push(await ai.callAI(keysEnv, req('review')));
+    check(outs.every(o => o.ok && o.text !== 'from k0') && calls.filter(c => c.key === 'k0').length === 1, `a key ${label} should hand over to the next key and rest on every model: ${outs.map(o => o.ok ? o.text : o.error).join(' | ')} (k0 tried ${calls.filter(c => c.key === 'k0').length} times)`);
+}
+ai._resetAi(); calls = [];
+behavior = () => ({ status: 429, json: { error: { message: 'You exceeded your current quota, please check your plan and billing details.' } } });
+const rl = await ai.callAI(keysEnv, req());
+check(!rl.ok && rl.status === 429, `the ordinary rate-limit message is still a 429 to retry: ${JSON.stringify(rl)}`);
+ai._resetAi(); calls = [];
+behavior = () => ({ status: 429, json: { error: { message: 'Your prepayment credits are depleted.' } } });
+const broke = await ai.callAI(keysEnv, req());
+check(!broke.ok && broke.status === 502 && /out of credits/.test(broke.error), `every key out of credits should say so: ${JSON.stringify(broke)}`);
 
 // 5. a refused region is explained, and no keys at all fails
 ai._resetAi(); calls = [];
