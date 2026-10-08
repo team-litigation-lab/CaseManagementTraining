@@ -61,6 +61,16 @@ const failures = []; const fail = (m) => failures.push(m);
         await page.click(`#nm-modal [data-form="${form}"]`);
         await page.waitForSelector('#nm-body');
     };
+    // every form has the paper's acknowledgement (I ____ understand…, Sign Name / Date, Print Name / Date), and the questions
+    // the audit against the paper forms found missing
+    const formHas = async (form, ids, texts) => {
+        const got = await page.evaluate(([ids, texts]) => { const m = document.getElementById('nm-modal'), t = m.innerText;
+            return { ids: ids.filter(id => !document.getElementById('nm-' + id) && !m.querySelector(`input[name="nm-${id}"], [data-f="${id}"]`)), texts: texts.filter(x => !t.toLowerCase().includes(x.toLowerCase())) }; }, [ids, texts]);
+        if (got.ids.length || got.texts.length) fail(`${form}: missing from the intake form: ${JSON.stringify(got)}`);
+    };
+    const ACKS = ['ackClientName', 'ackRead', 'ackName', 'ackDate', 'ackPrint', 'ackPrintDate'], ACK_TXT = ['free consultation', 'Sign Name', 'Print Name'];
+    const EXTRA = { pi: [['injuredParty'], ['Injured Party']], slipfall: [['injuryPhotos2'], ['If yes, did you take any photographs of your injuries?']],
+        premises: [['oopYn'], []], dogbite: [[], []], medmal: [['documentsYn', 'scenePhotosDesc', 'sig1', 'sig1Date', 'sig2', 'sig2Date'], ['MySpace', 'Client Signature']] };
     // 💾 Save Intake, then (when it saved) the result screen's Done
     const result = () => page.evaluate(() => ({ title: document.getElementById('nm-title').textContent, text: (document.querySelector('#nm-modal .nm-done') || {}).innerText || '' }));
     const complete = async (keepOpen) => {
@@ -141,6 +151,7 @@ const failures = []; const fail = (m) => failures.push(m);
     // 4. Slip and Fall in full: the case is filled in field by field, and the grade is higher
     dialogs.length = 0;
     await pick('slipfall');
+    await formHas('slipfall', ACKS.concat(EXTRA.slipfall[0]), ACK_TXT.concat(EXTRA.slipfall[1]));
     await fill('first', 'Saoirse'); await fill('middle', 'M'); await fill('last', 'Featherstonhaugh');
     await fill('address', '12 Elm St'); await fill('city', 'Tampa'); await fill('state', 'FL');
     await page.type('#nm-cellPhone', '8135550142');
@@ -221,6 +232,7 @@ const failures = []; const fail = (m) => failures.push(m);
 
     // 6. an unfinished intake is kept and can be resumed
     await pick('pi');
+    await formHas('pi', ACKS.concat(EXTRA.pi[0]), ACK_TXT.concat(EXTRA.pi[1]));
     await fill('first', 'Mstislav'); await fill('last', 'Kirkcudbright');
     await page.waitForTimeout(600);
     await page.click('#nm-modal .nm-foot [data-nm="close"]');
@@ -260,6 +272,7 @@ const failures = []; const fail = (m) => failures.push(m);
     // 8. the other forms: the case type and what's special to each
     const quick = async (form, extra) => {
         await pick(form);
+        await formHas(form, ACKS.concat(EXTRA[form][0]), ACK_TXT.concat(EXTRA[form][1]));
         if (form === 'premises' || form === 'medmal') await fill('name', 'Cian Beaumont'); else { await fill('first', 'Cian'); await fill('last', 'Beaumont'); }
         await page.type('#nm-cellPhone', '9045550160');
         await page.type('#nm-dol', '01052026');
