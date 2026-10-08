@@ -3,7 +3,7 @@
     :root{
         /* The main view (everything right of the sidebar) is drawn a little smaller than
            full size, so more of a case fits on screen at once. 1 = full size. */
-        --main-scale: .8;
+        --main-scale: .9;
         --navy:#0f2148;
         --navy-deep:#081226;
         --navy-mid:#132a5c;
