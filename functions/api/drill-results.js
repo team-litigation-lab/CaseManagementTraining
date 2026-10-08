@@ -131,9 +131,16 @@ async function trainerScorecard(env, session, body) {
 }
 
 // A graded call, to the Portal (it counts in the course). At most 6 seconds; a failure only means it didn't count yet.
+// When it can't be sent at all (this site has no gateway secret, or the account has no first and last name) the answer says
+// so ({ counted: false, reason }), so the trainee and their trainer aren't left thinking it counted: before, nothing was said.
 async function sendGraded(env, session, userRow, body) {
     const d = (Array.isArray(body.details) && body.details[0]) || {};
-    if (!gatewayOn(env) || !d.pack || !userRow || !userRow.first_name || !userRow.last_name) return null;
+    if (!d.pack) return null;
+    const where = { program: d.program, lesson: (d.course && d.course.lesson) || null, line: d.line };
+    // (an Admin's own test calls don't count in a course, and say nothing about it)
+    const cant = (reason) => session.userType === 'Admin' ? null : Object.assign({ counted: false, reason }, where);
+    if (!gatewayOn(env)) return cant('not-connected');
+    if (!userRow || !userRow.first_name || !userRow.last_name) return cant('no-name');
     const payload = { first: userRow.first_name, last: userRow.last_name, batch: session.batchId || '', username: session.username,
         call: { id: d.id, program: d.program, line: d.line, lesson: d.course && d.course.lesson, title: d.title, score: pct(body.score), verdict: d.verdict,
             secs: Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), voice: d.voice, at: new Date().toISOString() } };
