@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
     :root{
+        /* The main view (everything right of the sidebar) is drawn a little smaller than
+           full size, so more of a case fits on screen at once. 1 = full size. */
+        --main-scale: .8;
         --navy:#0f2148;
         --navy-deep:#081226;
         --navy-mid:#132a5c;
@@ -651,7 +654,7 @@
     #capture-area.mock-ro .pdf-card > .case-close-x { display:block !important; }   /* a view-only library case hides the card's buttons, not this one */
     /* the case workspace: the case scrolls, and its action bar stays at the bottom of the screen
        (the same as main's Tailwind classes, so it holds even when the Tailwind CDN doesn't load) */
-    #app-shell > main { display:flex; flex-direction:column; flex:1 1 auto; min-width:0; overflow:hidden; }
+    #app-shell > main { zoom: var(--main-scale); display:flex; flex-direction:column; flex:1 1 auto; min-width:0; overflow:hidden; }
     #app-shell > main > #capture-area { flex:1 1 auto; min-height:0; overflow-y:auto; }
     #case-actions-bar { flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 32px; background:#fff; border-top:2px solid #e2e8f0; box-shadow:0 -4px 12px rgba(15,33,72,.06); }
     .cab-btn { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; border-radius:7px; padding:8px 14px; cursor:pointer; border:1px solid #cbd5e1; background:#fff; color:#0f2148; white-space:nowrap; }
@@ -786,7 +789,11 @@
     .roster-trend-arrow.flat { color:#94a3b8; }
     .roster-no-data { color:#94a3b8; font-size:11.5px; font-style:italic; }
 
+    /* A phone is cramped already, and a printed page has no screen to save: full size on both. */
+    @media (max-width: 700px) { :root { --main-scale: 1; } }
+
     @media print {
+        :root { --main-scale: 1; }
         .no-print { display: none !important; }
         .pdf-card { border: 2px solid var(--orange) !important; break-inside: avoid; }
         #lsh-integrated-bar { -webkit-print-color-adjust: exact; background-color: var(--navy) !important; }
