@@ -528,6 +528,8 @@ Both sit under the case's top bar, above the tabs, so they're seen on every tab 
    | 🐕 **Dog Bite** | Client Intake Form – Dog Bite | Dog Bite |
    | 🩺 **Medical Malpractice** | Client Questionnaire (Medical Malpractice) | Others: Medical Malpractice |
 
+   Every question on the paper sheet is on the form (checked line by line against the five sheets). **Every form ends with the acknowledgement**, as on the Slip and Fall and Dog Bite sheets: *I ______ understand that this is a free consultation about my accident and that I am not represented until I speak with the attorney who agrees to accept my case and I sign a fee agreement. I understand that my case may or may not be accepted by the attorney.*, ticked as read to the client, then **Sign Name / Date** and **Print Name / Date**. Medical Malpractice also keeps its sheet's two **Client Signature / Date** lines.
+
 3. **Gather the information and the Facts of loss.** Only the client's name is needed to save; everything else counts toward the grade.
    - Questions that follow a Yes / No show once it's Yes.
    - Dates, phones, SSNs and amounts format themselves as they're typed.

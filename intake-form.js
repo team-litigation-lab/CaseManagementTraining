@@ -56,6 +56,17 @@
     const FACTS_HINT = 'Graded on detail: what happened, how, where and when, who was involved or at fault, and what the client did right after.';
     const DIAGRAM = 'The accident scene (the paper form asks for a diagram: describe the layout, where you were and what you hit or fell on)';
 
+    // The acknowledgement, as on the paper forms (Slip and Fall, Dog Bite): "I ____ understand that this is a free consultation…",
+    // then Sign Name / Date and Print Name / Date. Every intake form ends with it.
+    const ackItems = (head) => [
+        ...(head ? [H('Acknowledgment')] : []),
+        F('ackClientName', 'I (client’s full name)', 'text', { w: 4, hint: 'The name in “I ______ understand that this is a free consultation…”' }),
+        F('ackRead', ACK, 'check'),
+        F('ackName', 'Sign Name'), F('ackDate', 'Date', 'date', { auto: 'today' }),
+        F('ackPrint', 'Print Name'), F('ackPrintDate', 'Date', 'date', { auto: 'today' }),
+    ];
+    const ackSection = () => ({ id: 'acknowledgment', title: 'Acknowledgment', items: ackItems(false) });
+
     // Slip and Fall and Dog Bite: the same client block, treatment history, lost income and additional information.
     const sfClient = () => ({ id: 'client', title: 'Client', items: [
         F('today', "Today's Date", 'date', { auto: 'today' }),
@@ -106,9 +117,7 @@
         F('otherAtty', 'Who is/was your other attorney?', 'text', { w: 4, when: 'otherAttyYn' }),
         G('emergency', 'Emergency contact information: two close relatives who do not live with you', [F('name', 'Name'), F('phone', 'Phone Number', 'phone'), F('relation', 'Relation', 'text', { w: 1 })], { min: 2, max: 2 }),
         F('hearAbout', 'How did you hear about us?', 'text', { w: 4 }),
-        H('Acknowledgment'),
-        F('ackRead', ACK, 'check'),
-        F('ackName', 'Client name (signature)'), F('ackDate', 'Date', 'date', { auto: 'today' }),
+        ...ackItems(true),
     ] });
     const PARTS = [['bpHead', 'Head'], ['bpJaw', 'Jaw / mouth'], ['bpNeck', 'Neck'], ['bpShoulders', 'Shoulders', 1], ['bpUpperBack', 'Upper back'], ['bpArms', 'Arms', 1],
         ['bpHands', 'Hands', 1], ['bpChest', 'Chest'], ['bpTorso', 'Torso'], ['bpOrgans', 'Any problems with internal organs?'], ['bpMidBack', 'Mid back'], ['bpHips', 'Hips', 1],
@@ -119,11 +128,12 @@
             title: 'MVA', icon: '🚗', caseType: 'MVA',
             sections: [
                 { id: 'client', title: 'Injured Party', items: [
+                    F('injuredParty', 'Injured Party', 'text', { w: 4, ph: 'Driver, passenger, pedestrian…' }),
                     F('first', 'First Name', 'text', { req: 1, w: 1 }), F('middle', 'Middle', 'text', { w: 1 }), F('last', 'Last', 'text', { req: 1 }),
                     F('address', 'Address', 'text', { w: 4 }), F('city', 'City'), F('state', 'State', 'text', { w: 1 }), F('zip', 'Zip Code', 'text', { w: 1 }),
                     F('homePhone', 'Home #', 'phone'), F('cellPhone', 'Cell #', 'phone'), F('email', 'Email Address', 'email'),
                     F('ssn', 'Social Security #', 'ssn'), F('dl', "Driver's License #", 'text', { w: 1 }), F('dob', 'Date of Birth', 'date', { added: 1 }),
-                    G('injured2', 'Another injured party (the form has room for two)', [F('first', 'First Name', 'text', { w: 1 }), F('middle', 'Middle', 'text', { w: 1 }), F('last', 'Last'),
+                    G('injured2', 'Another injured party (the form has room for two)', [F('injuredParty', 'Injured Party', 'text', { w: 4 }), F('first', 'First Name', 'text', { w: 1 }), F('middle', 'Middle', 'text', { w: 1 }), F('last', 'Last'),
                         F('address', 'Address', 'text', { w: 4 }), F('city', 'City'), F('state', 'State', 'text', { w: 1 }), F('zip', 'Zip Code', 'text', { w: 1 }),
                         F('homePhone', 'Home #', 'phone'), F('cellPhone', 'Cell #', 'phone'), F('email', 'Email Address', 'email'),
                         F('ssn', 'Social Security #', 'ssn'), F('dl', "Driver's License #", 'text', { w: 1 })], { min: 0, max: 1, add: '+ Add another injured party' }),
@@ -198,6 +208,7 @@
                     F('lostFrom', 'Dates lost from work because of injury: From', 'date'), F('lostTo', 'To', 'date'),
                     F('lostTotal', 'Total Amount of Income Lost', 'money'),
                 ] },
+                ackSection(),
             ],
         },
         slipfall: {
@@ -230,6 +241,7 @@
                     F('injuryPhotos', 'Have you taken any photographs of your accident injuries?', 'yn'),
                     sfProviders(),
                     F('medBills', 'Approximate amount of your medical bills', 'money'),
+                    F('injuryPhotos2', 'If yes, did you take any photographs of your injuries?', 'yn'),
                     F('revisionEstimate', 'Did they give you an estimate cost for such future revision?', 'text', { w: 3 }),
                     ...sfHistory(),
                 ] },
@@ -285,7 +297,7 @@
                 ] },
                 { id: 'value', title: 'Value', items: [
                     F('oopYn', 'Have you incurred any out-of-pocket expenses as a result of this incident?', 'yn'),
-                    F('oopDetails', 'Type and amount (prescriptions, co-pays, deductibles)', 'area', { when: 'oopYn', rows: 2 }),
+                    G('oopItems', 'If yes, please describe type and amount (prescriptions, co-pays, deductibles)', [F('type', 'Type', 'text', { w: 3 }), F('amount', 'Amount', 'money')], { max: 2, when: 'oopYn' }),
                 ] },
                 { id: 'employment', title: 'Employment', items: [
                     F('employer', 'Current employer'), F('position', 'Position'),
@@ -312,6 +324,7 @@
                     F('laterYn', 'Have you had any injuries since this incident?', 'yn'), F('later', 'Please describe', 'area', { when: 'laterYn', rows: 2 }),
                     F('lifeImpact', 'How has this incident affected your personal life (hobbies, relationships, etc.)?', 'area'),
                 ] },
+                ackSection(),
             ],
         },
         dogbite: {
@@ -357,7 +370,7 @@
         medmal: {
             title: 'Medical Malpractice', icon: '🩺', caseType: 'Others', caseTypeOther: 'Medical Malpractice',
             sections: [
-                { id: 'client', title: 'Client', items: [
+                { id: 'client', title: 'Client', intro: 'Please answer the following questions with as much detail as possible so that we may fully evaluate and investigate the potential merits of your case.', items: [
                     F('name', 'Name', 'text', { req: 1 }), F('today', 'Date', 'date', { auto: 'today' }),
                     F('hearAbout', 'How did you hear about us?', 'text', { w: 1 }),
                     F('address', 'Address'), F('apt', 'Apt / unit (if applicable)', 'text', { w: 1 }), F('county', 'County', 'text', { w: 1 }),
@@ -398,11 +411,12 @@
                     F('statementWitnesses', 'Name, address and telephone number of any witnesses present for statements or admissions by the potential defendants', 'area', { rows: 2 }),
                 ] },
                 { id: 'photos', title: 'Photographs / Documents', items: [
-                    F('scenePhotos', 'Do you have photographs of the incident/accident scene?', 'yn'), F('scenePhotosDesc', 'Please describe', 'text', { w: 4, when: 'scenePhotos' }),
+                    F('scenePhotos', 'Do you have photographs of the incident/accident scene?', 'yn'),
                     F('injuryPhotos', 'Do you have photographs of the injuries?', 'yn'),
                     F('sceneVideos', 'Do you have videos of the incident/accident scene?', 'yn'),
                     F('injuryVideos', 'Do you have videos of the injuries?', 'yn'),
-                    F('documents', 'Any documents or items that may help establish your claim', 'area', { rows: 2 }),
+                    F('documentsYn', 'Do you have any documents or items that may assist in establishing your claim?', 'yn'),
+                    F('scenePhotosDesc', 'If yes (to any of the above), please describe', 'area', { rows: 2 }),
                 ] },
                 { id: 'health', title: 'Health Insurance', items: [
                     F('medicare', 'Do you receive, or are you eligible to receive, Medicare or Medicaid benefits?', 'yn'),
@@ -443,9 +457,11 @@
                     F('priorClaimYn', 'Have you ever been involved in a prior claim or lawsuit?', 'yn'), F('priorClaim', 'Please explain', 'area', { when: 'priorClaimYn', rows: 2 }),
                     F('settlementsYn', 'Have you ever received any settlements due to a personal injury action?', 'yn'), F('settlements', 'Please explain', 'area', { when: 'settlementsYn', rows: 2 }),
                     F('crimeYn', 'Have you ever been convicted of a crime or declared bankruptcy?', 'yn'), F('crime', 'Please explain', 'area', { when: 'crimeYn', rows: 2 }),
-                    F('socialYn', 'Do you have a Facebook, Twitter, YouTube, or other social media account?', 'yn'), F('social', 'Please specify', 'text', { w: 4, when: 'socialYn' }),
-                    H('Signature'),
-                    F('ackName', 'Client signature (typed name)'), F('ackDate', 'Date', 'date', { auto: 'today' }),
+                    F('socialYn', 'Do you have a Facebook, MySpace, Twitter, YouTube, or other social media account?', 'yn'), F('social', 'Please specify', 'text', { w: 4, when: 'socialYn' }),
+                    ...ackItems(true),
+                    H('Signatures (the paper form has two Client Signature lines)'),
+                    F('sig1', 'Client Signature'), F('sig1Date', 'Date', 'date', { auto: 'today' }),
+                    F('sig2', 'Client Signature'), F('sig2Date', 'Date', 'date'),
                 ] },
             ],
         },
@@ -660,7 +676,7 @@
     }
     function show() { build(); S.open = true; $id('nm-modal').classList.add('open'); paint(); }
     // Something typed (not just the dates the form fills in itself).
-    const hasAnswers = (a) => Object.keys(a || {}).some(k => k !== 'today' && k !== 'ackDate' && (Array.isArray(a[k]) ? a[k].some(r => r && Object.values(r).some(x => str(x))) : str(a[k])));
+    const hasAnswers = (a) => Object.keys(a || {}).some(k => k !== 'today' && k !== 'ackDate' && k !== 'ackPrintDate' && k !== 'sig1Date' && (Array.isArray(a[k]) ? a[k].some(r => r && Object.values(r).some(x => str(x))) : str(a[k])));
     function close() {
         if (!S.open) return;
         if (S.mode !== 'view' && S.form && hasAnswers(S.a)) saveDraft();
