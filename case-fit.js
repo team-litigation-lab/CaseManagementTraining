@@ -17,7 +17,9 @@
    (a case that is still filling in), never while a mouse button is
    down or something is being dragged. Only #capture-area is scaled:
    the sidebar, the top bars, the windows and the case's action bar keep
-   their size.
+   their size. main is drawn at --main-scale (zoom), which scales its own
+   margins too, so the room left for the panel is divided by that scale to
+   come out 500 real px.
    ========================================================= */
 (function () {
     'use strict';
@@ -27,7 +29,7 @@
     #capture-area{padding-right:2rem}
     body.case-fit #capture-area{zoom:var(--case-zoom,1)}
     @media (max-width:1100px){#sidebar{width:220px}#sidebar-system-name{letter-spacing:.5px;font-size:11px}}
-    @media (min-width:1100px){body.fdd-open #app-shell > main{margin-right:min(500px,100vw)}body.fdd-open.fdd-nosb #sidebar{display:none}}
+    @media (min-width:1100px){body.fdd-open #app-shell > main{margin-right:calc(min(500px,100vw) / var(--main-scale,1))}body.fdd-open.fdd-nosb #sidebar{display:none}}
     `;
     document.head.appendChild(css);
 
