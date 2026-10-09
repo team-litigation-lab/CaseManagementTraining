@@ -373,15 +373,14 @@
         align-items: center;
         text-align: center;
     }
-    /* the logo on the sidebar: the LSH mark (an image) and the name "Legal Support Help" as real
-       text, so it stays sharp at any size (the name drawn into the image blurred when scaled down),
-       straight on the sidebar, with no panel behind it */
+    /* the logo on the sidebar: the standard LSH logo, the full mark with its own wordmark. It is drawn
+       in navy, so it sits on a white tile to read against the navy sidebar. */
     #sidebar-logo {
-        display: flex; flex-direction: column; align-items: center; gap: 8px;
-        width: 176px; max-width: 100%; box-sizing: border-box; padding: 4px 0 0;
-        background: none; border: none; box-shadow: none;
+        display: flex; flex-direction: column; align-items: center;
+        width: 176px; max-width: 100%; box-sizing: border-box;
+        background: #fff; border-radius: 12px; padding: 10px 14px; box-shadow: 0 2px 10px rgba(0,0,0,.35);
     }
-    #sidebar-logo img { display: block; width: 92px; height: auto; }
+    #sidebar-logo img { display: block; width: 100%; height: auto; }
     #sidebar-logo .lsh-name {
         color: #fff; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-weight: 900; font-size: 13px;
         line-height: 1.1; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap;
@@ -390,7 +389,7 @@
     /* (#agency-seal: the logo on a white tile, kept for any page that still shows it; the sidebar
        now shows #sidebar-logo) */
     #agency-seal {
-        width: 88px; height: 88px; aspect-ratio: 1 / 1; border-radius: 12px;
+        height: 72px; width: auto; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0; overflow: hidden; background: #fff; padding: 6px; box-sizing: border-box;
         box-shadow: 0 2px 10px rgba(0,0,0,.35);
