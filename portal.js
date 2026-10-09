@@ -152,16 +152,13 @@ function attemptLogin() {
             startIdleTracking();
             refreshSiteState();
 
+            // Signing in lands on the case workspace, whoever you are. It is what the CMS is for, and
+            // it is already behind the sign-in screen, so there is nothing to open on top of it:
+            // Master Control and My Dashboard are a click away on the sidebar when they are wanted.
+            // A link that opened the Call Simulator (?calls=1) stays on it, over the Cases System.
             setTimeout(() => {
                 const authGate = document.getElementById('auth-gate');
                 if (authGate) authGate.classList.remove('open');
-                // A link that opened the Call Simulator (?calls=1) stays on it, over the Cases System.
-                const onCalls = document.body.classList.contains('fdd-open');
-                if (normalizedUser.userType === "Admin") {
-                    if (!onCalls) openAdminDashboard();
-                } else if (typeof showTraineeDashboard === "function") {
-                    showTraineeDashboard();
-                }
             }, 1200);
         } else {
             if (loginMsgDiv) { loginMsgDiv.className = "auth-msg error"; loginMsgDiv.innerText = data.error || "Login unauthorized."; }
