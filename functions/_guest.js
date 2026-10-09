@@ -1,21 +1,18 @@
-// Name-only sign-in for trainees who open the CMS from another LSH training
-// platform (the LSH Training Portal / Training Directory, Property Damage
-// Claims Training, Standard Foundational Training, EA/PA Training, Case
-// Management Training, Medsum & Demand Training).
+// Names, usernames and the tables behind them.
 //
-// Trainees register in the CMS once (so their trainer can monitor their work);
-// from a platform, typing their name signs them in to that registered account
-// (functions/api/guest-login.js). Name-only accounts made before registration
-// was required (usernames starting guest-) keep working. Admins still manage
-// every account like any other (suspend, revoke).
-//
-// This is convenience, not security: the platforms that link here are open
-// to their trainees without a password, so the name is all the CMS asks.
-// Admin access still needs an admin account and password.
+// Typing a name no longer signs anyone in: /api/guest-login is gone. A trainee
+// reaches the CMS through the LSH Training Portal (functions/api/portal-login.js),
+// an admin with the admin password. What is left here is shared by both:
+//   - the name helpers (cleanGuestName, parseFullName, splitName), used by
+//     registration and by the Admin Portal's trainer names;
+//   - the guest- prefix, which register.js still refuses so nobody registers
+//     into one of the name-only accounts made before this;
+//   - guestUsername / guest_accounts, which portal-login.js still uses for a
+//     trainee the Portal vouches for who has no CMS registration of their own.
 //
 // Tables (created on first use, like drill-results.js):
-//   guest_accounts    which users rows are name-only accounts, where they came from
-//   guest_login_rate  failed name look-ups per connection per hour (guest-login.js)
+//   guest_accounts    which users rows were made from a Portal ticket, where they came from
+//   guest_login_rate  wrong admin passwords per connection per hour (functions/api/login.js)
 export const GUEST_SOURCES = {
     portal: 'LSH Training Portal',
     pd: 'Property Damage Claims Training',

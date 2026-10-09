@@ -504,7 +504,7 @@ export async function nextBatchId(db, userType, referenceDate) {
 // Batch IDs saved in the old long forms, rewritten as B + six digits (the date as it was
 // given, DDMMYY, without the trainee number): B30092026 and B30092026-LSHADMIN-003 become
 // B300926, and B300926-LSHTRAINEE-004 becomes B300926. Runs at sign-in (login.js,
-// guest-login.js, portal-login.js), once per worker; after the first run there's nothing left to change.
+// portal-login.js), once per worker; after the first run there's nothing left to change.
 let batchIdsShortened = false;
 export async function shortenOldBatchIds(db) {
     if (batchIdsShortened) return;

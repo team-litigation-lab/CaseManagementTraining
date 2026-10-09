@@ -697,17 +697,6 @@
 
             <!-- The three sign-in views are forms of their own (never submitted: their buttons and Enter do the work), so a
                  name the browser fills in here stays here, not in the case search bar or the other boxes on the page. -->
-            <!-- NAME-ONLY VIEW: opened from another LSH training platform (guest-access.js) -->
-            <form id="auth-guest-view" class="hidden" onsubmit="return false" novalidate>
-                <div class="auth-guest-from" id="auth-guest-from">Opened from your training platform</div>
-                <p class="auth-guest-lead">Type your name the way you registered it in the CMS, and you're in. Your cases, reviews and drill scores are saved for your trainer.</p>
-                <div id="auth-guest-msg" class="auth-msg"></div>
-                <div class="auth-field"><label>Full name</label><input type="text" id="guest-name" autocomplete="name" maxlength="60" placeholder="First and last name"></div>
-                <div class="auth-field"><label>CMS Batch ID <span style="text-transform:none;">(only if asked)</span></label><input type="text" id="guest-batch" autocomplete="off" maxlength="24" placeholder="e.g., B050225"></div>
-                <button type="button" class="auth-submit" id="guest-submit" onclick="guestContinue()">Continue</button>
-                <div class="auth-switch">Not registered yet? <a onclick="guestRegister()">Register here</a> · <a onclick="showLoginView()">Sign in with username</a> · <a onclick="showLoginView(); switchPortalTab('Admin')">Trainer sign-in</a></div>
-            </form>
-
             <!-- LOGIN VIEW -->
             <form id="auth-login-view" onsubmit="return false" novalidate>
                 <div class="portal-tabs">
@@ -724,7 +713,7 @@
 
             <!-- REGISTER VIEW -->
             <form id="auth-register-view" class="hidden" onsubmit="return false" novalidate>
-                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, sign in with just your username, or open the CMS from your training platform and just type your name.</p>
+                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, open the CMS from the LSH Training Portal.</p>
                 <div id="auth-register-msg" class="auth-msg"></div>
                 <!-- Three fields only (functions/api/register.js): no email, start date or password. Trainees sign in with
                      just their username (the Batch ID stays on the account); an Admin can change a trainee's Batch ID later (Registrations / Users tabs). -->

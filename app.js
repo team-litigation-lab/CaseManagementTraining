@@ -3010,7 +3010,7 @@
                 const res = await nativeFetch(input, init);
                 if (res.status !== 401) return res;
                 const url = typeof input === 'string' ? input : (input && input.url) || '';
-                if (!/\/api\//.test(url) || /\/api\/(heartbeat|login|logout|guest-login)\b/.test(url) || !getSession()) return res;
+                if (!/\/api\//.test(url) || /\/api\/(heartbeat|login|logout)\b/.test(url) || !getSession()) return res;
                 const data = await res.clone().json().catch(() => null);
                 if (!data || data.code !== 'SESSION_EXPIRED') return res;
                 return (await sendHeartbeat()) ? nativeFetch(input, init) : res;
