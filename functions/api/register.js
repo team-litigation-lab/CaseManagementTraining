@@ -4,8 +4,7 @@ import { isGuestUsername, isTrainerUsername, cleanGuestName, parseFullName } fro
 // Trainees register with three things: their full name, their Batch ID (B + the
 // date their batch started, MMDDYY, e.g. B100526: cleanBatchId in _utils.js) and a
 // username. There's no password: once an Admin approves the registration, they
-// sign in with just their username (login.js), or with just their name
-// from a training platform (guest-login.js).
+// open the CMS from the LSH Training Portal (portal-login.js).
 // Accounts registered earlier with a password sign in the same way.
 const USERNAME_RE = /^[A-Za-z0-9_]{3,30}$/;
 // Day 1 of training is the day they register: the trainee's own date (their time
@@ -40,8 +39,8 @@ export async function onRequestPost({ request, env }) {
     if (!USERNAME_RE.test(username)) {
         return json({ success: false, error: 'Usernames are 3 to 30 letters, numbers or underscores.' }, 400);
     }
-    // Usernames starting "guest-" belong to trainees who sign in with just their
-    // name from another training platform (guest-login.js, _guest.js).
+    // Usernames starting "guest-" belong to the name-only accounts (_guest.js):
+    // reserved, so nobody registers their way into one.
     if (isGuestUsername(username)) {
         return json({ success: false, error: 'Usernames starting with "guest-" are reserved. Please choose another username.' }, 400);
     }

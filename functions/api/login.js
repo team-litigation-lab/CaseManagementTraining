@@ -36,7 +36,7 @@ async function adminPasswordOk(env, password) {
 }
 // Wrong passwords count against the connection (its IP), so the admin password can't be guessed by trying:
 // after ADMIN_TRIES_PER_HOUR wrong ones in an hour, sign-ins with a password wait for the next hour. The count
-// shares guest-login.js's table (_guest.js), keyed "admin:<ip>"; if that table isn't there yet, nothing is limited.
+// uses the guest_login_rate table (_guest.js), keyed "admin:<ip>"; if that table isn't there yet, nothing is limited.
 const ADMIN_TRIES_PER_HOUR = 20;
 async function wrongPasswords(db, request, add) {
     const ip = 'admin:' + (request.headers.get('CF-Connecting-IP') || 'unknown');
