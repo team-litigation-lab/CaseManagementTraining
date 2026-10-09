@@ -66,11 +66,17 @@ const failures = []; const fail = (m) => failures.push(m);
         const out = {};
         const name = document.getElementById('client-name-field'), lab = name && name.previousElementSibling;
         out.nameLabel = lab && lab.tagName === 'LABEL' ? lab.textContent.trim() : null;
+        // main is drawn at --main-scale (`zoom`, see styles.css), and getBoundingClientRect reports the
+        // zoomed pixels while the boxes' own min-height is written in unzoomed ones. Measure in the
+        // layout's own scale, so this says whether a box has its size and not what the view is zoomed to.
+        const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--main-scale')) || 1;
         for (const [k, el] of Object.entries({ name, contact: document.getElementById('client-phone-field'), ssn: document.getElementById('head-ssn-field'),
             target: document.querySelector('.header-card .target-settlement-display'), attorney: document.getElementById('attorney-field'), cm: document.getElementById('case-manager-field') })) {
             if (!el) { out[k] = 'missing'; continue; }
             const cs = getComputedStyle(el), r = el.getBoundingClientRect();
-            out[k] = { border: cs.borderTopStyle !== 'none' && parseFloat(cs.borderTopWidth) > 0 ? cs.borderTopColor : 'none', h: Math.round(r.height), w: Math.round(r.width) };
+            const z = (typeof el.currentCSSZoom === 'number' && el.currentCSSZoom > 0) ? el.currentCSSZoom : scale;
+            out[k] = { border: cs.borderTopStyle !== 'none' && parseFloat(cs.borderTopWidth) > 0 ? cs.borderTopColor : 'none',
+                h: Math.round(r.height / z), w: Math.round(r.width / z), zoom: z, onScreen: Math.round(r.height) };
         }
         return out;
     });
