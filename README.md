@@ -263,6 +263,16 @@ In the **Users** tab, trainees are grouped by Batch ID, the newest batch first.
 
 With the admin password set (and `PORTAL_ONLY` not `off`), trainees sign in only on the LSH Training Portal and open the CMS from there. The Portal's signed ticket says who they are (first and last name, and their Batch ID). Administrators type the admin password (`functions/api/portal-login.js`, `functions/_portal.js`, `guest-access.js`).
 
+### 🔗 Training tools open signed in (no CMS log-in page)
+
+Every link a course sends here carries a fresh ticket (`?ticket=`), so a trainee following one lands **already signed in, on the page the link asked for**, and never meets a log-in form. The course repos put it on every link out — clicks, middle-clicks, `window.open` and a framed open — in `js/lsh-tool-links.js`, and their Worker signs it at `/api/auth/tool-ticket` with the Portal's `PORTAL_SSO_SECRET`. The CMS reads it in `guest-access.js` → `/api/portal-login`.
+
+- **One secret, one ticket format**, the Portal's own: `base64url(JSON {first, last, b, exp})` + `.` + `base64url(HMAC-SHA256("portal-sso:" + PORTAL_SSO_SECRET, payload))`, good for 5 minutes. With `PORTAL_SSO_SECRET` set here the CMS checks the signature itself; without it, it asks the Portal (`/api/verify-ticket`) and trusts only the Portal's answer.
+- **The whole landing surface** works this way: a case file (`?mock=`), the Training Library or the Case Library search (`?library=1`), the Call Simulator (`?calls=1&program=…&line=…`, `&mode=graded`), the Front Desk Drill (`?drill=1`), the Intake folder (`?intake=1`) and the Firm Calendar (`?calendar=1`). The ticket signs the trainee in first and is taken out of the address bar, then the link opens what it asked for.
+- **A ticket is always acted on**, locked in or not. Whether the CMS hides its own sign-in (`portalOnly`: the admin password set, `PORTAL_ONLY` not `off`) is a separate question from whether a ticket the courses signed is good. It used to be gated on being locked in, so clearing the admin password — or `PORTAL_ONLY=off` — quietly turned every course link back into a log-in page.
+- **A ticket always wins** over whatever session the browser already has: whoever opened the link is who is signed in.
+- **Nothing is relaxed to make a link work.** An administrator's ticket (`{r:"a"}`) and the Portal's own system ticket (`{r:"s"}`) never sign anyone in — administrators type the admin password. A ticket that is expired, dated more than 10 minutes ahead, signed with another secret, or altered in either half is refused, and the trainee gets the normal sign-in (the Portal card when the CMS is locked to it, its own sign-in screen when it isn't).
+
 **Finding the trainee's account** (by first and last name; capitalisation, accents and a middle initial or suffix don't matter):
 - **One account has the name:** that one. A registration still waiting is approved by the Portal; declined, suspended and revoked accounts get their usual message.
 - **No account:** one is made, already approved.
@@ -976,6 +986,12 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
     - scoring hangs up, frees the line and keeps the transcript;
     - without live voice set up, the call and the rest of the drill run as text;
     - a **practice call on live voice**: Answer connects, both sides are transcribed, a typed line goes to the caller; when the live line drops (busy), the call goes on with the standard voice and the caller gets the transcript so far; the debrief scores it (clarity of speech and tone of voice are rated: it was a spoken call) and the result is saved with the whole transcript; the next practice call tries live voice again and ends at the time limit, going to the wrap-up; and on a visit where live voice isn't set up, the practice call says so, carries on with the standard voice, and the next one doesn't ask for live voice again.
+- **Training tools open signed in** (`.github/scripts/tool-links.cjs`, in the same job): the real `_portal.js` and `/api/portal-login` on SQLite with `PORTAL_SSO_SECRET` set, and a trainee arriving on a course link in a browser. Tickets are minted exactly as the course Worker signs them. It checks that:
+  - a real ticket signs the registered trainee in, and the CMS never calls the Portal while it holds the secret;
+  - one signed with another secret, one with either half altered, an expired one, one with no expiry and one dated far ahead are all refused with no session cookie;
+  - an administrator's and the Portal's own system ticket never sign anyone in;
+  - arriving with a ticket shows no log-in form and no Portal card, takes the ticket out of the address, and opens the Call Simulator (on a line, graded), the Front Desk Drill, a Training Library case, the Case Library search, the Intake folder and the Firm Calendar;
+  - with the CMS not locked to the Portal (`PORTAL_ONLY=off`, or no admin password yet) a course link still opens signed in, and a bad ticket there leaves the CMS's own sign-in up rather than saying there is none.
 - **Live view** (`.github/scripts/live-view.cjs`, in the same job): the real heartbeat, `/api/live-view` and `/api/live-screen` code on SQLite, with a trainee's page and an Admin's page in a browser. It checks:
   - where a trainee is, and a new step on the trail only when it changes;
   - a snapshot is kept only while an Admin watches, and an oversized one is skipped;

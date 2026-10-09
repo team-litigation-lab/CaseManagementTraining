@@ -72,8 +72,19 @@
             notice = 'We couldn’t reach the CMS to sign you in. Check your connection and open it from the LSH Training Portal again.';
         } finally {
             busy = false;
-            if (!session()) showNotice();
+            if (!session()) ticketFailed();
         }
+    }
+
+    // The ticket didn't sign them in (expired, wrongly signed, or the CMS couldn't reach the Portal).
+    // Locked to the Portal: the card pointing there, because there is no other way in. Otherwise the
+    // CMS's own sign-in is still the way in, so leave it up and say why the link didn't work — never
+    // tell someone there is no sign-in here while there is one.
+    function ticketFailed() {
+        if (portalOnly) { showNotice(); return; }
+        const o = document.getElementById('portal-only-overlay'); if (o) o.remove();
+        if (typeof window.showLoginView === 'function') window.showLoginView();
+        if (notice && typeof showToast === 'function') showToast(notice, 'error');
     }
 
     const orig = window.applySessionUI;
@@ -84,14 +95,18 @@
             return r;
         };
     }
+    // A ticket on the address is a trainee arriving on a link from their course, and it is always
+    // acted on — whether or not the CMS is locked to Portal sign-in. That is what keeps a course
+    // link from ever showing a log-in page (js/lsh-tool-links.js in the course repos puts the ticket
+    // on every link out). It also always wins over whatever session this browser already has:
+    // whoever opened the link is who gets signed in.
     function start() {
         fetch('/api/portal-login', { credentials: 'include' }).then((r) => r.json()).then((d) => {
             portalOnly = !!(d && d.portalOnly);
-            if (!portalOnly) return;
             if (wantAdmin && !session()) openAdminLogin();
-            else if (ticket) signInFromTicket();   // a Portal ticket always wins: whoever opened it from the Portal is who is signed in
-            else if (!session()) showNotice();
-        }).catch(() => { /* status unknown: leave the usual sign-in */ });
+            else if (ticket) signInFromTicket();
+            else if (portalOnly && !session()) showNotice();   // locked in: the Portal is the only way in
+        }).catch(() => { if (ticket) signInFromTicket(); });   // status unknown: the ticket is still worth trying
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

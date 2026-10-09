@@ -31,7 +31,11 @@ export async function onRequestGet({ env }) {
 
 export async function onRequestPost({ request, env }) {
     const db = env.DB;
-    if (!portalOnly(env)) return json({ success: false, code: 'NOT_CONFIGURED', error: 'Sign-in from the Portal isn\'t set up on the CMS yet.' }, 501);
+    // A signed ticket is honoured whether or not the CMS is locked to Portal sign-in. Being locked in
+    // (portalOnly: the admin password set and PORTAL_ONLY not "off") is about hiding the CMS's OWN
+    // sign-in; it has nothing to do with whether a ticket the courses signed is good. Gating this on
+    // it meant that clearing the admin password, or PORTAL_ONLY=off, silently turned every ticketed
+    // course link back into a log-in page. The ticket is checked just as strictly either way, below.
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const why = {};
