@@ -2178,7 +2178,12 @@
         }
         // Trainee view has no bar of its own: the sidebar's ⇦ Back to trainer view is the way back.
         function markTraineeView() { document.body.classList.toggle('trainee-view', isTraineeView()); }
+        // Bumped every time this tab's own session changes, so work already in flight can tell
+        // "this tab signed in as someone else since" from "this browser was taken over by someone
+        // else" (see sendHeartbeat's SESSION_CHANGED handling).
+        let _sessionGen = 0;
         function setSession(user) {
+            _sessionGen++;
             sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                 fullName: user.fullName,
                 batchId: user.batchId,
@@ -2187,6 +2192,7 @@
             }));
         }
         function clearSession() {
+            _sessionGen++;
             sessionStorage.removeItem(SESSION_KEY);
             sessionStorage.removeItem(TRAINEE_VIEW_KEY);
             localStorage.removeItem(SESSION_KEY);
@@ -3004,7 +3010,7 @@
             // session it authenticated as, and answers SESSION_CHANGED; this tab then signs itself out
             // instead of writing someone else's work, "online" and screen into that account (which is
             // what made 👁 Watch live show the wrong trainee). See functions/api/heartbeat.js.
-            const as = (getRealSession() || {}).username || '';
+            const as = (getRealSession() || {}).username || '', gen = _sessionGen;
             const beat = {
                 as,
                 fullName: session.fullName,
@@ -3027,10 +3033,11 @@
                 }
                 if (r.status === 409) {
                     const d = await r.clone().json().catch(() => null);
-                    // Someone else signed in on this browser. Only act while this tab still thinks it's
-                    // the account it just claimed: a beat already on its way when this tab itself signed
-                    // in as someone new gets the same answer, and the next beat is the right one.
-                    if (d && d.code === 'SESSION_CHANGED' && as && (getRealSession() || {}).username === as) {
+                    // Someone else signed in on this browser. Only act while this tab is still the
+                    // account it claimed and hasn't signed in as anyone since: a beat already on its way
+                    // when this tab itself signed in as someone new gets the same answer, and that is
+                    // not a takeover — the next beat is the right one.
+                    if (d && d.code === 'SESSION_CHANGED' && as && gen === _sessionGen && (getRealSession() || {}).username === as) {
                         handleSessionTakenOver(session.fullName || as);
                     }
                     return false;

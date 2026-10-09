@@ -266,7 +266,7 @@ const failures = []; const fail = (m) => failures.push(m);
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: 'CI' }, alert: { active: false }, ping: null });
         return j({ success: true });
     });
-    // a browser that has signed in before gets the sign-in screen (a new one gets Register first: guest.cjs)
+    // a browser that has signed in before gets the sign-in screen
     await page.addInitScript(() => localStorage.setItem('LSH_CMS_SIGNED_IN_BEFORE', '1'));
     await page.goto(base, { waitUntil: 'load' });
     await page.waitForSelector('#auth-login-view', { state: 'visible' });
