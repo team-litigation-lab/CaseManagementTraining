@@ -2285,6 +2285,21 @@
             if (message) showToast(message, 'info');
         }
 
+        /* Someone else signed in on this browser (a browser holds one session cookie; each tab keeps
+           its own session). This tab is no longer the person it was, so it stops here rather than
+           writing their work, their "online" or their screen into the account that now owns the
+           cookie — which is what made 👁 Watch live show the wrong trainee. Deliberately NO
+           /api/logout: that cookie belongs to whoever signed in last, and this tab must not end
+           their session. Only this tab's own session is cleared (sessionStorage). */
+        function handleSessionTakenOver(who) {
+            stopHeartbeat();
+            stopIdleTracking();
+            clearSession();
+            exitMasterControl();
+            applySessionUI();
+            showToast('This browser has been signed in as someone else, so ' + (who || 'you') + ' is signed out of this tab. Open the CMS again from your course to carry on.', 'info');
+        }
+
         /* =========================================================
            MASTER CONTROL — full-page admin view + portal toggle
            ========================================================= */
@@ -2681,11 +2696,22 @@
                 .then(list => renderMonitoringOnline(Array.isArray(list) ? list : []))
                 .catch(() => renderMonitoringOnline([]));
         }
+        // heartbeats.last_seen is SQLite's datetime('now'): UTC wall clock with no zone on it
+        // ("2026-10-09 08:02:31"). new Date() reads that as LOCAL time, so in Manila (UTC+8) every
+        // trainee looked 8 hours stale — none was ever "Online now" and 👁 Watch live never appeared;
+        // west of UTC they all looked online for ever. Read it as the UTC it is (the same way
+        // functions/api/live-view.js does). 0 when there's nothing to read.
+        function seenAt(raw) {
+            if (!raw) return 0;
+            const s = String(raw);
+            const t = Date.parse(s.replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? '' : 'Z'));
+            return isFinite(t) ? t : 0;
+        }
         // Flat list, no Batch ID grouping — sorted online-first, then by
         // most recently seen.
         function renderMonitoringOnline(list) {
             const now = Date.now();
-            list.forEach(u => u._online = (now - new Date(u.last_seen).getTime()) < HEARTBEAT_GRACE_MS * 2);
+            list.forEach(u => u._online = (now - seenAt(u.last_seen)) < HEARTBEAT_GRACE_MS * 2);
             const onlineCount = list.filter(u => u._online).length;
             const statTile = document.getElementById('admin-stat-online');
             if (statTile) statTile.innerText = onlineCount;
@@ -2698,13 +2724,13 @@
                 // (the username goes in a data attribute: JSON.stringify's double quotes inside onclick="…" cut the handler short, so the click did nothing)
                 return '<div class="reg-row" style="cursor:pointer;" data-username="' + escapeHtmlAttr(u.username) + '" onclick="openMonitorCase(this.dataset.username)"><div class="reg-info">' +
                     '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + escapeHtmlAttr(u.full_name || u.username) + '</b>' +
-                    '<div class="reg-meta">' + escapeHtmlAttr(u.user_type || '') + ' \u00B7 @' + escapeHtmlAttr(u.username) + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + new Date(u.last_seen).toLocaleString()) + (u.current_case ? (' \u00B7 Working on: ' + escapeHtmlAttr(u.current_case)) : '') + '</div>' +
+                    '<div class="reg-meta">' + escapeHtmlAttr(u.user_type || '') + ' \u00B7 @' + escapeHtmlAttr(u.username) + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + (seenAt(u.last_seen) ? new Date(seenAt(u.last_seen)).toLocaleString() : '\u2014')) + (u.current_case ? (' \u00B7 Working on: ' + escapeHtmlAttr(u.current_case)) : '') + '</div>' +
                     '</div><div style="display:flex;align-items:center;gap:10px;">' +
                     ((u._online && (u.user_type || 'Trainee') !== 'Admin') ? '<button class="mini-btn live-watch" onclick="event.stopPropagation(); openLiveView(this.closest(\'.reg-row\').dataset.username)">\u{1F441} Watch live</button>' : '') +
                     '<span style="font-size:11px;color:#64748b;">View Latest Saved \u2192</span></div></div>';
             }
 
-            const sorted = list.slice().sort((a, b) => (b._online - a._online) || (new Date(b.last_seen) - new Date(a.last_seen)));
+            const sorted = list.slice().sort((a, b) => (b._online - a._online) || (seenAt(b.last_seen) - seenAt(a.last_seen)));
             container.innerHTML = sorted.map(rowHtml).join('');
         }
 
@@ -2971,7 +2997,16 @@
         function sendHeartbeat(opts) {
             const session = getSession();
             if (!session) return Promise.resolve(false);
+            // as: the account THIS TAB believes it is. A browser has one session cookie, but each tab
+            // keeps its own session (sessionStorage), so a second trainee signing in on this browser
+            // (another tab, a link from their course, a shared computer) silently re-points every page
+            // already open at their account. The server records nothing for a page whose `as` isn't the
+            // session it authenticated as, and answers SESSION_CHANGED; this tab then signs itself out
+            // instead of writing someone else's work, "online" and screen into that account (which is
+            // what made 👁 Watch live show the wrong trainee). See functions/api/heartbeat.js.
+            const as = (getRealSession() || {}).username || '';
             const beat = {
+                as,
                 fullName: session.fullName,
                 currentCase: (document.getElementById('client-name-field') ? document.getElementById('client-name-field').innerText.trim() : '') || null
             };
@@ -2988,6 +3023,16 @@
             .then(async r => {
                 if (r.status === 401) {
                     handleSessionExpired('Your session has expired. Please log in again.');
+                    return false;
+                }
+                if (r.status === 409) {
+                    const d = await r.clone().json().catch(() => null);
+                    // Someone else signed in on this browser. Only act while this tab still thinks it's
+                    // the account it just claimed: a beat already on its way when this tab itself signed
+                    // in as someone new gets the same answer, and the next beat is the right one.
+                    if (d && d.code === 'SESSION_CHANGED' && as && (getRealSession() || {}).username === as) {
+                        handleSessionTakenOver(session.fullName || as);
+                    }
                     return false;
                 }
                 if (r.ok) {

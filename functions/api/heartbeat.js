@@ -28,6 +28,20 @@ export async function onRequestPost({ request, env }) {
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const { fullName, currentCase, where, snapshot, screen, mirror, hold } = body;
 
+    // Which account the page sending this believes it is (app.js: `as`). A browser holds ONE
+    // session cookie, but each tab keeps its own idea of who it is (sessionStorage). So a second
+    // trainee signing in on the same browser — another tab, a ticketed link from their course,
+    // a shared training-room computer — replaces the cookie under every page already open, and
+    // those pages then write their work, their "online" and their screen into the new account.
+    // That is what made 👁 Watch live show the wrong trainee: the live view is keyed on the
+    // username this request authenticates as, so the stale tab's screen was filed under whoever
+    // signed in last. Nothing is recorded for a page that is no longer who it thinks it is; it
+    // is told so, and signs itself out of this tab (the cookie stays: it belongs to the new user).
+    const claimed = typeof body.as === 'string' ? body.as.trim() : '';
+    if (claimed && claimed !== session.username) {
+        return json({ success: false, code: 'SESSION_CHANGED', error: 'This browser is signed in as someone else now. Open the CMS again from your course to carry on.' }, 409);
+    }
+
     // Identity comes from the verified session, not the request body —
     // otherwise anyone could POST a heartbeat claiming to be any username,
     // overwriting that user's "currently online" row. The name too: the one
