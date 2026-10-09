@@ -70,7 +70,13 @@ const failures = []; const fail = (m) => failures.push(m);
             target: document.querySelector('.header-card .target-settlement-display'), attorney: document.getElementById('attorney-field'), cm: document.getElementById('case-manager-field') })) {
             if (!el) { out[k] = 'missing'; continue; }
             const cs = getComputedStyle(el), r = el.getBoundingClientRect();
-            out[k] = { border: cs.borderTopStyle !== 'none' && parseFloat(cs.borderTopWidth) > 0 ? cs.borderTopColor : 'none', h: Math.round(r.height), w: Math.round(r.width) };
+            // The case is drawn at --main-scale, and smaller again when it has to fit (case-fit.js), both with
+            // `zoom`, which scales what getBoundingClientRect reports. A box is sized here in the case's own
+            // scale, the way the styles set it, so these sizes don't move when the view is drawn smaller.
+            let zoom = 1;
+            for (let n = el; n && n.nodeType === 1; n = n.parentElement) zoom *= Number(getComputedStyle(n).zoom) || 1;
+            out[k] = { border: cs.borderTopStyle !== 'none' && parseFloat(cs.borderTopWidth) > 0 ? cs.borderTopColor : 'none',
+                h: Math.round(r.height / zoom), w: Math.round(r.width / zoom), shown: Math.round(r.height) };
         }
         return out;
     });
