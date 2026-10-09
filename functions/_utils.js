@@ -120,6 +120,45 @@ export async function upsertSessionHeartbeat(db, { username, fullName, batchId, 
     ).bind(username, fullName || username, batchId || null, userType || null, currentCase).run();
 }
 
+/* =====================================================================
+   WHICH ACCOUNT THE PAGE THINKS IT IS
+
+   A browser holds ONE session cookie, but each tab keeps its own idea of who it
+   is (sessionStorage). So a second trainee signing in on the same browser —
+   another tab, a ticketed link from their course, a shared training-room
+   computer — replaces that cookie under every page already open. Those pages go
+   on working as the first trainee while every request they send authenticates
+   as the second: their case saves (case_repository.owner_username), time
+   entries, drill results, "online" row and mirrored screen were all filed under
+   whoever signed in last, and reads came back as that account's data. That is
+   what made 👁 Watch live show the wrong trainee, and it put one trainee's work
+   in another's My cases.
+
+   So every request from a CMS page says which account it believes it is:
+   X-LSH-As (app.js puts it on every /api/ request), or `as` in the JSON body of
+   the heartbeat and the live screen, which already carry it. When that isn't the
+   account the request authenticated as, nothing is read or written — 409
+   SESSION_CHANGED — and the page signs itself out of that tab. The cookie is
+   left alone: it belongs to the trainee who signed in last, who carries on.
+
+   It is only ever used to REFUSE, so a page naming the wrong account can only
+   lock itself out, never reach anyone else's data. A request that says nothing
+   (a page open from before this, an <img src="/api/file?…">) is left alone.
+   ===================================================================== */
+export const AS_HEADER = 'X-LSH-As';
+/** The account the page sending this request believes it is ('' when it doesn't say). */
+export function claimedAccount(request, body) {
+    const h = request && request.headers ? request.headers.get(AS_HEADER) : '';
+    const v = (typeof h === 'string' && h.trim()) || (body && typeof body.as === 'string' ? body.as.trim() : '');
+    return String(v || '').slice(0, 80);
+}
+/** True when the page says it is someone other than the account this request authenticated as. */
+export const wrongAccount = (claimed, username) => !!claimed && claimed !== username;
+export const sessionChangedResponse = () => json({
+    success: false, code: 'SESSION_CHANGED',
+    error: 'This browser is signed in as someone else now. Open the CMS again from your course to carry on.'
+}, 409);
+
 /**
  * Verifies the caller's session cookie. Use this at the top of any
  * endpoint that returns or mutates real data — never trust a
@@ -130,6 +169,13 @@ export async function requireSession(request, env, { adminOnly = false, skipHear
     const payload = await verifySessionToken(token, env.SESSION_SECRET);
     if (!payload) {
         return { ok: false, response: json({ success: false, error: 'Not authenticated.', code: 'NOT_AUTHENTICATED' }, 401) };
+    }
+    // Every endpoint comes through here, so this is the one place the check belongs: a page that is no
+    // longer the account it thinks it is neither reads nor writes. See the note above. Checked before
+    // any database work, so a stale tab costs nothing. The heartbeat and the live screen check their
+    // body's `as` as well, which arrives the same way.
+    if (wrongAccount(claimedAccount(request), payload.username)) {
+        return { ok: false, response: sessionChangedResponse() };
     }
     // /api/heartbeat's own POST handler is the one call site that passes
     // skipHeartbeatCheck: true. Its entire purpose is to refresh the

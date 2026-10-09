@@ -76,6 +76,14 @@ jobs:
         run: node .github/scripts/login.cjs
       - name: Portal-only sign-in (tickets, no typed name, no username alone, admins use the password)
         run: node .github/scripts/portal.cjs
+      - name: Session identity (a page reads and writes only as the account it believes it is)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/session-identity.cjs
+      - name: Training tools open signed in (the Portal's ticket, no CMS log-in page)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/tool-links.cjs
       - name: Case editor sections (keyed saves, new tabs, reorder, drop, task accept)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

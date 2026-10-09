@@ -1,4 +1,4 @@
-import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS } from '../_utils.js';
+import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS, claimedAccount, wrongAccount, sessionChangedResponse } from '../_utils.js';
 import { reportLiveView, waitForWatch, HOLD_MAX_MS } from '../_liveview.js';
 
 export async function onRequestGet({ request, env }) {
@@ -27,6 +27,13 @@ export async function onRequestPost({ request, env }) {
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     const { fullName, currentCase, where, snapshot, screen, mirror, hold } = body;
+
+    // Which account this page believes it is. requireSession already refused a wrong X-LSH-As; the
+    // heartbeat carries it in its body too, and is the one endpoint whose whole job is identity, so
+    // it checks that as well before writing anyone's "online" row. See _utils.js, "WHICH ACCOUNT THE
+    // PAGE THINKS IT IS": a stale tab used to file its work and its screen under whoever signed in
+    // last on this browser, which is what made 👁 Watch live show the wrong trainee.
+    if (wrongAccount(claimedAccount(request, body), session.username)) return sessionChangedResponse();
 
     // Identity comes from the verified session, not the request body —
     // otherwise anyone could POST a heartbeat claiming to be any username,

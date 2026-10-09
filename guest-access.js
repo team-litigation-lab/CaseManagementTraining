@@ -72,19 +72,36 @@
             notice = 'We couldn’t reach the CMS to sign you in. Check your connection and open it from the LSH Training Portal again.';
         } finally {
             busy = false;
-            if (!session()) showNotice();
+            if (!session()) ticketFailed();
         }
     }
 
+    // The ticket didn't sign them in (expired, wrongly signed, or the CMS couldn't reach the Portal).
+    // Locked to the Portal: the card pointing there. Otherwise the CMS's own sign-in is still the way
+    // in, so leave it up and say why the link didn't work — never tell someone there is no sign-in
+    // here while there is one.
+    function ticketFailed() {
+        if (portalOnly) { showNotice(); return; }
+        const o = document.getElementById('portal-only-overlay'); if (o) o.remove();
+        if (typeof window.showLoginView === 'function') window.showLoginView();
+        if (notice && typeof showToast === 'function') showToast(notice, 'error');
+    }
+
+    // A ticket on the address is a trainee arriving on a link from their course, and it is always
+    // acted on — whether or not the CMS is locked to Portal sign-in. Being locked in is about which
+    // of the CMS's own sign-ins are offered, not about whether a ticket the courses signed is good;
+    // gating this on it meant clearing the admin password, or PORTAL_ONLY=off, quietly turned every
+    // ticketed course link back into a log-in page (js/lsh-tool-links.js in the course repos puts the
+    // ticket on every link out). A ticket also wins over whatever session this browser already has:
+    // whoever opened the link is who gets signed in.
     function start() {
         fetch('/api/portal-login', { credentials: 'include' }).then((r) => r.json()).then((d) => {
             portalOnly = !!(d && d.portalOnly);
-            if (!portalOnly) return;
             if (wantAdmin && !session()) openAdminLogin();
-            else if (ticket) signInFromTicket();   // a Portal ticket always wins: whoever opened it from the Portal is who is signed in
+            else if (ticket) signInFromTicket();
             // No ticket: the CMS's own sign-in screen stays, where a registered trainee signs in with
             // their username (functions/api/login.js). showNotice() is now only for a ticket that failed.
-        }).catch(() => { /* status unknown: leave the usual sign-in */ });
+        }).catch(() => { if (ticket) signInFromTicket(); });   // status unknown: the ticket is still worth trying
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

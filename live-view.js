@@ -314,7 +314,11 @@
 
     // What a send carries: where they are, their screen (the copy only when the server doesn't have it), and now and then the case.
     async function liveReport() {
-        const out = { where: where() };
+        // as: the account this tab believes it is. A browser holds one session cookie, so a second
+        // trainee signing in on it re-points this page's requests at their account; the server then
+        // refuses to file this screen under them (SESSION_CHANGED), instead of 👁 Watch live showing
+        // the wrong trainee. See functions/api/live-screen.js and app.js's sendHeartbeat.
+        const out = { as: (realSession() || {}).username || '', where: where() };
         if (visible() && (S.dirty || !lastHtml)) {
             S.dirty = false;
             const t0 = performance.now();
@@ -356,6 +360,8 @@
                 const r = await fetch('/api/live-screen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: text });
                 const d = await r.json().catch(() => null);
                 if (r.status === 401) { setWatched(false); return; }   // signed out or expired: nothing more goes
+                // someone else signed in on this browser: this page's screen is nobody's to show here
+                if (r.status === 409 && d && d.code === 'SESSION_CHANGED') { setWatched(false); return; }
                 if (r.ok && d && d.success) {
                     ok = true;
                     if (!d.watched) setWatched(false);   // the trainer stopped watching

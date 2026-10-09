@@ -13,6 +13,10 @@
 // version; a trainee writes only their own screen and can't read anyone's. A trainee's heartbeat that may
 // wait (hold) waits while nobody watches and answers within about a second when a watch starts (an
 // Admin's never waits); /api/live-screen keeps a screen only while watched, and only the sender's own.
+// Checks (whose screen it is): a page says which account it believes it is (`as`). A browser holds one
+// session cookie but each tab keeps its own session, so a second trainee signing in on the same browser
+// re-points every page already open at their account; such a page's screen is never filed under them
+// (it was, and 👁 Watch live then showed the wrong trainee), and the page signs itself out of that tab.
 // Checks (browser): Monitoring has 👁 Watch live on an online trainee; the live view shows where they are
 // (the case and the tab), what they typed (as text, never run as HTML), what they open (New Intake), and the
 // trail; nothing on the trainee's page says they're being watched (no notice), and their page sends only while watched.
@@ -188,6 +192,27 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     if (r.data.watched || screenRow()) fail(`/api/live-screen kept a screen after the watch ended, or didn't say the watch ended: ${JSON.stringify(r.data)}`);
     const anon = await lsApi.onRequestPost({ request: new Request('http://x/api/live-screen', { method: 'POST', body: '{}' }), env });
     if (anon.status !== 401) fail(`/api/live-screen answered without a session (${anon.status})`);
+    // the API: a page that is no longer who it thinks it is (`as`)
+    // A browser holds ONE session cookie, but each tab keeps its own idea of who it is
+    // (sessionStorage). A second trainee signing in on the same browser — another tab, a ticketed
+    // link from their course, a shared training-room computer — replaces that cookie under every
+    // page already open, so a tab still showing the first trainee authenticates as the second. Its
+    // screen used to be filed under the second trainee, which is what made 👁 Watch live show the
+    // wrong trainee. `as` is the account the page believes it is: nothing is recorded when it isn't
+    // the session's own, and the page is told (SESSION_CHANGED) so it signs itself out of that tab.
+    const tomCase = () => (sql.prepare("SELECT current_case FROM heartbeats WHERE username = 'tom'").get() || {}).current_case;
+    await view(ann, '?username=tom');   // the trainer is watching tom
+    await hb(tom, { fullName: 'Tom Trainee', currentCase: "Tom's case", as: 'tom', where: W1, mirror: 1, screen: { id: 'tomown', enc: 'raw', data: "<p>Tom's own screen</p>", view: V } });
+    if (tomCase() !== "Tom's case" || !screenRow('tom') || screenRow('tom').data !== "<p>Tom's own screen</p>") fail(`a page that is who it says it is was refused: ${tomCase()} / ${JSON.stringify(screenRow('tom'))}`);
+    r = await hb(tom, { fullName: 'Tia Trainee', currentCase: "Tia's case", as: 'tia', where: W2, mirror: 1, screen: { id: 'stale1', enc: 'raw', data: "<p>Tia's screen</p>", view: V } });
+    if (r.status !== 409 || r.data.code !== 'SESSION_CHANGED') fail(`a heartbeat from a page signed in as another trainee wasn't refused: ${r.status} ${JSON.stringify(r.data)}`);
+    if (tomCase() !== "Tom's case" || screenRow('tom').data !== "<p>Tom's own screen</p>") fail(`a stale tab wrote another trainee's heartbeat or screen: ${tomCase()} / ${JSON.stringify(screenRow('tom').data)}`);
+    r = await ls(tom, { as: 'tia', where: W2, screen: { id: 'stale2', enc: 'raw', data: "<p>Tia again</p>", view: V } });
+    if (r.status !== 409 || r.data.code !== 'SESSION_CHANGED') fail(`/api/live-screen from a page signed in as another trainee wasn't refused: ${r.status} ${JSON.stringify(r.data)}`);
+    if (screenRow('tom').data !== "<p>Tom's own screen</p>") fail(`a stale tab's screen was filed under another trainee: ${JSON.stringify(screenRow('tom').data)}`);
+    r = await ls(tom, { where: W1, screen: { id: 'tomown', view: V } });   // a page from before this change says nothing: unchanged
+    if (r.status !== 200 || !r.data.watched) fail(`a page that doesn't say which account it is was refused: ${r.status} ${JSON.stringify(r.data)}`);
+
     sql.exec("DELETE FROM live_view; DELETE FROM live_screen; DELETE FROM heartbeats WHERE username = 'tom'");
 
     // the browser: a trainee working, an Admin watching
@@ -563,6 +588,30 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     if (M.unwatched.liveScreen) fail(`with nobody watching, the trainee's page sent ${M.unwatched.liveScreen} live updates`);
     if (M.unwatched.heartbeats > 2) fail(`with nobody watching, the trainee's page sent ${M.unwatched.heartbeats} heartbeats in ${M.unwatched.seconds} s (expected one every 30 s)`);
     if (!unwatchedBeats.every(x => x.hold) || M.unwatched.waitedMs < 20000) fail(`with nobody watching, the trainee's heartbeat doesn't wait at the server for the next watch (${JSON.stringify(unwatchedBeats.map(x => ({ hold: x.hold, ms: x.ms })))})`);
+    // 👁 Watch live never shows a page that is no longer who it thinks it is (the bug Lei reported:
+    // opening Watch live on one trainee showed another trainee's screen). A second trainee signing
+    // in on the same browser replaces its one session cookie, so a tab still open as the first
+    // trainee has every request authenticate as the second: here, a page that believes it is tia
+    // whose requests carry tom's session. Its screen must never be filed under tom, and the tab
+    // signs itself out of the CMS instead of working on in tom's account.
+    sql.prepare("INSERT OR REPLACE INTO heartbeats (username, full_name, batch_id, user_type, last_seen) VALUES ('tom', 'Tom Trainee', 'B300926', 'Trainee', datetime('now'))").run();
+    const tomPage = await open(tom, { username: 'tom', fullName: 'Tom Trainee', batchId: 'B300926', userType: 'Trainee' });
+    await tomPage.click('#client-name-field'); await tomPage.keyboard.type('TOM OWN CASE');
+    const stale = await open(tom, { username: 'tia', fullName: 'Tia Trainee', batchId: 'B300926', userType: 'Trainee' });
+    await stale.evaluate(() => { const d = document.createElement('div'); d.id = 'stale-mark'; d.textContent = 'STALE TAB OF TIA'; document.body.appendChild(d); });
+    await admin.evaluate(() => openLiveView('tom'));
+    await admin.waitForFunction(() => /TOM OWN CASE/.test((document.querySelector('#lv-stage iframe.lv-frame.lv-on') || {}).srcdoc || ''), null, { timeout: 15000, polling: 100 })
+        .catch(() => fail('👁 Watch live didn\'t show the trainee it was opened for'));
+    await admin.waitForTimeout(2500);
+    const crossed = await admin.evaluate(() => ({
+        doc: (document.querySelector('#lv-stage iframe.lv-frame.lv-on') || {}).srcdoc || '',
+        who: (document.getElementById('lv-sub') || {}).textContent || ''
+    }));
+    if (/STALE TAB OF TIA/.test(crossed.doc)) fail(`👁 Watch live showed the screen of a tab signed in as another trainee (${crossed.who})`);
+    await stale.waitForFunction(() => !JSON.parse(sessionStorage.getItem('LSH_SESSION_V1') || 'null'), null, { timeout: 40000, polling: 250 })
+        .catch(() => fail('a tab whose browser was signed in as someone else kept working in their account'));
+    await admin.evaluate(() => closeLiveView());
+
     if (process.env.SHOTS) {
         await trainee.evaluate(() => openFrontDeskDrill());
         await admin.evaluate(() => openLiveView('tia'));

@@ -270,17 +270,29 @@ What is kept, and why:
 - **The accounts already made that way** (usernames starting `guest-`) are ordinary approved accounts and
   keep working, with their cases, drill scores and reviews. `register.js` still refuses that prefix so
   nobody registers into one of them, and the Users list still shows where each came from (`guestVia`).
-- **`guestUsername` and `guest_accounts`** are still how `portal-login.js` makes an account for a trainee
-  the Portal vouches for who has no CMS registration of their own — that is single sign-on, not name
-  sign-in.
+- **`guestUsername` and `guest_accounts`** are how `portal-login.js` still *finds* one of those accounts
+  for a trainee the Portal vouches for. It no longer makes one: a ticket for a name with no CMS account
+  is refused (`NOT_REGISTERED`), so an account is registered and approved by a trainer, or there is no
+  way in.
 - **`guest_login_rate`** now counts wrong admin passwords per connection (`functions/api/login.js`); it
   kept its name rather than migrate a live table.
 
 Code: `functions/_guest.js`, `guest-access.js`.
 
+
 ## 🔐 Signing in from the LSH Training Portal
 
 With the admin password set (and `PORTAL_ONLY` not `off`), trainees sign in only on the LSH Training Portal and open the CMS from there. The Portal's signed ticket says who they are (first and last name, and their Batch ID). Administrators type the admin password (`functions/api/portal-login.js`, `functions/_portal.js`, `guest-access.js`).
+
+### 🔗 Training tools open signed in (no CMS log-in page)
+
+Every link a course sends here carries a fresh ticket (`?ticket=`), so a trainee following one lands **already signed in, on the page the link asked for**, and never meets a log-in form. The course repos put it on every link out — clicks, middle-clicks, `window.open` and a framed open — in `js/lsh-tool-links.js`, and their Worker signs it at `/api/auth/tool-ticket` with the Portal's `PORTAL_SSO_SECRET`. The CMS reads it in `guest-access.js` → `/api/portal-login`.
+
+- **One secret, one ticket format**, the Portal's own: `base64url(JSON {first, last, b, exp})` + `.` + `base64url(HMAC-SHA256("portal-sso:" + PORTAL_SSO_SECRET, payload))`, good for 5 minutes. With `PORTAL_SSO_SECRET` set here the CMS checks the signature itself; without it, it asks the Portal (`/api/verify-ticket`) and trusts only the Portal's answer.
+- **The whole landing surface** works this way: a case file (`?mock=`), the Training Library or the Case Library search (`?library=1`), the Call Simulator (`?calls=1&program=…&line=…`, `&mode=graded`), the Front Desk Drill (`?drill=1`), the Intake folder (`?intake=1`) and the Firm Calendar (`?calendar=1`). The ticket signs the trainee in first and is taken out of the address bar, then the link opens what it asked for.
+- **A ticket is always acted on**, locked in or not. Whether the CMS hides its own sign-in (`portalOnly`: the admin password set, `PORTAL_ONLY` not `off`) is a separate question from whether a ticket the courses signed is good. It used to be gated on being locked in, so clearing the admin password — or `PORTAL_ONLY=off` — quietly turned every course link back into a log-in page.
+- **A ticket always wins** over whatever session the browser already has: whoever opened the link is who is signed in.
+- **Nothing is relaxed to make a link work.** An administrator's ticket (`{r:"a"}`) and the Portal's own system ticket (`{r:"s"}`) never sign anyone in — administrators type the admin password. A ticket that is expired, dated more than 10 minutes ahead, signed with another secret, or altered in either half is refused, and the trainee gets the normal sign-in (the Portal card when the CMS is locked to it, its own sign-in screen when it isn't).
 
 **Finding the trainee's account** (by first and last name; capitalisation, accents and a middle initial or suffix don't matter):
 - **One account has the name:** that one. A registration still waiting is approved by the Portal; declined, suspended and revoked accounts get their usual message.
@@ -679,8 +691,22 @@ How it works:
 - Nothing on the trainee's page says they're being watched (no notice; the trainer decides whether to tell them).
 - In the summary, what trainees type is shown as text, never run as HTML. The same now holds for Monitoring's "View Latest Saved" and the Case Logs views.
 - Trainers' own screens aren't watched.
+- **Whose screen it is.** A page says which account it believes it is with every request it sends (`X-LSH-As`, and `as` in the heartbeat's and the live screen's body). A browser holds **one** session cookie, but each tab keeps its own session, so a second trainee signing in on the same browser — another tab, a ticketed link from their course, a shared training-room computer — used to re-point every page already open at the new account: the first trainee's tab went on working, and its screen was filed under the trainee who signed in last. 👁 Watch live on one trainee then showed the other's screen. Now nothing is recorded for a page that isn't the session's own account: it's told (`SESSION_CHANGED`), and signs itself out of that tab with "This browser has been signed in as someone else" rather than writing someone else's work, "online" and screen into their account. The cookie is left alone — it belongs to whoever signed in last — so the trainee who does own the browser carries on. A page that says nothing (one open from before this change) is recorded as before. It is refused on the **first request** it sends, so nothing of one trainee's work reaches another's account — see **🧍 One tab, one account** below.
+- **Who's online** in Monitoring reads `heartbeats.last_seen` as the UTC it is. It used to be read as local time, so in Manila (UTC+8) every trainee looked eight hours stale: none was ever "Online now" and 👁 Watch live never appeared at all; west of UTC they all looked online for ever.
 
 What the screen can't show: anything drawn on a `<canvas>` (the CMS has none), pictures from other websites, the name of a file picked in a file box, the text cursor and selected text, and anything outside the CMS tab. Small differences can come from the trainer's own browser (fonts, scrollbars).
+
+## 🧍 One tab, one account
+
+A browser holds **one** session cookie, but each tab keeps its own idea of who it is (`sessionStorage`). So a second trainee signing in on the same browser — another tab, a ticketed link from their course, a shared training-room computer — replaced that cookie under every page already open. Those pages went on working as the first trainee while every request they sent authenticated as the second: case saves (`case_repository.owner_username`), time entries, drill results, the "online" row and the mirrored screen were all filed under whoever signed in last, and reads came back as that account's data. That is what made 👁 Watch live show the wrong trainee, and it put one trainee's work in another's **My cases**.
+
+- **Every `/api/` request says which account the page believes it is:** `X-LSH-As` (`app.js` adds it), and `as` in the body of the heartbeat and the live screen, which already carried one.
+- **`requireSession` refuses any request where that isn't the account it authenticated as** (`functions/_utils.js`), before it touches the database — so the check covers every endpoint that goes through it, which is every endpoint but the sign-in, sign-out, status and calendar-feed ones. `/api/logout` checks it too: a stale tab's **Log Out** must not end the session of whoever owns the browser now.
+- **The answer is 409 `SESSION_CHANGED`,** and the first one signs that tab out: "This browser has been signed in as someone else." No `/api/logout` is sent, and only this tab's own session is cleared — the cookie belongs to the trainee who signed in last, who carries on uninterrupted.
+- **A tab that has been taken over stays out of the API** even once it is signed out, because the browser still holds the other trainee's cookie and a request with no account name on it would be read and written as them. Signing in again there (a ticket from their course) brings it back.
+- **The name is only ever used to refuse,** so a page naming the wrong account can only lock itself out, never reach anyone else's data. A request that says nothing — a page open from before this, an `<img src="/api/file?…">` — is left alone.
+
+Code: `functions/_utils.js` (`claimedAccount`, `wrongAccount`, `requireSession`), `app.js` (the `fetch` wrapper, `handleSessionTakenOver`), `functions/api/heartbeat.js`, `functions/api/live-screen.js`, `functions/api/logout.js`. Checked by `.github/scripts/session-identity.cjs`.
 
 Code: `live-view.js`, `functions/_liveview.js` (the `live_view` and `live_screen` tables, made on first use), `/api/live-view`, `/api/live-screen`, and the heartbeat (`app.js`, `functions/api/heartbeat.js`).
 
@@ -993,6 +1019,18 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
     - scoring hangs up, frees the line and keeps the transcript;
     - without live voice set up, the call and the rest of the drill run as text;
     - a **practice call on live voice**: Answer connects, both sides are transcribed, a typed line goes to the caller; when the live line drops (busy), the call goes on with the standard voice and the caller gets the transcript so far; the debrief scores it (clarity of speech and tone of voice are rated: it was a spoken call) and the result is saved with the whole transcript; the next practice call tries live voice again and ends at the time limit, going to the wrap-up; and on a visit where live voice isn't set up, the practice call says so, carries on with the standard voice, and the next one doesn't ask for live voice again.
+- **Training tools open signed in** (`.github/scripts/tool-links.cjs`, in the same job): the real `_portal.js` and `/api/portal-login` on SQLite with `PORTAL_SSO_SECRET` set, and a trainee arriving on a course link in a browser. Tickets are minted exactly as the course Worker signs them. It checks that:
+  - a real ticket signs the registered trainee in, and the CMS never calls the Portal while it holds the secret;
+  - one signed with another secret, one with either half altered, an expired one, one with no expiry and one dated far ahead are all refused with no session cookie;
+  - an administrator's and the Portal's own system ticket never sign anyone in;
+  - arriving with a ticket shows no log-in form and no Portal card, takes the ticket out of the address, and opens the Call Simulator (on a line, graded), the Front Desk Drill, a Training Library case, the Case Library search, the Intake folder and the Firm Calendar;
+  - with the CMS not locked to the Portal (`PORTAL_ONLY=off`, or no admin password yet) a course link still opens signed in, and a bad ticket there leaves the CMS's own sign-in up rather than saying there is none.
+- **Session identity** (`.github/scripts/session-identity.cjs`, in the same job): the real `requireSession`, time, drill, heartbeat, live-screen and logout code on SQLite, and a taken-over tab in a browser. It checks that:
+  - `requireSession` refuses a request whose `X-LSH-As` isn't the account it authenticated as (409 `SESSION_CHANGED`), and passes a matching one, or none at all;
+  - every endpoint but the sign-in, sign-out, status and calendar-feed ones goes through `requireSession`, so a new endpoint can't quietly skip the check;
+  - a stale tab is refused on a read (`/api/time`) and on writes (`/api/drill-results`, `/api/time`), on the heartbeat (by header and by the `as` in its body) and on the live screen, and the other account's time, drills, "Working on" and screen are left as they were — with the same entry saving normally for the account that does own the cookie;
+  - a stale tab's **Log Out** can't end that account's session, and the owner's own Log Out still works;
+  - in the browser: a page that is no longer who it thinks it is is refused on its first request and signs itself out, the browser owner stays signed in, and the tab then reaches no API at all except the way back in.
 - **Live view** (`.github/scripts/live-view.cjs`, in the same job): the real heartbeat, `/api/live-view` and `/api/live-screen` code on SQLite, with a trainee's page and an Admin's page in a browser. It checks:
   - where a trainee is, and a new step on the trail only when it changes;
   - a snapshot is kept only while an Admin watches, and an oversized one is skipped;
@@ -1006,6 +1044,7 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - markup put on the trainee's page (an `onerror` image, a script, a `javascript:` link, a frame) is taken out before it's sent, and never runs on the Admin's page or in the frame; a crafted screen sent straight to the API (scripts, handlers, `<noscript>` and `<svg>`/`<math>` tricks, a declarative shadow root, `javascript:` links and forms) is cleaned again on the Admin's page;
   - a screen too big to mirror, and an older trainee page that can't mirror, are explained and show the summary, and the screen comes back when it can;
   - nothing on the trainee's page says they're watched; their page sends only while watched, and stops after.
+  - a page that is no longer who it thinks it is (a second trainee signed in on the same browser, so its requests carry their session) writes nothing: its heartbeat and its screen are refused (`SESSION_CHANGED`), the other trainee's "online", case and screen are left as they were, 👁 Watch live on them never shows the stale tab's screen, and that tab signs itself out; a page that says nothing about which account it is works as before.
   - It prints what it measured: how long the watch took to start, how long changes took to reach the Admin, the requests a minute on each side, and the time spent copying the page.
 - **Autosave** (`.github/scripts/autosave.cjs`): nothing is sent while the trainee types or glances at another tab; the tab away for a while sends the case once, and nothing again when nothing changed; offline sends nothing and says the work is kept here, and the connection back sends it; a suspended page (`freeze`) and a closing page send it; a case never saved isn't sent while the page closes; a save that never got through is sent on the next visit (and a visit with nothing unsaved sends nothing); the idle archive sends only unsaved work.
 - **CMS Blueprint** (`.github/scripts/blueprint.cjs`): a trainee's 🧭 Blueprint (after 📊 My Dashboard) opens the Trainee blueprint only, which never names the Training Library or the trainer tools; ◀ ▶, ← → and the contents strip go through every slide and Esc closes it; its PDF has a page for every slide and the deployed version. An Admin gets both decks as tabs and a PDF of each; in 👁 Trainee view, the trainee deck only. Every slide fits on a laptop and on a phone. The numbers match everywhere (Cover, then 1 to n; never n + 1); the cover shows the LSH mark with its name as text; each slide's screenshot loads, has a description, opens full size and closes with Esc, and the PDFs carry the screenshots.

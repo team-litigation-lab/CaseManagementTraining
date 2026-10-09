@@ -1,4 +1,4 @@
-import { json, requireSession } from '../_utils.js';
+import { json, requireSession, claimedAccount, wrongAccount, sessionChangedResponse } from '../_utils.js';
 import { reportLiveView } from '../_liveview.js';
 // POST /api/live-screen  (the trainee's own page, only while a trainer watches it: live-view.js)
 // About a second after each change on the trainee's screen (at most once a second), and a short "still here"
@@ -14,6 +14,10 @@ export async function onRequestPost({ request, env }) {
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     if (!body || typeof body !== 'object') return json({ success: false, error: 'Invalid request body.' }, 400);
+    // The same check as the heartbeat's, on the `as` this body carries: a page that is no longer who
+    // it thinks it is must not file its screen under the account that now owns this browser's cookie,
+    // or 👁 Watch live shows the wrong trainee. See _utils.js.
+    if (wrongAccount(claimedAccount(request, body), session.username)) return sessionChangedResponse();
     const live = await reportLiveView(env.DB, session.username, { where: body.where, snapshot: body.snapshot, screen: body.screen, mirror: 1 });
     return json(Object.assign({ success: true, watched: !!live.watched }, live.watched ? { screenId: live.screenId || null } : {}), 200, { 'Cache-Control': 'no-store' });
 }
