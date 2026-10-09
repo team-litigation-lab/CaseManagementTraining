@@ -76,21 +76,14 @@
         }
     }
 
-    const orig = window.applySessionUI;
-    if (typeof orig === 'function') {
-        window.applySessionUI = function () {
-            const r = orig.apply(this, arguments);
-            if (portalOnly && !busy && !session()) showNotice();
-            return r;
-        };
-    }
     function start() {
         fetch('/api/portal-login', { credentials: 'include' }).then((r) => r.json()).then((d) => {
             portalOnly = !!(d && d.portalOnly);
             if (!portalOnly) return;
             if (wantAdmin && !session()) openAdminLogin();
             else if (ticket) signInFromTicket();   // a Portal ticket always wins: whoever opened it from the Portal is who is signed in
-            else if (!session()) showNotice();
+            // No ticket: the CMS's own sign-in screen stays, where a registered trainee signs in with
+            // their username (functions/api/login.js). showNotice() is now only for a ticket that failed.
         }).catch(() => { /* status unknown: leave the usual sign-in */ });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
