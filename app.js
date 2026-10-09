@@ -2178,12 +2178,19 @@
         }
         // Trainee view has no bar of its own: the sidebar's ⇦ Back to trainer view is the way back.
         function markTraineeView() { document.body.classList.toggle('trainee-view', isTraineeView()); }
+        // Set when this browser was signed in as someone else while this tab was open (see
+        // handleSessionTakenOver). The tab then has no session of its own but the browser still holds
+        // that trainee's cookie, so anything it sent would be read and written as them. It stays out of
+        // the API until someone signs in here again — only the sign-in endpoints still go through.
+        let _takenOver = false;
+        const SIGN_IN_API = /^\/api\/(portal-login|login|register|state|status)\b/;
         // Bumped every time this tab's own session changes, so work already in flight can tell
         // "this tab signed in as someone else since" from "this browser was taken over by someone
         // else" (see sendHeartbeat's SESSION_CHANGED handling).
         let _sessionGen = 0;
         function setSession(user) {
             _sessionGen++;
+            _takenOver = false;   // someone has signed in here, so this tab is somebody again
             sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                 fullName: user.fullName,
                 batchId: user.batchId,
@@ -2298,6 +2305,7 @@
            /api/logout: that cookie belongs to whoever signed in last, and this tab must not end
            their session. Only this tab's own session is cleared (sessionStorage). */
         function handleSessionTakenOver(who) {
+            _takenOver = true;
             stopHeartbeat();
             stopIdleTracking();
             clearSession();
@@ -3010,7 +3018,7 @@
             // session it authenticated as, and answers SESSION_CHANGED; this tab then signs itself out
             // instead of writing someone else's work, "online" and screen into that account (which is
             // what made 👁 Watch live show the wrong trainee). See functions/api/heartbeat.js.
-            const as = (getRealSession() || {}).username || '', gen = _sessionGen;
+            const as = (getRealSession() || {}).username || '';
             const beat = {
                 as,
                 fullName: session.fullName,
@@ -3031,17 +3039,9 @@
                     handleSessionExpired('Your session has expired. Please log in again.');
                     return false;
                 }
-                if (r.status === 409) {
-                    const d = await r.clone().json().catch(() => null);
-                    // Someone else signed in on this browser. Only act while this tab is still the
-                    // account it claimed and hasn't signed in as anyone since: a beat already on its way
-                    // when this tab itself signed in as someone new gets the same answer, and that is
-                    // not a takeover — the next beat is the right one.
-                    if (d && d.code === 'SESSION_CHANGED' && as && gen === _sessionGen && (getRealSession() || {}).username === as) {
-                        handleSessionTakenOver(session.fullName || as);
-                    }
-                    return false;
-                }
+                // 409 SESSION_CHANGED (someone else signed in on this browser) is handled for every
+                // /api/ request in the fetch wrapper above, this one included: the tab signs itself out.
+                if (r.status === 409) return false;
                 if (r.ok) {
                     const d = await r.clone().json().catch(() => null);
                     // is a trainer watching? d.screenId: the trainee's screen the server has
@@ -3056,16 +3056,53 @@
         // or the browser paused a background tab) is sent again once, right after a heartbeat,
         // so the trainee's note, call or save goes through instead of failing. The server
         // refuses those before doing anything, so sending one again is safe.
+        // Every /api/ request also says which account THIS TAB believes it is (X-LSH-As). A browser holds
+        // one session cookie but each tab keeps its own session, so a second trainee signing in here
+        // re-points every page already open at their account — a stale tab's case saves, time entries and
+        // drill results landed in their name, and its reads came back as their data. The server refuses
+        // any request whose X-LSH-As isn't the account it authenticated as (functions/_utils.js), and the
+        // first refusal signs this tab out, so nothing of one trainee's work reaches another's account.
+        // Only our own API is told: never a cross-origin request, which has no business knowing the name.
+        const ourApi = (url) => { try { const u = new URL(url, location.href); return u.origin === location.origin && u.pathname.startsWith('/api/'); } catch (e) { return false; } };
         (function () {
             const nativeFetch = window.fetch.bind(window);
             window.fetch = async function (input, init) {
-                const res = await nativeFetch(input, init);
-                if (res.status !== 401) return res;
                 const url = typeof input === 'string' ? input : (input && input.url) || '';
+                const as = (getRealSession() || {}).username || '', gen = _sessionGen;
+                // Taken over and nobody signed in here since: the browser's cookie isn't this tab's to
+                // use, so the request never leaves. Signing in again (a ticket from their course) does.
+                if (_takenOver && !as && ourApi(url) && !SIGN_IN_API.test(new URL(url, location.href).pathname)) {
+                    return new Response(JSON.stringify({ success: false, code: 'SESSION_CHANGED', error: 'This browser is signed in as someone else now. Open the CMS again from your course to carry on.' }),
+                        { status: 409, headers: { 'Content-Type': 'application/json' } });
+                }
+                let req = input, opts = init;
+                if (as && ourApi(url)) {
+                    if (typeof input === 'string' || input instanceof URL) {
+                        const h = new Headers((init && init.headers) || undefined);
+                        h.set('X-LSH-As', as);
+                        opts = Object.assign({}, init, { headers: h });
+                    } else {
+                        const h = new Headers(input.headers);
+                        h.set('X-LSH-As', as);
+                        req = new Request(input, { headers: h });
+                    }
+                }
+                const res = await nativeFetch(req, opts);
+                if (res.status === 409 && as && ourApi(url)) {
+                    const d = await res.clone().json().catch(() => null);
+                    // Someone else signed in on this browser. Only act while this tab is still the account
+                    // it claimed and hasn't signed in as anyone since (a request already on its way when
+                    // this tab itself signed in as someone new gets the same answer, and is not a takeover).
+                    if (d && d.code === 'SESSION_CHANGED' && gen === _sessionGen && (getRealSession() || {}).username === as) {
+                        handleSessionTakenOver((getSession() || {}).fullName || as);
+                    }
+                    return res;
+                }
+                if (res.status !== 401) return res;
                 if (!/\/api\//.test(url) || /\/api\/(heartbeat|login|logout)\b/.test(url) || !getSession()) return res;
                 const data = await res.clone().json().catch(() => null);
                 if (!data || data.code !== 'SESSION_EXPIRED') return res;
-                return (await sendHeartbeat()) ? nativeFetch(input, init) : res;
+                return (await sendHeartbeat()) ? nativeFetch(req, opts) : res;
             };
         })();
 
