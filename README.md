@@ -208,7 +208,7 @@ Link to the CMS with a program so it opens in that program's context:
 | `…/?library=1` | Opens the Training Library after sign-in (Admins); trainees get the Case Library search. |
 | `…/?intake=1` | Opens the Intake folder after sign-in. |
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
-| `…/?from=ea` (or `portal`, `pd`, `standard`, `cm`) | Opened from that platform: trainees sign in with just their name (see Name sign-in). |
+| `…/?from=ea` (or `portal`, `pd`, `standard`, `cm`) | Notes which platform the trainee came from (shown in the Users list). It no longer signs anyone in. |
 | `…/?calendar=1` | Opens the 📅 Calendar tab (Firm Calendar) after sign-in. |
 | `…/?calendar=attorney` | Opens the 🗓 Attorney's Calendar (the Calendaring activity) after sign-in. |
 
@@ -257,51 +257,26 @@ In the **Users** tab, trainees are grouped by Batch ID, the newest batch first.
 
 **One Batch ID format, B + MMDDYY** (since October 2026; it was B + DDMMYY). That's what trainees type, what an Admin's edit saves, and what the CMS issues itself: a trainer's account gets the day it was made, and a registration approved without one gets its start date (`nextBatchId` in `functions/_utils.js`). The batch the training platforms send is read the same way. Batch IDs saved in the old long form, with a trainee number (`B30092026-LSHADMIN-003`, `B05022026-LSHTRAINEE-001`, `B300926-LSHTRAINEE-004`, `B30092026`), are shortened to `B300926` / `B050226`, without the trainee number, the first time anyone signs in (`shortenOldBatchIds`); their dates keep the order they were given in. A Batch ID is shared by everyone in the batch, so it isn't unique.
 
-**The trade-off:** anyone who knows a trainee's username can sign in as them. That's the same convenience the name sign-in below already gives on the training platforms, and an Admin approves every registration first (an Admin can suspend or revoke an account at any time). Admin access still needs the admin password.
+**The trade-off:** anyone who knows a trainee's username can sign in as them. An Admin approves every registration first (an Admin can suspend or revoke an account at any time). Admin access still needs the admin password.
 
-## 👤 Name sign-in from our other training platforms
+## 👤 Name sign-in (removed)
 
-Trainees **register in the CMS once**, so their trainer can follow their work. After an Admin approves them, opening the CMS **from one of our training platforms** signs them in with **just their name** (`guest-access.js` → `/api/guest-login`).
+Typing a name no longer signs anyone in. From one of our training platforms the CMS used to take a
+trainee's name alone (`/api/guest-login`); that door is gone, with its page, its endpoint and its test.
+A trainee reaches the CMS through the LSH Training Portal (below), an admin with the admin password.
 
-**Which platforms:**
+What is kept, and why:
 
-| Platform | Link sends |
-|---|---|
-| LSH Training Portal: the Training Directory's **🗂 Case Management System** banner and the Call Simulator's case links | `from=portal` |
-| Property Damage Claims Training | `from=pd` |
-| Standard Foundational Training | `from=standard` |
-| EA/PA Training | `from=ea` |
-| Case Management Training | `from=cm` |
-| Medsum & Demand Training | `from=md` |
+- **The accounts already made that way** (usernames starting `guest-`) are ordinary approved accounts and
+  keep working, with their cases, drill scores and reviews. `register.js` still refuses that prefix so
+  nobody registers into one of them, and the Users list still shows where each came from (`guestVia`).
+- **`guestUsername` and `guest_accounts`** are still how `portal-login.js` makes an account for a trainee
+  the Portal vouches for who has no CMS registration of their own — that is single sign-on, not name
+  sign-in.
+- **`guest_login_rate`** now counts wrong admin passwords per connection (`functions/api/login.js`); it
+  kept its name rather than migrate a live table.
 
-- The links also send `name=` and `batch=`, which fill in the form.
-- A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses.
-- The platform is remembered for the browser tab.
-
-**What typing a name does:**
-- **It matches the registered trainee's own account** (their first and last name, with or without the middle initial or suffix; capitalisation doesn't matter), and signs them in exactly as their username would.
-- **Two registered trainees with the same name:** the form asks for the **CMS Batch ID** to pick the right one.
-- **A registration still waiting for approval** is told to wait. Declined, suspended and revoked accounts get their usual message.
-- **Not registered yet:** they're told to register, and **Register now** opens the registration form with their name (and batch, if the link sent one) filled in.
-- **Name-only accounts** made before registration was required (usernames starting `guest-`) keep working.
-- **Admin accounts are never reached by name.** Only Trainee accounts are.
-
-**Opened directly** (not from a platform):
-- The **Register** form comes first. **Back to log in** switches to the usual sign-in.
-- Once a browser has signed in, it gets the sign-in screen from then on.
-- Name-only sign-in never works outside a platform.
-
-**The trade-off:**
-- On a platform page, anyone who types a registered trainee's name signs in as that trainee. That's the point of it: quick access, and the trainee's work still lands in their monitored account.
-- Failed name look-ups are limited to 120 per connection per hour (a class often shares one office connection).
-- Admin access still needs the admin password.
-
-**Data** (D1):
-- the trainee's own `users` row;
-- `guest_accounts`, for the older name-only accounts;
-- `guest_login_rate`, which counts failed look-ups.
-
-Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
+Code: `functions/_guest.js`, `guest-access.js`.
 
 ## 🔐 Signing in from the LSH Training Portal
 
@@ -1018,15 +993,6 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
     - scoring hangs up, frees the line and keeps the transcript;
     - without live voice set up, the call and the rest of the drill run as text;
     - a **practice call on live voice**: Answer connects, both sides are transcribed, a typed line goes to the caller; when the live line drops (busy), the call goes on with the standard voice and the caller gets the transcript so far; the debrief scores it (clarity of speech and tone of voice are rated: it was a spoken call) and the result is saved with the whole transcript; the next practice call tries live voice again and ends at the time limit, going to the wrap-up; and on a visit where live voice isn't set up, the practice call says so, carries on with the standard voice, and the next one doesn't ask for live voice again.
-- **Name sign-in** (`.github/scripts/guest.cjs`, in the same job): the real `guest-login.js` on SQLite. It checks that:
-  - a registered trainee's name signs in to their account, with or without the M.I.;
-  - duplicate names need the Batch ID;
-  - pending accounts wait for approval;
-  - Admins are never reached by name;
-  - older name-only accounts still work;
-  - an unknown name is sent to Register, with the name and batch filled in;
-  - name sign-in is refused without a platform;
-  - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
 - **Live view** (`.github/scripts/live-view.cjs`, in the same job): the real heartbeat, `/api/live-view` and `/api/live-screen` code on SQLite, with a trainee's page and an Admin's page in a browser. It checks:
   - where a trainee is, and a new step on the trail only when it changes;
   - a snapshot is kept only while an Admin watches, and an oversized one is skipped;
