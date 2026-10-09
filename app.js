@@ -185,6 +185,7 @@
         // previously causing the logo to render as blank space; removing
         // that system entirely was the fix, not just patching one instance.
         const AGENCY_LOGO = "lsh-logo-dark.png";   // the standard LSH logo, the full mark with its wordmark
+        const AGENCY_MARK = "lsh-mark.png";        // just the square mark, for slots too small for the wordmark
 
 
         const staffOptions = `
@@ -3630,8 +3631,12 @@
         function renderAgencyLogo() {
             const seal = document.getElementById('agency-seal');
             if (seal) seal.innerHTML = '<img src="' + AGENCY_LOGO + '" alt="Agency Logo">';
+            // The sign-in box gives the logo a 40px-tall slot, and the wordmark is unreadable
+            // squeezed into it — so that one slot takes the square mark, with "Legal Support
+            // Help" already spelled out in the heading beside it (the same pairing the
+            // blueprint uses: the mark, with the name as real text).
             const authSeal = document.getElementById('auth-seal');
-            if (authSeal) authSeal.innerHTML = '<img src="' + AGENCY_LOGO + '" alt="Agency Logo" style="width:100%;height:100%;object-fit:contain;">';
+            if (authSeal) authSeal.innerHTML = '<img src="' + AGENCY_MARK + '" alt="Agency Logo" style="width:100%;height:100%;object-fit:contain;">';
         }
 
         /* =========================================================

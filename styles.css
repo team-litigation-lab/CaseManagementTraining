@@ -378,7 +378,8 @@
     #sidebar-logo {
         display: flex; flex-direction: column; align-items: center;
         width: 176px; max-width: 100%; box-sizing: border-box;
-        background: #fff; border-radius: 12px; padding: 10px 14px; box-shadow: 0 2px 10px rgba(0,0,0,.35);
+        /* No plate behind it: the logo is transparent and its wordmark is white, so it
+           sits straight on the sidebar like it does on every other LSH platform. */
     }
     #sidebar-logo img { display: block; width: 100%; height: auto; }
     #sidebar-logo .lsh-name {
@@ -389,10 +390,9 @@
     /* (#agency-seal: the logo on a white tile, kept for any page that still shows it; the sidebar
        now shows #sidebar-logo) */
     #agency-seal {
-        height: 72px; width: auto; border-radius: 12px;
+        height: 72px; width: auto;
         display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0; overflow: hidden; background: #fff; padding: 6px; box-sizing: border-box;
-        box-shadow: 0 2px 10px rgba(0,0,0,.35);
+        flex-shrink: 0; overflow: hidden; box-sizing: border-box;
     }
     #agency-seal span { font-size: 40px !important; }
     #agency-seal img { width: 100%; height: 100%; object-fit: contain; aspect-ratio: 1 / 1; display: block; }
