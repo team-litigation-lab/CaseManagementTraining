@@ -273,11 +273,11 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!(await page.isVisible('#login-username'))) fail('the Trainee tab lost its username field');
     // a name the browser fills in on the sign-in screen stays there: each sign-in view is a form of its own (never
     // submitted: its button is type="button"), and a search box the browser fills in by itself is emptied again
-    const forms = await page.evaluate(() => ['auth-guest-view', 'auth-login-view', 'auth-register-view'].map(id => {
+    const forms = await page.evaluate(() => ['auth-login-view', 'auth-register-view'].map(id => {
         const f = document.getElementById(id), b = f && f.querySelector('.auth-submit');
         return `${id}:${f && f.tagName}:${b && b.type}:${f && f.getAttribute('onsubmit')}`;
     }));
-    if (forms.join() !== 'auth-guest-view:FORM:button:return false,auth-login-view:FORM:button:return false,auth-register-view:FORM:button:return false') fail(`the sign-in views aren't forms of their own: ${forms.join(' ')}`);
+    if (forms.join() !== 'auth-login-view:FORM:button:return false,auth-register-view:FORM:button:return false') fail(`the sign-in views aren't forms of their own: ${forms.join(' ')}`);
     const filled = await page.evaluate(() => {
         const box = document.createElement('input'); box.type = 'search'; document.body.appendChild(box);
         const name = document.getElementById('login-trainer-name');

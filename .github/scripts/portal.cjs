@@ -22,7 +22,6 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     const portalLogin = await imp('functions/api/portal-login.js');
     const login = await imp('functions/api/login.js');
     const register = await imp('functions/api/register.js');
-    const guest = await imp('functions/api/guest-login.js');
     const exportApi = await imp('functions/api/export-trainees.js');
     const sql = new DatabaseSync(':memory:');
     sql.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT, email TEXT, user_type TEXT, batch_id TEXT, username TEXT UNIQUE, password TEXT, status TEXT, training_start_date TEXT, created_at TEXT DEFAULT (datetime('now')));
@@ -95,8 +94,8 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     if (r.status === 200 || r.cookie) fail(`a trainee must not sign in by username alone, whatever the tab (${r.status})`);
     r = await call(register, 'onRequestPost', { fullName: 'A B', batchId: 'B300926', username: 'abc' });
     if (r.status !== 403 || r.data.code !== 'PORTAL_REQUIRED') fail(`registration here must be refused (${r.status})`);
-    r = await call(guest, 'onRequestPost', { name: 'Tia Trainee', from: 'cm' });
-    if (r.status !== 403 || r.data.code !== 'PORTAL_REQUIRED') fail(`a typed name must not sign anyone in (${r.status})`);
+    // the name-only door isn't refused any more, it is gone (no /api/guest-login at all)
+    if (require('fs').existsSync(path.join(ROOT, 'functions/api/guest-login.js'))) fail('/api/guest-login is back: a typed name could sign someone in');
     r = await call(login, 'onRequestPost', { portalMode: 'Admin', password: 'ci-master-pass' });
     if (r.status !== 200 || r.data.user.user_type !== 'Admin') fail(`the admin password must still sign an admin in (${r.status})`);
     r = await call(login, 'onRequestPost', { portalMode: 'Admin', password: 'wrong' });

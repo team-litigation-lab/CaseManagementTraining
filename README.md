@@ -259,50 +259,6 @@ In the **Users** tab, trainees are grouped by Batch ID, the newest batch first.
 
 **The trade-off:** anyone who knows a trainee's username can sign in as them. That's the same convenience the name sign-in below already gives on the training platforms, and an Admin approves every registration first (an Admin can suspend or revoke an account at any time). Admin access still needs the admin password.
 
-## 👤 Name sign-in from our other training platforms
-
-Trainees **register in the CMS once**, so their trainer can follow their work. After an Admin approves them, opening the CMS **from one of our training platforms** signs them in with **just their name** (`guest-access.js` → `/api/guest-login`).
-
-**Which platforms:**
-
-| Platform | Link sends |
-|---|---|
-| LSH Training Portal: the Training Directory's **🗂 Case Management System** banner and the Call Simulator's case links | `from=portal` |
-| Property Damage Claims Training | `from=pd` |
-| Standard Foundational Training | `from=standard` |
-| EA/PA Training | `from=ea` |
-| Case Management Training | `from=cm` |
-| Medsum & Demand Training | `from=md` |
-
-- The links also send `name=` and `batch=`, which fill in the form.
-- A link without `from=` still counts when the page that linked here (the browser's referrer) is one of those sites, including their preview addresses.
-- The platform is remembered for the browser tab.
-
-**What typing a name does:**
-- **It matches the registered trainee's own account** (their first and last name, with or without the middle initial or suffix; capitalisation doesn't matter), and signs them in exactly as their username would.
-- **Two registered trainees with the same name:** the form asks for the **CMS Batch ID** to pick the right one.
-- **A registration still waiting for approval** is told to wait. Declined, suspended and revoked accounts get their usual message.
-- **Not registered yet:** they're told to register, and **Register now** opens the registration form with their name (and batch, if the link sent one) filled in.
-- **Name-only accounts** made before registration was required (usernames starting `guest-`) keep working.
-- **Admin accounts are never reached by name.** Only Trainee accounts are.
-
-**Opened directly** (not from a platform):
-- The **Register** form comes first. **Back to log in** switches to the usual sign-in.
-- Once a browser has signed in, it gets the sign-in screen from then on.
-- Name-only sign-in never works outside a platform.
-
-**The trade-off:**
-- On a platform page, anyone who types a registered trainee's name signs in as that trainee. That's the point of it: quick access, and the trainee's work still lands in their monitored account.
-- Failed name look-ups are limited to 120 per connection per hour (a class often shares one office connection).
-- Admin access still needs the admin password.
-
-**Data** (D1):
-- the trainee's own `users` row;
-- `guest_accounts`, for the older name-only accounts;
-- `guest_login_rate`, which counts failed look-ups.
-
-Code: `functions/_guest.js`, `functions/api/guest-login.js`, `guest-access.js`.
-
 ## 🔐 Signing in from the LSH Training Portal
 
 With the admin password set (and `PORTAL_ONLY` not `off`), trainees sign in only on the LSH Training Portal and open the CMS from there. The Portal's signed ticket says who they are (first and last name, and their Batch ID). Administrators type the admin password (`functions/api/portal-login.js`, `functions/_portal.js`, `guest-access.js`).
@@ -1020,15 +976,6 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
     - scoring hangs up, frees the line and keeps the transcript;
     - without live voice set up, the call and the rest of the drill run as text;
     - a **practice call on live voice**: Answer connects, both sides are transcribed, a typed line goes to the caller; when the live line drops (busy), the call goes on with the standard voice and the caller gets the transcript so far; the debrief scores it (clarity of speech and tone of voice are rated: it was a spoken call) and the result is saved with the whole transcript; the next practice call tries live voice again and ends at the time limit, going to the wrap-up; and on a visit where live voice isn't set up, the practice call says so, carries on with the standard voice, and the next one doesn't ask for live voice again.
-- **Name sign-in** (`.github/scripts/guest.cjs`, in the same job): the real `guest-login.js` on SQLite. It checks that:
-  - a registered trainee's name signs in to their account, with or without the M.I.;
-  - duplicate names need the Batch ID;
-  - pending accounts wait for approval;
-  - Admins are never reached by name;
-  - older name-only accounts still work;
-  - an unknown name is sent to Register, with the name and batch filled in;
-  - name sign-in is refused without a platform;
-  - a direct visit shows Register on a new browser, and the sign-in screen on a browser that signed in before.
 - **Live view** (`.github/scripts/live-view.cjs`, in the same job): the real heartbeat, `/api/live-view` and `/api/live-screen` code on SQLite, with a trainee's page and an Admin's page in a browser. It checks:
   - where a trainee is, and a new step on the trail only when it changes;
   - a snapshot is kept only while an Admin watches, and an oversized one is skipped;
