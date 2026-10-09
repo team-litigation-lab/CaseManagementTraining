@@ -77,22 +77,14 @@ export async function onRequestPost({ request, env }) {
         } else if (matches.length > 1) {
             return json({ success: false, code: 'NEED_BATCH', error: 'More than one CMS account has your name, so the CMS can\'t tell which one is yours. Please tell your trainer: in Master Control → Users they can remove the extra account, or give each one its own Batch ID.' }, 409);
         } else {
-            // no registered account: a name-only account, already approved (made once, found again by the same name + batch)
+            // No registered account under that name. A ticket no longer makes one: an account is
+            // registered in the CMS and approved by a trainer, or there is no way in. The name-only
+            // accounts made before this still open, so nobody's saved work is stranded by the change.
             await ensureGuestTables(db);
             const username = guestUsername(`${who.first} ${who.last}`, batch);
             user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
             if (!user) {
-                try {
-                    await db.prepare(
-                        `INSERT INTO users (first_name, mi, last_name, suffix, email, user_type, batch_id, username, password, status, training_start_date)
-                         VALUES (?, NULL, ?, NULL, ?, 'Trainee', ?, ?, ?, 'Approved', NULL)`
-                    ).bind(who.first, who.last, `${username}@portal.invalid`, batch || null, username, 'disabled:' + crypto.randomUUID() + crypto.randomUUID()).run();
-                    const now = new Date().toISOString();
-                    await db.prepare(`INSERT OR IGNORE INTO guest_accounts (username, full_name, course_batch, first_via, last_via, program, created_at, last_seen) VALUES (?, ?, ?, 'portal', 'portal', NULL, ?, ?)`)
-                        .bind(username, `${who.first} ${who.last}`, batch || null, now, now).run();
-                    await logActivity(db, username, batch || null, 'register', { userType: 'Trainee', viaPortal: true });
-                } catch (e) { /* the same trainee opening it twice at once made it first */ }
-                user = await db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
+                return json({ success: false, code: 'NOT_REGISTERED', error: `No CMS account is registered for ${who.first} ${who.last}. Register on the CMS and ask your trainer to approve it, then open the CMS from the Portal again.` }, 403);
             }
             guest = true;
         }
