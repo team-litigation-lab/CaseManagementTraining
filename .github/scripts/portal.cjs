@@ -5,7 +5,7 @@
 // ones still waiting) and refuses, never guesses, when it can't tell them apart (two approved; one beside a suspended one).
 // Usage: node .github/scripts/portal.cjs   (from the repository root; Node 22.13+)
 const { DatabaseSync } = require('node:sqlite');
-const path = require('path'); const { pathToFileURL } = require('url');
+const fs = require('fs'); const path = require('path'); const { pathToFileURL } = require('url');
 const ROOT = process.cwd();
 function d1(db) {
     return { prepare(sql) {
@@ -22,7 +22,6 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     const portalLogin = await imp('functions/api/portal-login.js');
     const login = await imp('functions/api/login.js');
     const register = await imp('functions/api/register.js');
-    const guest = await imp('functions/api/guest-login.js');
     const exportApi = await imp('functions/api/export-trainees.js');
     const sql = new DatabaseSync(':memory:');
     sql.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT, email TEXT, user_type TEXT, batch_id TEXT, username TEXT UNIQUE, password TEXT, status TEXT, training_start_date TEXT, created_at TEXT DEFAULT (datetime('now')));
@@ -69,7 +68,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     if (r.status !== 200 || r.data.user.username !== 'tia' || !/lsh_session=/.test(r.cookie)) fail(`a trainee ticket should sign the registered trainee in (${r.status} ${JSON.stringify(r.data)})`);
     if (sql.prepare("SELECT status FROM users WHERE username='tia'").get().status !== 'Approved') fail('the Portal\'s approval should approve a registration still waiting in the CMS');
     r = await call(portalLogin, 'onRequestPost', { ticket: 'newbie' });
-    if (r.status !== 200 || !/^guest-/.test(r.data.user.username)) fail(`a trainee with no CMS account should get an approved one (${r.status} ${JSON.stringify(r.data)})`);
+    if (r.status !== 403 || r.data.code !== 'NOT_REGISTERED' || r.cookie) fail(`a trainee with no CMS account must be told to register, not given one (${r.status} ${JSON.stringify(r.data)})`);
     r = await call(portalLogin, 'onRequestPost', { ticket: 'revoked' });
     if (r.status !== 403) fail(`a revoked trainee must stay blocked (${r.status})`);
     // the same name more than once: narrowed down when it can be told apart, refused (never guessed) when it can't
@@ -89,14 +88,19 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         if (r.status !== 403 || r.data.code !== 'ADMIN_PASSWORD_REQUIRED' || r.cookie) fail(`a ${t} ticket must never sign anyone in (${r.status} ${JSON.stringify(r.data)})`);
     }
     for (const t of ['forged', 'expired', 'junk']) { r = await call(portalLogin, 'onRequestPost', { ticket: t }); if (r.status !== 401 || r.cookie) fail(`a ${t} ticket must be refused (${r.status})`); }
+    // An approved CMS account is the way in, by the Portal's ticket or by its username (the trade-off is
+    // in the README: anyone who knows the username can sign in as them, and an Admin approves each one).
     r = await call(login, 'onRequestPost', { username: 'tia', portalMode: 'Trainee' });
-    if (r.status !== 403 || r.cookie) fail(`a trainee must not sign in by username alone (${r.status})`);
-    r = await call(login, 'onRequestPost', { username: 'tia' });
-    if (r.status === 200 || r.cookie) fail(`a trainee must not sign in by username alone, whatever the tab (${r.status})`);
+    if (r.status !== 200 || !/lsh_session=/.test(r.cookie)) fail(`an approved trainee should sign in by username (${r.status} ${JSON.stringify(r.data)})`);
+    r = await call(login, 'onRequestPost', { username: 'rex' });
+    if (r.status === 200 || r.cookie) fail(`a revoked trainee must not sign in by username (${r.status})`);
+    r = await call(login, 'onRequestPost', { username: 'nobody-at-all' });
+    if (r.status === 200 || r.cookie) fail(`an unknown username must not sign anyone in (${r.status})`);
     r = await call(register, 'onRequestPost', { fullName: 'A B', batchId: 'B300926', username: 'abc' });
     if (r.status !== 403 || r.data.code !== 'PORTAL_REQUIRED') fail(`registration here must be refused (${r.status})`);
-    r = await call(guest, 'onRequestPost', { name: 'Tia Trainee', from: 'cm' });
-    if (r.status !== 403 || r.data.code !== 'PORTAL_REQUIRED') fail(`a typed name must not sign anyone in (${r.status})`);
+    // A typed name must not sign anyone in. There is no longer an endpoint that could: name sign-in was
+    // removed, so the check is that the route is gone rather than that it refuses.
+    if (fs.existsSync(path.join(ROOT, 'functions/api/guest-login.js'))) fail('functions/api/guest-login.js is back: a typed name could sign someone in');
     r = await call(login, 'onRequestPost', { portalMode: 'Admin', password: 'ci-master-pass' });
     if (r.status !== 200 || r.data.user.user_type !== 'Admin') fail(`the admin password must still sign an admin in (${r.status})`);
     r = await call(login, 'onRequestPost', { portalMode: 'Admin', password: 'wrong' });
