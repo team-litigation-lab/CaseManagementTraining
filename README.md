@@ -208,7 +208,7 @@ Link to the CMS with a program so it opens in that program's context:
 | `…/?library=1` | Opens the Training Library after sign-in (Admins); trainees get the Case Library search. |
 | `…/?intake=1` | Opens the Intake folder after sign-in. |
 | `…/?drill=1` | Opens the Front Desk Drill after sign-in. |
-| `…/?from=ea` (or `portal`, `pd`, `standard`, `cm`) | Opened from that platform: trainees sign in with just their name (see Name sign-in). |
+| `…/?from=ea` (or `portal`, `pd`, `standard`, `cm`) | Notes which platform the trainee came from (shown in the Users list). It no longer signs anyone in. |
 | `…/?calendar=1` | Opens the 📅 Calendar tab (Firm Calendar) after sign-in. |
 | `…/?calendar=attorney` | Opens the 🗓 Attorney's Calendar (the Calendaring activity) after sign-in. |
 
@@ -257,7 +257,28 @@ In the **Users** tab, trainees are grouped by Batch ID, the newest batch first.
 
 **One Batch ID format, B + MMDDYY** (since October 2026; it was B + DDMMYY). That's what trainees type, what an Admin's edit saves, and what the CMS issues itself: a trainer's account gets the day it was made, and a registration approved without one gets its start date (`nextBatchId` in `functions/_utils.js`). The batch the training platforms send is read the same way. Batch IDs saved in the old long form, with a trainee number (`B30092026-LSHADMIN-003`, `B05022026-LSHTRAINEE-001`, `B300926-LSHTRAINEE-004`, `B30092026`), are shortened to `B300926` / `B050226`, without the trainee number, the first time anyone signs in (`shortenOldBatchIds`); their dates keep the order they were given in. A Batch ID is shared by everyone in the batch, so it isn't unique.
 
-**The trade-off:** anyone who knows a trainee's username can sign in as them. That's the same convenience the name sign-in below already gives on the training platforms, and an Admin approves every registration first (an Admin can suspend or revoke an account at any time). Admin access still needs the admin password.
+**The trade-off:** anyone who knows a trainee's username can sign in as them. An Admin approves every registration first (an Admin can suspend or revoke an account at any time). Admin access still needs the admin password.
+
+## 👤 Name sign-in (removed)
+
+Typing a name no longer signs anyone in. From one of our training platforms the CMS used to take a
+trainee's name alone (`/api/guest-login`); that door is gone, with its page, its endpoint and its test.
+A trainee reaches the CMS through the LSH Training Portal (below), an admin with the admin password.
+
+What is kept, and why:
+
+- **The accounts already made that way** (usernames starting `guest-`) are ordinary approved accounts and
+  keep working, with their cases, drill scores and reviews. `register.js` still refuses that prefix so
+  nobody registers into one of them, and the Users list still shows where each came from (`guestVia`).
+- **`guestUsername` and `guest_accounts`** are how `portal-login.js` still *finds* one of those accounts
+  for a trainee the Portal vouches for. It no longer makes one: a ticket for a name with no CMS account
+  is refused (`NOT_REGISTERED`), so an account is registered and approved by a trainer, or there is no
+  way in.
+- **`guest_login_rate`** now counts wrong admin passwords per connection (`functions/api/login.js`); it
+  kept its name rather than migrate a live table.
+
+Code: `functions/_guest.js`, `guest-access.js`.
+
 
 ## 🔐 Signing in from the LSH Training Portal
 

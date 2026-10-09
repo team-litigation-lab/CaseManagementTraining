@@ -1,6 +1,5 @@
 import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned, shortenOldBatchIds } from '../_utils.js';
 import { cleanGuestName, splitName, trainerUsername } from '../_guest.js';
-import { portalOnly } from '../_portal.js';
 // The Admin Portal signs in with the admin password (no username):
 //   - with a trainer's name: as that trainer's own Admin account, made on first use
 //     (no registration), so pings, logs and reviews show who they are;
@@ -112,10 +111,6 @@ export async function onRequestPost({ request, env }) {
     } else {
         const name = String(username || '').trim();
         if (!name) return json({ success: false, error: 'Please enter your username.' }, 400);
-        if (portalOnly(env) && portalMode === 'Trainee') {
-            // Trainees sign in on the LSH Training Portal and open the CMS from there (portal-login.js): a username alone opens nothing.
-            return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Trainees sign in on the LSH Training Portal and open the CMS from there.' }, 403);
-        }
         // Fetch by username only — a password is checked in JS via verifyPassword()
         // so we can support hashed rows (and transparently upgrade legacy
         // plaintext rows) instead of comparing with `password = ?` in SQL.
@@ -125,7 +120,10 @@ export async function onRequestPost({ request, env }) {
             const alike = (await db.prepare(`SELECT * FROM users WHERE username = ? COLLATE NOCASE AND user_type = 'Trainee' LIMIT 2`).bind(name).all()).results || [];
             if (alike.length === 1) user = alike[0];
         }
-        const trainee = !!(user && user.user_type === 'Trainee') && !portalOnly(env);
+        // A trainee signs in with their username alone, here or from the Portal (a ticket): only an
+        // admin ever types a password, and only on the Admin Portal tab. The account still has to be
+        // registered and approved — nothing below creates one, and the status checks still apply.
+        const trainee = !!(user && user.user_type === 'Trainee');
         // Any other account needs its own password (an older tab may still send a Batch ID: a trainee doesn't need it).
         const secret = String(password || body.batchId || '');
         if (!trainee && secret && await wrongPasswords(db, request, false) >= ADMIN_TRIES_PER_HOUR) return TOO_MANY();
