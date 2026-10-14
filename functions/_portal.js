@@ -4,7 +4,7 @@
 //   - without it: it sends the ticket back to the Portal (/api/verify-ticket) and trusts only the Portal's answer.
 //     The Portal holds the secret, so nothing has to be copied to the CMS for sign-in to be Portal-only.
 //   ticket = base64url(JSON {first,last,b,exp}) + "." + base64url(HMAC-SHA256(key "portal-sso:" + PORTAL_SSO_SECRET, payload))
-//   an administrator's ticket is {r:"a", exp}
+//   an administrator's ticket is {r:"a", n: their name on the Portal, exp}: it signs them in as that trainer
 // Everyone signs in on the Portal; the CMS does not sign anyone in by a typed name or a username alone once
 // PORTAL_SSO_SECRET (and the admin password) are set. Until then it behaves as before, so nothing breaks mid-setup.
 const MAX_AHEAD_MS = 10 * 60 * 1000;
@@ -43,10 +43,21 @@ export async function readPortalTicket(env, ticket, why = {}) {
     const exp = Number(t && t.exp);
     if (!exp || Date.now() > exp || exp - Date.now() > MAX_AHEAD_MS) { why.r = 'expired'; return null; }
     if (t.r === 's') return { system: true };   // the Portal's own server-side tools: never signs a person in
-    if (t.r === 'a') return { admin: true };
+    if (t.r === 'a') return { admin: true, name: String(t.n || '').trim().slice(0, 60) };
     const first = String(t.first || '').trim(), last = String(t.last || '').trim(), batch = String(t.b || '').trim();
     if (!first || !last) { why.r = 'format'; return null; }
     return { first, last, batch };
+}
+
+// An administrator's ticket signs them in once: its signature is noted for 10 minutes (longer than a ticket lives), and the
+// same ticket again is refused, so a link copied out of the address bar can't sign anyone in a second time.
+export async function useTicketOnce(db, ticket) {
+    const key = String(ticket || '').split('.').pop().slice(0, 43);
+    if (!key) return false;
+    await db.prepare(`CREATE TABLE IF NOT EXISTS sso_used (sig TEXT PRIMARY KEY, at INTEGER NOT NULL)`).run();
+    await db.prepare(`DELETE FROM sso_used WHERE at < ?`).bind(Date.now() - 10 * 60 * 1000).run();
+    try { await db.prepare(`INSERT INTO sso_used (sig, at) VALUES (?, ?)`).bind(key, Date.now()).run(); } catch (e) { return false; }
+    return true;
 }
 
 // No secret here: the Portal checks the ticket and says who it vouches for.
@@ -58,7 +69,7 @@ async function readViaPortal(env, ticket, why) {
     } catch (e) { why.r = 'unreachable'; return null; }
     if (!out || !out.ok) { why.r = (out && out.code) || 'format'; return null; }
     if (out.system) return { system: true };
-    if (out.admin) return { admin: true };
+    if (out.admin) return { admin: true, name: String(out.name || '').trim().slice(0, 60) };
     const first = String(out.first || '').trim(), last = String(out.last || '').trim(), batch = String(out.batch || '').trim();
     if (!first || !last) { why.r = 'format'; return null; }
     return { first, last, batch };

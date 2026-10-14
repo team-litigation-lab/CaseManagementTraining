@@ -32,6 +32,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         INSERT INTO batch_id_counter VALUES ('Admin', 0), ('Trainee', 0);
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Tia', 'Trainee', 't@x.io', 'Trainee', 'B300926', 'tia', 'disabled:x', 'Pending');
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Rex', 'Revoked', 'r@x.io', 'Trainee', 'B300926', 'rex', 'disabled:x', 'Revoked');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Dan', 'Declined', 'dd@x.io', 'Trainee', 'B300926', 'dan', 'disabled:x', 'Rejected');
         -- the same name more than once: a declined registration and the account in use; an approved one and one still waiting;
         -- two approved in the same batch; one approved and one suspended; two in different batches
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Dee', 'Double', 'd1@x.io', 'Trainee', 'B300926', 'dee_old', 'disabled:x', 'Rejected');
@@ -50,6 +51,8 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         trainee: { ok: true, first: 'Tia', last: 'Trainee', batch: 'B300926' },
         newbie: { ok: true, first: 'Nia', last: 'Newbie', batch: 'B300926' },
         revoked: { ok: true, first: 'Rex', last: 'Revoked', batch: 'B300926' },
+        declined: { ok: true, first: 'Dan', last: 'Declined', batch: 'B300926' },
+        coach: { ok: true, admin: true, name: 'Coach Ana' }, coach2: { ok: true, admin: true, name: 'Coach Ana' },
         dee: { ok: true, first: 'Dee', last: 'Double', batch: 'B300926' }, pat: { ok: true, first: 'Pat', last: 'Pair', batch: '' },
         sam: { ok: true, first: 'Sam', last: 'Same', batch: 'B300926' }, sue: { ok: true, first: 'Sue', last: 'Split', batch: 'B300926' },
         bea: { ok: true, first: 'Bea', last: 'Batch', batch: 'B011026' },
@@ -67,8 +70,14 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     r = await call(portalLogin, 'onRequestPost', { ticket: 'trainee' });
     if (r.status !== 200 || r.data.user.username !== 'tia' || !/lsh_session=/.test(r.cookie)) fail(`a trainee ticket should sign the registered trainee in (${r.status} ${JSON.stringify(r.data)})`);
     if (sql.prepare("SELECT status FROM users WHERE username='tia'").get().status !== 'Approved') fail('the Portal\'s approval should approve a registration still waiting in the CMS');
+    // the Portal registered and approved them: no CMS account yet gets one, approved (no second registration)
     r = await call(portalLogin, 'onRequestPost', { ticket: 'newbie' });
-    if (r.status !== 403 || r.data.code !== 'NOT_REGISTERED' || r.cookie) fail(`a trainee with no CMS account must be told to register, not given one (${r.status} ${JSON.stringify(r.data)})`);
+    if (r.status !== 200 || !/lsh_session=/.test(r.cookie) || r.data.user.fullName !== 'Nia Newbie' || r.data.user.userType !== 'Trainee') fail(`a trainee the Portal approved with no CMS account should get one and be signed in (${r.status} ${JSON.stringify(r.data)})`);
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'newbie' });
+    if (r.status !== 200 || sql.prepare("SELECT COUNT(*) AS n FROM users WHERE first_name='Nia'").get().n !== 1) fail('opening the CMS again should use the same account, not make another');
+    // a registration declined in the CMS: the Portal's approval wins ("Your registration was declined" no more)
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'declined' });
+    if (r.status !== 200 || r.data.user.username !== 'dan' || sql.prepare("SELECT status FROM users WHERE username='dan'").get().status !== 'Approved') fail(`a registration declined in the CMS should open with the Portal's approval (${r.status} ${JSON.stringify(r.data)})`);
     r = await call(portalLogin, 'onRequestPost', { ticket: 'revoked' });
     if (r.status !== 403) fail(`a revoked trainee must stay blocked (${r.status})`);
     // the same name more than once: narrowed down when it can be told apart, refused (never guessed) when it can't
@@ -83,10 +92,18 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         d = await as(t);
         if (d.status !== 409 || d.cookie || d.code !== 'NEED_BATCH') fail(`${t === 'sam' ? 'two approved accounts with the same name and batch' : 'an approved account beside a suspended one'} must be refused, not guessed: ${JSON.stringify(d)}`);
     }
-    for (const t of ['admin', 'system']) {
-        r = await call(portalLogin, 'onRequestPost', { ticket: t });
-        if (r.status !== 403 || r.data.code !== 'ADMIN_PASSWORD_REQUIRED' || r.cookie) fail(`a ${t} ticket must never sign anyone in (${r.status} ${JSON.stringify(r.data)})`);
-    }
+    // a trainer signed in to the Portal with their own admin account: their own CMS Admin account, no password; once only
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'coach' });
+    if (r.status !== 200 || r.data.user.userType !== 'Admin' || r.data.user.fullName !== 'Coach Ana' || !/lsh_session=/.test(r.cookie)) fail(`a trainer's admin ticket should sign them in as that trainer (${r.status} ${JSON.stringify(r.data)})`);
+    const coachUser = r.data.user.username;
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'coach' });
+    if (r.status !== 401 || r.data.code !== 'used' || r.cookie) fail(`an admin ticket used again must be refused (${r.status} ${JSON.stringify(r.data)})`);
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'coach2' });
+    if (r.status !== 200 || r.data.user.username !== coachUser) fail(`the same trainer again should be the same CMS account (${JSON.stringify(r.data)})`);
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'admin' });
+    if (r.status !== 200 || r.data.user.userType !== 'Admin') fail(`an admin ticket with no name should open the Master Account (${r.status} ${JSON.stringify(r.data)})`);
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'system' });
+    if (r.status !== 403 || r.cookie) fail(`the Portal's system ticket must never sign anyone in (${r.status} ${JSON.stringify(r.data)})`);
     for (const t of ['forged', 'expired', 'junk']) { r = await call(portalLogin, 'onRequestPost', { ticket: t }); if (r.status !== 401 || r.cookie) fail(`a ${t} ticket must be refused (${r.status})`); }
     // An approved CMS account is the way in, by the Portal's ticket or by its username (the trade-off is
     // in the README: anyone who knows the username can sign in as them, and an Admin approves each one).

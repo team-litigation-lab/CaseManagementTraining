@@ -207,7 +207,9 @@ const wd = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
     // the titles on the week grid (without the type's icon in front)
     const grid = (page) => page.evaluate(() => [...document.querySelectorAll('#fc-main .ev b')].map(b => b.textContent.replace(/^[^\p{L}\p{N}(]+\s/u, '').trim()));
     const pageFields = (page) => page.evaluate(() => [document.querySelectorAll('select').length, document.querySelectorAll('[contenteditable="true"]').length]);
-    const firmOnly = lib.standingEvents(mon, addDays(mon, 4)).map(e => e.title);
+    // the firm's standing events in that week, as the grid shows them: timed blocks (an all-day one, like the Out of office
+    // that comes round every few weeks, is a chip in the all-day row, which grid() doesn't read)
+    const firmOnly = lib.standingEvents(mon, addDays(mon, 4)).filter(e => !e.allDay).map(e => e.title);
 
     // a trainee: the sidebar button, with a case open
     let page = await open('ci');
@@ -231,8 +233,11 @@ const wd = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
     if (head.trim() !== '🗓 Attorney\'s Calendar' || await page.locator('#fc-head [data-fc="mode"]').count()) fail(`a trainee's Attorney's Calendar heading (and no switch to the Firm Calendar): ${head}`);
     if (!/Attorney's Calendar/.test(rail) || !/Marcus Reyes/.test(rail) || !/Elena Brooks/.test(rail) || !/Firm \/ Staff/.test(rail) || /Weekly schedule/.test(rail)) fail(`the rail should list the Attorney's Calendar and the firm's calendars (no schedule tools for a trainee): ${rail.slice(0, 200)}`);
     if (rail.indexOf("Attorney's Calendar") > rail.indexOf('Marcus Reyes')) fail('the Attorney\'s Calendar should be listed first');
-    const ownTitles = ['Callback: Hannah Pierce'];
+    // what this test added itself: the trainee's own booking, and the 'Firm event' on Dr. Reyes's calendar (section 3),
+    // which is the firm's and on the grid with the rest of the firm's calendars
+    const ownTitles = ['Callback: Hannah Pierce', 'Firm event'];
     const ownInWeek = titles.filter(t => ownTitles.includes(t)).length;
+    if (!titles.includes('Firm event')) fail('the Firm Calendar event added on Dr. Reyes\'s calendar is missing from the week');
     if (!titles.includes('Deposition Preparation: Niamh Cholmondeley') || !titles.some(t => firmOnly.includes(t)) || titles.length - ownInWeek !== seeded.length + firmOnly.length) fail(`the week should show the attorney's schedule together with the firm's calendars (${titles.length} on the grid, ${seeded.length} + ${firmOnly.length} expected)`);
     await page.evaluate(() => fcNav(1)); await page.waitForTimeout(700);
     const nextWeek = await grid(page);
