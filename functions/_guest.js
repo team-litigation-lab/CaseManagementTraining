@@ -113,6 +113,23 @@ export function trainerUsername(name) {
     return TRAINER_PREFIX + s;
 }
 
+// A users row made from a Portal ticket (functions/api/portal-login.js): noted here so the
+// trainer roster can say how the trainee got in, and so the account can be told apart from
+// one registered in the CMS itself. Called again on a later visit, it just moves last_seen.
+export async function recordGuestAccount(db, { username, fullName, batch, via }) {
+    await ensureGuestTables(db);
+    const now = new Date().toISOString();
+    await db.prepare(
+        `INSERT INTO guest_accounts (username, full_name, course_batch, first_via, last_via, program, created_at, last_seen)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, ?)
+         ON CONFLICT(username) DO UPDATE SET
+            full_name = excluded.full_name,
+            course_batch = COALESCE(NULLIF(excluded.course_batch, ''), guest_accounts.course_batch),
+            last_via = excluded.last_via,
+            last_seen = excluded.last_seen`
+    ).bind(username, fullName, batch || null, via, via, now, now).run();
+}
+
 // Map of username -> platform label for the name-only accounts.
 export async function guestVia(db) {
     await ensureGuestTables(db);

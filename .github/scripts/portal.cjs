@@ -1,8 +1,10 @@
 // Portal-only sign-in test: with the admin password set (and PORTAL_ONLY not "off"), the CMS signs trainees in only from the
 // LSH Training Portal's ticket (checked by the Portal, stubbed here), never by a typed name or a username alone, never lets a
 // trainee register in the CMS, and never signs an administrator in from a ticket (they type the admin password). When several
-// accounts have the trainee's name it narrows them down (Batch ID, declined registrations left out, the approved account over
-// ones still waiting) and refuses, never guesses, when it can't tell them apart (two approved; one beside a suspended one).
+// accounts have the trainee's name it narrows them down (declined registrations left out first, then the Batch ID, then the
+// approved account over ones still waiting) and refuses, never guesses, when it can't tell them apart (two approved; one
+// beside a suspended one). The Portal's approval is the only approval: a trainee with no CMS account gets one, already
+// approved, and a registration this CMS declined is reinstated — only Revoked and Suspended stay blocked.
 // Usage: node .github/scripts/portal.cjs   (from the repository root; Node 22.13+)
 const { DatabaseSync } = require('node:sqlite');
 const fs = require('fs'); const path = require('path'); const { pathToFileURL } = require('url');
@@ -32,7 +34,6 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         INSERT INTO batch_id_counter VALUES ('Admin', 0), ('Trainee', 0);
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Tia', 'Trainee', 't@x.io', 'Trainee', 'B300926', 'tia', 'disabled:x', 'Pending');
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Rex', 'Revoked', 'r@x.io', 'Trainee', 'B300926', 'rex', 'disabled:x', 'Revoked');
-        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Dan', 'Declined', 'dd@x.io', 'Trainee', 'B300926', 'dan', 'disabled:x', 'Rejected');
         -- the same name more than once: a declined registration and the account in use; an approved one and one still waiting;
         -- two approved in the same batch; one approved and one suspended; two in different batches
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Dee', 'Double', 'd1@x.io', 'Trainee', 'B300926', 'dee_old', 'disabled:x', 'Rejected');
@@ -44,18 +45,24 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Sue', 'Split', 'u1@x.io', 'Trainee', 'B300926', 'sue', 'disabled:x', 'Approved');
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Sue', 'Split', 'u2@x.io', 'Trainee', 'B300926', 'sue_s', 'disabled:x', 'Suspended');
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Bea', 'Batch', 'b1@x.io', 'Trainee', 'B300926', 'bea_sep', 'disabled:x', 'Approved');
-        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Bea', 'Batch', 'b2@x.io', 'Trainee', 'B011026', 'bea_oct', 'disabled:x', 'Approved');`);
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Bea', 'Batch', 'b2@x.io', 'Trainee', 'B011026', 'bea_oct', 'disabled:x', 'Approved');
+        -- a registration this CMS declined, and nothing else under that name: the Portal's approval reinstates it
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Dan', 'Declined', 'dn@x.io', 'Trainee', 'B300926', 'dan', 'disabled:x', 'Rejected');
+        -- a declined registration carrying the batch the ticket names, beside the account actually in use (no batch on it):
+        -- the Batch ID must not pick the declined one (that is what told a newly registered trainee they were declined)
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Mia', 'Mixed', 'm1@x.io', 'Trainee', 'B300926', 'mia_old', 'disabled:x', 'Rejected');
+        INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Mia', 'Mixed', 'm2@x.io', 'Trainee', NULL, 'mia', 'disabled:x', 'Approved');`);
     const env = { DB: d1(sql), SESSION_SECRET: 'ci-secret', MASTER_ADMIN_PASSWORD: 'ci-master-pass' };   // no PORTAL_SSO_SECRET: tickets are checked by the Portal
     // the Portal's answer, stubbed
     const answers = {
         trainee: { ok: true, first: 'Tia', last: 'Trainee', batch: 'B300926' },
         newbie: { ok: true, first: 'Nia', last: 'Newbie', batch: 'B300926' },
         revoked: { ok: true, first: 'Rex', last: 'Revoked', batch: 'B300926' },
-        declined: { ok: true, first: 'Dan', last: 'Declined', batch: 'B300926' },
         coach: { ok: true, admin: true, name: 'Coach Ana' }, coach2: { ok: true, admin: true, name: 'Coach Ana' },
         dee: { ok: true, first: 'Dee', last: 'Double', batch: 'B300926' }, pat: { ok: true, first: 'Pat', last: 'Pair', batch: '' },
         sam: { ok: true, first: 'Sam', last: 'Same', batch: 'B300926' }, sue: { ok: true, first: 'Sue', last: 'Split', batch: 'B300926' },
         bea: { ok: true, first: 'Bea', last: 'Batch', batch: 'B011026' },
+        dan: { ok: true, first: 'Dan', last: 'Declined', batch: 'B300926' }, mia: { ok: true, first: 'Mia', last: 'Mixed', batch: 'B300926' },
         admin: { ok: true, admin: true }, system: { ok: true, system: true },
         forged: { ok: false, code: 'signature' }, expired: { ok: false, code: 'expired' }
     };
@@ -70,14 +77,16 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     r = await call(portalLogin, 'onRequestPost', { ticket: 'trainee' });
     if (r.status !== 200 || r.data.user.username !== 'tia' || !/lsh_session=/.test(r.cookie)) fail(`a trainee ticket should sign the registered trainee in (${r.status} ${JSON.stringify(r.data)})`);
     if (sql.prepare("SELECT status FROM users WHERE username='tia'").get().status !== 'Approved') fail('the Portal\'s approval should approve a registration still waiting in the CMS');
-    // the Portal registered and approved them: no CMS account yet gets one, approved (no second registration)
+    // Registration is on the Portal (api/register.js refuses it here), so a trainee with no CMS account is given
+    // one from the ticket, already approved — refusing left them nowhere to register.
     r = await call(portalLogin, 'onRequestPost', { ticket: 'newbie' });
-    if (r.status !== 200 || !/lsh_session=/.test(r.cookie) || r.data.user.fullName !== 'Nia Newbie' || r.data.user.userType !== 'Trainee') fail(`a trainee the Portal approved with no CMS account should get one and be signed in (${r.status} ${JSON.stringify(r.data)})`);
-    r = await call(portalLogin, 'onRequestPost', { ticket: 'newbie' });
-    if (r.status !== 200 || sql.prepare("SELECT COUNT(*) AS n FROM users WHERE first_name='Nia'").get().n !== 1) fail('opening the CMS again should use the same account, not make another');
-    // a registration declined in the CMS: the Portal's approval wins ("Your registration was declined" no more)
-    r = await call(portalLogin, 'onRequestPost', { ticket: 'declined' });
-    if (r.status !== 200 || r.data.user.username !== 'dan' || sql.prepare("SELECT status FROM users WHERE username='dan'").get().status !== 'Approved') fail(`a registration declined in the CMS should open with the Portal's approval (${r.status} ${JSON.stringify(r.data)})`);
+    const made = sql.prepare("SELECT * FROM users WHERE username = 'guest-nia-newbie--b300926'").get();
+    if (r.status !== 200 || !r.cookie || !made) fail(`a trainee with no CMS account should be given one from the ticket (${r.status} ${JSON.stringify(r.data)})`);
+    else if (made.status !== 'Approved' || made.user_type !== 'Trainee' || made.batch_id !== 'B300926' || !made.training_start_date || !/^disabled:/.test(made.password)) fail(`the account made from a ticket should be an approved trainee, with a start date and no password of its own: ${JSON.stringify(made)}`);
+    const via = sql.prepare("SELECT last_via FROM guest_accounts WHERE username = 'guest-nia-newbie--b300926'").get();
+    if (!via || via.last_via !== 'portal') fail(`an account made from a ticket should be noted as coming from the Portal: ${JSON.stringify(via)}`);
+    r = await call(portalLogin, 'onRequestPost', { ticket: 'newbie' });   // a second visit opens the same account, not another one
+    if (r.status !== 200 || sql.prepare("SELECT COUNT(*) AS n FROM users WHERE first_name = 'Nia'").get().n !== 1) fail('a second visit should open the same account, not make another');
     r = await call(portalLogin, 'onRequestPost', { ticket: 'revoked' });
     if (r.status !== 403) fail(`a revoked trainee must stay blocked (${r.status})`);
     // the same name more than once: narrowed down when it can be told apart, refused (never guessed) when it can't
@@ -88,6 +97,11 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     if (d.status !== 200 || d.user !== 'pat' || sql.prepare("SELECT status FROM users WHERE username='pat_again'").get().status !== 'Pending') fail(`the approved account should be used over one still waiting (and that one left as it is): ${JSON.stringify(d)}`);
     d = await as('bea');
     if (d.status !== 200 || d.user !== 'bea_oct') fail(`the Portal's Batch ID should pick the account in that batch: ${JSON.stringify(d)}`);
+    d = await as('dan');
+    if (d.status !== 200 || d.user !== 'dan' || sql.prepare("SELECT status FROM users WHERE username='dan'").get().status !== 'Approved') fail(`the Portal's approval should reinstate a registration this CMS declined: ${JSON.stringify(d)}`);
+    d = await as('mia');
+    if (d.status !== 200 || d.user !== 'mia') fail(`a declined registration must not win the Batch ID narrowing over the account in use: ${JSON.stringify(d)}`);
+    if (sql.prepare("SELECT status FROM users WHERE username='mia_old'").get().status !== 'Rejected') fail('the declined duplicate should be left as it is');
     for (const t of ['sam', 'sue']) {
         d = await as(t);
         if (d.status !== 409 || d.cookie || d.code !== 'NEED_BATCH') fail(`${t === 'sam' ? 'two approved accounts with the same name and batch' : 'an approved account beside a suspended one'} must be refused, not guessed: ${JSON.stringify(d)}`);
