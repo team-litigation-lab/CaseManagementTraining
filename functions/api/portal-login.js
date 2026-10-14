@@ -119,6 +119,11 @@ export async function onRequestPost({ request, env }) {
             await logActivity(db, user.username, user.batch_id, 'approved', { viaPortal: true, was: user.status });
             user.status = 'Approved';
         }
+        // the Portal knows the batch and the CMS account doesn't (an old registration, or one made above): keep it
+        if (user && !user.batch_id && batch) {
+            await db.prepare(`UPDATE users SET batch_id = ? WHERE id = ?`).bind(batch, user.id).run();
+            user.batch_id = batch;
+        }
         if (user && user.status !== 'Approved') return json({ success: false, error: BLOCKED[user.status] || 'Access for this name is not available. Please contact your trainer.' }, 403);
     }
     if (!user) return json({ success: false, error: 'Couldn\'t open your account. Please try again.' }, 500);
