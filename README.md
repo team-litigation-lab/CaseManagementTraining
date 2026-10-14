@@ -270,10 +270,13 @@ What is kept, and why:
 - **The accounts already made that way** (usernames starting `guest-`) are ordinary approved accounts and
   keep working, with their cases, drill scores and reviews. `register.js` still refuses that prefix so
   nobody registers into one of them, and the Users list still shows where each came from (`guestVia`).
-- **`guestUsername` and `guest_accounts`** are how `portal-login.js` still *finds* one of those accounts
-  for a trainee the Portal vouches for. It no longer makes one: a ticket for a name with no CMS account
-  is refused (`NOT_REGISTERED`), so an account is registered and approved by a trainer, or there is no
-  way in.
+- **`guestUsername` and `guest_accounts`** are how `portal-login.js` finds, and makes, one of those
+  accounts for a trainee the Portal vouches for. A ticket for a name with no CMS account makes one,
+  already approved, and notes it in `guest_accounts` as coming from the Portal. For a while a ticket
+  refused instead (`NOT_REGISTERED`, "register on the CMS"), which left every newly registered trainee
+  nowhere to go: registering in the CMS is refused while it is Portal-only (`api/register.js` answers
+  `PORTAL_REQUIRED`), so the Portal sent them here and the CMS sent them back to a door that is shut.
+  The trainer still approves the registration — on the Portal, which is where registering happens.
 - **`guest_login_rate`** now counts wrong admin passwords per connection (`functions/api/login.js`); it
   kept its name rather than migrate a live table.
 
@@ -295,12 +298,14 @@ Every link a course sends here carries a fresh ticket (`?ticket=`), so a trainee
 - **Nothing is relaxed to make a link work.** An administrator's ticket (`{r:"a"}`) and the Portal's own system ticket (`{r:"s"}`) never sign anyone in — administrators type the admin password. A ticket that is expired, dated more than 10 minutes ahead, signed with another secret, or altered in either half is refused, and the trainee gets the normal sign-in (the Portal card when the CMS is locked to it, its own sign-in screen when it isn't).
 
 **Finding the trainee's account** (by first and last name; capitalisation, accents and a middle initial or suffix don't matter):
-- **One account has the name:** that one. A registration still waiting is approved by the Portal; declined, suspended and revoked accounts get their usual message.
+- **One account has the name:** that one. A registration still waiting is approved by the Portal, and one this CMS declined is reinstated by it — declining was a ruling on registering here, and registering happens on the Portal now. Suspended and revoked accounts get their usual message: those are an administrator closing an account, and no ticket talks past them.
 - **No account:** one is made, already approved.
 - **Several accounts have the name** (often the same person registered twice), narrowed down in this order:
-  1. the Portal's Batch ID;
-  2. declined registrations are left out;
+  1. declined registrations are left out, while another account is left;
+  2. the Portal's Batch ID;
   3. one approved account beside ones still waiting (never signed in, so empty): the approved one.
+
+  Declined registrations are left out **before** the Batch ID and not after it. The other way round, a declined registration carrying the trainee's current batch won that narrowing and became the only match, and the account they actually use was dropped for it — which is how a trainee who had just registered on the Portal was told, on opening the CMS, that their registration had been declined.
 - **Still more than one** (two approved accounts in the same batch, or one beside a suspended or revoked one): refused, never guessed. The trainee is asked to tell their trainer, who removes the extra account or gives each one its own Batch ID in Master Control → Users. A suspended account never lets its owner in through another account with the same name.
 
 ## 🪪 The case header: Client's Name, SSN and the Client's ID
