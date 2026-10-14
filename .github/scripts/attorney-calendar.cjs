@@ -231,7 +231,13 @@ const wd = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
     if (head.trim() !== '🗓 Attorney\'s Calendar' || await page.locator('#fc-head [data-fc="mode"]').count()) fail(`a trainee's Attorney's Calendar heading (and no switch to the Firm Calendar): ${head}`);
     if (!/Attorney's Calendar/.test(rail) || !/Marcus Reyes/.test(rail) || !/Elena Brooks/.test(rail) || !/Firm \/ Staff/.test(rail) || /Weekly schedule/.test(rail)) fail(`the rail should list the Attorney's Calendar and the firm's calendars (no schedule tools for a trainee): ${rail.slice(0, 200)}`);
     if (rail.indexOf("Attorney's Calendar") > rail.indexOf('Marcus Reyes')) fail('the Attorney\'s Calendar should be listed first');
-    const ownTitles = ['Callback: Hannah Pierce'];
+    // Everything this test put on the calendar itself, left out of the count below: the trainee's own
+    // 'Callback: Hannah Pierce', and the firm-wide 'Firm event' posted into Marcus Reyes' calendar further
+    // up (it invites the attorney, so it draws on this grid). 'Firm event' is in neither `seeded` (the
+    // attorney's templates) nor `firmOnly` (the standing events), so while it was left out of this list the
+    // count was one short whenever addDays(mon, 3) happened to fall inside the rendered Mon-Fri window --
+    // a failure that came and went with the date the suite ran.
+    const ownTitles = ['Callback: Hannah Pierce', 'Firm event'];
     const ownInWeek = titles.filter(t => ownTitles.includes(t)).length;
     if (!titles.includes('Deposition Preparation: Niamh Cholmondeley') || !titles.some(t => firmOnly.includes(t)) || titles.length - ownInWeek !== seeded.length + firmOnly.length) fail(`the week should show the attorney's schedule together with the firm's calendars (${titles.length} on the grid, ${seeded.length} + ${firmOnly.length} expected)`);
     await page.evaluate(() => fcNav(1)); await page.waitForTimeout(700);
