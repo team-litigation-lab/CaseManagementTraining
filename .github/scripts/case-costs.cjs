@@ -26,7 +26,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));
 });
 const failures = []; const fail = (m) => failures.push(m);
-const POSITIONAL = { edits: 49, selects: 9 };   // as in sections.cjs
+const POSITIONAL = { edits: 49, selects: 8 };   // as in sections.cjs
 // a 4 × 4 PNG (a photo to upload)
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR4nGM4YaNxIkXjRI/GiS0aDMRxAEnyFoGyxg6eAAAAAElFTkSuQmCC', 'base64');
 
