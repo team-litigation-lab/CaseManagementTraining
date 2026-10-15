@@ -2231,11 +2231,10 @@
                 renderRepo();
                 _draftRestoredFor = null;   // whoever signs in next gets their own work back (and only theirs)
                 // Nothing of the last person's stays open over the sign-in screen: the live view of a trainee
-                // (and this page's own screen going to one), the Client's ID view, the Blueprint, a contact card.
+                // (and this page's own screen going to one), the Client's ID view, a contact card.
                 if (window.lshLiveWatched) window.lshLiveWatched(false);
                 if (window.closeLiveView) window.closeLiveView();
                 if (window.lshClientId) window.lshClientId.close();
-                if (window.LSHBlueprint && document.getElementById('lbp-page')) window.LSHBlueprint.close();
                 if (window.closeContacts) window.closeContacts(false);
                 return;
             }
@@ -3210,61 +3209,6 @@
            by Cloudflare D1 via /api/announcement and /api/alert, and
            kept in sync for every connected user through /api/state.
            ========================================================= */
-        const ALERT_SWATCHES = ['#b91c1c', '#c2410c', '#a16207', '#166534', '#1d4ed8', '#4c1d95', '#0f172a'];
-        let alertImageDataUrl = null;
-        (function buildAlertSwatches() {
-            document.addEventListener('DOMContentLoaded', () => {
-                const row = document.getElementById('alert-bg-swatches');
-                if (!row) return;
-                row.innerHTML = ALERT_SWATCHES.map(c => `<div class="swatch" style="background:${c}" onclick="selectAlertSwatch('${c}', this)"></div>`).join('');
-            });
-        })();
-        function selectAlertSwatch(color, el) {
-            document.getElementById('alert-bg-color').value = color;
-            document.querySelectorAll('#alert-bg-swatches .swatch').forEach(s => s.classList.remove('selected'));
-            if (el) el.classList.add('selected');
-        }
-        // Alert images go to R2 as well. The preview renders instantly from a
-        // local object URL so the admin isn't staring at a blank box while the
-        // upload runs; `alertImageDataUrl` then holds the /api/file?key=<key>
-        // path that gets broadcast, not the image bytes. The variable keeps
-        // its old name so the alert-render path at refreshSiteState (which
-        // just assigns it to img.src) needs no change — a path works there
-        // exactly as a data URI did.
-        let alertImagePreviewObjectUrl = null;
-        async function previewAlertImage(input) {
-            const file = input.files[0]; if (!file) return;
-            const preview = document.getElementById('alert-image-preview');
-            if (file.size > DOC_UPLOAD_MAX_BYTES) {
-                showToast('That image is too large (max ' + formatBytes(DOC_UPLOAD_MAX_BYTES) + ').', 'error');
-                input.value = '';
-                return;
-            }
-            if (alertImagePreviewObjectUrl) { URL.revokeObjectURL(alertImagePreviewObjectUrl); alertImagePreviewObjectUrl = null; }
-            alertImagePreviewObjectUrl = URL.createObjectURL(file);
-            preview.src = alertImagePreviewObjectUrl;
-            preview.style.display = 'inline-block';
-            preview.style.opacity = '0.5';
-            try {
-                const up = await uploadFileToR2(file, 'alert-image');
-                alertImageDataUrl = up.url;
-                preview.style.opacity = '1';
-            } catch (err) {
-                alertImageDataUrl = null;
-                preview.style.display = 'none';
-                preview.src = '';
-                preview.style.opacity = '1';
-                showToast('Could not upload that image: ' + (err && err.message ? err.message : 'unknown error'), 'error');
-            }
-            input.value = '';
-        }
-        function clearAlertImage() {
-            alertImageDataUrl = null;
-            if (alertImagePreviewObjectUrl) { URL.revokeObjectURL(alertImagePreviewObjectUrl); alertImagePreviewObjectUrl = null; }
-            document.getElementById('alert-image-input').value = '';
-            const preview = document.getElementById('alert-image-preview');
-            preview.style.display = 'none'; preview.src = ''; preview.style.opacity = '1';
-        }
         function makeAnnouncement() {
             const text = document.getElementById('announce-text-input').value.trim();
             if (!text) return;
@@ -3278,21 +3222,8 @@
         function clearAnnouncement() {
             fetch('/api/announcement', { method: 'DELETE', credentials: 'include' }).then(() => { showToast('Ticker cleared.', 'info'); refreshSiteState(); }).catch(() => {});
         }
-        function setAlert() {
-            const text = document.getElementById('alert-text-input').value.trim();
-            if (!text) { showToast('Please enter alert text.', 'error'); return; }
-            const bgColor = document.getElementById('alert-bg-color').value;
-            const duration = parseInt(document.getElementById('alert-duration-select').value, 10) || 0;
-            const scheduleRaw = document.getElementById('alert-schedule-input').value;
-            const startAt = scheduleRaw ? new Date(scheduleRaw).toISOString() : new Date().toISOString();
-            fetch('/api/alert', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ text, bgColor, image: alertImageDataUrl, durationSeconds: duration, startAt })
-            }).then(r => r.json()).then(() => {
-                showToast(scheduleRaw ? 'Alert scheduled.' : 'Alert is now live for all users.', 'alert');
-                refreshSiteState();
-            }).catch(() => showToast('Network error setting alert.', 'error'));
-        }
+        // Alerts are no longer composed in the CMS. The overlay still shows one that is
+        // already running or scheduled, and Master Control → Overview can stop it.
         function stopAlert() {
             fetch('/api/alert', { method: 'DELETE', credentials: 'include' }).then(() => { showToast('Alert stopped.', 'info'); dismissAlertLocally(); refreshSiteState(); }).catch(() => {});
         }
@@ -3542,9 +3473,7 @@
             lastAnnouncementText = annText;
 
             // Alert overlay (full screen, separate from ticker)
-            const alertLine = document.getElementById('alert-status-line');
             if (state.alert && state.alert.active) {
-                if (alertLine) alertLine.innerHTML = 'Alert is <b>LIVE</b> since ' + new Date(state.alert.startAt).toLocaleTimeString() + (state.alert.durationSeconds ? (' \u00B7 auto-stops after ' + state.alert.durationSeconds + 's') : ' \u00B7 until manually stopped');
                 const ovState = document.getElementById('ov-alert-state'); if (ovState) ovState.innerText = 'Active';
                 if (lastAlertId !== state.alert.id) {
                     lastAlertId = state.alert.id;
@@ -3557,7 +3486,6 @@
                     playNotificationSound('alert');
                 }
             } else {
-                if (alertLine) alertLine.innerText = 'No alert is currently active.';
                 const ovState = document.getElementById('ov-alert-state'); if (ovState) ovState.innerText = 'None Active';
                 lastAlertId = null;
                 document.getElementById('alert-overlay').classList.remove('open');
