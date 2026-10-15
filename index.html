@@ -954,22 +954,13 @@
                 </div>
             </div>
 
-            <!-- ACCESS CONTROL (Pause, database maintenance) -->
+            <!-- ACCESS CONTROL (Pause) -->
             <div class="mc-pane" id="admin-dash-access">
                 <div class="mc-section-title">⏸ Pause Activity (site-wide, no logout, resumable)</div>
                 <div class="admin-tile">
                     <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Pausing freezes activity across every connected user. Nobody is logged out and no progress is lost — when you Resume, everyone continues exactly where they left off.</p>
                     <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="pause-state-label" style="color:var(--classified-red);">Active (not paused)</span></div>
                     <button class="btn-primary" id="pause-toggle-btn" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="togglePause()">⏸ Pause All Activity</button>
-                </div>
-
-                <div id="db-maintenance-section" style="display:none;">
-                    <div class="mc-section-title">🗄 Database Maintenance</div>
-                    <div class="admin-tile">
-                        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Clears data that's only needed for a while: pings over 7 days old, online status of people not seen for 30 days, live-view copies, sign-in attempt counts, live-call records over 90 days old and stopped alerts over 30 days old. Cases, results, intakes, time and the server logs are kept. D1 reuses the space; it can't shrink the database file itself (copying it into a fresh one with the Migrate D1 workflow does).</p>
-                        <div style="font-size:12px;font-weight:800;margin-bottom:10px;" id="db-cleanup-result">Not run this session</div>
-                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" id="db-cleanup-btn" onclick="runDbCleanup()">🧹 Clear old data</button>
-                    </div>
                 </div>
             </div>
 

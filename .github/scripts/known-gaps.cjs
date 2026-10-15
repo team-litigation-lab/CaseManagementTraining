@@ -3,9 +3,8 @@
 // Checks:
 //   - Lock / Unlock is gone: no /api/lock, no lock screen, confirm box or Lock button, and /api/state doesn't
 //     report a lock; ⏸ Pause stays;
-//   - 🧹 Clear old data (Master Account only) clears old pings, online status, live-view copies, sign-in attempt
-//     counts, old live-call records and stopped alerts, keeps everything recent, and says how many rows it cleared;
-//     the vacuum endpoint and vacuum-d1.yml are gone;
+//   - 🧹 Clear old data is gone: no /api/db-cleanup, no Database Maintenance section or button in Access
+//     Control, and no runDbCleanup; ⏸ Pause stays, and the vacuum endpoint and vacuum-d1.yml are still gone;
 //   - Trainer Notes: the trainee's dashboard gets their trainer's note and name, and shows it read only (an Admin
 //     still writes it);
 //   - Saved Call Simulator calls: /api/drill-results?id= gives a call with its scorecard, review and
@@ -35,10 +34,9 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
 
 (async () => {
     // ---- files that are gone ----
-    for (const f of ['functions/api/lock.js', 'functions/api/vacuum-db.js', '.github/workflows/vacuum-d1.yml']) if (fs.existsSync(path.join(ROOT, f))) fail(`${f} is still there`);
+    for (const f of ['functions/api/lock.js', 'functions/api/vacuum-db.js', 'functions/api/db-cleanup.js', '.github/workflows/vacuum-d1.yml']) if (fs.existsSync(path.join(ROOT, f))) fail(`${f} is still there`);
 
     const utils = await imp('functions/_utils.js');
-    const cleanup = await imp('functions/api/db-cleanup.js');
     const dash = await imp('functions/api/trainee-dashboard.js');
     const drills = await imp('functions/api/drill-results.js');
     const state = await imp('functions/api/state.js');
@@ -80,34 +78,15 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         if (res.status === 403 && /locked/i.test(body.error || '')) fail(`${path} (${method}) still refuses trainees because of the old site lock`);
     }
 
-    // ---- 🧹 Clear old data ----
+    // ---- 🧹 Clear old data is gone: nothing clears rows on demand any more ----
     const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
-    const hour = Math.floor(Date.now() / 3600000);
     sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('old', '__all__', 'A', ago(10));
-    sql.prepare('INSERT INTO pings (text, target, by, fired_at) VALUES (?, ?, ?, ?)').run('new', '__all__', 'A', ago(1));
     sql.prepare(`INSERT INTO heartbeats (username, user_type, last_seen) VALUES ('gone', 'Trainee', datetime('now', '-40 days'))`).run();
-    sql.prepare(`INSERT INTO live_screen (username, data, seen_at) VALUES ('tia', 'x', ?), ('bo', 'y', ?)`).run(ago(2), ago(0.1));
-    sql.prepare(`INSERT INTO live_view (username, updated_at) VALUES ('tia', ?), ('bo', ?)`).run(ago(9), ago(1));
-    sql.prepare(`INSERT INTO guest_login_rate (ip, window_start, count) VALUES ('1.1.1.1', ?, 3), ('2.2.2.2', ?, 1)`).run(hour - 5, hour);
-    sql.prepare(`INSERT INTO live_call_log (username, created_at) VALUES ('tia', datetime('now', '-100 days')), ('tia', datetime('now', '-1 day'))`).run();
-    sql.prepare(`INSERT INTO alerts (text, start_at, stopped) VALUES ('old stopped', ?, 1), ('old live', ?, 0), ('new stopped', ?, 1)`).run(ago(40), ago(40), ago(2));
-    let r = await cleanup.onRequestPost({ request: req('/api/db-cleanup', 'maria', { method: 'POST' }), env });
-    if (r.status !== 403) fail(`a trainer (not the Master Account) could clear old data (${r.status})`);
-    r = await cleanup.onRequestPost({ request: req('/api/db-cleanup', 'tia', { method: 'POST' }), env });
-    if (r.status !== 403) fail(`a trainee could clear old data (${r.status})`);
-    r = await cleanup.onRequestPost({ request: req('/api/db-cleanup', 'master', { method: 'POST' }), env });
-    const cl = await r.json();
-    const left = (t, col) => sql.prepare(`SELECT ${col} AS v FROM ${t} ORDER BY 1`).all().map(x => x.v).join(',');
-    if (r.status !== 200 || !cl.success) fail(`Clear old data failed: ${r.status} ${JSON.stringify(cl)}`);
-    if (left('pings', 'text') !== 'new') fail(`pings left: ${left('pings', 'text')}`);
-    if (/gone/.test(left('heartbeats', 'username'))) fail('the online status of someone not seen for 40 days stayed');
-    if (left('live_screen', 'username') !== 'bo' || left('live_view', 'username') !== 'bo') fail(`live view rows left: ${left('live_screen', 'username')} / ${left('live_view', 'username')}`);
-    if (left('guest_login_rate', 'ip') !== '2.2.2.2') fail(`sign-in counts left: ${left('guest_login_rate', 'ip')}`);
-    if (sql.prepare('SELECT COUNT(*) AS n FROM live_call_log').get().n !== 1) fail('live-call records: the 100-day-old one should go, the recent one stay');
-    if (left('alerts', 'text') !== 'new stopped,old live') fail(`alerts left: ${left('alerts', 'text')}`);
-    if (cl.rows !== 7) fail(`Clear old data said it cleared ${cl.rows} rows (7 expected): ${JSON.stringify(cl.cleared)}`);
-    if (!sql.prepare(`SELECT 1 FROM activity_log WHERE action = 'db-cleanup'`).get()) fail('Clear old data isn\'t in the server logs');
-    if (!sql.prepare(`SELECT 1 FROM heartbeats WHERE username = 'tia'`).get()) fail('a current online status was cleared');
+    sql.prepare(`INSERT INTO live_call_log (username, created_at) VALUES ('tia', datetime('now', '-100 days'))`).run();
+    sql.prepare(`INSERT INTO alerts (text, start_at, stopped) VALUES ('old stopped', ?, 1)`).run(ago(40));
+    const kept = (t) => sql.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;
+    if (!kept('pings') || !kept('live_call_log') || !kept('alerts')) fail('old rows went somewhere: nothing in the CMS should delete them now');
+    if (!sql.prepare(`SELECT 1 FROM heartbeats WHERE username = 'gone'`).get()) fail('a stale online status was cleared, but nothing should clear it now');
 
     // ---- Trainer Notes: the trainee reads them ----
     sql.prepare(`INSERT INTO case_reviews (trainee_username, case_id, client_name, training_day, automated_findings, changed_sections, trainer_comment, trainer_username, comment_updated_at)
@@ -158,15 +137,16 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         await page.waitForTimeout(800);
         return page;
     };
-    // the Master Account: no lock anywhere, the clear-old-data button
+    // the Master Account: no lock anywhere, and no clear-old-data button either
     const m = await open({ username: 'LSHADMIN123', fullName: 'LSH Admin', batchId: 'B300926', userType: 'Admin' }, true);
     const ui = await m.evaluate(() => { openAdminDashboard(); showAdminDashTab('access');
         const access = document.getElementById('admin-dash-access');
         return { overlay: !!document.getElementById('lock-overlay'), confirm: !!document.getElementById('lock-confirm-modal'), fns: typeof openLockConfirm + typeof attemptUnlock + typeof confirmLock,
-            lockText: /\bLock\b/.test(access.textContent), pause: !!document.getElementById('pause-toggle-btn'), cleanup: !!document.getElementById('db-cleanup-btn') && getComputedStyle(document.getElementById('db-maintenance-section')).display !== 'none',
+            lockText: /\bLock\b/.test(access.textContent), pause: !!document.getElementById('pause-toggle-btn'),
+            cleanup: !!document.getElementById('db-cleanup-btn') || !!document.getElementById('db-maintenance-section') || /Clear old data|Database Maintenance/i.test(access.textContent) || typeof runDbCleanup !== 'undefined',
             vacuum: /vacuum/i.test(access.textContent), overview: /Access State|Unlocked/.test(document.getElementById('admin-dash-overview') ? document.getElementById('admin-dash-overview').textContent : '') }; });
     if (ui.overlay || ui.confirm || ui.fns !== 'undefinedundefinedundefined' || ui.lockText || ui.overview) fail(`Lock / Unlock is still on the page: ${JSON.stringify(ui)}`);
-    if (!ui.pause || !ui.cleanup || ui.vacuum) fail(`Access Control should have Pause and 🧹 Clear old data, and no vacuum: ${JSON.stringify(ui)}`);
+    if (!ui.pause || ui.cleanup || ui.vacuum) fail(`Access Control should have Pause only — no 🧹 Clear old data and no vacuum: ${JSON.stringify(ui)}`);
     // Admin: the saved calls list and a call opened
     await m.evaluate(() => { exitMasterControl && exitMasterControl(); openFrontDeskDrill(); fddResults(); }); await m.waitForTimeout(800);   // 📊 Results and saved calls, under the call lines
     const listA = await m.evaluate(() => { const p = document.getElementById('fdd-panel'); return { saved: /Saved calls/.test(p.textContent), name: /Tia Trainee/.test(p.textContent), view: p.querySelectorAll('.fdd-view').length }; });
@@ -191,5 +171,5 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     await browser.close(); server.close();
 
     if (failures.length) { console.error('FAILED:\n - ' + failures.join('\n - ')); process.exit(1); }
-    console.log('Known gaps test passed (no Lock / Unlock; 🧹 Clear old data, Master Account only; Trainer Notes for trainees; saved Call Simulator calls).');
+    console.log('Known gaps test passed (no Lock / Unlock; no 🧹 Clear old data; Trainer Notes for trainees; saved Call Simulator calls).');
 })().catch(e => { console.error(e); process.exit(1); });
