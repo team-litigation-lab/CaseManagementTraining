@@ -820,12 +820,10 @@
                     <div class="admin-tile">
                         <h4>Current Alert</h4>
                         <div class="admin-stat" id="ov-alert-state" style="font-size:16px;">None Active</div>
-                        <div class="admin-stat-label">Manage from Broadcast &amp; Ping</div>
+                        <div class="admin-stat-label">Alerts are no longer set from the CMS; this stops one that is still running</div>
+                        <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;font-size:10.5px;margin-top:8px;" onclick="stopAlert()">⏹ Stop Alert</button>
                     </div>
                 </div>
-                <!-- 📷 the Training Library's realistic photos (library-photos.js): how many are made; make the missing ones -->
-                <div class="mc-section-title">📷 Training Library photos</div>
-                <div class="admin-tile lp-panel" id="lp-panel"></div>
             </div>
 
             <!-- REGISTRATIONS (pending only) -->
@@ -874,52 +872,6 @@
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAnnouncement()">📢 Broadcast Announcement</button>
                         <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="clearAnnouncement()">Clear Ticker</button>
-                    </div>
-                </div>
-
-                <div class="mc-section-title">⚠ Alert (covers the entire screen for every user until stopped or expired)</div>
-                <div class="admin-tile">
-                    <div id="alert-status-line" style="font-size:12px; font-weight:800; color:var(--classified-red); margin-bottom:12px;">No alert is currently active.</div>
-
-                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Alert Text</label>
-                    <textarea id="alert-text-input" placeholder="Type the full-screen alert message..." style="width:100%;min-height:60px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin:6px 0 14px;"></textarea>
-
-                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Attach Image (optional)</label>
-                    <div style="display:flex;align-items:center;gap:12px;margin:6px 0 14px;">
-                        <label class="btn-ghost" style="cursor:pointer;padding:8px 14px;border-radius:6px;font-size:10.5px;">
-                            Choose Image
-                            <input type="file" accept="image/*" class="hidden" id="alert-image-input" onchange="previewAlertImage(this)">
-                        </label>
-                        <img id="alert-image-preview" style="display:none;height:44px;border-radius:6px;">
-                        <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;font-size:10.5px;" onclick="clearAlertImage()">Remove Image</button>
-                    </div>
-
-                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Background Color</label>
-                    <div class="swatch-row" id="alert-bg-swatches" style="margin-top:6px;"></div>
-                    <input type="color" id="alert-bg-color" value="#b91c1c" style="width:60px;height:32px;border:none;border-radius:6px;cursor:pointer;margin-bottom:14px;">
-
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-                        <div>
-                            <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Duration</label><br>
-                            <select id="alert-duration-select" style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;">
-                                <option value="0">Until manually stopped</option>
-                                <option value="15">15 seconds</option>
-                                <option value="30">30 seconds</option>
-                                <option value="60">1 minute</option>
-                                <option value="300">5 minutes</option>
-                                <option value="900">15 minutes</option>
-                                <option value="3600">1 hour</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Set Alert Time (optional — leave blank to fire immediately)</label><br>
-                            <input type="datetime-local" id="alert-schedule-input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;">
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn-primary" style="background:var(--classified-red);color:white;border-radius:6px;padding:10px 16px;font-size:11px;" onclick="setAlert()">⚠ Set Alert</button>
-                        <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="stopAlert()">⏹ Stop / Cancel Alert</button>
                     </div>
                 </div>
 
@@ -1074,7 +1026,7 @@
     <script src="app.js"></script>
   <script src="portal.js"></script>
     <script src="mock-cases.js"></script>
-    <!-- the Training Library's mock photos: drawn from each file (case-photos.js), or realistic once an Admin has made them (library-photos.js) -->
+    <!-- the Training Library's mock photos: drawn from each file (case-photos.js), or realistic once an Admin has made one in the file itself (library-photos.js) -->
     <script src="case-photos.js"></script>
     <script src="library-photos.js"></script>
     <script src="call-packs.js"></script>
@@ -1099,7 +1051,8 @@
     <script src="time-tracker.js"></script>
     <!-- ☁ Google Drive backup of the open case's files (the Doc Hub tab; /api/drive-backup) -->
     <script src="drive-backup.js"></script>
-    <!-- 🧭 the Blueprint: a trainee deck and (Admins) a trainer deck, with a PDF of each.
+    <!-- 🧭 the Blueprint's decks and PDFs. No button in the CMS: the Main Portal's 🧭 Blueprint page
+         opens them with ?admin=1#/blueprint.
          blueprint-content.js is the CMS's slides; lsh-blueprint.js is the same file on every LSH platform. -->
     <script src="blueprint-content.js"></script>
     <script src="lsh-blueprint.js"></script>

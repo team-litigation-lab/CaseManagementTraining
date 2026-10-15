@@ -11,11 +11,7 @@
 //   - an Admin, from a photo's larger view: ✨ Make a realistic photo (Gemini's picture becomes a JPG and is kept, and
 //     the card and the view show it), ↺ Back to the drawing, ⬆ Use my own photo; a failure (no billing) is shown and
 //     the buttons work again;
-//   - Master Control → 📷 Training Library photos: the counts; ✨ Make the missing photos makes every one, and stops
-//     at once when Gemini can't (no billing);
-//   - ⬆ Upload photos…: several at once; a file named for its photo (MC-26.png, MC-21-id.png → the same client's
-//     MC-01, MC-01-scene.png) picks it, a minor's ID isn't offered, one photo a slot (choosing a taken one frees the
-//     other), ✕ drops one, Save keeps each as a JPG for its slot and the card shows it;
+//   - Master Control has no Training Library photos panel: a photo is made one at a time, from the file itself;
 //   - a trainee sees the photos but no Admin buttons.
 // Usage: node .github/scripts/library-photos.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
@@ -195,55 +191,19 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAA
     v = await page.evaluate(() => { const b = document.querySelector('#pdp-modal .lp-admin'); const r = b ? b.dataset.lpKind : null; lshPdPhotos.close(); return r; });
     if (v !== 'scene') fail(`the crash scene's larger view has no Admin buttons: ${v}`);
 
-    // 5. Master Control: the counts; make every missing one (stops at once without billing)
-    state = {}; postMode = '402'; posts.length = 0;
-    await page.evaluate(() => lshLibraryPhotos.load(true)); await settle(300);
-    v = await page.evaluate(() => (document.getElementById('lp-panel') || {}).textContent || '');
-    const builtIns = await page.evaluate(() => MOCK_CASES.flatMap(c => lshLibraryPhotos.slots(c)).filter(s => s.kind === 'id' && lshClientId.builtInPhoto(s.mc)).length);
-    if (builtIns < 30 || !new RegExp(`${builtIns} of ${data.slots}`).test(v) || !new RegExp(`Make the ${data.slots - builtIns} missing photos`).test(v)) fail(`Master Control's photo panel doesn't count the photos (an ID's built-in photo counts; ${builtIns}): ${v.slice(0, 300)}`);
-    await page.evaluate(() => lshLibraryPhotos.makeMissing()); await settle(800);
-    v = await page.evaluate(() => (document.getElementById('lp-panel') || {}).textContent || '');
-    if (posts.length > 3 || !/billing/.test(v)) fail(`making every photo should stop at once without billing (and say why): ${posts.length} asked; ${v.slice(-200)}`);
-    postMode = 'ok'; posts.length = 0; puts.length = 0;
-    await page.evaluate(() => lshLibraryPhotos.makeMissing());
-    await page.waitForFunction(() => /Every photo is in place/.test((document.getElementById('lp-panel') || {}).textContent || ''), null, { timeout: 120000 }).catch(() => {});
-    v = await page.evaluate(() => (document.getElementById('lp-panel') || {}).textContent || '');
-    if (posts.length !== data.slots - builtIns || puts.length !== data.slots - builtIns || posts.filter(p => p.kind === 'id').length !== data.ids - builtIns || !/Every photo is in place/.test(v)) fail(`Make the missing photos didn't make each missing one once (and leave the IDs' built-in photos): ${posts.length} asked, ${puts.length} kept of ${data.slots - builtIns}; ${v.slice(0, 200)}`);
-
-    // 6. ⬆ Upload photos…: several at once, each for the photo the Admin picks
-    state = {}; puts.length = 0;
-    await page.evaluate(() => { openAdminDashboard(); lshLibraryPhotos.load(true); }); await settle(600);
-    const png = (name) => ({ name, mimeType: 'image/png', buffer: Buffer.from(PNG_B64, 'base64') });
-    let [up] = await Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => lshLibraryPhotos.pickUploads())]);
-    await up.setFiles([png('MC-26.png'), png('face-two.png'), png('MC-10.png'), png('MC-21-id.png'), png('extra.png')]);
-    await settle(300);
-    const rows = () => page.evaluate(() => [...document.querySelectorAll('#lp-upload select[data-lp-up="slot"]')].map(s => s.value));
-    v = await rows();
-    if (JSON.stringify(v) !== JSON.stringify(['MC-26/id', '', '', 'MC-01/id', ''])) fail(`files named for their photo didn't pick it (a minor's ID never; MC-21 is MC-01's client): ${JSON.stringify(v)}`);
-    v = await page.evaluate(() => { const o = [...document.querySelectorAll('#lp-upload select[data-i="0"] option')].map(x => x.value); return { minor: o.includes('MC-10/id'), shared: o.includes('MC-21/id'), scene: o.includes('MC-01/scene'), n: o.length }; });
-    if (v.minor || v.shared || !v.scene || v.n !== data.slots + 1) fail(`the upload list should offer every photo but a minor's ID (and a shared client's once): ${JSON.stringify(v)}`);
-    await page.selectOption('#lp-upload select[data-i="1"]', 'MC-04/id'); await settle(100);
-    await page.selectOption('#lp-upload select[data-i="2"]', 'MC-26/id'); await settle(100);
-    v = await rows();
-    if (v[0] !== '' || v[2] !== 'MC-26/id') fail(`choosing a photo another upload had should take it from that one: ${JSON.stringify(v)}`);
-    await page.selectOption('#lp-upload select[data-i="2"]', 'MC-01/scene'); await page.selectOption('#lp-upload select[data-i="0"]', 'MC-26/id'); await settle(100);
-    await page.click('#lp-upload [data-lp-up="drop"][data-i="4"]'); await settle(100);
-    v = await page.evaluate(() => ({ rows: document.querySelectorAll('#lp-upload .lp-up-row').length, save: (document.querySelector('#lp-upload [data-lp-up="save"]') || {}).textContent }));
-    if (v.rows !== 4 || !/Save 4 photos/.test(v.save || '')) fail(`✕ should drop a photo, and Save count the chosen ones: ${JSON.stringify(v)}`);
-    await page.click('#lp-upload [data-lp-up="save"]');
-    await page.waitForFunction(() => !document.querySelector('#lp-upload .lp-up-row'), null, { timeout: 10000 }).catch(() => {});
-    const kept = puts.map(p => p.img).sort().join();
-    if (kept !== 'MC-01/id,MC-01/scene,MC-04/id,MC-26/id' || !puts.every(p => p.jpeg && p.type === 'image/jpeg' && p.model === 'upload')) fail(`Save didn't keep each upload as a JPG for its photo: ${JSON.stringify(puts)}`);
-    await page.evaluate(() => exitMasterControl()); await openCase('MC-26');
-    v = await page.evaluate(() => (document.querySelector('#client-id-card svg image[href*="/api/library-photos"]') || { getAttribute: () => '' }).getAttribute('href'));
-    if (!/MC-26%2Fid/.test(v)) fail(`an uploaded ID photo doesn't show on the client's card: ${v}`);
+    // 5. there is no bulk photo panel in Master Control: photos are made one at a time, from the file
+    await page.evaluate(() => openAdminDashboard()); await settle(400);
+    v = await page.evaluate(() => ({ panel: !!document.getElementById('lp-panel'),
+        api: ['makeMissing', 'pickUploads', 'stop'].filter(k => typeof lshLibraryPhotos[k] === 'function') }));
+    if (v.panel || v.api.length) fail(`Master Control should have no Training Library photos panel: ${JSON.stringify(v)}`);
+    await page.evaluate(() => exitMasterControl()); await settle(200);
 
     // 7. a trainee sees the photos, with no Admin buttons
     const tp = await open('Trainee');
     await tp.evaluate(async () => { await openMockCase('MC-04', { silent: true }); }); await tp.waitForTimeout(900);
     await tp.evaluate(() => document.querySelector('#client-id-card .cid-thumb').click()); await tp.waitForTimeout(200);
-    v = await tp.evaluate(() => ({ photo: !!document.querySelector('#cid-modal svg image[href*="/api/library-photos"]'), admin: !!document.querySelector('.lp-admin'), panel: (document.getElementById('lp-panel') || {}).innerHTML || '' }));
-    if (!v.photo || v.admin || v.panel) fail(`a trainee should see the realistic photo without Admin buttons: ${JSON.stringify(v)}`);
+    v = await tp.evaluate(() => ({ photo: !!document.querySelector('#cid-modal svg image[href*="/api/library-photos"]'), admin: !!document.querySelector('.lp-admin') }));
+    if (!v.photo || v.admin) fail(`a trainee should see the realistic photo without Admin buttons: ${JSON.stringify(v)}`);
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`${failures.length} problem(s):\n` + failures.map((f, i) => `${i + 1}. ${f}`).join('\n')); process.exit(1); }

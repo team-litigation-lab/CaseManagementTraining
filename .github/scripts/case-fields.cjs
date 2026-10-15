@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));
 });
 // the positional fields (sections.cjs keeps the same count): a new field must never add to them
-const POSITIONAL = { edits: 49, selects: 9 };
+const POSITIONAL = { edits: 49, selects: 8 };
 const OLD = JSON.parse(fs.readFileSync(path.join(ROOT, '.github/scripts/fixtures/case-before-keyed.json'), 'utf8')).content;
 const failures = []; const fail = (m) => failures.push(m);
 

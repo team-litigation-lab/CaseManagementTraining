@@ -34,7 +34,9 @@ const server = http.createServer((req, res) => {
 // The case editor's positional fields (contenteditable / select outside [data-keyed]) on an empty page.
 // Saved cases are restored by these positions: adding one before others breaks every saved case.
 // If this changes on purpose, make the new field keyed instead (see "Keyed sections" in app.js).
-const POSITIONAL = { edits: 49, selects: 9 };
+// 9 → 8 selects: the ⚠ Alert composer's duration select is gone. It was the LAST positional
+// select (after trainee-dash-picker), so dropping it shifts no index a saved case restores into.
+const POSITIONAL = { edits: 49, selects: 8 };
 const OLD = JSON.parse(fs.readFileSync(path.join(ROOT, '.github/scripts/fixtures/case-before-keyed.json'), 'utf8')).content;
 const failures = []; const fail = (m) => failures.push(m);
 

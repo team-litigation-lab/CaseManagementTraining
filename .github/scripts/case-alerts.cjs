@@ -41,7 +41,7 @@ const server = http.createServer((req, res) => {
 });
 const failures = []; const fail = (m) => failures.push(m);
 // The case editor's positional fields on an empty page (as in sections.cjs): nothing here may change them.
-const POSITIONAL = { edits: 49, selects: 9 };
+const POSITIONAL = { edits: 49, selects: 8 };
 
 function d1(db) {
     return {
