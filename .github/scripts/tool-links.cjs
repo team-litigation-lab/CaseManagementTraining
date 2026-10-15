@@ -63,6 +63,8 @@ const traineeTicket = (o) => mint({ first: 'Tia', last: 'Trainee', b: 'B300926' 
     const sql = new DatabaseSync(':memory:');
     sql.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, mi TEXT, last_name TEXT, suffix TEXT, email TEXT, user_type TEXT, batch_id TEXT, username TEXT UNIQUE, password TEXT, status TEXT, training_start_date TEXT, created_at TEXT DEFAULT (datetime('now')));
         CREATE TABLE heartbeats (username TEXT PRIMARY KEY, full_name TEXT, batch_id TEXT, user_type TEXT, current_case TEXT, last_seen TEXT);
+        CREATE TABLE deleted_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, user_type TEXT, batch_id TEXT, email TEXT, full_name TEXT, deleted_by TEXT, deleted_at TEXT NOT NULL);
+        CREATE TABLE batch_id_counter (user_type TEXT PRIMARY KEY, value INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor_username TEXT, actor_batch TEXT, action TEXT, details TEXT, created_at TEXT DEFAULT (datetime('now')));
         INSERT INTO users (first_name, last_name, email, user_type, batch_id, username, password, status) VALUES ('Tia', 'Trainee', 't@x.io', 'Trainee', 'B300926', 'tia', 'disabled:x', 'Approved');`);
     // The CMS holds the same PORTAL_SSO_SECRET as the course platforms, so it checks the signature itself.
@@ -100,10 +102,13 @@ const traineeTicket = (o) => mint({ first: 'Tia', last: 'Trainee', b: 'B300926' 
     if (r.status !== 401 || r.data.code !== 'expired' || r.cookie) fail(`a ticket dated far ahead must be refused: ${r.status} ${JSON.stringify(r.data)}`);
     r = await post(await mint({ first: 'Tia', last: 'Trainee', b: 'B300926' }, { exp: 0 }));
     if (r.status !== 401 || r.cookie) fail(`a ticket with no expiry must be refused: ${r.status} ${JSON.stringify(r.data)}`);
-    for (const [what, claims] of [['an administrator\'s', { r: 'a' }], ['the Portal\'s own system', { r: 's' }]]) {
-        r = await post(await mint(claims));
-        if (r.status !== 403 || r.data.code !== 'ADMIN_PASSWORD_REQUIRED' || r.cookie) fail(`${what} ticket must never sign anyone in: ${r.status} ${JSON.stringify(r.data)}`);
-    }
+    r = await post(await mint({ r: 's' }));
+    if (r.status !== 403 || r.cookie) fail(`the Portal's own system ticket must never sign anyone in: ${r.status} ${JSON.stringify(r.data)}`);
+    { const t = await mint({ r: 'a', n: 'Coach Ana' });
+      r = await post(t);
+      if (r.status !== 200 || !r.cookie || r.data.user.userType !== 'Admin') fail(`a trainer's admin ticket should sign them in as an Admin: ${r.status} ${JSON.stringify(r.data)}`);
+      r = await post(t);
+      if (r.status !== 401 || r.data.code !== 'used' || r.cookie) fail(`an admin ticket used again must be refused: ${r.status} ${JSON.stringify(r.data)}`); }
     r = await post(await mint({ first: '', last: '', b: 'B300926' }));
     if (r.status !== 401 || r.cookie) fail(`a ticket with no name must be refused: ${r.status}`);
     for (const junk of ['', 'not-a-ticket', 'a.b.c']) { r = await post(junk); if (r.status !== 401 || r.cookie) fail(`"${junk}" must be refused: ${r.status}`); }
@@ -187,12 +192,12 @@ const traineeTicket = (o) => mint({ first: 'Tia', last: 'Trainee', b: 'B300926' 
         await ctx.close();
     }
 
-    // an administrator's ticket: the admin password, never a sign-in
+    // a trainer's admin ticket (signed in to the Portal with their own account): signed in as that trainer, no password
     {
-        const { ctx, page } = await arrive('?ticket=' + encodeURIComponent(await mint({ r: 'a' })) + '&library=1');
+        const { ctx, page } = await arrive('?ticket=' + encodeURIComponent(await mint({ r: 'a', n: 'Coach Ben' })) + '&library=1');
         const s = await state(page);
-        if (s.session) fail(`an administrator's ticket signed someone in (${JSON.stringify(s.session)})`);
-        if (!s.adminTab) fail('an administrator\'s ticket should go to the admin password sign-in');
+        if (!s.session || s.session.userType !== 'Admin' || s.session.fullName !== 'Coach Ben') fail(`a trainer's admin ticket should sign them in as that trainer (${JSON.stringify(s.session)})`);
+        if (s.gate) fail('a trainer arriving from the Portal was asked to sign in again');
         await ctx.close();
     }
     // an expired ticket: the normal sign-in, and nothing granted
@@ -229,6 +234,6 @@ const traineeTicket = (o) => mint({ first: 'Tia', last: 'Trainee', b: 'B300926' 
 
     await browser.close(); server.close();
     if (failures.length) { console.error(failures.map((m, i) => `${i + 1}. ${m}`).join('\n')); process.exit(1); }
-    console.log(`Training tools open signed in: ticket checked here (signature, expiry, admin and system tickets refused); ${LANDINGS.length} landing pages open with no log-in form.`);
+    console.log(`Training tools open signed in: ticket checked here (signature, expiry and system tickets refused; a trainer's admin ticket signs them in once); ${LANDINGS.length} landing pages open with no log-in form.`);
     process.exit(0);
 })().catch(e => { console.error(e); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); });

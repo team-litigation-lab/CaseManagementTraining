@@ -1,6 +1,8 @@
 // GET  /api/portal-login            → { portalOnly }  (does the CMS take sign-ins only from the Portal?)
 // POST /api/portal-login { ticket } → signs in from the LSH Training Portal's signed ticket (functions/_portal.js)
-//   - an administrator's (or the Portal's system) ticket never signs anyone in: administrators type the admin password;
+//   - an administrator's ticket (the trainer signed in to the Portal with their own admin account) signs them in as that
+//     trainer: their own CMS Admin account, by name (the Master Account when the ticket has no name), no admin password.
+//     Each ticket works once. The Portal's system ticket never signs anyone in;
 //   - a trainee's ticket opens their registered CMS account (matched by first + last name; when several accounts
 //     have the name: declined registrations are set aside first, then the Batch ID, then the one approved account
 //     over ones still waiting; still more than one: refused, never guessed). The Portal's approval is the only
@@ -10,7 +12,8 @@
 //     registration is on the Portal now (api/register.js refuses it here), so there is nowhere else to make one.
 import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds, isUsernameTombstoned } from '../_utils.js';
 import { ensureGuestTables, recordGuestAccount, cleanGuestBatch, cleanGuestName, guestUsername, parseFullName } from '../_guest.js';
-import { readPortalTicket, portalOnly, portalSecret, adminPasswordsSet } from '../_portal.js';
+import { readPortalTicket, portalOnly, portalSecret, adminPasswordsSet, useTicketOnce } from '../_portal.js';
+import { trainerUser, adminPortalUser } from './login.js';
 
 const normName = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
 function nameVariants(u) {
@@ -73,9 +76,17 @@ export async function onRequestPost({ request, env }) {
             ? 'The LSH Training Portal couldn\'t be verified (code: bad-signature). Please tell your administrator: the Portal and the CMS need the same sign-in secret.'
             : 'This sign-in link has expired. Open the CMS again from the LSH Training Portal.' }, 401);
     }
-    // Administrators type the admin password here, like on every other platform: a Portal ticket never signs one in.
-    if (who.admin || who.system) {
-        return json({ success: false, code: 'ADMIN_PASSWORD_REQUIRED', error: 'Administrators sign in with the admin password.' }, 403);
+    if (who.system) return json({ success: false, code: 'SYSTEM_TICKET', error: 'This link can\'t sign anyone in.' }, 403);
+    // A trainer, signed in to the Portal with their own admin account: their own CMS Admin account, no password here.
+    // An admin ticket works once (a trainee's doesn't need to: the courses put it on every link out).
+    if (who.admin) {
+        if (!(await useTicketOnce(db, body.ticket))) {
+            return json({ success: false, code: 'used', error: 'This sign-in link was already used. Open the CMS again from the LSH Training Portal.' }, 401);
+        }
+        const admin = who.name ? await trainerUser(db, who.name) : await adminPortalUser(db);
+        if (!admin || admin.revoked) return json({ success: false, error: 'Access for this trainer has been revoked in the CMS. Please contact the Master Account.' }, 403);
+        if (admin.user_type !== 'Admin' || admin.status !== 'Approved') return json({ success: false, error: BLOCKED[admin.status] || 'This trainer account isn\'t available. Please contact the Master Account.' }, 403);
+        return signIn(env, admin, { viaPortal: true, admin: true });
     }
     await shortenOldBatchIds(db);
 
@@ -136,11 +147,21 @@ export async function onRequestPost({ request, env }) {
             await logActivity(db, user.username, user.batch_id, 'update-status', { userId: user.id, newStatus: 'Approved', from: was, viaPortal: true });   // reads like an admin's approval in the activity log
             user.status = 'Approved';
         }
+        // the Portal knows the batch and the CMS account doesn't (an old registration, or one made above): keep it
+        if (user && !user.batch_id && batch) {
+            await db.prepare(`UPDATE users SET batch_id = ? WHERE id = ?`).bind(batch, user.id).run();
+            user.batch_id = batch;
+        }
         if (user && user.status !== 'Approved') return json({ success: false, error: BLOCKED[user.status] || 'Access for this name is not available. Please contact your trainer.' }, 403);
     }
     if (!user) return json({ success: false, error: 'Couldn\'t open your account. Please try again.' }, 500);
 
-    await logActivity(db, user.username, user.batch_id, 'login', { viaPortal: true });
+    return signIn(env, user, { viaPortal: true }, guest);
+}
+
+async function signIn(env, user, log, guest = false) {
+    const db = env.DB;
+    await logActivity(db, user.username, user.batch_id, 'login', log);
     const fullName = buildFullName(user);
     await upsertSessionHeartbeat(db, { username: user.username, fullName, batchId: user.batch_id, userType: user.user_type });
     const payload = { sub: user.id, username: user.username, batchId: user.batch_id, userType: user.user_type, fullName };

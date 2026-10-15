@@ -630,7 +630,7 @@ A card lists the cases the contact is on: the client, the case number and what t
 3. **📝 New Intake**, **📞 Call Simulator** (the Front Desk practice calls and drill) and **🗓 Attorney's Calendar** (the Calendaring activity).
 4. **Trainer tools** (Admins only): 📚 Training Library, 📥 Intake Folder, 📅 Firm Calendar.
 
-**The strip at the top** (over the case, not the sidebar): the announcements, and at its right **📄 Download Case Summary**, **🏠 Main Portal** (back to the LSH Training Portal's Training Directory), **📊 My Dashboard** and **🧭 Blueprint** (`#top-actions`; in a narrow window they show just their icons). It no longer says "LEGAL SUPPORT HELP TRAINING INTERFACE - … PORTAL".
+**The strip at the top** (over the case, not the sidebar): the announcements, and at its right **📄 Download Case Summary**, **🏠 Main Portal** (back to the LSH Training Portal's Training Directory), and **📊 My Dashboard** (`#top-actions`; in a narrow window they show just their icons). It no longer says "LEGAL SUPPORT HELP TRAINING INTERFACE - … PORTAL".
 
 **The date and time** (with the time zone picker) are right above the case's Case ID, outside the case (`#case-clock-row`). They stay outside `#capture-area` on purpose: a case's dropdowns are saved by position, counted from the top of the page, so the picker keeps its place in front of the case's.
 
@@ -657,12 +657,12 @@ Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#captur
 
 ## 🧭 Blueprint (how the CMS works, for trainees, trainers and the Admin)
 
-Top right → **🧭 Blueprint** (after 📊 My Dashboard) opens a full-screen slide deck that explains the CMS, like the Orientation in EA / PA. There are three versions:
+The No Blueprint rule: the CMS shows no 🧭 Blueprint button. The blueprints live on the Main Portal's 🧭 Blueprint page; its "📚 Program blueprints…" menu (admins) opens the CMS with `#/blueprint`, and once an Admin is signed in that opens this full-screen slide deck that explains the CMS (a trainee who follows the link gets nothing). There are three versions:
 - **Trainee blueprint** (12 slides and a cover): what the CMS is, signing in and finding your way (the sidebar and the top right), finding a case, 📇 Contacts, New Intake, the case bar and the 17 tabs, saving and autosave, the calendar and the timer, the Call Simulator, My Dashboard and the case summary, and good habits. It never names the Training Library or the trainer tools.
 - **Trainer blueprint** (Admins only; 20 slides and a cover): signing in, before a batch starts, the program links, registrations and users, Monitoring and 👁 Watch live, Case Logs, Broadcast & Ping, access control, the Training Library, the case header (Client's Name, SSN, Client's ID), facilitated mock calls, the Call Simulator and its RECEPTION MOCK CALL scorecard, grading and feedback, the Case Library and Latest Updates, the Intake folder, the Firm Calendar, time and drill results, a training day, Trainee view, and when something goes wrong.
 - **Admin blueprint** (the Master Account only; 15 slides and a cover): who does what, signing in and sessions, accounts and batches, Master Control, Pause and Database Maintenance, Cloudflare usage and billing (Workers Paid), the AI keys, updates, data and records, database upkeep, the settings (secrets; limits and bindings), the routine, when something breaks, and the known gaps.
 
-Trainees, and Admins in 👁 Trainee view, get the Trainee blueprint only. Trainers get the Trainer and Trainee blueprints as tabs, so they can share the Trainee blueprint in Google Meet on day one. The Master Account gets all three, opening on the Admin blueprint (`canAdmin` in `blueprint-content.js`).
+In 👁 Trainee view an Admin gets the Trainee blueprint only. Trainers get the Trainer and Trainee blueprints as tabs, so they can share the Trainee blueprint in Google Meet on day one. The Master Account gets all three, opening on the Admin blueprint (`canAdmin` in `blueprint-content.js`).
 
 - **Moving around:** ◀ ▶, the ← → keys, or the numbered contents strip under the slide. **Esc** or **✕ Close** closes it.
 - **Numbering:** the cover is ★ (the counter says *Cover · 12 slides*); the slides are 1 to 12 (1 to 20 for trainers), the same on the buttons, the counter, the slide's heading and footer, and the PDF's page footers.

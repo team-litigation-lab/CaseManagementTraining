@@ -413,15 +413,23 @@
         canAdmin: () => { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin' && s.username === 'LSHADMIN123'); },
         // getSession() answers as a trainee in Trainee view, so an Admin there gets the trainee deck only
         role: () => { const s = typeof getSession === 'function' ? getSession() : null; return !s ? null : s.userType === 'Admin' ? 'trainer' : 'trainee'; },
-        version,
-        // the top right, right after 📊 My Dashboard, styled like it
-        mount: (html) => {
-            const dash = document.getElementById('dash-open-btn');
-            if (!dash) return;
-            dash.insertAdjacentHTML('afterend', html);
-            const b = document.getElementById('lbp-open-btn');
-            b.className = dash.className;
-            b.innerHTML = '🧭 <span class="lbl">Blueprint</span>';   // (in a narrow window the label hides, as the other two's do)
-        }
+        version
+        // No Blueprint button (the No Blueprint rule): the Main Portal's 🧭 Blueprint page is where the blueprints
+        // live. Its "📚 Program blueprints…" menu links here with #/blueprint, which opens the deck for an Admin.
     };
+    // #/blueprint: open the Admin's deck once they are signed in (a trainee who follows the link gets nothing)
+    const BP_LINK = /^#\/blueprint\/?$/;
+    let bpTimer = null;
+    function openFromLink() {
+        if (!BP_LINK.test(location.hash)) { clearInterval(bpTimer); bpTimer = null; return; }
+        const c = window.LSH_BLUEPRINT, s = typeof getSession === 'function' ? getSession() : null;
+        if (!s || !window.LSHBlueprint || !c) return;   // not signed in yet: wait
+        clearInterval(bpTimer); bpTimer = null;
+        if (c.role() !== 'trainer') return;
+        history.replaceState(history.state, '', location.pathname + location.search);   // once: a reload doesn't open it again
+        LSHBlueprint.open();
+    }
+    function watchLink() { if (BP_LINK.test(location.hash) && !bpTimer) { bpTimer = setInterval(openFromLink, 400); openFromLink(); } }
+    window.addEventListener('hashchange', watchLink);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchLink); else watchLink();
 })();

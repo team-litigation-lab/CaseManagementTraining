@@ -1,7 +1,8 @@
 // CMS Blueprint test (lsh-blueprint.js with the CMS's blueprint-content.js) in a browser: static files, the API answered by the test,
 // jsPDF served from node_modules in place of cdnjs.
-// Checks: a trainee has 🧭 Blueprint at the top right, after 📊 My Dashboard; it opens the Trainee
-// blueprint only (no Trainer tab), the trainee deck never names the Training Library or the
+// Checks: the No Blueprint rule: no 🧭 Blueprint button for anyone; the deck opens from #/blueprint (the Main Portal's
+// 🧭 Blueprint page links there) for an Admin only, and a trainee who follows it gets nothing. The Trainee
+// blueprint has no Trainer tab, the trainee deck never names the Training Library or the
 // trainer tools, ◀ ▶, the ← → keys and the contents strip go through every slide, Esc closes it,
 // and ⬇ Download PDF saves the trainee PDF (one page a slide, with the slides' titles and the version stamp). An Admin
 // (a trainer) gets the Trainer and Trainee decks as tabs and a PDF of each, never the Admin deck; the Master Account
@@ -38,7 +39,7 @@ function inspect(buf) {
 }
 const TRAINER_WORDS = /training library|caller scenario|master control|case logs|trainer tools|chartswap|casepeer/i;
 
-async function openPage(browser, viewport, session) {
+async function openPage(browser, viewport, session, hash = '') {
     const context = await browser.newContext({ viewport, acceptDownloads: true });
     const page = await context.newPage();
     page.on('pageerror', e => fail(`${session.userType} ${viewport.width}px: page error: ${e.message}`));
@@ -52,7 +53,7 @@ async function openPage(browser, viewport, session) {
     await page.route(/cdn\.tailwindcss\.com|html2pdf/, r => r.fulfill({ contentType: 'text/javascript', body: '' }));
     await page.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/jspdf\/4\.2\.1\/jspdf\.umd\.min\.js/, r => r.fulfill({ contentType: 'text/javascript', body: JSPDF }));
     await page.addInitScript((s) => sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify(s)), session);
-    await page.goto(base, { waitUntil: 'load' }); await page.waitForTimeout(1000);
+    await page.goto(base + hash, { waitUntil: 'load' }); await page.waitForTimeout(1000);
     return page;
 }
 // every slide of the deck that's open: drawn, nothing cut off, and the counter right
@@ -103,10 +104,10 @@ let base;
     const ADMIN = { username: 'trainer-ci', fullName: 'CI Trainer', batchId: 'B1', userType: 'Admin' };
 
     // ---- a trainee, on a laptop ----
-    let page = await openPage(browser, { width: 1366, height: 768 }, TRAINEE);
-    const side = await page.evaluate(() => { const b = document.getElementById('lbp-open-btn'); return { shown: !!(b && b.offsetParent), text: b && b.textContent.trim(), prev: b && b.previousElementSibling && b.previousElementSibling.id }; });
-    if (!side.shown || side.text !== '🧭 Blueprint' || side.prev !== 'dash-open-btn') fail(`the Blueprint button (top right, after My Dashboard): ${JSON.stringify(side)}`);
-    await page.click('#lbp-open-btn'); await page.waitForTimeout(300);
+    let page = await openPage(browser, { width: 1366, height: 768 }, TRAINEE, '#/blueprint');
+    if (await page.$('#lbp-open-btn')) fail('a trainee has a 🧭 Blueprint button (the No Blueprint rule: the blueprint lives on the Main Portal)');
+    if (await page.evaluate(() => LSHBlueprint.isOpen())) fail('#/blueprint opened the Blueprint for a trainee');
+    await page.evaluate(() => LSHBlueprint.open()); await page.waitForTimeout(300);
     const t = await page.evaluate(() => ({ open: LSHBlueprint.isOpen(), deck: document.getElementById('lbp-slide').dataset.deck,
         tabs: !!document.getElementById('lbp-tabs').offsetParent, count: document.getElementById('lbp-count').textContent }));
     if (!t.open || t.deck !== 'trainee' || t.tabs) fail(`a trainee's Blueprint should open the trainee deck with no tabs: ${JSON.stringify(t)}`);
@@ -168,8 +169,10 @@ let base;
     await page.context().close();
 
     // ---- an Admin: both decks, a PDF of each ----
-    page = await openPage(browser, { width: 1366, height: 768 }, ADMIN);
-    await page.click('#lbp-open-btn'); await page.waitForTimeout(300);
+    page = await openPage(browser, { width: 1366, height: 768 }, ADMIN, '#/blueprint');
+    if (await page.$('#lbp-open-btn')) fail('an Admin has a 🧭 Blueprint button (the No Blueprint rule)');
+    if (!(await page.evaluate(() => LSHBlueprint.isOpen()))) fail('#/blueprint from the Portal did not open the Blueprint for an Admin');
+    if (await page.evaluate(() => location.hash)) fail('#/blueprint stayed in the address (a reload would open the Blueprint again)');
     const a = await page.evaluate(() => ({ deck: document.getElementById('lbp-slide').dataset.deck, tabs: [...document.querySelectorAll('#lbp-tabs button')].filter(b => b.offsetParent).map(b => b.textContent.trim()) }));
     if (a.deck !== 'trainer' || a.tabs.join() !== 'Trainer blueprint,Trainee blueprint') fail(`an Admin's Blueprint should open the Trainer deck with both tabs: ${JSON.stringify(a)}`);
     const aw = await walk(page, 'trainer 1366px'); aw.out.forEach(fail);
@@ -191,15 +194,14 @@ let base;
     // 👁 Trainee view: the trainee deck only
     await Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.click('#session-footer button:has-text("Trainee view")')]);
     await page.waitForTimeout(1000);
-    await page.click('#lbp-open-btn'); await page.waitForTimeout(200);
+    await page.evaluate(() => LSHBlueprint.open()); await page.waitForTimeout(200);
     const tv = await page.evaluate(() => ({ deck: document.getElementById('lbp-slide').dataset.deck, tabs: !!document.getElementById('lbp-tabs').offsetParent }));
     if (tv.deck !== 'trainee' || tv.tabs) fail(`in Trainee view an Admin should get the trainee deck only: ${JSON.stringify(tv)}`);
     await page.context().close();
 
     // ---- the Master Account: all three decks, opening on the Admin blueprint ----
     const MASTER = { username: 'LSHADMIN123', fullName: 'LSH Admin', batchId: '', userType: 'Admin' };
-    page = await openPage(browser, { width: 1366, height: 768 }, MASTER);
-    await page.click('#lbp-open-btn'); await page.waitForTimeout(300);
+    page = await openPage(browser, { width: 1366, height: 768 }, MASTER, '#/blueprint');
     const m = await page.evaluate(() => ({ deck: document.getElementById('lbp-slide').dataset.deck, tabs: [...document.querySelectorAll('#lbp-tabs button')].filter(b => b.offsetParent).map(b => b.textContent.trim()) }));
     if (m.deck !== 'admin' || m.tabs.join() !== 'Admin blueprint,Trainer blueprint,Trainee blueprint') fail(`the Master Account's Blueprint should open the Admin deck with three tabs: ${JSON.stringify(m)}`);
     const mw = await walk(page, 'admin 1366px'); mw.out.forEach(fail);
