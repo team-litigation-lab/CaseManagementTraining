@@ -371,8 +371,8 @@ const SAVED = [
     if (await page.locator('#sidebar-actions button:has-text(".ics")').count()) fail('the sidebar still offers .ics downloads');
     if (await page.locator('#sidebar-actions button:has-text("Training Calendar")').count()) fail('the sidebar still has a separate Training Calendar');
     if (!(await page.locator('#tab-calendar').count())) fail('the Calendar tab is missing');
-    // A trainee's sidebar: the program, their cases, then New Intake and the Call Simulator. Download Case Summary,
-    // Main Portal and My Dashboard are at the top right (the Blueprint lives on the Main Portal, not in the CMS).
+    // A trainee's sidebar: the program, their cases, then New Intake and the Call Simulator. Download Case Summary and My Dashboard
+    // are at the top right (no Blueprint: it lives on the Main Portal).
     // No Latest Updates, Intake Folder, Firm Calendar or other trainer tools; the case's own actions are at the bottom of the case.
     const side = await page.evaluate(() => ({
         groups: [...document.querySelectorAll('#sidebar-actions > .sb-group')].filter(g => g.offsetParent).map(g => g.id),
@@ -385,7 +385,7 @@ const SAVED = [
         // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
         || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
     // The page's frame: the sidebar (and its logo) runs to the top, the announcements strip is over the main area only and has no
-    // "LEGAL SUPPORT HELP TRAINING INTERFACE - TRAINEE PORTAL" label; Download Case Summary, Main Portal and My Dashboard are at
+    // "LEGAL SUPPORT HELP TRAINING INTERFACE - TRAINEE PORTAL" label; Download Case Summary and My Dashboard are at
     // its right; the date and time are right above the case's Case ID, outside the case; the timer is in the case header under the
     // search bars, just the timer and a Billable / Non-billable dropdown (the timesheet is on the Time tab); no standing
     // "Autosave active" note; the Profile tab has no SSN or DOB box (the header has them).
@@ -404,7 +404,6 @@ const SAVED = [
             top: [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id),
             topInStrip: !!(document.getElementById('top-actions') && document.getElementById('top-actions').closest('#classification-bar')),
             topRight: (() => { const a = document.getElementById('dash-open-btn'); return a ? Math.round(innerWidth - a.getBoundingClientRect().right) : null; })(),
-            blueprint: !!document.getElementById('lbp-open-btn'),
             clockAbove: (() => { document.getElementById('capture-area').scrollTop = 0;
                 const c = r(document.querySelector('#case-clock-row .clock-widget')), id = r(document.getElementById('case-id-field')), card = r(document.querySelector('.header-card'));
                 return { aboveCard: c.bottom <= card.top + 1, rightEdge: Math.round(card.right - c.right), overId: c.left < id.right && c.right > id.left, inCase: !!document.getElementById('live-clock').closest('#capture-area') }; })(),
@@ -412,8 +411,7 @@ const SAVED = [
             ttText: tt ? tt.innerText.replace(/\s+/g, ' ').trim() : '',
             autosave: (document.getElementById('autosave-indicator') || {}).textContent };
     });
-    if (frame.top.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn' || !frame.topInStrip || frame.topRight > 40) fail(`Download Case Summary, Main Portal and My Dashboard should be at the top right: ${JSON.stringify(frame)}`);
-    if (frame.blueprint) fail('the CMS should have no 🧭 Blueprint button: every blueprint lives on the Main Portal');
+    if (frame.top.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn' || !frame.topInStrip || frame.topRight > 40) fail(`Download Case Summary, Main Portal and My Dashboard should be at the top right (no Blueprint: it lives on the Main Portal): ${JSON.stringify(frame)}`);
     const home = await page.evaluate(() => { const a = document.getElementById('portal-home-btn'); return a && { href: a.getAttribute('href'), text: a.textContent.trim(), cls: a.className, next: a.nextElementSibling && a.nextElementSibling.id, h: Math.round(a.getBoundingClientRect().height), dh: Math.round(document.getElementById('dash-open-btn').getBoundingClientRect().height), top: Math.round(a.getBoundingClientRect().top - document.getElementById('dash-open-btn').getBoundingClientRect().top) }; });
     if (!home || home.href !== 'https://cm-training-activity.pages.dev/programs.html' || home.text !== '🏠 Main Portal' || home.cls !== 'cls-btn' || home.next !== 'dash-open-btn' || Math.abs(home.h - home.dh) > 2 || Math.abs(home.top) > 2) fail(`🏠 Main Portal should be beside My Dashboard, the same size, back to the Portal's Training Directory: ${JSON.stringify(home)}`);
     if (!frame.clockAbove.aboveCard || Math.abs(frame.clockAbove.rightEdge) > 40 || !frame.clockAbove.overId || frame.clockAbove.inCase) fail(`the date and time should be right above the Case ID, outside the case: ${JSON.stringify(frame.clockAbove)}`);
@@ -500,7 +498,7 @@ const SAVED = [
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
     if (work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Call Simulator') fail(`an Admin's sidebar should have New Intake, 📞 Call Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
     const adminTop = await admin.evaluate(() => [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id));
-    if (adminTop.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn') fail(`an Admin's top right should be Download Case Summary, Main Portal, My Dashboard: ${adminTop.join()}`);
+    if (adminTop.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn') fail(`an Admin's top right should be Download Case Summary, Main Portal, My Dashboard (no Blueprint): ${adminTop.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');

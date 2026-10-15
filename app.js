@@ -2231,10 +2231,11 @@
                 renderRepo();
                 _draftRestoredFor = null;   // whoever signs in next gets their own work back (and only theirs)
                 // Nothing of the last person's stays open over the sign-in screen: the live view of a trainee
-                // (and this page's own screen going to one), the Client's ID view, a contact card.
+                // (and this page's own screen going to one), the Client's ID view, the Blueprint, a contact card.
                 if (window.lshLiveWatched) window.lshLiveWatched(false);
                 if (window.closeLiveView) window.closeLiveView();
                 if (window.lshClientId) window.lshClientId.close();
+                if (window.LSHBlueprint && document.getElementById('lbp-page')) window.LSHBlueprint.close();
                 if (window.closeContacts) window.closeContacts(false);
                 return;
             }
@@ -2256,14 +2257,14 @@
 
             if (session.userType === 'Admin') {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
+                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b>${session.batchId && session.batchId !== 'null' ? `<br>Batch ID: <b>${session.batchId}</b>` : ''}</div>
                     <button class="session-btn active-admin" onclick="openAdminDashboard()">⇄ Master Control</button>
                     <button class="session-btn trainee-view-btn" onclick="setTraineeView(true)" title="See the site the way trainees see it">👁 Trainee view</button>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             } else {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b><br>Batch ID: <b>${session.batchId}</b></div>
+                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b>${session.batchId && session.batchId !== 'null' ? `<br>Batch ID: <b>${session.batchId}</b>` : ''}</div>
                     ${session.traineeView ? '<button class="session-btn active-admin" onclick="setTraineeView(false)">⇦ Back to trainer view</button>' : ''}
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;

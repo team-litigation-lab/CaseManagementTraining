@@ -52,7 +52,7 @@ async function wrongPasswords(db, request, add) {
 const TOO_MANY = () => json({ success: false, error: 'Too many wrong passwords from this network. Please wait up to an hour and try again.' }, 429);
 // A trainer's own Admin account, by name, made on first use (with no usable password
 // of its own: the admin password is the key, as for the Master Account).
-async function trainerUser(db, name) {
+export async function trainerUser(db, name) {
     const username = trainerUsername(name);
     const find = () => db.prepare(`SELECT * FROM users WHERE username = ?`).bind(username).first();
     let user = await find();
