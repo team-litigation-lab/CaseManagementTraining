@@ -174,8 +174,7 @@
               shot: 'blueprint/trainer-broadcast.jpg', shotAlt: 'Master Control, Broadcast & Ping: the announcement and the alert' },
             { icon: '⏸', title: 'Access control', points: [
                 '⏸ Pause: trainees see a paused screen and can\'t work. Their work is kept. Trainers are never paused.',
-                '⏵ Resume lifts it for everyone at once; nobody is signed out.',
-                'Database Maintenance (🧹 Clear old data) is for the Master Account only.'],
+                '⏵ Resume lifts it for everyone at once; nobody is signed out.'],
               where: 'Master Control → Access Control.',
               tip: 'Pause for a break or a demo. To keep one trainee out, suspend their account in Users.',
               shot: 'blueprint/trainer-access.jpg', shotAlt: 'Master Control, Access Control: Pause Activity' },
@@ -282,7 +281,7 @@
         sub: 'Running the CMS itself: accounts, health, data and settings',
         slides: [
             { icon: '🏛', title: 'Who does what', points: [
-                'Master Account (you): name left blank + the admin password. The only one that can suspend, revoke or reinstate a trainer, and that sees Database Maintenance.',
+                'Master Account (you): name left blank + the admin password. The only one that can suspend, revoke or reinstate a trainer.',
                 'Trainers: their own name + the admin password. Every training tool: registrations, the Training Library, Master Control.',
                 'Trainees: their username (or their name, from a course platform). Their own cases and results only.',
                 'Pings are signed "System Administrator" from the Master Account and "Admin <first name>" from a trainer.'],
@@ -308,15 +307,15 @@
                 'Registrations and Users: approve, revoke, fix Batch IDs. Monitoring: who\'s online, 👁 Watch live, Server Logs.',
                 'Case Logs: every saved case and its previous versions; delete one or several.',
                 'Broadcast & Ping: the announcement ticker, full-screen alerts, pings (optionally as a task).',
-                'Access Control: ⏸ Pause, and Database Maintenance (Master Account only).'],
+                'Access Control: ⏸ Pause.'],
               where: 'Sidebar footer → ⇄ Master Control.',
               tip: 'Open pages check for messages every 15 seconds (30 in a background tab).' },
-            { icon: '⏸', title: 'Pause and Database Maintenance', points: [
+            { icon: '⏸', title: 'Pause', points: [
                 'Pause freezes trainees\' screens under an overlay; Admins are never paused. The server still accepts saves.',
                 'There\'s no site lock: to keep someone out, suspend or revoke their account in Users.',
-                '🧹 Clear old data (Master Account): removes old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts. Cases, results and logs stay.'],
+                'Nothing clears old rows on demand any more: D1 reuses the space rows leave behind, and the file only shrinks by copying the database into a fresh one with the Migrate D1 workflow.'],
               where: 'Master Control → Access Control.',
-              tip: 'Use Pause for breaks and demos; clear old data now and then, outside class hours.' },
+              tip: 'Use Pause for breaks and demos.' },
             { icon: '📉', title: 'Cloudflare usage and billing', points: [
                 'All LSH sites share one Cloudflare account, on the Workers Paid plan: there\'s no daily limit.',
                 '10 million requests a month are included; each extra million costs $0.30, and Cloudflare has no spending cap.',
@@ -348,7 +347,7 @@
             { icon: '⚠', title: 'Database upkeep', points: [
                 'migrate-d1.yml copies the live database into a new one you name, then points the site at it. It refuses the live database\'s name, since it deletes the one it\'s given first.',
                 'D1 has no VACUUM: deleted rows\' space is reused, but the file only gets smaller when migrate-d1.yml copies it into a fresh one.',
-                'Not needed for normal running; 🧹 Clear old data in Access Control does the routine clearing.',
+                'There is no on-demand clearing in the CMS any more: nothing deletes old rows on a button press.',
                 'To undo a mistake, use D1 Time Travel.'],
               where: 'GitHub → CaseManagementTraining → Actions.',
               tip: 'Don\'t run a database workflow without a plan and a fresh Time Travel point.' },

@@ -2346,48 +2346,8 @@
             if (tab === 'registrations' || tab === 'users' || tab === 'overview' || tab === 'announce') refreshUsersAndRegistrations();
             if (tab === 'monitoring') refreshMonitoring();
             if (tab === 'case-logs') refreshCaseLogs();
-            if (tab === 'access') renderDbMaintenanceVisibility();
         }
 
-        /* =========================================================
-           DATABASE MAINTENANCE — Master Account only: 🧹 Clear old data.
-           D1 can't VACUUM, so this clears data that's only needed for a while
-           (old pings, online status, live-view copies, sign-in counts…);
-           D1 reuses the space. See functions/api/db-cleanup.js.
-           ========================================================= */
-        function renderDbMaintenanceVisibility() {
-            const section = document.getElementById('db-maintenance-section');
-            if (!section) return;
-            const session = getSession();
-            const sessionIsMaster = !!(session && session.username === 'LSHADMIN123');
-            section.style.display = sessionIsMaster ? 'block' : 'none';
-        }
-        function runDbCleanup() {
-            const btn = document.getElementById('db-cleanup-btn');
-            const label = document.getElementById('db-cleanup-result');
-            if (!confirm('Clear old data now? Old pings, online status, live-view copies, sign-in attempt counts, old live-call records and stopped alerts are removed. Cases, results, intakes, time and the server logs are kept.')) return;
-            btn.disabled = true;
-            btn.innerText = 'Clearing…';
-            fetch('/api/db-cleanup', { method: 'POST', credentials: 'include' })
-                .then(r => r.json())
-                .then(data => {
-                    btn.disabled = false;
-                    btn.innerText = '🧹 Clear old data';
-                    if (data.success) {
-                        const parts = (data.cleared || []).filter(c => c.rows).map(c => c.rows + ' ' + c.what);
-                        label.innerText = 'Last run (' + new Date().toLocaleTimeString() + '): ' + (parts.length ? parts.join(' · ') : 'nothing old to clear') + '.';
-                        showToast(data.rows ? 'Cleared ' + data.rows + ' old row' + (data.rows === 1 ? '' : 's') + '.' : 'Nothing old to clear.', 'info');
-                    } else {
-                        label.innerText = 'Last run failed: ' + (data.error || 'Unknown error');
-                        showToast(data.error || 'Couldn\'t clear old data.', 'error');
-                    }
-                })
-                .catch(() => {
-                    btn.disabled = false;
-                    btn.innerText = '🧹 Clear old data';
-                    showToast('Network error clearing old data.', 'error');
-                });
-        }
 
         /* =========================================================
            BATCH IDs — B + the date the batch started (MMDDYY), e.g. B100526 for 5 October 2026
