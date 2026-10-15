@@ -52,6 +52,23 @@
     if (wantAdmin) { try { const u = new URL(location.href); u.searchParams.delete('admin'); history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash); } catch (e) { /* keep the address */ } }
     const session = () => { try { return typeof getSession === 'function' ? getSession() : null; } catch (e) { return null; } };
 
+    // ?admin=1: an administrator arriving from a course or the Portal. A trainee session left in this browser
+    // by an earlier ticketed launch (a test, a shared computer) is signed out first — session and server cookie
+    // both — or the CMS would open as that trainee and the admin password prompt would never show. An admin
+    // already signed in here is left alone.
+    function adminArrived() {
+        const s = session();
+        if (s && s.userType === 'Admin') return;
+        if (!s) { openAdminLogin(); return; }
+        const done = () => openAdminLogin();
+        try {
+            if (typeof logoutSession === 'function') { Promise.resolve(logoutSession()).then(done, done); return; }
+            if (typeof clearSession === 'function') clearSession();
+            if (typeof applySessionUI === 'function') applySessionUI();
+        } catch (e) { /* fall through to the admin prompt either way */ }
+        done();
+    }
+
     async function signInFromTicket() {
         busy = true;
         card('<h1 style="font-size:20px;margin:0 0 8px">Signing you in…</h1><p style="color:#cbd5e1;font-size:14px;margin:0">Opening the CMS from the LSH Training Portal.</p>');
@@ -97,11 +114,11 @@
     function start() {
         fetch('/api/portal-login', { credentials: 'include' }).then((r) => r.json()).then((d) => {
             portalOnly = !!(d && d.portalOnly);
-            if (wantAdmin && !session()) openAdminLogin();
+            if (wantAdmin) adminArrived();
             else if (ticket) signInFromTicket();
             // No ticket: the CMS's own sign-in screen stays, where a registered trainee signs in with
             // their username (functions/api/login.js). showNotice() is now only for a ticket that failed.
-        }).catch(() => { if (ticket) signInFromTicket(); });   // status unknown: the ticket is still worth trying
+        }).catch(() => { if (wantAdmin) adminArrived(); else if (ticket) signInFromTicket(); });   // status unknown: the ticket is still worth trying
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
