@@ -102,7 +102,9 @@
     let mockViewOnly = false;  // the file as it is (Notes and Tasks aside): a trainee without a program, the Front Desk, a drill
     let mockEditing = false;   // an Admin has the library case open to edit (Save goes to the library)
     let mockMine = false;      // a trainee working on it in their program's role (Save keeps it as their own case for this file)
-    let viewReason = '';       // why a trainee's file is view only: 'drill' | 'program' | 'error'
+    let viewReason = '';       // why a trainee's file is view only: 'drill' | 'messages' (a 💬 Client Messaging conversation) | 'program' | 'error'
+    // a drill or a text conversation keeps the file as it is (opts.viewOnly), whatever the trainee's program
+    const inActivity = (r) => r === 'drill' || r === 'messages';
     let editTouched = false;   // an Admin or trainee has changed something since it opened or was saved
     let libState = { program: currentProgram() || 'all', q: '', tab: 'cases' };
     window.mockIsViewOnly = () => !!(mockId && mockViewOnly);
@@ -117,7 +119,7 @@
         if (!(mockId && mockViewOnly)) return false;
         const pending = updatesPending();
         if (pending) saveUpdates();
-        const why = viewReason === 'drill' ? 'during the drill'
+        const why = viewReason === 'drill' ? 'during the drill' : viewReason === 'messages' ? 'during the text conversation'
             : currentProgram() ? `for ${programLabel(currentProgram())}` : 'until you choose your program (in the bar above the case)';
         if (!silent && typeof showToast === 'function') showToast(pending || upd.saved
             ? `Your Notes and Tasks on this ${kindWord()} are saved to your account. The rest of the case is view only ${why}.`
@@ -149,7 +151,7 @@
         const freshly = data.mockViewOnly || !data.mockEditDirty
             || (data.mockEditing && !isAdmin()) || (data.mockMine && (isAdmin() || !worksOnCopy(currentProgram())))
             || (!data.mockEditing && !data.mockMine);
-        if (freshly) { openMockCase(data.mockId, { silent: true, viewOnly: data.viewReason === 'drill' }); return true; }
+        if (freshly) { openMockCase(data.mockId, { silent: true, viewOnly: inActivity(data.viewReason), reason: data.viewReason }); return true; }
         // Unsaved changes come back as unsaved changes (the normal restore puts the content back, and a trainee's
         // is then saved to their case for this file, as after any interruption).
         mockId = data.mockId; mockViewOnly = false;
@@ -1168,11 +1170,12 @@
             return;
         }
         const why = viewReason === 'drill' ? 'view only during the drill; look things up the way you would on a live call'
+            : viewReason === 'messages' ? 'view only during the text conversation; read the file and answer from it (Notes and Tasks stay open)'
             : viewReason === 'error' ? 'view only for now (your saved work on it couldn\'t load: reopen it to work on it)'
             : currentProgram() ? `view only for ${esc(programLabel(currentProgram()))}: log the calls you take in Notes and Tasks`
             : 'view only until you choose your program (it decides what you can edit); you can add Notes and Tasks now';
         b.innerHTML = `<span class="mb-tag">CASE FILE · ${esc(fileRef(c))}</span><span>${who} — ${why}.</span><span class="mb-sp"></span>
-               ${viewReason === 'drill' ? '' : programSelect()}${find}${close}`;
+               ${inActivity(viewReason) ? '' : programSelect()}${find}${close}`;
     }
 
     window.openMockCase = function (id, opts) {
@@ -1190,7 +1193,7 @@
         const mine = !editor && !opts.viewOnly && worksOnCopy(program);
         showBase(c);
         mockId = c.id; mockViewOnly = !editor && !mine; mockEditing = editor; mockMine = mine; editTouched = false;
-        viewReason = mockViewOnly ? (opts.viewOnly ? 'drill' : 'program') : '';
+        viewReason = mockViewOnly ? (opts.viewOnly ? (opts.reason === 'messages' ? 'messages' : 'drill') : 'program') : '';
         if (editor || mine) {
             upd.id = null; clearTimeout(upd.timer); upd.pending = false;
             if (typeof currentCaseId !== 'undefined') { currentCaseId = null; currentCaseIsDraft = false; currentCaseCanEdit = true; }
@@ -1246,7 +1249,7 @@
         p = normProgram(p);
         if (!p) return;
         window.lshSetProgram(p);
-        if (mockId && !isAdmin()) openMockCase(mockId, { silent: true, tab: activeTab(), viewOnly: viewReason === 'drill' });
+        if (mockId && !isAdmin()) openMockCase(mockId, { silent: true, tab: activeTab(), viewOnly: inActivity(viewReason), reason: viewReason });
         if (typeof showToast === 'function') showToast(worksOnCopy(p) ? `Program: ${programLabel(p)}. You can edit ${areaList(p)} on a case file.` : `Program: ${programLabel(p)}. Case files are view only; log the calls you take in Notes and Tasks.`, 'info', 4500);
     };
     // ↺ Start over: the file as it is again; Save Case then replaces the trainee's saved work on it.

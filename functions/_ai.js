@@ -91,8 +91,9 @@ export async function portalPost(env, path, body) {
     return { status: res.status, data };
 }
 
-// The Portal gateway's budget modules a CMS request may count under (a Call Simulator line's call counts under its line).
-export const GATEWAY_MODULES = ['cms', 'standard', 'reception', 'intake', 'calendaring', 'ea-pa', 'pd'];
+// The Portal gateway's budget modules a CMS request may count under (a Call Simulator line's call counts under its line;
+// a Client Messaging conversation under its program's, message-packs.js aiModule).
+export const GATEWAY_MODULES = ['cms', 'standard', 'reception', 'intake', 'calendaring', 'ea-pa', 'pd', 'medsum'];
 // req: { system, messages: [{ role: 'user'|'model', text }], json, maxTokens, feature: 'caller'|'review', module }
 // → { ok, status, text, model, error }
 export async function callAI(env, req) {

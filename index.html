@@ -181,7 +181,7 @@
                     <div id="conflict-panel" class="no-print" hidden></div>
                 </div>
 
-                <!-- The tabs in the firm's order (two rows of 9: tab-break after Settlement). Only these buttons were reordered:
+                <!-- The tabs in the firm's order (two rows, 9 and 10: tab-break after Settlement). Only these buttons were reordered:
                      the panes below stay where they are, so the case's positional fields don't move. -->
                 <div class="case-tabs no-print">
                     <div onclick="showTab('profile')" id="tab-profile" class="tab-btn active-tab">Profile</div>
@@ -198,6 +198,7 @@
                     <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
                     <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
                     <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
+                    <div onclick="showTab('messages')" id="tab-messages" class="tab-btn" title="Text messages with the client (client-messaging.js)">💬 Messages</div>
                     <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
                     <div onclick="showTab('calendar')" id="tab-calendar" class="tab-btn">📅 Calendar</div>
                     <div onclick="showTab('time')" id="tab-time" class="tab-btn">⏱ Time</div>
@@ -668,6 +669,9 @@
             <div id="pane-calendar" class="tab-pane no-print" data-free-edit></div>
             <!-- Time & billing (time-tracker.js fills it). Same rules as the Calendar tab. -->
             <div id="pane-time" class="tab-pane no-print" data-free-edit></div>
+            <!-- 💬 Messages: the file's text conversations with the client, filled by client-messaging.js (nothing in it is saved
+                 with the case: no select or contenteditable, so the case's positional fields don't move) -->
+            <div id="pane-messages" class="tab-pane no-print" data-free-edit></div>
 
         </div>
         <!-- The open case's actions, always at the bottom of the screen (app.js). Outside #capture-area, so it's
@@ -1032,6 +1036,8 @@
     <script src="case-photos.js"></script>
     <script src="library-photos.js"></script>
     <script src="call-packs.js"></script>
+    <!-- 💬 Client Messaging: the text conversations (message-packs.js) and the Messages tab and its activity (client-messaging.js) -->
+    <script src="message-packs.js"></script>
     <script src="training-library.js"></script>
     <script src="library-pdf.js"></script>
     <script src="live-call.js"></script>
@@ -1039,6 +1045,7 @@
     <script src="case-fit.js"></script>
     <script src="client-id.js"></script>
     <script src="front-desk-drill.js"></script>
+    <script src="client-messaging.js"></script>
     <script src="case-library.js"></script>
     <script src="intake-folder.js"></script>
     <!-- 📇 Contacts: the small Search contacts bar under the case header's Search cases pops up a contact's card

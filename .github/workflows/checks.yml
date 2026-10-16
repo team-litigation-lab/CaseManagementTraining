@@ -150,6 +150,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/case-fields.cjs
+      - name: Client Messaging (the Messages tab, practice and graded text conversations, the debrief, results and the file's thread)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/messaging.cjs
       - name: Case dates move together (edit the DOL or a date of service; the DOB stays; Undo; only what the user may edit)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

@@ -136,7 +136,7 @@
                 'The role decides which tabs of a case file a trainee can edit. It shows in the sidebar\'s Training program box.',
                 'reception: Front Desk, view only plus Notes and Tasks · intake: the header, Profile, Parties, Police, Insurance · cm: all but Litigation and Case Costs.',
                 'md: Treatment, Lost Wages, Demand, Liens · ea: Doc Hub · pd: Parties, Police, Insurance, Property Damage. All but reception also get Doc Hub, Notes and Tasks.',
-                'Straight to a tool: &drill=1 (Call Simulator), &intake=1 (Intake folder), &mock=MC-04 (one file).'],
+                'Straight to a tool: &drill=1 (Call Simulator), &messages=1 (Client Messaging), &intake=1 (Intake folder), &mock=MC-04 (one file).'],
               where: 'The end of the CMS address you send the class, e.g. ?program=reception&drill=1.',
               tip: 'No program on the link: case files are view only until the trainee picks one in the sidebar.',
               shot: 'blueprint/trainer-program-link.jpg', shotAlt: 'A case file opened with the Front Desk link: the banner says it is view only for Receptionist / Front Desk' },

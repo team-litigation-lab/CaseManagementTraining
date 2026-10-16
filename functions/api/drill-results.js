@@ -1,15 +1,18 @@
 import { json, requireSession, buildFullName } from '../_utils.js';
 import { gatewayOn, portalPost } from '../_ai.js';
 
-// Call Simulator results (front-desk-drill.js in the CMS). One row per completed
+// Call Simulator and Client Messaging results (front-desk-drill.js, client-messaging.js in the CMS). One row per completed
 // drill (mode 'drill') or Core callers practice call (mode 'practice'): which
 // calls the trainee got, how they did at finding the case, authenticating the
 // caller and handling the call, and how long it took; or one call on a line
 // (call-packs.js): a practice call (mode 'line') or a graded one (mode
-// 'graded'), its details naming the program, line and call. Trainees read
-// their own history; Admins read everyone's.
+// 'graded'), its details naming the program, line and call; or one text
+// conversation (message-packs.js): practice (mode 'msg') or graded (mode
+// 'msg-graded'), its details ({ kind: 'message' }) naming the program, the
+// line ('Client Messaging') and the conversation. Trainees read their own
+// history; Admins read everyone's.
 //
-// A graded call counts in the trainee's course: it's sent to the Training Portal
+// A graded call (or graded conversation) counts in the trainee's course: it's sent to the Training Portal
 // (its /api/call-results, with the AI gateway's shared secret, AI_GATEWAY_SECRET),
 // which keeps it on their Portal results and in their course's own store (FT by
 // lesson, CM / PD / EA by line). The answer says where it counted ({ course });
@@ -50,12 +53,13 @@ async function ensureTable(db) {
     }
 }
 const pct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
-const MODES = ['drill', 'practice', 'line', 'graded'];
+const MODES = ['drill', 'practice', 'line', 'graded', 'msg', 'msg-graded'];
+const GRADED = ['graded', 'msg-graded'];   // these count in the course (sendGraded)
 // For the lists (an Admin's list leaves the details out): a line call's line and title, the call taken (a Core caller's
 // or a line's: the Call Simulator shows your best on each call), and a drill's set ("Set 2"; 0 is all the calls).
-const LINE_COLS = `CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].line') END AS line,
-    CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].title') END AS title,
-    CASE WHEN mode IN ('practice', 'line', 'graded') THEN json_extract(details, '$[0].id') END AS call_id,
+const LINE_COLS = `CASE WHEN mode IN ('line', 'graded', 'msg', 'msg-graded') THEN json_extract(details, '$[0].line') END AS line,
+    CASE WHEN mode IN ('line', 'graded', 'msg', 'msg-graded') THEN json_extract(details, '$[0].title') END AS title,
+    CASE WHEN mode IN ('practice', 'line', 'graded', 'msg', 'msg-graded') THEN json_extract(details, '$[0].id') END AS call_id,
     CASE WHEN mode = 'drill' THEN json_extract(details, '$[0].set') END AS drill_set,
     CASE WHEN mode IN ('line', 'graded') THEN json_extract(details, '$[0].trainer.pct') END AS trainer_pct`;
 
@@ -102,7 +106,7 @@ export async function onRequestPost({ request, env }) {
     ).bind(session.username, buildFullName(userRow) || session.fullName || session.username, session.batchId || null,
         String(body.program || '').slice(0, 20) || null, mode, calls, pct(body.score), pct(body.findPct), pct(body.authPct), pct(body.actionPct),
         Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), details).run();
-    const course = mode === 'graded' ? await sendGraded(env, session, userRow, body) : null;
+    const course = GRADED.includes(mode) ? await sendGraded(env, session, userRow, body) : null;
     return json(course ? { success: true, course } : { success: true });
 }
 
@@ -141,9 +145,11 @@ async function sendGraded(env, session, userRow, body) {
     const cant = (reason) => session.userType === 'Admin' ? null : Object.assign({ counted: false, reason }, where);
     if (!gatewayOn(env)) return cant('not-connected');
     if (!userRow || !userRow.first_name || !userRow.last_name) return cant('no-name');
-    const payload = { first: userRow.first_name, last: userRow.last_name, batch: session.batchId || '', username: session.username,
+    // kind 'message': a Client Messaging conversation (the Portal files it as that simulator, on its own line)
+    const kind = d.kind === 'message' ? 'message' : 'call';
+    const payload = { first: userRow.first_name, last: userRow.last_name, batch: session.batchId || '', username: session.username, kind,
         call: { id: d.id, program: d.program, line: d.line, lesson: d.course && d.course.lesson, title: d.title, score: pct(body.score), verdict: d.verdict,
-            secs: Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), voice: d.voice, at: new Date().toISOString() } };
+            secs: Math.max(0, Math.min(3600, parseInt(body.avgSeconds, 10) || 0)), voice: kind === 'message' ? 'text' : d.voice, at: new Date().toISOString() } };
     try {
         const r = await Promise.race([portalPost(env, '/api/call-results', payload), new Promise(res => setTimeout(() => res({ status: 504 }), 6000))]);
         if (r.data && r.data.success) return { counted: true, program: d.program, lesson: (d.course && d.course.lesson) || null, line: d.line, best: r.data.course ? r.data.course.best : null };

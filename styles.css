@@ -262,7 +262,7 @@
         background: var(--navy); border: 1px solid var(--navy) !important; color: #fff !important;
         box-shadow: inset 0 -3px 0 var(--orange);
     }
-    .case-tabs .tab-break { flex-basis: 100%; height: 0; }   /* index.html: after Settlement, so the rows are 9 and 9 */
+    .case-tabs .tab-break { flex-basis: 100%; height: 0; }   /* index.html: after Settlement, so the rows are 9 and 10 */
     /* a narrower case panel: tighter keys, so the 18 tabs still take two rows (with a library file's ✎ marks too) */
     .case-tabs { container-type: inline-size; }
     @container (max-width: 1120px) { .case-tabs .tab-btn { font-size: 10.5px; letter-spacing: .02em; padding: 8px 8px; } }

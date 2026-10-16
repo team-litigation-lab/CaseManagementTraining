@@ -140,7 +140,7 @@ async function pagePart() {
     // 0b. the tabs, in the firm's order (two rows: the break after Settlement); Finance is now Case Costs
     const tabs = await page.evaluate(() => [...document.querySelector('.case-tabs').children].map(el => el.classList.contains('tab-break') ? '|' : el.textContent.trim()));
     const TABS = ['Profile', 'Parties Involved', 'Police Report', 'Insurance', 'Treatment', 'Lost Wages', 'Case Costs', 'Demand', 'Settlement (BI/UM)', '|',
-        'ADR', 'Litigation', 'Doc Hub', 'Notes', 'Tasks', '📅 Calendar', '⏱ Time', 'Liens', 'Property Damage'];
+        'ADR', 'Litigation', 'Doc Hub', 'Notes', '💬 Messages', 'Tasks', '📅 Calendar', '⏱ Time', 'Liens', 'Property Damage'];
     if (tabs.join(' · ') !== TABS.join(' · ')) fail(`the tabs aren't in the firm's order: ${tabs.join(' · ')}`);
 
     // 1. ⚠ Critical note
