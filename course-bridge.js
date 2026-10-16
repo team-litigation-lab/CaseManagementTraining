@@ -1,4 +1,4 @@
-/* 🔗 The open case, told to the course that framed the CMS.
+/* 🔗 The CMS and the course that framed it: which case is open, and filing a document into it.
 
    A lesson in a training course (Case Management's ⧉ Side by side) frames the CMS beside the step, and the
    step used to ask the trainee to copy the Case ID out of the case header and type it into "Log Your Work".
@@ -10,10 +10,18 @@
    shows — #case-id-field, #client-name-field and the phase, watched for changes — so every way a case is opened
    (a new save, My cases, the Case Library, a Training Library file) is covered without hooking each one.
 
+   Filing a document (the course's document-filing step): the course sends the document it is teaching with
+   the name the trainee wrote for it, and the CMS checks that name against the firm's convention
+   (caseFileName in app.js — the one source of truth) before anything is uploaded. A name that doesn't
+   follow it is refused, with what is wrong with each part, and nothing is filed; a name that does is
+   uploaded into the open case under the Doc Hub category the trainee chose, exactly as an upload in the
+   CMS would be, and the case is saved. The trainee types the name: the CMS never quietly corrects it.
+
    What it does not do: nothing is sent to a page that did not ask, and only an LSH course or the Training
-   Portal may ask (ORIGINS). It carries the case header and nothing else from the file — no client details,
-   no documents — and the course cannot ask the CMS to do anything through it: the only message it answers
-   is the question above. Outside a frame the file does nothing at all. */
+   Portal may ask (ORIGINS). What it tells the course is the case header and nothing else from the file —
+   no client details, no documents. What it will do for the course is file a document the course sends into
+   the case the trainee has open; it files nothing into a Training Library file (view only) or a case with
+   no Case ID, and it answers no other request. Outside a frame the file does nothing at all. */
 (function () {
     if (window.parent === window) return;   // not framed: nobody to tell
 
@@ -54,15 +62,108 @@
     }
 
     window.addEventListener('message', (e) => {
-        if (!e.data || e.data.lsh !== 'cms-case?' || !allowed(e.origin)) return;
-        const now = openCase();
-        askers.add(e.origin);
-        tell(e.origin, now);                                       // answered whether or not anything changed
-        last = now.caseId + '|' + now.client + '|' + now.phase;    // so the next change is what announces
+        if (!e.data || !allowed(e.origin)) return;
+        if (e.data.lsh === 'cms-case?') {
+            const now = openCase();
+            askers.add(e.origin);
+            tell(e.origin, now);                                       // answered whether or not anything changed
+            last = now.caseId + '|' + now.client + '|' + now.phase;    // so the next change is what announces
+            return;
+        }
+        // the name the trainee wrote, checked against the convention — nothing is uploaded
+        if (e.data.lsh === 'cms-doc-check') {
+            const problems = nameProblems(e.data.name, e.data.category, e.data.original || e.data.name);
+            tell(e.origin, { lsh: 'cms-doc-checked', id: e.data.id, ok: !problems.length, problems, categories: categories() });
+            return;
+        }
+        // the document itself, filed into the open case under the trainee's chosen category
+        if (e.data.lsh === 'cms-doc-file') {
+            fileDocument(e.data)
+                .then(out => tell(e.origin, Object.assign({ lsh: 'cms-doc-filed', id: e.data.id, problems: [] }, out)))
+                .catch(err => tell(e.origin, { lsh: 'cms-doc-filed', id: e.data.id, ok: false, problems: [], error: (err && err.message) || 'The document could not be filed.' }));
+            return;
+        }
     });
 
-    // for the checks (.github/scripts/course-bridge.cjs): who may ask, and what would be answered
-    window.__lshCourseBridge = { allowed, openCase, origins: ORIGINS.map(String) };
+    /* ---------- filing a document the course sends ----------
+       The name the trainee wrote is checked against the firm's convention:
+           <Case ID>_<Last-First>_<Type>_<YYYY-MM-DD>.<ext>
+       The expected name comes from caseFileName, so the convention lives in one place. Each part is
+       compared on its own, so the refusal says what to fix rather than just "wrong". */
+    const MAX_BYTES = 2 * 1024 * 1024;   // DOC_UPLOAD_MAX_BYTES in app.js (and upload.js's server-side limit)
+    // a second file of the same type on the same day is named "…-2": the trainee's plain name is accepted
+    // either way, so the "-2" is dropped before the comparison. (Only after the date, never inside it.)
+    const dropDupSuffix = (name) => name.replace(/(\d{4}-\d{2}-\d{2})-\d{1,3}(\.[A-Za-z0-9]{1,8})?$/, (m, date, ext) => date + (ext || ''));
+
+    function categories() {
+        const out = [];
+        document.querySelectorAll('#doc-body tr').forEach(tr => {
+            const label = tr.querySelector('td div'); const t = label ? label.textContent.trim() : '';
+            if (t && !out.some(x => x.toLowerCase() === t.toLowerCase())) out.push(t);
+        });
+        return out;
+    }
+    const rowFor = (category) => Array.from(document.querySelectorAll('#doc-body tr')).find(tr => {
+        const label = tr.querySelector('td div');
+        return label && label.textContent.trim().toLowerCase() === String(category || '').trim().toLowerCase();
+    }) || null;
+    const emptyRowFor = (category) => { const r = rowFor(category); return r && !r.querySelector('.doc-attachment a') ? r : null; };
+
+    function nameProblems(typed, category, original) {
+        const name = String(typed || '').trim(), problems = [];
+        if (!name) return ['The file needs a name, in the firm\'s convention: <Case ID>_<Last-First>_<Type>_<YYYY-MM-DD>.<ext>'];
+        if (/[^A-Za-z0-9._-]/.test(name)) problems.push('Only letters, digits and - _ . may be used: no spaces, commas or brackets.');
+        const expected = dropDupSuffix(typeof caseFileName === 'function' ? caseFileName(category, original) : '');
+        if (!expected) return ['The CMS cannot work out this file\'s name: open the case first.'];
+        const parts = (s) => { const dot = s.lastIndexOf('.'); const stem = dot > 0 ? s.slice(0, dot) : s; return { bits: stem.split('_'), ext: dot > 0 ? s.slice(dot + 1) : '' }; };
+        const got = parts(dropDupSuffix(name)), want = parts(expected);
+        const LABEL = ['the Case ID', 'the client (last name first)', 'the type (the Doc Hub category)', 'the date it was uploaded (YYYY-MM-DD)'];
+        if (got.bits.length !== want.bits.length)
+            problems.push(`The name has ${got.bits.length} part${got.bits.length === 1 ? '' : 's'} separated by _, and needs ${want.bits.length}: ${LABEL.join(', ')}.`);
+        want.bits.forEach((w, i) => {
+            const g = got.bits[i];
+            if (g === undefined || g === w) return;
+            problems.push(`${LABEL[i] ? LABEL[i].charAt(0).toUpperCase() + LABEL[i].slice(1) : 'Part ' + (i + 1)} should be "${w}", not "${g}".`);
+        });
+        if (want.ext && got.ext.toLowerCase() !== want.ext.toLowerCase())
+            problems.push(`The file is a .${want.ext} , so the name must end .${want.ext} (lower case), not ".${got.ext}".`);
+        if (!problems.length && dropDupSuffix(name) !== expected) problems.push(`The name should be "${expected}".`);
+        return problems;
+    }
+
+    async function fileDocument(req) {
+        const open = openCase();
+        if (!open.caseId) return { ok: false, error: 'No case with a Case ID is open in the CMS. Open the case (or save it, so it is given its ID) and file the document again.' };
+        if (window.mockIsViewOnly && window.mockIsViewOnly()) return { ok: false, error: 'This is a Training Library file, which is view only. Open your own case and file the document there.' };
+        if (typeof addDocument !== 'function' || typeof handleDocUpload !== 'function') return { ok: false, error: 'The case editor is not open in the CMS.' };
+        const cats = categories();
+        if (!cats.some(c => c.toLowerCase() === String(req.category || '').trim().toLowerCase()))
+            return { ok: false, error: `"${req.category}" is not a Doc Hub category on this case. The categories are: ${cats.join(', ')}.`, categories: cats };
+        const bytes = req.bytes instanceof ArrayBuffer ? req.bytes : null;
+        if (!bytes || !bytes.byteLength) return { ok: false, error: 'The document did not arrive. Try filing it again.' };
+        if (bytes.byteLength > MAX_BYTES) return { ok: false, error: 'That document is too large to file (max 2 MB).' };
+
+        const problems = nameProblems(req.name, req.category, req.original || req.name);
+        if (problems.length) return { ok: false, problems, expected: dropDupSuffix(caseFileName(req.category, req.original || req.name)) };
+
+        let row = emptyRowFor(req.category);
+        if (!row) { addDocument(req.category); row = document.getElementById('doc-body').lastElementChild; }
+        const summary = row && row.querySelector('[contenteditable="true"]');
+        if (summary && !summary.innerText.trim()) summary.innerText = String(req.summary || req.original || '').replace(/\.[^.]+$/, '').slice(0, 200);
+        const input = row && row.querySelector('input[type="file"]');
+        if (!input) return { ok: false, error: 'The Doc Hub row could not take the document.' };
+        const file = new File([bytes], String(req.original || req.name), { type: req.mime || 'application/octet-stream' });
+        const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+        await handleDocUpload(input);
+        const link = row.querySelector('.doc-attachment a[data-r2-key]');
+        if (!link) return { ok: false, error: 'The upload did not finish. Try filing the document again.' };
+        let saved = false;
+        try { if (typeof saveCase === 'function') { const r = await saveCase({ quiet: true }); saved = !!(r && r.ok !== false); } } catch (e) { saved = false; }
+        return { ok: true, name: link.getAttribute('download') || req.name, key: link.getAttribute('data-r2-key'), category: req.category, saved };
+    }
+
+    // for the checks (.github/scripts/course-bridge.cjs): who may ask, what would be answered, the naming
+    window.__lshCourseBridge = { allowed, openCase, origins: ORIGINS.map(String), nameProblems, categories };
 
     // the case header, watched: every way a case is opened or saved writes these
     function watch() {

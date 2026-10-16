@@ -156,7 +156,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/contacts.cjs
-      - name: The open case is told to the course that framed the CMS (and to nobody else)
+      - name: The course and the CMS (the open case told to the course; a document filed only under a name in the firm's convention)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/course-bridge.cjs
