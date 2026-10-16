@@ -214,6 +214,15 @@ Link to the CMS with a program so it opens in that program's context:
 
 Parameters combine, e.g. `?program=reception&mock=MC-06`. Cases a trainee saves are stamped with the program, so trainers can tell which course they came from. Sign-in inside another site's page (an iframe) works through the partitioned session cookie and the cross-site request guard in `functions/_middleware.js`.
 
+### 🔗 The course is told which case is open (`course-bridge.js`)
+
+A lesson that frames the CMS beside the step (Case Management's ⧉ Side by side) used to ask the trainee to copy the Case ID out of the case header and type it into the step's **Log Your Work** box. The CMS is integrated with the course, so it says which case is open instead and the course fills the box in (the course's `js/cm-cms-case.js`).
+
+- The course posts `{lsh:"cms-case?"}` to the frame; the CMS answers that origin with `{lsh:"cms-case", caseId, client, phase, at}` — the case header it already shows (`#case-id-field`, `#client-name-field`, the phase), watched for changes, so every way a case is opened or saved is covered: a new case given its ID, My cases, the Case Library, a Training Library file. A draft with no ID yet answers with no Case ID.
+- Nothing is sent to a page that did not ask, and only an LSH course Worker (`*.legalsupporthelp.workers.dev`, previews included), the LSH Training Portal or a local server while the checks run may ask. Everything else is refused.
+- It carries the case header and nothing else from the file — no client details, no documents — and the only message it answers is that one question: a course cannot ask the CMS to do anything through it. Outside a frame the file does nothing at all.
+- Checked by `.github/scripts/course-bridge.cjs`.
+
 ## 🔑 Admin Portal (trainer's name + admin password)
 
 The sign-in screen's **Admin Portal** tab asks for the trainer's **name** and the **admin password**, with no username and no registration. It works on a direct visit and from the training platforms (their sign-in screen has a **Trainer sign-in** link).
