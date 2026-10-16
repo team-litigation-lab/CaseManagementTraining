@@ -379,7 +379,7 @@ Both sit under the case's top bar, above the tabs, so they're seen on every tab 
 
 ## 🗂 Case editor: newer sections
 
-**The tabs, in order** (two rows of 9): Profile · Parties Involved · Police Report · Insurance · Treatment · Lost Wages · **Case Costs** · Demand · Settlement (BI/UM), then ADR · Litigation · Doc Hub · Notes · Tasks · 📅 Calendar · ⏱ Time · Liens · Property Damage. **Case Costs** is the tab that was called Finance (the case's costs, with their total). Only the tab buttons moved: the tabs' contents stay where they were on the page, so cases saved before load exactly as they did.
+**The tabs, in order** (9, then 10): Profile · Parties Involved · Police Report · Insurance · Treatment · Lost Wages · **Case Costs** · Demand · Settlement (BI/UM), then ADR · Litigation · Doc Hub · Notes · **💬 Messages** · Tasks · 📅 Calendar · ⏱ Time · Liens · Property Damage. **Case Costs** is the tab that was called Finance (the case's costs, with their total). Only the tab buttons moved: the tabs' contents stay where they were on the page, so cases saved before load exactly as they did.
 
 **Parties Involved** (tab after Profile)
 - Everyone involved in the incident, each with a role: client, passenger, client vehicle driver, at-fault party, at-fault driver, vehicle owner, property owner / business, witness, or other.
@@ -918,6 +918,32 @@ A timer for billable and non-billable hours, the way a firm's case management sy
 
 Code: `time-tracker.js`, `functions/api/time.js`, `functions/_time.js`. Like the calendar, it adds no `<select>` or contenteditable to the page.
 
+## 💬 Client messaging (the case's text thread)
+
+The clients text the firm, and the trainee answers — the practice a case manager does more of than anything else. Nothing is sent anywhere: every client here is fictional and their side is scripted, the way the Call Simulator's callers are.
+
+- **The 💬 badge** sits beside the timer in the case header (under the search bars). It shows the open case's unread texts on every tab — **💬 Messages 2** in orange — and opens the thread when clicked. With nothing unread it stays, quietly, as the way into the tab.
+- **💬 Messages tab** (after **Notes**): the thread, newest at the bottom. The client's texts on the left, the trainee's replies on the right, and under each reply the **coaching note**: what a good reply does, and the point behind it ("a gap in treatment is the thing to head off: say why it matters, fix the next visit, log it"). **↻ Start over** clears the thread and begins the script again.
+- **The client writes back when they're answered.** The first text arrives when the case is opened; the next one comes once the trainee has replied to the last, so the thread moves at the trainee's pace and never piles up.
+- **Each trainee has their own thread on a case**, so two trainees practising on the same Training Library file never see each other's replies. Admins can read a trainee's thread (`/api/messages?...&user=<username>`).
+- **Not part of the case:** the thread isn't in the saved case or the PDF. Typing a reply doesn't count as a case edit, and it stays usable on view-only Training Library cases.
+
+**The scripts** (`message-packs.js`): one pack per case. Each of the client's texts carries `goals` (what a good reply does), a `tip` (the coaching note) and `next` (what the client says once they have an answer). A case gets the pack whose `cases` names its Training Library id (`MC-01`) or its client, and any other file gets the generic pack — a status check-in, a change of address and a billing question, which work on any personal-injury case.
+
+| Pack | Case | The thread |
+|---|---|---|
+| `mc01-maria-appointments` | MC-01 · Maria Santos | A missed chiropractic visit, provider bills, and "is my settlement enough?" |
+| `mc02-derek-work` | MC-02 · Derek Thompson | A work status note his employer wants, and how long the case will take |
+| `cm-johndoe-apex` | John Doe v. Apex | The defence adjuster calling his cell for a recorded statement; his wife as a second claimant |
+| `generic-pi` | any other file | A status check-in, a new address and phone, a hospital bill |
+
+Add a thread by adding a pack. `.github/scripts/message-packs.cjs` checks every pack: unique ids, a `start` that exists, every `next` reachable, no text without goals, and no library id that doesn't exist.
+
+**Data** (D1, created on first use):
+- `client_messages`: one row per message, with the owner, case, direction (the client's text or the trainee's reply), who it is from, the body, the pack and scripted text it belongs to, the goals it was answered against, and when it was read.
+
+Code: `client-messages.js`, `message-packs.js`, `functions/api/messages.js`, `functions/_messages.js`. Like the calendar and the timer, it adds no `<select>` or contenteditable to the page.
+
 ## 🔒 Security
 
 - **Uploaded files** (Doc Hub, Intake folder, Client's ID, alert pictures) are served from this site, so a file a browser would run could run as whoever opened it. Only a PDF, a photo (PNG, JPG, GIF, WebP) or plain text opens in the browser. Anything else, an HTML page or an SVG included, is kept and sent as a download, and so is any older file stored as one of those (`fileTypeIsInline` in `functions/_utils.js`; `upload.js`, `file.js`). `/api/file` serves only keys under `documents/`, and only to someone who may see the file: whoever uploaded it and Admins, and anyone for a file an Admin uploaded (alert pictures, Training Library attachments). A file from before uploads recorded who sent them opens for whoever has a saved case it's attached to. Having the link isn't enough.
@@ -1186,6 +1212,16 @@ D1 has no VACUUM (neither the Workers binding nor `wrangler` can run one), so th
   - privacy between trainees and the Admin view;
   - deleting;
   - that the tab adds no select or contenteditable and isn't saved as a case edit.
+- **Client messaging** (`.github/scripts/messages.cjs`, in the same job): runs the real messages API on an in-memory SQLite database, through the real page. It checks:
+  - the 💬 Messages tab, and the 💬 badge beside the timer in the case header;
+  - the client's first scripted text arriving on the open case, and the badge counting it;
+  - the badge opening the tab, and reading clearing the count;
+  - a reply kept with the text it answers, the coaching note under it, and the client writing back only once answered;
+  - a scripted text never delivered twice (a reload mid-thread);
+  - another case starting its own thread, and Start over restarting the script;
+  - privacy between trainees, the Admin view, and a thread with no case refused;
+  - that the tab adds no select or contenteditable and a typed reply isn't saved as a case edit.
+- **The clients' scripted texts** (`.github/scripts/message-packs.cjs`, in the first job): every pack in `message-packs.js` has a unique id, a `start` that exists, every `next` reachable, goals on every text, and no Training Library id that doesn't exist.
 - **Firm Calendar** (`.github/scripts/calendar.cjs`, in the same job): runs the real calendar API code on an in-memory SQLite database standing in for D1, through the real page. It opens the Calendar tab next to Tasks and schedules from a view-only library case (the case is linked, its attorney picked, typing works), then checks:
   - the live availability warning;
   - a conflicting time is refused with free times offered, and picking one saves it;

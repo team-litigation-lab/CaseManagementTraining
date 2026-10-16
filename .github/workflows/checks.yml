@@ -30,6 +30,8 @@ jobs:
         run: node .github/scripts/check-site.mjs
       - name: Training Library cases and Front Desk Drill calls are consistent
         run: node .github/scripts/check-data.mjs
+      - name: The clients' scripted texts are consistent (message-packs.js)
+        run: node .github/scripts/message-packs.cjs
       - name: Gemini key pool, /api/call-ai and practice call results (Google answered by the test)
         run: node .github/scripts/call-ai.mjs
       - name: The Training Library's realistic photos on the server (/api/library-photos; storage and Gemini answered by the test)
@@ -70,6 +72,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/time.cjs
+      - name: Client messaging (the real messages API on SQLite, in a browser)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/messages.cjs
       - name: Sign-in (Admin Portal password, registration)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

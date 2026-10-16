@@ -181,7 +181,7 @@
                     <div id="conflict-panel" class="no-print" hidden></div>
                 </div>
 
-                <!-- The tabs in the firm's order (two rows of 9: tab-break after Settlement). Only these buttons were reordered:
+                <!-- The tabs in the firm's order (9, then 10: tab-break after Settlement). Only these buttons were reordered:
                      the panes below stay where they are, so the case's positional fields don't move. -->
                 <div class="case-tabs no-print">
                     <div onclick="showTab('profile')" id="tab-profile" class="tab-btn active-tab">Profile</div>
@@ -198,6 +198,7 @@
                     <div onclick="showTab('litigation')" id="tab-litigation" class="tab-btn">Litigation</div>
                     <div onclick="showTab('docs')" id="tab-docs" class="tab-btn">Doc Hub</div>
                     <div onclick="showTab('notes')" id="tab-notes" class="tab-btn">Notes</div>
+                    <div onclick="showTab('messages')" id="tab-messages" class="tab-btn">💬 Messages</div>
                     <div onclick="showTab('tasks')" id="tab-tasks" class="tab-btn">Tasks</div>
                     <div onclick="showTab('calendar')" id="tab-calendar" class="tab-btn">📅 Calendar</div>
                     <div onclick="showTab('time')" id="tab-time" class="tab-btn">⏱ Time</div>
@@ -669,6 +670,10 @@
             <!-- Time & billing (time-tracker.js fills it). Same rules as the Calendar tab. -->
             <div id="pane-time" class="tab-pane no-print" data-free-edit></div>
 
+            <!-- 💬 Client messaging (client-messages.js fills it): the case's text thread with its
+                 client, scripted in message-packs.js. Same rules as the Calendar and Time tabs. -->
+            <div id="pane-messages" class="tab-pane no-print" data-free-edit></div>
+
         </div>
         <!-- The open case's actions, always at the bottom of the screen (app.js). Outside #capture-area, so it's
              never part of a saved case or a case preview. Buttons only: nothing here is saved by position. -->
@@ -1049,6 +1054,8 @@
     <script src="intake-form.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>
+    <script src="message-packs.js"></script>
+    <script src="client-messages.js"></script>
     <!-- ☁ Google Drive backup of the open case's files (the Doc Hub tab; /api/drive-backup) -->
     <script src="drive-backup.js"></script>
     <!-- 🧭 the Blueprint's decks and PDFs. No button in the CMS: the Main Portal's 🧭 Blueprint page
