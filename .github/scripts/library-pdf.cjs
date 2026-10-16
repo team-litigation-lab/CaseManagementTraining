@@ -84,7 +84,10 @@ function inspect(buf) {
     const keys = (t.text.match(/TRAINER ONLY/g) || []).length;
     if (keys !== ids.length) fail(`trainer copy: ${keys} trainer-only keys for ${ids.length} cases`);
     if (t.pages < ids.length + 2) fail(`trainer copy: only ${t.pages} pages for ${ids.length} cases`);
-    for (const must of ['Maria Santos', 'RPD-26-061902', 'KM-26-118834', 'D47', 'Featherstonhaugh = ', 'Caller scenarios', 'Treatment chronology'])
+    // MC-01's report and claim numbers carry the year of its date of loss, which rolls forward
+    // with the library (case-freshness.js), so they are read from the library, not written here
+    const mc01 = mock.MOCK_CASES.find(c => c.id === 'MC-01');
+    for (const must of ['Maria Santos', mc01.police.number, mc01.bi[0].claim, 'D47', 'Featherstonhaugh = ', 'Caller scenarios', 'Treatment chronology'])
         if (!t.text.includes(must)) fail(`trainer copy: "${must}" isn't in the file`);
     if (/undefined|\[object|NaN/.test(t.text)) fail('trainer copy: undefined/NaN in the text');
     if (!/Downloaded LSH-Training-Library-Mock-Cases-Trainer-Copy\.pdf \(\d+ pages\)/.test(await page.textContent('body'))) fail('no "Downloaded … (N pages)" message after the trainer copy');

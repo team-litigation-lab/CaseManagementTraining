@@ -153,15 +153,17 @@ const SAVED = [
     // search bar: saved and mock cases by name, same-name warning, search by DOL, open a result.
     // Trainees never see the Training Library: its files are tagged with their case number, like any case.
     const CN = await page.evaluate(() => Object.fromEntries(MOCK_CASES.map(c => [c.id, c.caseNumber])));
+    // the library's dates roll forward by themselves (case-freshness.js), so the dates to search for are read from it
+    const DOL = await page.evaluate(() => Object.fromEntries(MOCK_CASES.map(c => [c.id, c.dateOfLoss])));
     await page.fill('#cl-bar-input', 'maria santos');
     const found = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .clb-row .cl-tag')].map(t => t.textContent));
     for (const want of [CN['MC-01'], CN['MC-21'], CN['MC-22']]) if (!found.some(t => t.includes(want))) fail(`search bar "maria santos" did not find ${want} (${found.join(', ')})`);
     if (found.some(t => t.includes('LSH-2026-MVA-000007'))) fail('a trainee\'s search found another trainee\'s saved case');
     if (found.some(t => /TRAINING LIBRARY|MC-\d/i.test(t))) fail(`a trainee's search results show Training Library tags (${found.join(', ')})`);
     if (!(await page.isVisible('#cl-bar-results .cl-dup'))) fail('the search bar did not warn that several files share the name Maria Santos');
-    await page.fill('#cl-bar-input', '07/28/2026');
+    await page.fill('#cl-bar-input', DOL['MC-22']);
     const byDol = await page.evaluate(() => [...document.querySelectorAll('#cl-bar-results .clb-row .cl-tag')].map(t => t.textContent));
-    if (byDol.join() !== CN['MC-22']) fail(`searching the DOL 07/28/2026 found ${byDol.join(', ') || 'nothing'} instead of MC-22 (${CN['MC-22']})`);
+    if (byDol.join() !== CN['MC-22']) fail(`searching the DOL ${DOL['MC-22']} found ${byDol.join(', ') || 'nothing'} instead of MC-22 (${CN['MC-22']})`);
     await page.click('#cl-bar-results .clb-row'); await page.waitForTimeout(300);
     if (await page.evaluate(() => mockCurrentId()) !== 'MC-22' || await page.isVisible('#cl-bar-results')) fail('clicking a search result did not open MC-22');
     // keyboard: Enter opens the first match (the newest James Wilson file, MC-24)

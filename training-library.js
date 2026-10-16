@@ -376,6 +376,7 @@
                 <div class="modal-box wide lib-box">
                     <h2 class="serif">📚 Training Library</h2>
                     <div class="sub mono">Mock cases for every LSH training program. Open one to edit it for everyone (trainees see it view only), or download them as a PDF.</div>
+                    <div class="sub mono" id="lib-asof" style="margin-top:-4px"></div>
                     <div class="lib-tabs" id="lib-tabs"></div>
                     <div id="lib-filters"></div>
                     <div id="lib-body" style="overflow-y:auto;flex:1;"></div>
@@ -391,8 +392,19 @@
             pane.classList.add('mock-upd');
             pane.insertAdjacentHTML('afterbegin', `<div class="mock-upd-bar no-print"><span class="mub-text"></span><span class="mub-state"></span><button onclick="mockResetUpdates()">↺ Reset to the original</button></div>`);
         });
+        paintAsOf();
         paintProgramUI();
         paintRoleUI();
+    }
+
+    // The files' dates roll forward by themselves (case-freshness.js), so a trainer who compares
+    // the CMS with a printed copy can see which week the library is reading as.
+    function paintAsOf() {
+        const box = $id('lib-asof'), f = window.lshFreshness; if (!box || !f) return;
+        const weeks = Math.round(f.days() / 7);
+        box.textContent = weeks
+            ? `📅 Every date in these files is read ${weeks} week${weeks === 1 ? '' : 's'} later than it was written, so the deadlines and appointments stay live: the library reads as the week of ${f.freshAsOf()}. Dates of birth don't move.`
+            : `📅 The files are read as the week of ${f.freshAsOf()}. From next week on, every date in them is read that much later, so the deadlines and appointments stay live (dates of birth don't move).`;
     }
 
     // Trainees don't browse the Training Library, or even see its name: they search the Case Library.

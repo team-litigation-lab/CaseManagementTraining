@@ -40,6 +40,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));
 });
 const failures = []; const fail = (m) => failures.push(m);
+// MC-34's mediation date rolls forward with the library (case-freshness.js), so it is read from it
+const MC34_ADR = ((require(path.join(ROOT, 'mock-cases.js')).MOCK_CASES.find(c => c.id === 'MC-34') || {}).adr || [{}])[0].date;
 // The case editor's positional fields on an empty page (as in sections.cjs): nothing here may change them.
 const POSITIONAL = { edits: 49, selects: 8 };
 
@@ -366,7 +368,7 @@ async function pagePart() {
     if (JSON.stringify(lib.liens) !== JSON.stringify([['Reduction requested', '$ 9,000.00'], ['Confirmed (lien letter received)', '']])) fail(`MC-11's lien statuses didn't fill in: ${JSON.stringify(lib.liens)}`);
     if (!/Reduction requested: 1/.test(lib.lienSum)) fail(`MC-11's lien totals: ${lib.lienSum}`);
     if (lib.selfConflict) fail('a library file was flagged as a conflict with itself');
-    if (lib.adrDate !== '10/21/2026' || !/Carla Meade/.test(lib.adr)) fail(`MC-34's mediation didn't fill the ADR tab: ${JSON.stringify(lib.adr)}`);
+    if (lib.adrDate !== MC34_ADR || !/Carla Meade/.test(lib.adr)) fail(`MC-34's mediation didn't fill the ADR tab (its date is ${MC34_ADR}): ${JSON.stringify(lib.adr)}`);
     if (!lib.adrTab) fail('the ADR tab isn\'t open to the Case Management program on a library file');
     if (!/must attend in person/.test(lib.crit)) fail(`MC-34's critical note didn't show: ${lib.crit}`);
     if (!/•••-••-5530/.test(lib.mask)) fail(`a library file's SSN isn't masked to its last 4: ${lib.mask}`);
@@ -393,7 +395,7 @@ async function pagePart() {
         out.liens = [...document.querySelectorAll('#lien-container > .pdf-card')].map(c => [c.querySelector('[data-lien="status"]').value, c.querySelector('[data-lien="requested"]').innerText]);
         return out;
     });
-    if (!/must attend in person/.test(restored.crit) || restored.adr !== 1 || restored.date !== '10/21/2026') fail(`work saved on MC-34 before the critical note and ADR hid them: ${JSON.stringify(restored)}`);
+    if (!/must attend in person/.test(restored.crit) || restored.adr !== 1 || restored.date !== MC34_ADR) fail(`work saved on MC-34 before the critical note and ADR hid them: ${JSON.stringify(restored)}`);
     if (restored.dirty || restored.dirtyAfterLook) fail(`opening the file or looking at its SSN counted as an edit: ${JSON.stringify(restored)}`);
     if (JSON.stringify(restored.liens) !== JSON.stringify([['Reduction requested', '$ 9,000.00'], ['Confirmed (lien letter received)', '']])) fail(`work saved on MC-11 before the lien status lost the file's statuses: ${JSON.stringify(restored.liens)}`);
     delete savedMine['MC-34']; delete savedMine['MC-11'];

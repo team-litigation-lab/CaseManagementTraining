@@ -30,6 +30,8 @@ jobs:
         run: node .github/scripts/check-site.mjs
       - name: Training Library cases and Front Desk Drill calls are consistent
         run: node .github/scripts/check-data.mjs
+      - name: The Training Library's dates roll forward by themselves (now, next week and years from now)
+        run: node .github/scripts/case-freshness.cjs
       - name: Gemini key pool, /api/call-ai and practice call results (Google answered by the test)
         run: node .github/scripts/call-ai.mjs
       - name: The Training Library's realistic photos on the server (/api/library-photos; storage and Gemini answered by the test)

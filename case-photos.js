@@ -519,7 +519,7 @@ ${finish(id, W, H)}`}
             const text = `${mc && mc.narrative || ''} ${mc && mc.summary || ''}`;
             female = (text.match(/\b(she|her|hers|herself)\b/gi) || []).length > (text.match(/\b(he|him|his|himself)\b/gi) || []).length;
         }
-        const y = /(\d{4})$/.exec(String(c.dob || '').trim()), age = y ? 2026 - +y[1] : 40;
+        const y = /(\d{4})$/.exec(String(c.dob || '').trim()), age = y ? new Date().getUTCFullYear() - +y[1] : 40;
         const t = Math.floor(r() * SKIN.length), tone = SKIN[t];
         const dark = tone[2] < 50;
         let hair = dark ? (r() < 0.75 ? 'black' : 'dark') : ['black', 'dark', 'brown', 'brown', 'auburn', 'blond'][Math.floor(r() * 6)];

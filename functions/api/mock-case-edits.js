@@ -1,4 +1,6 @@
 import { json, requireSession } from '../_utils.js';
+// The library's dates roll forward by themselves, so the server reads the same dates as the page.
+import '../../case-freshness.js';
 import mock from '../../mock-cases.js';
 
 // Admin edits to Training Library (mock) cases (training-library.js).

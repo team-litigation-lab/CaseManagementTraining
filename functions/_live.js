@@ -11,6 +11,8 @@
 // call, `gives` is what they answer when asked for each identifier (some answers are
 // wrong on purpose, and null means "I don't know / I'd rather not say"). A call from
 // the Call Simulator's lines (call-packs.js) brings its own caller (livePrompt).
+// The library's dates roll forward by themselves, so the server reads the same dates as the page.
+import '../case-freshness.js';
 import mock from '../mock-cases.js';
 import packs from '../call-packs.js';
 import { geminiFetch } from './_ai.js';

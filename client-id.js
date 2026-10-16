@@ -82,6 +82,9 @@
         const words = idName(c.name).split(/\s+/).filter(Boolean);
         const last = words.length > 1 ? words.pop() : (words[0] || ''), first = words.length ? words.join(' ') : '';
         const md = /^(\d{2})\/(\d{2})\//.exec(c.dob || ''), mmdd = md ? `${md[1]}/${md[2]}` : '01/15';
+        // issued three years ago, expires in five: a specimen ID is never out of date, however
+        // long the library has been rolling forward (case-freshness.js)
+        const thisYear = new Date().getUTCFullYear(), issued = thisYear - 3, expires = thisYear + 5;
         const idNo = 'T' + String(h % 100000000).padStart(8, '0');
         const addr = String(c.address || ''), cut = addr.indexOf(',');
         const line1 = (cut > 0 ? addr.slice(0, cut) : addr).toUpperCase(), line2 = (cut > 0 ? addr.slice(cut + 1).trim() : '').toUpperCase();
@@ -110,7 +113,7 @@
 ${L(114, 58, 'ID NO.')}${V(114, 71, idNo, 13, null, '#b91c1c')}
 ${L(114, 86, 'LN')}${V(114, 98, last.toUpperCase(), 12, [18, 210])}
 ${L(114, 112, 'FN')}${V(114, 124, first.toUpperCase(), 12, [18, 210])}
-${L(114, 139, 'DOB')}${V(114, 151, c.dob || '—', 10.5)}${L(192, 139, 'ISS')}${V(192, 151, `${mmdd}/2023`, 10.5)}${L(264, 139, 'EXP')}${V(264, 151, `${mmdd}/2031`, 10.5, null, '#b91c1c')}
+${L(114, 139, 'DOB')}${V(114, 151, c.dob || '—', 10.5)}${L(192, 139, 'ISS')}${V(192, 151, `${mmdd}/${issued}`, 10.5)}${L(264, 139, 'EXP')}${V(264, 151, `${mmdd}/${expires}`, 10.5, null, '#b91c1c')}
 ${L(114, 166, 'ADDRESS')}${V(114, 178, line1, 9, [34, 214])}${V(114, 190, line2, 9, [34, 214])}
 <text x="16" y="204" font-size="6.5" font-weight="700" fill="#64748b" letter-spacing=".5">LEGAL SUPPORT HELP · CASE MANAGEMENT TRAINING</text>
 <text x="170" y="128" font-size="44" font-weight="900" fill="#ef4444" fill-opacity=".13" text-anchor="middle" transform="rotate(-16 170 118)" letter-spacing="4">SPECIMEN</text>

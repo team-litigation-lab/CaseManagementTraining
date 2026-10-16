@@ -1618,6 +1618,34 @@ Return ONLY JSON:
         };
     }
 
+    /* ---------------------------------------------------------
+       The dates in these briefs roll forward with the files they quote
+       (case-freshness.js). A Standard Training call is about a Training
+       Library file (`doc`), so it is moved exactly as that file was
+       (mock-cases.js keeps each file's reading in LSH_LIBRARY_DATES): the
+       appointment the caller asks about is the appointment on the file.
+       The CM, PD and EA calls are about those programs' own case summaries
+       (CASES below), which are anchored to dates that mean something — the
+       John Doe crash happened on Valentine's Day — so those move by whole
+       years instead, keeping the month and day and recalculating the
+       weekday. Dates of birth never move.
+       --------------------------------------------------------- */
+    const fresh = (typeof globalThis !== 'undefined' && globalThis.LSH_FRESHNESS) ||
+        (typeof require === 'function' ? (() => { try { return require('./case-freshness.js'); } catch (e) { return null; } })() : null);
+    if (fresh) {
+        const library = (typeof globalThis !== 'undefined' && globalThis.LSH_LIBRARY_DATES) ||
+            (typeof require === 'function' ? (() => { try { return require('./mock-cases.js').LIBRARY_DATES; } catch (e) { return null; } })() : null) || {};
+        const summaries = {};
+        Object.keys(CASES).forEach(k => { summaries[k] = fresh.scan(CASES[k]); fresh.rebase(CASES[k], { mode: 'years' }); });
+        Object.keys(DOCS).forEach(id => fresh.rebase(DOCS[id], { context: library[id] }));
+        CALLS.forEach(call => {
+            if (call.doc) fresh.rebase(call, { context: library[call.doc] });
+            else if (call.case) fresh.rebase(call, { mode: 'years', context: summaries[call.case] });
+            else fresh.rebase(call);
+        });
+        fresh.rebaseEach(LINES);
+    }
+
     const API = { PROGRAMS, VIEWS, viewOf, linesIn, LINES, CALLS, DOCS, CASES, FT_FIRM, find, lineOf, linesOf, callsIn, programOf, rubricOf, scorecardOf, tipsOf, noteOf, iconOf, docOf, caseOf, scriptOf, blurb,
         aiModule, courseOf, callerPrompt, livePrompt, GRADE_SYSTEM, gradePrompt, parseGrade };
     if (typeof window !== 'undefined') window.CALL_PACKS = API;

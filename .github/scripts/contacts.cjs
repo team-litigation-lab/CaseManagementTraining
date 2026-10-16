@@ -25,9 +25,13 @@ const server = http.createServer((req, res) => {
 });
 const failures = []; const fail = (m) => failures.push(m);
 // the case files, as the test reads them
+// case-freshness.js first, as the page loads it: the library's dates (and the year in its case
+// and claim numbers) roll forward by themselves, and the test has to read the same dates.
 const ctx = { window: {}, console }; vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'case-freshness.js'), 'utf8'), ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'mock-cases.js'), 'utf8') + ';this.CASES = MOCK_CASES;', ctx);
 const CASES = ctx.CASES;
+const mc01 = CASES.find(x => x.id === 'MC-01');
 const key = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const real = (v) => !!String(v || '').trim() && !/^(none|n\/a|unknown|not yet assigned)\b/i.test(String(v).trim());
 
@@ -142,7 +146,9 @@ let base;
     await type(page, 'dana whitfield');
     await page.click('#ct-bar-results button:has(b:text-is("Dana Whitfield"))'); await page.waitForTimeout(200);
     c = await card(page);
-    if (!c || c.name !== 'Dana Whitfield' || !/Keystone Mutual Insurance/.test(c.title) || !/KM-26-118834/.test(c.text)) fail(`a click on a match should pop up its card: ${JSON.stringify(c && { name: c.name, title: c.title })}`);
+    // the claim number carries the year of the file's date of loss, which rolls forward with the library
+    const mc01claim = mc01.bi[0].claim;
+    if (!c || c.name !== 'Dana Whitfield' || !/Keystone Mutual Insurance/.test(c.title) || !c.text.includes(mc01claim)) fail(`a click on a match should pop up its card: ${JSON.stringify(c && { name: c.name, title: c.title })}`);
     // selecting text on the card and letting go outside it keeps the card
     const who = await page.locator('#ct-pop .ct-who b').boundingBox(), boxR = await page.locator('#ct-pop .ct-pop-box').boundingBox();
     await page.mouse.move(who.x + 2, who.y + who.height / 2); await page.mouse.down();
@@ -155,9 +161,8 @@ let base;
     await page.mouse.click(8, 8); await page.waitForTimeout(150);
     if (await card(page)) fail('a click outside the card didn\'t close it');
     // search by company, phone (any format), email, claim, client, case number
-    const mc01 = CASES.find(x => x.id === 'MC-01');
     for (const [q, want] of [['Hendricks & Vale', 'Paul Hendricks'], ['5550103345', 'City Spine & Rehab'], ['555.010.3345', 'City Spine & Rehab'], ['frontdesk@cityspine', 'City Spine & Rehab'],
-        ['KM-26-118834', 'Dana Whitfield'], ['Linda Garcia', 'Linda Garcia'], [mc01.caseNumber, null]]) {
+        [mc01claim, 'Dana Whitfield'], ['Linda Garcia', 'Linda Garcia'], [mc01.caseNumber, null]]) {
         await type(page, q); l = await list(page);
         if (want ? !l.names.includes(want) : l.names.length < 3) fail(`searching "${q}" should list ${want || 'everyone on that case'}: ${l.names.join(', ')}`);
     }

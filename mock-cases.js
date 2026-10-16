@@ -2866,6 +2866,34 @@ const MOCK_NAME_SOUNDS = {
     Shaughnessy: { say: 'SHAW-nuh-see', heard: 'Shawnessy' }
 };
 
+/* ---------------------------------------------------------
+   The library's dates roll forward by themselves (case-freshness.js).
+
+   Everything above was written for one week (its AS_OF). Read as it is, a
+   file opened years later would carry deadlines that have passed — an SOL
+   in the past, a "next visit" from last year. So every date in every file
+   is moved forward by the whole weeks that have gone by since that week,
+   and the whole file moves together: a file that was three weeks old is
+   always three weeks old, an SOL two years out is always two years out,
+   and 09/29 is still the Tuesday the note says it is. Dates of birth stay.
+
+   Each file is read on its own, then moved. A drill call is moved with the
+   file it is about, so the caller's "June 9th" is the file's date of loss.
+   The readings are kept (LSH_LIBRARY_DATES) for call-packs.js, which
+   quotes these same files in the Call Simulator's briefs and has to move
+   them the same way.
+   --------------------------------------------------------- */
+const FRESHNESS = (typeof globalThis !== 'undefined' && globalThis.LSH_FRESHNESS) ||
+    (typeof require === 'function' ? (() => { try { return require('./case-freshness.js'); } catch (e) { return null; } })() : null);
+const LIBRARY_DATES = {};
+if (FRESHNESS) {
+    MOCK_CASES.forEach(c => { LIBRARY_DATES[c.id] = FRESHNESS.scan(c); });
+    FRESHNESS.rebaseEach(MOCK_CASES);
+    DRILL_CALLS.forEach(call => FRESHNESS.rebase(call, { context: LIBRARY_DATES[call.mock] }));
+    FRESHNESS.rebase(MOCK_FIRM);
+    if (typeof globalThis !== 'undefined') globalThis.LSH_LIBRARY_DATES = LIBRARY_DATES;
+}
+
 if (typeof window !== 'undefined') {
     window.MOCK_CASES = MOCK_CASES;
     window.MOCK_FIRM = MOCK_FIRM;
@@ -2873,4 +2901,5 @@ if (typeof window !== 'undefined') {
     window.DRILL_CALLS = DRILL_CALLS;
     window.MOCK_NAME_SOUNDS = MOCK_NAME_SOUNDS;
 }
-if (typeof module !== 'undefined') module.exports = { MOCK_CASES, MOCK_FIRM, MOCK_PROGRAMS, DRILL_CALLS, MOCK_NAME_SOUNDS };
+if (typeof globalThis !== 'undefined') { globalThis.MOCK_CASES = MOCK_CASES; globalThis.DRILL_CALLS = DRILL_CALLS; }
+if (typeof module !== 'undefined') module.exports = { MOCK_CASES, MOCK_FIRM, MOCK_PROGRAMS, DRILL_CALLS, MOCK_NAME_SOUNDS, LIBRARY_DATES };

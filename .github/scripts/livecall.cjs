@@ -27,6 +27,8 @@ const { chromium } = require('playwright');
 const { DatabaseSync } = require('node:sqlite');
 const http = require('http'); const fs = require('fs'); const path = require('path'); const { pathToFileURL } = require('url');
 const ROOT = process.cwd();
+const mockCases = require(path.join(ROOT, 'mock-cases.js'));
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
 const server = http.createServer((req, res) => {
     let f = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname)); if (f.endsWith('/')) f += 'index.html';
@@ -107,7 +109,10 @@ const failures = []; const fail = (m) => failures.push(m);
     const d06 = live.callerPrompt(live.drillCall('D06'));
     if (!/Your last 4 of your Social Security number|The last 4 of your Social Security number: you don't know it/.test(d06)) fail('a detail the caller doesn\'t have (D06 SSN) isn\'t marked as unknown');
     if (live.voiceFor(live.drillCall('D03')) === live.voiceFor(live.drillCall('D01')) || !['Puck', 'Charon', 'Fenrir', 'Orus'].includes(live.voiceFor(live.drillCall('D03')))) fail('James Wilson did not get a male voice');
-    if (!live.callerPrompt(live.drillCall('D02')).includes('06/09/2026') && !live.callerPrompt(live.drillCall('D02')).includes('back in June')) fail('the date of the accident answer is missing from D02');
+    // MC-01's date of loss rolls forward with the library (case-freshness.js), so it is read from it
+    const mc01dol = (mockCases.MOCK_CASES.find(c => c.id === 'MC-01') || {}).dateOfLoss;
+    const d02 = live.callerPrompt(live.drillCall('D02'));
+    if (!d02.includes(mc01dol) && !d02.includes(MONTHS[+mc01dol.slice(0, 2) - 1])) fail(`the date of the accident answer is missing from D02 (the file's date of loss is ${mc01dol})`);
     // a Call Simulator line's call (call-packs.js): its own caller, who opens with their opening line; a voice for their gender;
     // a call the trainee places is picked up by them
     r = await post({ callId: 'ft_cal_depo' });

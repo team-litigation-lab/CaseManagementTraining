@@ -316,7 +316,7 @@
     function paintUpdates(filters, body) {
         const sub = $id('cl-sub'); if (sub) sub.textContent = isAdmin() ? 'Every trainee\'s saved cases, the most recently updated first, with each case\'s latest Case Note.' : 'Your saved cases, the most recently updated first, with each case\'s latest Case Note.';
         filters.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
-            <input type="search" id="cl-upd-q" class="cl-search" style="flex:1" placeholder="Search the Case Notes (e.g. adjuster, demand sent, records requested, 10/01/2026)…" value="${esc(U.q)}" oninput="clUpdSearch(this.value)" autocomplete="off" spellcheck="false" aria-label="Search the Case Notes">
+            <input type="search" id="cl-upd-q" class="cl-search" style="flex:1" placeholder="Search the Case Notes (e.g. adjuster, demand sent, records requested, MM/DD/YYYY)…" value="${esc(U.q)}" oninput="clUpdSearch(this.value)" autocomplete="off" spellcheck="false" aria-label="Search the Case Notes">
             <button class="cl-refresh" onclick="clUpdRefresh()" title="Load the latest updates again" style="border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:9px 12px;font-size:11px;font-weight:800;cursor:pointer;color:#0f2148">↻</button></div>`;
         body.innerHTML = '<div id="cl-upd-list"></div>';
         U.items = null; paintUpdateList(); loadUpdates();

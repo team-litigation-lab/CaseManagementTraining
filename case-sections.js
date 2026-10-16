@@ -340,7 +340,7 @@
                 <div><label>Time</label><div contenteditable="true" data-ph="e.g. 9:00 AM" data-adr="time"></div></div>
                 <div><label>Location / Video Link</label><div contenteditable="true" data-ph="Address, or the video link" data-adr="where"></div></div>
                 <div><label>Brief / Summary Due</label><div contenteditable="true" data-ph="MM/DD/YYYY" data-fmt="date" data-adr="brief"></div></div>
-                <div><label>Prep Session With Client</label><div contenteditable="true" data-ph="e.g. 10/14/2026, 3:00 PM"></div></div>
+                <div><label>Prep Session With Client</label><div contenteditable="true" data-ph="e.g. MM/DD/YYYY, 3:00 PM"></div></div>
                 <div><label>Carrier Rep With Authority</label><div contenteditable="true" data-ph="Adjuster attending, and their authority"></div></div>
                 <div><label>Fee &amp; Split</label><div contenteditable="true" data-ph="e.g. $2,400, split 50/50"></div></div>
                 <div><label>Last Demand</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency"></div></div>

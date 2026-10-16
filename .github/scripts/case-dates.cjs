@@ -22,6 +22,20 @@ const server = http.createServer((req, res) => {
 });
 const failures = []; const fail = (m) => failures.push(m);
 
+// MC-01 as the library reads it today: its dates roll forward by themselves (case-freshness.js),
+// so what the test types and expects is worked out from the file, not written here.
+const MC01 = require(path.join(ROOT, 'mock-cases.js')).MOCK_CASES.find(c => c.id === 'MC-01');
+const DAY = 864e5;
+const pad = (n) => String(n).padStart(2, '0');
+// every MM/DD/YYYY in a text, n days later ("09/29/2026 10:30 AM" keeps its time)
+const bump = (text, n) => String(text).replace(/\b(\d{2})\/(\d{2})\/(\d{4})\b/g, (all, mo, d, y) => {
+    const x = new Date(Date.UTC(+y, +mo - 1, +d) + n * DAY);
+    return `${pad(x.getUTCMonth() + 1)}/${pad(x.getUTCDate())}/${x.getUTCFullYear()}`;
+});
+const digits = (date) => date.replace(/\//g, '');
+const firstDate = (text) => (/\b\d{2}\/\d{2}\/\d{4}\b/.exec(String(text)) || [''])[0];
+const DOL = MC01.dateOfLoss, SOL = MC01.sol, DOB = MC01.client.dob;
+
 (async () => {
     await new Promise(r => server.listen(0, r));
     const base = `http://localhost:${server.address().port}/`;
@@ -42,7 +56,7 @@ const failures = []; const fail = (m) => failures.push(m);
 
     // 1. the helpers
     const h = await page.evaluate(() => {
-        const D = window.lshCaseDates, from = D.dayOf('06/09/2026');
+        const D = window.lshCaseDates, from = D.dayOf('06/09/2026');   // any date; this block tests the helpers, not the file
         return { md: D.dayOf('6/9/2026') === from, bad: D.dayOf('02/30/2026'),
             text: D.shiftText('Seen 6/16/2026 and 02/30/2026; prior 05/01/2019; DOB 03/22/1988; range 06/16/2026 – 09/22/2026; pain 7/10.', from, 6, new Set([D.dayOf('03/22/1988')])).text };
     });
@@ -70,43 +84,48 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.evaluate(() => openMockCase('MC-01', { silent: true }));
     await page.waitForTimeout(500);
     const start = await read();
-    if (start.dol !== '06/09/2026' || start.sol !== '06/09/2028' || start.bar) fail(`MC-01 didn't load as it is (or the bar showed on load): ${JSON.stringify({ dol: start.dol, sol: start.sol, bar: start.bar })}`);
+    if (start.dol !== DOL || start.sol !== SOL || start.bar) fail(`MC-01 didn't load as it is (${DOL} / ${SOL}), or the bar showed on load: ${JSON.stringify({ dol: start.dol, sol: start.sol, bar: start.bar })}`);
     if (await page.evaluate(() => document.getElementById('date-of-loss-field').isContentEditable) !== true) fail('the DOL isn\'t editable on a library case for an Admin');
     // leaving the DOL unchanged moves nothing
-    await typeInto('#date-of-loss-field', '06092026');
+    await typeInto('#date-of-loss-field', digits(DOL));
     if ((await read()).bar) fail('leaving the DOL as it was showed the bar');
 
     // 3. the DOL moves 6 days later
-    await typeInto('#date-of-loss-field', '06152026');
+    await typeInto('#date-of-loss-field', digits(bump(DOL, 6)));
     const moved = await read();
-    const plus6 = { sol: '06/15/2028', chrono: [['06/16/2026'], ['06/22/2026', '09/28/2026'], ['08/10/2026', '09/30/2026']], next: ['', '10/05/2026 10:30 AM', '10/07/2026 4:00 PM'],
-        periods: ['06/16/2026 – 06/16/2026', '06/22/2026 – present', '08/10/2026 – present'] };
-    if (moved.dol !== '06/15/2026' || moved.sol !== plus6.sol) fail(`the SOL didn't move with the DOL: ${moved.dol} / ${moved.sol}`);
+    const plus6 = { sol: bump(SOL, 6), chrono: MC01.chrono.map(r => r.dos.map(d => bump(d, 6))), next: MC01.chrono.map(r => (r.next ? bump(r.next, 6) : '')),
+        periods: MC01.facilities.map(f => bump(f.dates, 6)) };
+    if (moved.dol !== bump(DOL, 6) || moved.sol !== plus6.sol) fail(`the SOL didn't move with the DOL: ${moved.dol} / ${moved.sol}`);
     if (JSON.stringify(moved.chrono.map(c => c.dos)) !== JSON.stringify(plus6.chrono) || JSON.stringify(moved.chrono.map(c => c.next)) !== JSON.stringify(plus6.next)) fail(`the chronology didn't move with the DOL: ${JSON.stringify(moved.chrono)}`);
     if (JSON.stringify(moved.periods.map(p => p[1])) !== JSON.stringify(plus6.periods)) fail(`the providers' treatment periods didn't move with the DOL: ${JSON.stringify(moved.periods)}`);
-    if (!moved.notes.some(n => n.startsWith('06/18/2026')) || !moved.tasks.some(t => /^09\/28\/2026.*10\/26\/2026/.test(t))) fail(`the notes and tasks (and dates in their text) didn't move: ${JSON.stringify({ notes: moved.notes.slice(0, 2), tasks: moved.tasks })}`);
-    if (moved.dob !== '03/22/1988' || (moved.pdob && moved.pdob !== '03/22/1988')) fail(`the DOB moved: ${moved.dob} / ${moved.pdob}`);
+    const noteDate = bump(MC01.notes[0].date, 6), taskDate = bump(MC01.tasks[0].date, 6), inTask = bump(firstDate(MC01.tasks[0].text), 6);
+    if (!moved.notes.some(n => n.startsWith(noteDate)) || !moved.tasks.some(t => t.startsWith(taskDate) && t.includes(inTask)))
+        fail(`the notes and tasks (and dates in their text) didn't move to ${noteDate} / ${taskDate} … ${inTask}: ${JSON.stringify({ notes: moved.notes.slice(0, 2), tasks: moved.tasks })}`);
+    if (moved.dob !== DOB || (moved.pdob && moved.pdob !== DOB)) fail(`the DOB moved: ${moved.dob} / ${moved.pdob}`);
     if (!/DOL moved 6 days later/.test(moved.bar) || !/other dates/.test(moved.bar)) fail(`the bar doesn't say what moved: "${moved.bar}"`);
     // Undo puts it all back (the DOL itself stays as typed)
     await page.click('#cd-bar button');
     const undone = await read();
-    if (undone.sol !== '06/09/2028' || JSON.stringify(undone.chrono) !== JSON.stringify(start.chrono) || JSON.stringify(undone.periods) !== JSON.stringify(start.periods)
+    if (undone.sol !== SOL || JSON.stringify(undone.chrono) !== JSON.stringify(start.chrono) || JSON.stringify(undone.periods) !== JSON.stringify(start.periods)
         || JSON.stringify(undone.notes) !== JSON.stringify(start.notes) || JSON.stringify(undone.tasks) !== JSON.stringify(start.tasks) || undone.bar) fail('↶ Undo didn\'t put every date back');
-    await typeInto('#date-of-loss-field', '06092026');   // back to the file's DOL (the bar for that move is undone too)
+    await typeInto('#date-of-loss-field', digits(DOL));   // back to the file's DOL (the bar for that move is undone too)
     await page.click('#cd-bar button');
 
-    // 4. a date of service moves: City Spine & Rehab's first visit, 06/16 → 06/18
+    // 4. a date of service moves: City Spine & Rehab's first visit, two days later
     await page.evaluate(() => showTab('medical')); await page.waitForTimeout(200);
-    await typeInto('#chrono-container tr:nth-child(2) .chrono-dos-list [contenteditable]', '06182026');
+    const spine = MC01.chrono[1];
+    await typeInto('#chrono-container tr:nth-child(2) .chrono-dos-list [contenteditable]', digits(bump(spine.dos[0], 2)));
     const dos = await read();
-    if (JSON.stringify(dos.chrono[1]) !== JSON.stringify({ name: 'City Spine & Rehab', dos: ['06/18/2026', '09/24/2026'], next: '10/01/2026 10:30 AM' })) fail(`the row's later visit and next visit didn't move with its date of service: ${JSON.stringify(dos.chrono[1])}`);
-    if (dos.periods[1][1] !== '06/18/2026 – present') fail(`the provider's treatment period didn't follow its first visit: ${dos.periods[1][1]}`);
+    const wantSpine = { name: spine.facility, dos: spine.dos.map(d => bump(d, 2)), next: bump(spine.next, 2) };
+    if (JSON.stringify(dos.chrono[1]) !== JSON.stringify(wantSpine)) fail(`the row's later visit and next visit didn't move with its date of service: ${JSON.stringify(dos.chrono[1])}, wanted ${JSON.stringify(wantSpine)}`);
+    if (dos.periods[1][1] !== `${bump(spine.dos[0], 2)} – present`) fail(`the provider's treatment period didn't follow its first visit: ${dos.periods[1][1]}`);
     if (JSON.stringify([dos.chrono[0], dos.chrono[2]]) !== JSON.stringify([start.chrono[0], start.chrono[2]]) || dos.sol !== start.sol || JSON.stringify(dos.notes) !== JSON.stringify(start.notes)) fail('a date of service moved other providers\' rows, the SOL or the notes');
     if (!/date of service moved 2 days later/.test(dos.bar)) fail(`the bar doesn't say the date of service moved: "${dos.bar}"`);
     // the last visit of QuickCare (one visit): its period ends there too
-    await typeInto('#chrono-container tr:nth-child(1) .chrono-dos-list [contenteditable]', '06112026');
+    const only = bump(MC01.chrono[0].dos[0], 1);
+    await typeInto('#chrono-container tr:nth-child(1) .chrono-dos-list [contenteditable]', digits(only));
     const one = await read();
-    if (one.periods[0][1] !== '06/11/2026 – 06/11/2026') fail(`a one-visit provider's period didn't follow its visit: ${one.periods[0][1]}`);
+    if (one.periods[0][1] !== `${only} – ${only}`) fail(`a one-visit provider's period didn't follow its visit: ${one.periods[0][1]}`);
 
     // 5. a trainee moves only what their program may edit: an Intake trainee's DOL moves the SOL in the header, the notes and the
     //    tasks, but not the Treatment tab's chronology or the litigation SOL (other programs' parts of the file)
@@ -129,9 +148,9 @@ const failures = []; const fail = (m) => failures.push(m);
         dos: [...document.querySelectorAll('#chrono-container .chrono-dos-list [contenteditable]')].map(e => e.textContent.trim()).join(','),
         note: (document.querySelector('#note-body tr') || {}).textContent || '' }));
     const t0 = await tRead();
-    await tp.locator('#date-of-loss-field').click(); await tp.keyboard.press('Control+A'); await tp.keyboard.type('06152026'); await tp.keyboard.press('Tab'); await tp.waitForTimeout(200);
+    await tp.locator('#date-of-loss-field').click(); await tp.keyboard.press('Control+A'); await tp.keyboard.type(digits(bump(DOL, 6))); await tp.keyboard.press('Tab'); await tp.waitForTimeout(200);
     const t1 = await tRead();
-    if (t1.sol !== '06/15/2028' || !/06\/18\/2026/.test(t1.note)) fail(`an Intake trainee's DOL didn't move the header SOL or the notes: ${JSON.stringify(t1)}`);
+    if (t1.sol !== bump(SOL, 6) || !t1.note.includes(bump(MC01.notes[0].date, 6))) fail(`an Intake trainee's DOL didn't move the header SOL (${bump(SOL, 6)}) or the notes (${bump(MC01.notes[0].date, 6)}): ${JSON.stringify(t1)}`);
     if (t1.dos !== t0.dos || t1.lit !== t0.lit) fail(`an Intake trainee's DOL moved parts of the file they can't edit (the chronology or the litigation SOL): ${JSON.stringify({ before: t0, after: t1 })}`);
 
     await browser.close(); server.close();
