@@ -28,8 +28,25 @@ const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) f
     // the course: another origin (its own port), framing the CMS the way a lesson does
     const course = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        // ?beside=1 is a page sitting beside the CMS rather than framing it (a Portal simulator): it asks
+        // the CMS itself, and the answer has to come back to it, not to the page that framed the CMS.
+        if (/beside=1/.test(req.url)) {
+            return res.end(`<!doctype html><title>Beside the CMS</title><body><p>beside</p><script>
+              const cms = () => parent.document.getElementById('cms').contentWindow;
+              const wait = (kind) => new Promise((done) => {
+                const on = (e) => { if (e.data && e.data.lsh === kind) { removeEventListener('message', on); done(e.data); } };
+                addEventListener('message', on); setTimeout(() => { removeEventListener('message', on); done(null); }, 4000);
+              });
+              window.askTheCms = () => { const p = wait('cms-case'); cms().postMessage({ lsh: 'cms-case?' }, '*'); return p; };
+              window.fileWithTheCms = (name) => { const p = wait('cms-doc-filed');
+                cms().postMessage({ lsh: 'cms-doc-file', id: 'beside1', name, category: 'Medical Records', original: 'records.pdf',
+                  mime: 'application/pdf', summary: 'from a page beside the CMS', bytes: new TextEncoder().encode('%PDF-1.4 x').buffer }, '*');
+                return p; };
+            </script></body>`);
+        }
         res.end(`<!doctype html><title>Course</title><body>
           <iframe id="cms" src="${cmsBase}" style="width:900px;height:600px"></iframe>
+          <iframe id="beside" src="/?beside=1" style="width:300px;height:120px"></iframe>
           <script>
             window.heard = [];
             addEventListener('message', e => { if (e.data && e.data.lsh === 'cms-case') window.heard.push(e.data); });
@@ -223,6 +240,24 @@ const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) f
         return seen.filter(k => k !== 'cms-case');   // (the open case changing is announced on its own)
     });
     check(other.length === 0, `any other request is ignored: ${JSON.stringify(other)}`);
+
+    // ---- an asker that is not the framing page -------------------------------------------------
+    // The Training Portal's Medical Records Requests simulator files the records and the itemized bill it
+    // produces into the open case the same way the course's filing step does. It is not the CMS's
+    // window.parent - it sits beside it - so the answer has to go back to the window that asked.
+    await frame.evaluate(() => {
+        document.getElementById('case-id-field').innerText = 'LSH-2026-MVA-000041';
+        document.getElementById('client-name-field').innerText = 'Garcia, Linda';
+    });
+    const beside = page.frames().find(f => /beside=1/.test(f.url()));
+    check(!!beside, 'a page beside the CMS is on the test page');
+    if (beside) {
+        const answer = await beside.evaluate(() => window.askTheCms());
+        check(!!answer && answer.caseId === 'LSH-2026-MVA-000041',
+            `a page beside the CMS is answered too, not window.parent: ${JSON.stringify(answer)}`);
+        const filed = await beside.evaluate((name) => window.fileWithTheCms(name), `LSH-2026-MVA-000041_Garcia-Linda_Medical-Records_${await frame.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })}.pdf`);
+        check(!!filed && filed.ok === true, `and it can file a document into the open case: ${JSON.stringify(filed)}`);
+    }
 
     await browser.close(); cms.close(); course.close();
     if (failures.length) { console.error(`\n${failures.length} check(s) failed.`); process.exit(1); }

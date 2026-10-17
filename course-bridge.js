@@ -17,13 +17,18 @@
    uploaded into the open case under the Doc Hub category the trainee chose, exactly as an upload in the
    CMS would be, and the case is saved. The trainee types the name: the CMS never quietly corrects it.
 
-   What it does not do: nothing is sent to a page that did not ask, and only an LSH course or the Training
-   Portal may ask (ORIGINS). What it tells the course is the case header and nothing else from the file —
-   no client details, no documents. What it will do for the course is file a document the course sends into
-   the case the trainee has open; it files nothing into a Training Library file (view only) or a case with
-   no Case ID, and it answers no other request. Outside a frame the file does nothing at all. */
+   Who may be on the other side: the course that frames the CMS beside a step, and also a page the CMS
+   itself opened — the Training Portal's Medical Records Requests simulator, launched from the CMS, files
+   the records and the itemized bill it produces straight into the open case the same way. So an answer
+   goes back to whoever asked (the asking window), not to window.parent by assumption, and the file works
+   framed or not. Nothing else changes: an asker still has to be an allowed origin.
+
+   What it does not do: nothing is sent to a page that did not ask, and only an LSH course, the Training
+   Portal or one of its simulators may ask (ORIGINS). What it tells the course is the case header and
+   nothing else from the file — no client details, no documents. What it will do is file a document an
+   asker sends into the case the trainee has open; it files nothing into a Training Library file (view
+   only) or a case with no Case ID, and it answers no other request. */
 (function () {
-    if (window.parent === window) return;   // not framed: nobody to tell
 
     // Who may ask: an LSH course Worker (case-management-training.legalsupporthelp.workers.dev and its
     // preview addresses), the LSH Training Portal, and a local server while the checks run.
@@ -48,39 +53,42 @@
         };
     }
 
-    const askers = new Set();   // the origins that asked, told again when the open case changes
+    // who asked, and where to answer: the window itself, because an asker can be the page that framed
+    // the CMS (window.parent) or a page the CMS opened (a simulator). Told again when the open case changes.
+    const askers = new Map();   // asking window → its origin
     let last = '';
 
-    function tell(origin, msg) {
-        try { window.parent.postMessage(msg || openCase(), origin); } catch (e) { /* the parent went away */ }
+    function tell(win, origin, msg) {
+        try { (win || window.parent).postMessage(msg || openCase(), origin); } catch (e) { /* that window went away */ }
     }
     function announce() {
         const now = openCase(), key = now.caseId + '|' + now.client + '|' + now.phase;
         if (key === last) return;
         last = key;
-        askers.forEach(o => tell(o, now));
+        askers.forEach((origin, win) => { if (win.closed) askers.delete(win); else tell(win, origin, now); });
     }
 
     window.addEventListener('message', (e) => {
         if (!e.data || !allowed(e.origin)) return;
+        const from = e.source || window.parent;
         if (e.data.lsh === 'cms-case?') {
             const now = openCase();
-            askers.add(e.origin);
-            tell(e.origin, now);                                       // answered whether or not anything changed
+            askers.set(from, e.origin);
+            tell(from, e.origin, now);                                 // answered whether or not anything changed
             last = now.caseId + '|' + now.client + '|' + now.phase;    // so the next change is what announces
             return;
         }
         // the name the trainee wrote, checked against the convention — nothing is uploaded
         if (e.data.lsh === 'cms-doc-check') {
             const problems = nameProblems(e.data.name, e.data.category, e.data.original || e.data.name);
-            tell(e.origin, { lsh: 'cms-doc-checked', id: e.data.id, ok: !problems.length, problems, categories: categories() });
+            tell(from, e.origin, { lsh: 'cms-doc-checked', id: e.data.id, ok: !problems.length, problems, categories: categories() });
             return;
         }
         // the document itself, filed into the open case under the trainee's chosen category
         if (e.data.lsh === 'cms-doc-file') {
             fileDocument(e.data)
-                .then(out => tell(e.origin, Object.assign({ lsh: 'cms-doc-filed', id: e.data.id, problems: [] }, out)))
-                .catch(err => tell(e.origin, { lsh: 'cms-doc-filed', id: e.data.id, ok: false, problems: [], error: (err && err.message) || 'The document could not be filed.' }));
+                .then(out => tell(from, e.origin, Object.assign({ lsh: 'cms-doc-filed', id: e.data.id, problems: [] }, out)))
+                .catch(err => tell(from, e.origin, { lsh: 'cms-doc-filed', id: e.data.id, ok: false, problems: [], error: (err && err.message) || 'The document could not be filed.' }));
             return;
         }
     });
