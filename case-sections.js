@@ -48,12 +48,41 @@
                 <div><label>Statement</label><select class="prof-input"><option>Not taken</option><option>Taken (recorded)</option><option>Taken (written)</option><option>Refused</option><option>N/A</option></select></div>
                 <div><label>Represented By</label><div contenteditable="true" data-ph="Attorney, if any"></div></div>
             </div>
-            <label style="margin-top:10px;">Notes</label>
-            <div contenteditable="true" data-ph="What they saw or did, injuries, how to reach them…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>`;
+            ${partyMoreHTML()}
+            <label style="margin-top:10px;">General Notes</label>
+            <div contenteditable="true" data-ph="What they saw or did, how to reach them, anything else…" class="multiline-field text-sm italic text-slate-600 min-h-[48px]"></div>`;
         box.appendChild(div);
         placeholders(div);
         partiesSummary();
         const first = div.querySelectorAll('[contenteditable="true"]')[0]; if (first) first.focus();
+    };
+    // Each person's identity, address, vehicle and injury details (DOB, sex, driver's license, full address with state and
+    // ZIP, the vehicle, its damage, injuries, EMS transport). Rows saved before these fields get them when the case opens
+    // (upgradePartyRows), keeping what they had; a row's fields are saved with it (data-keyed rows), so nothing shifts.
+    const SEXES = ['—', 'Female', 'Male', 'Other / not stated'];
+    const YES_NO = ['—', 'Yes', 'No', 'Unknown'];
+    function partyMoreHTML() {
+        const f = (label, ph, o) => `<div${o && o.wide ? ' class="col-span-2"' : ''}><label>${label}</label><div contenteditable="true" data-ph="${ph}"${o && o.fmt ? ` data-fmt="${o.fmt}"` : ''}></div></div>`;
+        const sel = (label, opts) => `<div><label>${label}</label><select class="prof-input">${opts.map(o => `<option>${o}</option>`).join('')}</select></div>`;
+        return `<div class="kx-party-more grid grid-cols-4 gap-5" style="margin-top:12px;padding-top:12px;border-top:1px dashed #e2e8f0;">
+                ${f('Date of Birth', 'MM/DD/YYYY', { fmt: 'date' })}${sel('Sex', SEXES)}${f("Driver's License #", 'License number and state')}${sel('Transported via EMS / Ambulance?', YES_NO)}
+                ${f('Street Address', 'Street and unit', { wide: true })}${f('City', 'City')}${f('State / ZIP', 'e.g. GA 30303')}
+                ${f('Vehicle Year / Make / Model', 'e.g. 2019 Honda Civic')}${f('Vehicle Color', 'e.g. Silver')}${f('Plate #', 'Plate number and state')}${f('Vehicle Owner', 'Registered owner, if not this person')}
+                ${f('Vehicle Damage Status / Location', 'e.g. Total loss · at Copart, Atlanta', { wide: true })}${f('Injury Details', 'Injuries reported, treatment, hospital', { wide: true })}
+            </div>`;
+    }
+    window.upgradePartyRows = function () {
+        document.querySelectorAll('#kx-parties > .kx-row').forEach(r => {
+            if (r.querySelector('.kx-party-more')) return;
+            const grid = r.querySelector('.grid'); if (grid) grid.insertAdjacentHTML('afterend', partyMoreHTML());
+            const notes = [...r.querySelectorAll('label')].find(l => l.textContent.trim() === 'Notes'); if (notes) notes.textContent = 'General Notes';
+        });
+    };
+    // Primary Injury: "By Ambulance?" is asked only when the client was transported to a hospital.
+    window.toggleInjuryAmbulance = function () {
+        const box = $id('kx-injury'); if (!box) return;
+        const h = box.querySelector('[data-k="hospital"]'), w = box.querySelector('[data-amb-wrap]');
+        if (w) w.style.visibility = h && h.value === 'Yes' ? '' : 'hidden';
     };
     function partiesSummary() {
         const out = $id('parties-summary'), box = $id('kx-parties'); if (!out || !box) return;
@@ -536,7 +565,7 @@
         // way); with none, what's in them was typed. (Not what the last case's boxes were.)
         const hasCosts = caseCostsTotal() > 0;
         document.querySelectorAll('[data-s="costs"]').forEach(f => { delete f.dataset.typed; if (hasCosts) f.dataset.auto = '1'; else { delete f.dataset.auto; f.removeAttribute('title'); } });
-        window.applyReportKind(); window.calcWages(); window.upgradeLienRows(); window.upgradeLitRows(); runChecks(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
+        window.applyReportKind(); window.calcWages(); window.upgradeLienRows(); window.upgradeLitRows(); window.upgradePartyRows(); window.toggleInjuryAmbulance(); runChecks(); partiesSummary(); window.addDemandLetterBoxes(); window.addDocLinkButtons();
         ['kx-parties', 'kx-authorized', 'kx-demand', 'kx-counsel', 'kx-adr', 'kx-insurance-extra'].forEach(id => { const b = $id(id); if (b) placeholders(b); });
     };
 

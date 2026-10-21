@@ -14,6 +14,10 @@
 (function () {
     'use strict';
     const PORTAL_LOGIN = 'https://cm-training-activity.pages.dev/trainee-login.html';
+    // Single sign-on: the Portal's launch signs a trainee who is logged in there straight back in here with a ticket
+    // (functions/api/launch.js in the Portal); one who isn't logged in there is told to log in first.
+    const PORTAL_LAUNCH = 'https://cm-training-activity.pages.dev/api/launch?tool=cms';
+    const BOUNCE_KEY = 'lsh-sso-bounce';
     let portalOnly = false, dismissed = false, busy = false, notice = '';
     const params = new URLSearchParams(location.search);
     const ticket = params.get('ticket') || '';
@@ -84,6 +88,7 @@
             startHeartbeat();
             startIdleTracking();
             refreshSiteState();
+            try { sessionStorage.removeItem(BOUNCE_KEY); } catch (e) { /* ignore */ }
             if (typeof showToast === 'function') showToast('Signed in as ' + u.fullName + '.', 'success');
         } catch (e) {
             notice = 'We couldn’t reach the CMS to sign you in. Check your connection and open it from the LSH Training Portal again.';
@@ -111,13 +116,43 @@
     // ticketed course link back into a log-in page (js/lsh-tool-links.js in the course repos puts the
     // ticket on every link out). A ticket also wins over whatever session this browser already has:
     // whoever opened the link is who gets signed in.
+    // Locked to the Portal, the Trainee tab asks for nothing: no username, no registration, just the way to the Portal.
+    function ssoOnly() {
+        const gate = document.getElementById('auth-gate');
+        if (gate) gate.classList.add('sso-only');
+        const form = document.getElementById('auth-login-view');
+        if (form && !document.getElementById('sso-trainee')) {
+            const box = document.createElement('div');
+            box.id = 'sso-trainee';
+            box.className = 'sso-trainee';
+            box.innerHTML = '<p class="auth-hint">Trainees are signed in with the account they use on the LSH Training Portal. There is no username to type here.</p>'
+                + '<a class="auth-submit sso-go" href="' + launchUrl() + '">Sign in with the LSH Training Portal</a>';
+            const msg = document.getElementById('auth-login-msg');
+            if (msg && msg.nextSibling) form.insertBefore(box, msg.nextSibling); else form.appendChild(box);
+        }
+    }
+    // Where the trainee was heading, when the Portal has a landing for it (the drill); otherwise the CMS's start page.
+    function launchUrl() { return PORTAL_LAUNCH + (params.get('drill') === '1' ? '&to=drill' : ''); }
+    // No ticket and nobody signed in: off to the Portal, which sends them back signed in. Once in two minutes at most,
+    // so a ticket that keeps failing (or a Portal that can't sign them in) never bounces them back and forth.
+    function bounceToPortal() {
+        let last = 0;
+        try { last = Number(sessionStorage.getItem(BOUNCE_KEY) || 0); } catch (e) { /* storage off: go anyway, once */ }
+        if (Date.now() - last < 120000) return false;
+        try { sessionStorage.setItem(BOUNCE_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+        card('<h1 style="font-size:20px;margin:0 0 8px">Signing you in…</h1><p style="color:#cbd5e1;font-size:14px;margin:0">Taking you through the LSH Training Portal, which signs you in with your account.</p>');
+        location.replace(launchUrl());
+        return true;
+    }
     function start() {
         fetch('/api/portal-login', { credentials: 'include' }).then((r) => r.json()).then((d) => {
             portalOnly = !!(d && d.portalOnly);
+            if (portalOnly) ssoOnly();
             if (wantAdmin) adminArrived();
             else if (ticket) signInFromTicket();
-            // No ticket: the CMS's own sign-in screen stays, where a registered trainee signs in with
-            // their username (functions/api/login.js). showNotice() is now only for a ticket that failed.
+            else if (portalOnly && !session()) bounceToPortal();
+            // No ticket, not locked to the Portal (PORTAL_ONLY=off, or no admin password yet): the CMS's own
+            // sign-in screen stays, with the username (functions/api/login.js). showNotice() is for a ticket that failed.
         }).catch(() => { if (wantAdmin) adminArrived(); else if (ticket) signInFromTicket(); });   // status unknown: the ticket is still worth trying
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

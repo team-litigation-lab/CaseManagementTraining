@@ -969,3 +969,12 @@
     .lp-up-main select { width: 100%; max-width: 520px; font-size: 12.5px; padding: 5px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; }
     .lp-up-row + .lp-row { margin-top: 10px; }
     .lp-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Single sign-on (guest-access.js): locked to the Portal, the Trainee tab has no username, no Log In and no registration,
+   only the way to the Portal; the Admin tab is unchanged. */
+.sso-trainee { display: none; }
+#auth-gate.sso-only:not(.mode-admin) .sso-trainee { display: block; }
+#auth-gate.sso-only:not(.mode-admin) .login-username-field,
+#auth-gate.sso-only:not(.mode-admin) .auth-register-link,
+#auth-gate.sso-only:not(.mode-admin) #auth-login-view > .auth-submit { display: none; }
+.sso-trainee .sso-go { display: block; text-align: center; text-decoration: none; margin-top: 10px; }
