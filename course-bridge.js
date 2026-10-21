@@ -5,7 +5,7 @@
    The CMS is integrated with the course, so it says which case is open instead: the course fills the box in.
 
    How it works: the course posts {lsh:"cms-case?"} to this frame; the CMS answers that origin with
-   {lsh:"cms-case", caseId, client, phase, at}, and tells it again whenever the open case changes (a case
+   {lsh:"cms-case", caseId, client, phase, dol, at}, and tells it again whenever the open case changes (a case
    saved and given its ID, another file opened, the editor reset). It is the case header the CMS already
    shows — #case-id-field, #client-name-field and the phase, watched for changes — so every way a case is opened
    (a new save, My cases, the Case Library, a Training Library file) is covered without hooking each one.
@@ -49,9 +49,12 @@
             caseId: realId(txt('case-id-field')),
             client: txt('client-name-field'),
             phase: txt('display-phase'),
+            dol: dolOf(txt('date-of-loss-field')),   // the course moves its case documents' dates with it (MM/DD/YYYY)
             at: new Date().toISOString()
         };
     }
+    const dolOf = (s) => (/^\d{2}\/\d{2}\/\d{4}$/.test(s) ? s : '');
+    const keyOf = (c) => c.caseId + '|' + c.client + '|' + c.phase + '|' + c.dol;
 
     // who asked, and where to answer: the window itself, because an asker can be the page that framed
     // the CMS (window.parent) or a page the CMS opened (a simulator). Told again when the open case changes.
@@ -62,7 +65,7 @@
         try { (win || window.parent).postMessage(msg || openCase(), origin); } catch (e) { /* that window went away */ }
     }
     function announce() {
-        const now = openCase(), key = now.caseId + '|' + now.client + '|' + now.phase;
+        const now = openCase(), key = keyOf(now);
         if (key === last) return;
         last = key;
         askers.forEach((origin, win) => { if (win.closed) askers.delete(win); else tell(win, origin, now); });
@@ -75,7 +78,7 @@
             const now = openCase();
             askers.set(from, e.origin);
             tell(from, e.origin, now);                                 // answered whether or not anything changed
-            last = now.caseId + '|' + now.client + '|' + now.phase;    // so the next change is what announces
+            last = keyOf(now);    // so the next change is what announces
             return;
         }
         // the name the trainee wrote, checked against the convention — nothing is uploaded
