@@ -123,6 +123,29 @@
         ['bpHands', 'Hands', 1], ['bpChest', 'Chest'], ['bpTorso', 'Torso'], ['bpOrgans', 'Any problems with internal organs?'], ['bpMidBack', 'Mid back'], ['bpHips', 'Hips', 1],
         ['bpLowBack', 'Low back'], ['bpLegs', 'Legs', 1], ['bpFeet', 'Feet', 1], ['bpOther', 'Any other symptoms or problems']];
 
+    // Intake Sheet: a full address for everyone concerned. Under every address question (the client's, the at-fault party's,
+    // the employer's, an emergency contact's, a witness's, a provider's…) the form asks for City, State and ZIP Code too,
+    // where the paper form left them out. Keys: address → city / state / zip (as the client's always had); afAddress →
+    // afAddressCity / afAddressState / afAddressZip. Answers saved before simply leave them empty.
+    function fullAddresses(items) {
+        for (let i = 0; i < items.length; i++) {
+            const it = items[i];
+            if (it.t === 'group' && Array.isArray(it.fields)) { fullAddresses(it.fields); continue; }
+            if (it.t !== 'text' || !/address$/i.test(it.k || '')) continue;
+            const base = it.k === 'address' ? '' : it.k, key = (x) => base ? base + x : x.toLowerCase();
+            const has = (k) => items.some(x => x.k === k);
+            const add = [];
+            if (!has(key('City'))) add.push(F(key('City'), 'City', 'text', { w: 1, when: it.when }));
+            if (!has(key('State'))) add.push(F(key('State'), 'State', 'text', { w: 1, when: it.when }));
+            if (!has(key('Zip'))) add.push(F(key('Zip'), 'ZIP Code', 'text', { w: 1, when: it.when }));
+            if (!add.length) continue;
+            let at = i + 1;   // after the address and the city / state already there
+            while (at < items.length && items[at].k && [key('City'), key('State'), key('Zip')].includes(items[at].k)) at++;
+            items.splice(at, 0, ...add);
+            i = at + add.length - 1;
+        }
+        return items;
+    }
     const FORMS = {
         pi: {
             title: 'MVA', icon: '🚗', caseType: 'MVA',
@@ -467,6 +490,7 @@
         },
     };
     const ORDER = ['pi', 'slipfall', 'premises', 'dogbite', 'medmal'];
+    Object.values(FORMS).forEach(form => form.sections.forEach(sec => fullAddresses(sec.items)));
     // Each form's questions by key (groups by their own key).
     Object.values(FORMS).forEach(form => {
         form.index = {};
@@ -1026,6 +1050,9 @@
     function buildPlan(rec) {
         const f = FORMS[rec.form], a = rec.answers || {}, id = rec.form;
         const r = reader(f, a), v = r.v, peek = r.peek, rows = r.rows;
+        // a full address: street, then city, state and ZIP (fullAddresses() adds those three under every address question)
+        const fullAddr = (k) => join([v(k), join([v(k + 'City'), join([v(k + 'State'), v(k + 'Zip')])], ', ')], ', ');
+        const rowAddr = (x) => join([x.address, join([x.city, join([x.state, x.zip])], ', ')], ', ');
         const p = { parties: [], bi: [], pip: [], facilities: [], treat: [], facts: [], noteExtra: [] };
 
         // client
@@ -1091,10 +1118,19 @@
         else if (v('priorYn') === 'Yes') prior.push('Other injuries or treatment before this accident.');
         if (v('priorInj')) prior.push(v('priorInj'));
         if (v('priorAccidents')) prior.push(`Prior accidents: ${v('priorAccidents')}`);
-        rows('priorProviders').forEach(x => prior.push(`Treated before for this type of injury: ${join([x.name, x.dates, x.address], ' · ')}`));
+        rows('priorProviders').forEach(x => prior.push(`Treated before for this type of injury: ${join([x.name, x.dates, rowAddr(x)], ' · ')}`));
         if (!prior.length && v('similarYn') === 'Yes') prior.push('Treated before for a similar injury or condition.');
         inj.prior = prior.join('\n');
+        // the Primary Injury card's newer fields: hospital, ambulance, medications, treatment
+        const hosp = peek('hospitalYn') || peek('hospitalized');
+        if (hosp === 'Yes' || hosp === 'No') inj.hospital = hosp;
+        if (peek('ambulance') === 'Yes') inj.ambulance = 'Yes, by ambulance'; else if (hosp === 'Yes' && peek('ambulance') === 'No') inj.ambulance = 'No, other transport';
+        if (peek('meds')) inj.medications = peek('meds');
+        if (peek('hospitalTreatment')) inj.treatment = peek('hospitalTreatment');
         p.injury = inj;
+        // Case Narrative: did the client call their insurance?
+        const told = peek('reportedToIns') || peek('statementGiven');
+        if (told) p.insCall = { called: told === 'Yes' ? 'Yes' : told === 'No' ? 'No' : '', details: join([peek('statementDetails'), peek('claimNumbers') ? 'Claim # given: ' + peek('claimNumbers') : ''], '\n') };
 
         // police / incident report
         if (id === 'pi' && v('policeReport')) p.police = v('policeReport') === 'Yes' ? { kind: 'Police Report', agency: v('policeAgency'), number: v('policeReportNo'), officer: join([v('officerName'), peek('officerId') ? 'ID ' + v('officerId') : ''], ' · ') } : { kind: 'No Report' };
@@ -1105,15 +1141,19 @@
         // parties
         const party = (role, name, o) => { if (str(name)) p.parties.push(Object.assign({ role, name: str(name) }, o || {})); };
         if (id === 'pi') {
-            party('At-Fault Driver', v('afName'), { phone: v('afPhone'), contact: v('afAddress'), insurance: join([peek('afCo'), peek('afClaim')], ' · '),
-                vehicle: join([peek('dYear'), peek('dMake'), peek('dModel'), peek('dColor'), peek('dPlate') ? 'plate ' + peek('dPlate') : '']), notes: v('afDl') ? `Driver's license # ${v('afDl')}` : '' });
+            party('At-Fault Driver', v('afName'), { phone: v('afPhone'), contact: fullAddr('afAddress'), insurance: join([peek('afCo'), peek('afClaim')], ' · '),
+                vehicle: join([peek('dYear'), peek('dMake'), peek('dModel'), peek('dColor'), peek('dPlate') ? 'plate ' + peek('dPlate') : '']), notes: v('afDl') ? `Driver's license # ${v('afDl')}` : '',
+                dl: v('afDl'), street: v('afAddress'), city: v('afAddressCity'), state: v('afAddressState'), zip: v('afAddressZip'),
+                vehicleYmm: join([peek('dYear'), peek('dMake'), peek('dModel')]), color: peek('dColor'), plate: peek('dPlate') });
             rows('injured2').forEach(x => party('Other', join([x.first, x.middle, x.last]), { phone: x.cellPhone || x.homePhone, contact: join([x.email, join([x.address, x.city, join([x.state, x.zip])], ', ')], ' · '),
-                notes: join(['Also injured in this incident (intake form).', x.ssn ? `SSN ${x.ssn}` : '', x.dl ? `Driver's license # ${x.dl}` : ''], ' ') }));
+                notes: join(['Also injured in this incident (intake form).', x.ssn ? `SSN ${x.ssn}` : '', x.dl ? `Driver's license # ${x.dl}` : ''], ' '),
+                dl: x.dl, dob: x.dob, street: x.address, city: x.city, state: x.state, zip: x.zip }));
         }
         if (id === 'slipfall') party('Property Owner / Business', firstLine(v('adverseParties'), 120), { insurance: join([peek('ownerInsurers'), peek('claimNumbers')], ' · '), vehicle: peek('location'), notes: str(a.adverseParties).includes('\n') ? str(a.adverseParties) : '' });
         if (id === 'dogbite') party('At-Fault Party', firstLine(v('occupants'), 120), { insurance: join([peek('ownerInsurers'), peek('claimNumbers')], ' · '), vehicle: peek('location'), notes: join(['Homeowner / tenants / business owner where the bite happened (intake form).', str(a.occupants).includes('\n') ? str(a.occupants) : ''], '\n') });
         if (id === 'medmal') party('At-Fault Party', firstLine(v('responsible'), 120), { notes: str(a.responsible).length > 120 || str(a.responsible).includes('\n') ? str(a.responsible) : 'Named at intake as responsible for the malpractice.' });
-        rows('witnesses').forEach(x => party('Witness', x.name, { phone: x.phone, contact: x.address, notes: x.relation ? `Relation to the client: ${x.relation}` : '' }));
+        rows('witnesses').forEach(x => party('Witness', x.name, { phone: x.phone, contact: rowAddr(x), notes: x.relation ? `Relation to the client: ${x.relation}` : '',
+            street: x.address, city: x.city, state: x.state, zip: x.zip }));
         if (id === 'premises') party('Witness', firstLine(v('witnessWho'), 120), { contact: v('witnessContact'), notes: v('witnessInfo') });
         if (id === 'medmal') party('Witness', firstLine(v('witnesses'), 120), { notes: str(a.witnesses).length > 120 || str(a.witnesses).includes('\n') ? str(a.witnesses) : '' });
 
@@ -1121,7 +1161,7 @@
         if (peek('healthProvider') || peek('healthCarrier')) p.health = { carrier: v('healthProvider') || v('healthCarrier'), memberId: v('healthNo') };
         const plans = rows('healthPlans');
         if (plans[0]) p.health = { carrier: plans[0].name, memberId: plans[0].id };
-        plans.slice(1).forEach(x => p.noteExtra.push(`Other medical insurance: ${join([x.name, x.id, x.address, x.copay], ' · ')}`));
+        plans.slice(1).forEach(x => p.noteExtra.push(`Other medical insurance: ${join([x.name, x.id, rowAddr(x), x.copay], ' · ')}`));
         if (id === 'pi' && peek('afCo')) p.bi.push({ holder: peek('afName'), carrier: v('afCo'), policy: v('afPolicy'), claim: v('afClaim'), adjuster: v('afAdjuster'), contact: join([v('afAdjPhone') || v('afInsPhone'), peek('afAdjExt') ? 'ext. ' + v('afAdjExt') : ''], ' ') });
         if ((id === 'slipfall' || id === 'dogbite') && peek('ownerInsurers')) p.bi.push({ holder: firstLine(peek('adverseParties') || peek('occupants'), 120), carrier: v('ownerInsurers'), claim: v('claimNumbers') });
         if (id === 'premises' && peek('defCarrier')) p.bi.push({ carrier: v('defCarrier'), claim: v('defClaim'), adjuster: v('defAdjuster'), contact: join([v('defCarrierPhone'), v('defCarrierAddress')], ' · '),
@@ -1138,7 +1178,7 @@
         const tl = (label, k) => { const x = v(k); if (x) p.treat.push(`${label}: ${x}`); };
         tl('Approximate medical bills', 'medBills'); tl('Hospital stay', 'hospitalStay'); tl('Hospital treatment', 'hospitalTreatment'); tl('Paramedic report #', 'paramedicReportNo');
         tl('Medications', 'meds'); tl('Regular medications before the incident', 'regularMeds'); tl('Health before the incident', 'healthBefore'); tl('Treating physicians', 'physicians');
-        rows('pharmacies').forEach(x => p.treat.push(`Pharmacy: ${join([x.name, x.address], ' · ')}`));
+        rows('pharmacies').forEach(x => p.treat.push(`Pharmacy: ${join([x.name, rowAddr(x)], ' · ')}`));
         tl('Future appointments', 'future'); tl('Medical supplies', 'supplies');
         [['Totally disabled', 'totallyDisabled'], ['Partially disabled', 'partiallyDisabled'], ['Confined to hospitals', 'confinedHospital'], ['Confined to bed', 'confinedBed'], ['Confined to house', 'confinedHouse']].forEach(([l, k]) => tl(l, k));
         tl('Effect on personal life', 'lifeImpact'); tl('Limitations', 'limitations');
@@ -1146,7 +1186,7 @@
         // employment and lost wages
         const employer = v('employer');
         if (employer) p.employment = { status: 'Employed', employer, title: v('position') };
-        const w = { employer, position: peek('position'), contact: join([v('supervisor'), v('employerAddress')], ' · '), notes: [] };
+        const w = { employer, position: peek('position'), contact: join([v('supervisor'), fullAddr('employerAddress')], ' · '), notes: [] };
         if (peek('wage') && id === 'pi') { w.payType = 'Hourly'; w.rate = v('wage'); }
         if (peek('payRate')) { const per = v('payPer'); w.rate = v('payRate'); w.payType = per === 'Per hour' ? 'Hourly' : per === 'Per year' ? 'Salary (annual)' : ''; if (per && !w.payType) w.notes.push(`Rate of pay: ${w.rate} ${per.toLowerCase()}`); }
         if (id === 'medmal' && peek('wage')) w.notes.push(`Wage: ${v('wage')}`);
@@ -1156,6 +1196,8 @@
         wn('Time missed', 'timeMissed'); wn('Out of work', 'timeOut'); wn('Hours / days per week', 'hoursPerWeek'); wn('Employed before the injury', 'tenure'); wn('Benefits', 'benefits'); wn('Date of employment', 'employDate');
         if (v('missedWork') === 'No' || v('lostWagesYn') === 'No' || v('lostTimeYn') === 'No') w.notes.push('Client says no work time was lost.');
         if (employer || w.rate || w.claimed || w.from || w.notes.length) p.wages = w;
+        // Profile → Employment Details: the employer's address, pay rate and time missed so far
+        p.employment2 = { 'employer-address': fullAddr('employerAddress'), 'pay-rate': w.rate || '', 'time-missed': peek('timeMissed') || peek('timeOut') };
 
         // property damage (MVA)
         const anyVehicle = ['vMake', 'vModel', 'vYear', 'vPlate', 'vOwner', 'vDriver', 'dMake', 'dModel', 'dYear', 'dPlate', 'dOwner', 'dDriver'].some(k => peek(k));
@@ -1216,6 +1258,9 @@
         put($id('case-narrative-field'), p.narrative);
         const inj = $id('kx-injury');
         if (inj) Object.entries(p.injury).forEach(([k, val]) => put(inj.querySelector(`[data-k="${k}"]`), val));
+        if (typeof window.toggleInjuryAmbulance === 'function') window.toggleInjuryAmbulance();
+        if (p.insCall) Object.entries(p.insCall).forEach(([k, val]) => put(document.querySelector(`#kx-ins-call [data-k="${k}"]`), val));
+        if (p.employment2) Object.entries(p.employment2).forEach(([k, val]) => put(document.querySelector(`#kx-employment [data-k="${k}"]`), val));
 
         if (p.police) {
             const kind = document.querySelector('#kx-report-kind select');
@@ -1231,7 +1276,9 @@
             const row = $id('kx-parties').lastElementChild; if (!row) return;
             n++;
             putIn(row, 'Full Name', x.name); putIn(row, 'Phone', x.phone); putIn(row, 'Email / Address', x.contact);
-            putIn(row, 'Insurance Carrier', x.insurance); putIn(row, 'Vehicle / Location', x.vehicle); putIn(row, 'Notes', x.notes);
+            putIn(row, 'Insurance Carrier', x.insurance); putIn(row, 'Vehicle / Location', x.vehicle); putIn(row, 'General Notes', x.notes);
+            putIn(row, 'Date of Birth', x.dob); putIn(row, "Driver's License", x.dl); putIn(row, 'Street Address', x.street); putIn(row, 'City', x.city);
+            putIn(row, 'State / ZIP', join([x.state, x.zip])); putIn(row, 'Vehicle Year', x.vehicleYmm); putIn(row, 'Vehicle Color', x.color); putIn(row, 'Plate', x.plate);
         });
 
         const ins = $id('pane-matrix');

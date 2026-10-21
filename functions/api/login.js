@@ -1,12 +1,14 @@
 import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned, shortenOldBatchIds } from '../_utils.js';
 import { cleanGuestName, splitName, trainerUsername } from '../_guest.js';
+import { portalOnly } from '../_portal.js';
 // The Admin Portal signs in with the admin password (no username):
 //   - with a trainer's name: as that trainer's own Admin account, made on first use
 //     (no registration), so pings, logs and reviews show who they are;
 //   - with no name: as the Master Account (MASTER_USERNAME in _utils.js), which
 //     keeps every admin power it has.
 // The password is the MASTER_ADMIN_PASSWORD secret on the Pages project, never the code (README → Admin Portal).
-// The Trainee Portal signs in with the username alone: the Batch ID was given at
+// With PORTAL_ONLY=off (or no admin password yet) the Trainee Portal signs in with the username alone; locked to the
+// Portal (production), a trainee is signed in only by the Portal's ticket (single sign-on, api/portal-login.js): the Batch ID was given at
 // registration (register.js) and is on the account, and an Admin approves every
 // registration before it can sign in. Only a Trainee account signs in this way, never
 // an Admin's; an Admin account with a password of its own still needs that password.
@@ -124,6 +126,11 @@ export async function onRequestPost({ request, env }) {
         // admin ever types a password, and only on the Admin Portal tab. The account still has to be
         // registered and approved — nothing below creates one, and the status checks still apply.
         const trainee = !!(user && user.user_type === 'Trainee');
+        // Single sign-on: while the CMS is locked to the Portal (the admin password set, PORTAL_ONLY not "off"), a trainee
+        // is signed in only by the Portal's ticket, as the account they are logged in with there, never by a typed username.
+        if (portalOnly(env) && (trainee || portalMode === 'Trainee')) {
+            return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Trainees sign in on the LSH Training Portal. Open the CMS from the Portal and it signs you in.' }, 403);
+        }
         // Any other account needs its own password (an older tab may still send a Batch ID: a trainee doesn't need it).
         const secret = String(password || body.batchId || '');
         if (!trainee && secret && await wrongPasswords(db, request, false) >= ADMIN_TRIES_PER_HOUR) return TOO_MANY();

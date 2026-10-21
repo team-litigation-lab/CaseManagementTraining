@@ -103,8 +103,15 @@
     // either way, so the "-2" is dropped before the comparison. (Only after the date, never inside it.)
     const dropDupSuffix = (name) => name.replace(/(\d{4}-\d{2}-\d{2})-\d{1,3}(\.[A-Za-z0-9]{1,8})?$/, (m, date, ext) => date + (ext || ''));
 
+    // The Doc Hub's categories: its own buttons (Intake, Medical, Police… each adds a row of that category), then any
+    // other category a row already carries. Read from the rows alone, a case with an empty Doc Hub (every new case,
+    // John Doe's included) had no categories, so every document the course sent it was refused.
     function categories() {
         const out = [];
+        document.querySelectorAll('#pane-docs button[onclick^="addDocument("]').forEach(b => {
+            const m = /^addDocument\('([^']+)'\)$/.exec((b.getAttribute('onclick') || '').trim());
+            if (m && !out.some(x => x.toLowerCase() === m[1].toLowerCase())) out.push(m[1]);
+        });
         document.querySelectorAll('#doc-body tr').forEach(tr => {
             const label = tr.querySelector('td div'); const t = label ? label.textContent.trim() : '';
             if (t && !out.some(x => x.toLowerCase() === t.toLowerCase())) out.push(t);

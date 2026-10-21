@@ -71,7 +71,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
         const a = answers[JSON.parse(init.body).ticket];
         return new Response(JSON.stringify(a || { ok: false, code: 'format' }), { status: a && a.ok ? 200 : 401, headers: { 'Content-Type': 'application/json' } });
     };
-    const call = async (mod, method, body) => { const r = await mod[method]({ request: new Request('http://x/api', { method: 'POST', body: JSON.stringify(body) }), env }); return { status: r.status, cookie: r.headers.get('set-cookie') || '', data: await r.json().catch(() => ({})) }; };
+    const call = async (mod, method, body, e = env) => { const r = await mod[method]({ request: new Request('http://x/api', { method: 'POST', body: JSON.stringify(body) }), env: e }); return { status: r.status, cookie: r.headers.get('set-cookie') || '', data: await r.json().catch(() => ({})) }; };
     let r = await portalLogin.onRequestGet({ env }); const st = await r.json();
     if (!st.portalOnly || st.verifies !== 'via the Portal') fail(`status should say portalOnly via the Portal (${JSON.stringify(st)})`);
     r = await call(portalLogin, 'onRequestPost', { ticket: 'trainee' });
@@ -119,10 +119,15 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     r = await call(portalLogin, 'onRequestPost', { ticket: 'system' });
     if (r.status !== 403 || r.cookie) fail(`the Portal's system ticket must never sign anyone in (${r.status} ${JSON.stringify(r.data)})`);
     for (const t of ['forged', 'expired', 'junk']) { r = await call(portalLogin, 'onRequestPost', { ticket: t }); if (r.status !== 401 || r.cookie) fail(`a ${t} ticket must be refused (${r.status})`); }
-    // An approved CMS account is the way in, by the Portal's ticket or by its username (the trade-off is
-    // in the README: anyone who knows the username can sign in as them, and an Admin approves each one).
+    // Single sign-on: locked to the Portal, the Portal's ticket is the only way a trainee signs in. A typed username,
+    // even an approved trainee's, signs no one in (with or without the Trainee tab's portalMode).
     r = await call(login, 'onRequestPost', { username: 'tia', portalMode: 'Trainee' });
-    if (r.status !== 200 || !/lsh_session=/.test(r.cookie)) fail(`an approved trainee should sign in by username (${r.status} ${JSON.stringify(r.data)})`);
+    if (r.status !== 403 || r.data.code !== 'PORTAL_REQUIRED' || r.cookie) fail(`a typed username must not sign a trainee in while the CMS is locked to the Portal (${r.status} ${JSON.stringify(r.data)})`);
+    r = await call(login, 'onRequestPost', { username: 'tia' });
+    if (r.status === 200 || r.cookie) fail(`a typed username without portalMode must not sign a trainee in either (${r.status})`);
+    // PORTAL_ONLY=off is still the way back to the username sign-in (the CMS's own tests use it)
+    r = await call(login, 'onRequestPost', { username: 'tia', portalMode: 'Trainee' }, { ...env, PORTAL_ONLY: 'off' });
+    if (r.status !== 200 || !/lsh_session=/.test(r.cookie)) fail(`with PORTAL_ONLY=off an approved trainee should still sign in by username (${r.status} ${JSON.stringify(r.data)})`);
     r = await call(login, 'onRequestPost', { username: 'rex' });
     if (r.status === 200 || r.cookie) fail(`a revoked trainee must not sign in by username (${r.status})`);
     r = await call(login, 'onRequestPost', { username: 'nobody-at-all' });

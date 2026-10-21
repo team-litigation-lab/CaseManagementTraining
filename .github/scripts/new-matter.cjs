@@ -96,7 +96,7 @@ const failures = []; const fail = (m) => failures.push(m);
             narrative: t('case-narrative-field'),
             injury: { primary: k('#kx-injury [data-k="primary"]'), parts: k('#kx-injury [data-k="parts"]'), type: k('#kx-injury [data-k="type"]'), prior: k('#kx-injury [data-k="prior"]'), details: k('#kx-injury [data-k="details"]') },
             report: k('#kx-report-kind select'), police: pf,
-            parties: [...document.querySelectorAll('#kx-parties .kx-row')].map(r => ({ role: r.querySelector('select[data-role]').value, name: val(r, 'Full Name'), phone: val(r, 'Phone'), insurance: val(r, 'Insurance Carrier'), notes: val(r, 'Notes') })),
+            parties: [...document.querySelectorAll('#kx-parties .kx-row')].map(r => ({ role: r.querySelector('select[data-role]').value, name: val(r, 'Full Name'), phone: val(r, 'Phone'), insurance: val(r, 'Insurance Carrier'), notes: val(r, 'General Notes') })),
             health: val(card('pane-matrix', 'Health Insurance'), 'Carrier'),
             bi: [...document.querySelectorAll('#bi-container > div')].map(c => ({ carrier: val(c, 'Carrier'), claim: val(c, 'Claim #'), adjuster: val(c, 'Adjuster Name'), limits: val(c, 'Policy Limits') })),
             pip: [...document.querySelectorAll('#pip-um-container > div')].map(c => ({ type: val(c, 'Coverage Type'), carrier: val(c, 'Insurance Carrier'), policy: val(c, 'Policy #') })),

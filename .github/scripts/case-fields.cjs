@@ -164,6 +164,48 @@ let base;
         return { rows: document.querySelectorAll('#kx-demand .kx-row').length, boxes: document.querySelectorAll('#kx-demand .kx-row .kx-dl-btn').length, hadBox: /kx-dl/.test(html) };
     });
     if (legacy.hadBox || legacy.rows !== 1 || legacy.boxes !== 1) fail(`a demand saved before the upload box should get one: ${JSON.stringify(legacy)}`);
+
+    // ---- the newer fields: Employment Details, Primary Injury, the insurance call, Social Media & Communications, Parties Involved ----
+    const more = await page.evaluate(() => {
+        blankCaseEditorContent(); showTab('profile');
+        const set = (sel, v) => { const el = document.querySelector(sel); if (!el) return false; if (el.tagName === 'SELECT') el.value = v; else el.innerText = v; return true; };
+        const ok = [set('#kx-employment [data-k="employer-address"]', '100 Peachtree St, Atlanta, GA 30303'), set('#kx-employment [data-k="pay-rate"]', '$22.50 / hour'),
+            set('#kx-employment [data-k="previous-employer"]', 'Home Depot, 2019–2023'), set('#kx-employment [data-k="demands-client"]', 'Lifts 50 lb'),
+            set('#kx-employment [data-k="demands-driver"]', 'n/a'), set('#kx-employment [data-k="time-missed"]', '9 work days'),
+            set('#kx-injury [data-k="treatment"]', 'Chiropractic 3x a week'), set('#kx-injury [data-k="medications"]', 'Cyclobenzaprine 10 mg'),
+            set('#kx-injury [data-k="hospital"]', 'Yes'), set('#kx-injury [data-k="ambulance"]', 'Yes, by ambulance'),
+            set('#kx-ins-call [data-k="called"]', 'Yes'), set('#kx-ins-call [data-k="details"]', 'Spoke to Keystone on 02/07'),
+            set('#kx-social [data-k="posts"]', 'Posted a photo of the car'), set('#kx-social [data-k="advice"]', 'Told not to post'), set('#kx-social [data-k="notes"]', 'Accounts private now')];
+        showTab('parties'); addParty('At-Fault Driver');
+        const row = document.querySelector('#kx-parties .kx-row:last-child');
+        const lab = (t) => [...row.querySelectorAll('label')].find(l => l.textContent.trim() === t);
+        const field = (t) => { const l = lab(t); return l && (l.nextElementSibling || l.parentElement.querySelector('[contenteditable], select')); };
+        const want = ['Date of Birth', 'Sex', "Driver's License #", 'Transported via EMS / Ambulance?', 'Street Address', 'City', 'State / ZIP', 'Vehicle Year / Make / Model', 'Vehicle Color', 'Plate #', 'Vehicle Owner', 'Vehicle Damage Status / Location', 'Injury Details', 'General Notes'];
+        const missing = want.filter(t => !field(t));
+        field('Plate #').innerText = 'GA ABC1234'; field('Sex').value = 'Male'; field('Transported via EMS / Ambulance?').value = 'No';
+        const pos = { edits: posEdits().length, sels: posSels().length };
+        const content = buildCaseContentPayload(); blankCaseEditorContent();
+        const cleared = !!document.querySelector('#kx-social [data-k="posts"]').innerText.trim();
+        applyCaseContentToDOM(content);
+        const get = (sel) => { const el = document.querySelector(sel); return el ? (el.tagName === 'SELECT' ? el.value : el.innerText.trim()) : null; };
+        const back = { addr: get('#kx-employment [data-k="employer-address"]'), amb: get('#kx-injury [data-k="ambulance"]'), called: get('#kx-ins-call [data-k="called"]'),
+            posts: get('#kx-social [data-k="posts"]'), meds: get('#kx-injury [data-k="medications"]'), party: (document.querySelector('#kx-parties .kx-row') || {}).innerText || '',
+            sels: [...document.querySelectorAll('#kx-parties .kx-row select')].map(x => x.value) };
+        // a party row saved before these fields gets them when the case opens, keeping what it had
+        const old = buildCaseContentPayload();
+        old.keyed['kx-parties'].html = old.keyed['kx-parties'].html.replace(/<div class="kx-party-more[\s\S]*?<\/div>\s*<\/div>\s*(?=<label)/, '').replace('General Notes', 'Notes');
+        old.keyed['kx-parties'].sels = [old.keyed['kx-parties'].sels[0], old.keyed['kx-parties'].sels[1]];
+        blankCaseEditorContent(); applyCaseContentToDOM(old);
+        const up = document.querySelector('#kx-parties .kx-row');
+        return { ok, missing, pos, cleared, back, upgraded: !!(up && up.querySelector('.kx-party-more')), notesLabel: up && [...up.querySelectorAll('label')].some(l => l.textContent.trim() === 'General Notes') };
+    });
+    if (more.ok.some(x => !x)) fail(`a newer field is missing from the page: ${JSON.stringify(more.ok)}`);
+    if (more.missing.length) fail(`Parties Involved is missing: ${more.missing.join(', ')}`);
+    if (more.pos.edits !== POSITIONAL.edits || more.pos.sels !== POSITIONAL.selects) fail(`the newer fields moved the positional ones (${JSON.stringify(more.pos)})`);
+    if (more.cleared) fail('a new case keeps the last Social Media notes');
+    if (more.back.addr !== '100 Peachtree St, Atlanta, GA 30303' || more.back.amb !== 'Yes, by ambulance' || more.back.called !== 'Yes' || more.back.posts !== 'Posted a photo of the car' || more.back.meds !== 'Cyclobenzaprine 10 mg') fail(`the newer fields didn't load back: ${JSON.stringify(more.back)}`);
+    if (!/GA ABC1234/.test(more.back.party) || !more.back.sels.includes('Male') || !more.back.sels.includes('No')) fail(`a party's newer details didn't load back: ${JSON.stringify(more.back)}`);
+    if (!more.upgraded || !more.notesLabel) fail(`a party row saved before the newer details didn't get them: ${JSON.stringify({ upgraded: more.upgraded, notes: more.notesLabel })}`);
     await page.close();
 
     // ---- a library file: DOB in the header, its defense counsel, view only for the Front Desk ----
@@ -179,5 +221,5 @@ let base;
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log('Case file fields test passed (DOB in the header beside the SSN and Target Settlement beside Case Manager, DOB off the Profile tab, both saved where they were; Non-Economic Damages on Identity; Opposing Counsel on Litigation, and the library files\' defense counsel; ⬆ Upload Demand on each demand, saved, removable, 2 MB limit, older demands get the box, hidden on view-only files).');
+    console.log('Case file fields test passed (DOB in the header beside the SSN and Target Settlement beside Case Manager, DOB off the Profile tab, both saved where they were; Non-Economic Damages on Identity; Opposing Counsel on Litigation, and the library files\' defense counsel; ⬆ Upload Demand on each demand, saved, removable, 2 MB limit, older demands get the box, hidden on view-only files; Employment Details, Primary Injury, the insurance call, Social Media & Communications and each party\'s details saved by id, older party rows upgraded).');
 })().catch(e => { console.error(e); process.exit(1); });
