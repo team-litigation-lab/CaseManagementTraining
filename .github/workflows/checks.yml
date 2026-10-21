@@ -54,10 +54,6 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/smoke.cjs
-      - name: Case fields added after the first version (they save by name, never by position)
-        env:
-          NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node .github/scripts/case-fields.cjs
       - name: Firm Calendar (the real calendar API on SQLite, in a browser)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
@@ -148,7 +144,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/known-gaps.cjs
-      - name: Case file fields (DOB in the header, Non-Economic Damages, Opposing Counsel, Upload Demand)
+      - name: Case file fields (DOB in the header, Non-Economic Damages, Opposing Counsel, Upload Demand, the fields added for the case file)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/case-fields.cjs
