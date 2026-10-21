@@ -5,8 +5,10 @@
    service (DOS) in the Medical Chronology. When either is edited, the
    rest of the case is brought into line, so the file never contradicts
    itself:
-   - DOL: every later date on the case moves by the same number of days
-     as the DOL did: the SOL (both places), the treatment chronology (dates
+   - DOL: the SOL (both places) is worked out again as the same span of
+     years from the new DOL, so it never drifts by a day across a leap
+     year (the rule the course's SOL updater keeps). Every other later
+     date moves by the same number of days as the DOL did: the treatment chronology (dates
      of service and next visits), the providers' treatment periods,
      insurance and lien letters, demand and litigation dates, ADR,
      settlement, the case notes and tasks, and dates written inside the
@@ -50,6 +52,42 @@
         return { text: out, n };
     }
 
+    // The same day and month, N calendar years on: 02/06/2026 + 2 → 02/06/2028, whatever leap years fall
+    // between. (02/29 + 1 year has no 29th, so it gives 02/28, as a deadline would be read.)
+    function plusYears(day, years) {
+        const x = new Date(day * 864e5), y = x.getUTCFullYear() + years, mo = x.getUTCMonth() + 1;
+        return dayParts(mo, x.getUTCDate(), y) ?? dayParts(mo, x.getUTCDate() - 1, y);
+    }
+    /* The statute of limitations is a span of years from the date of loss, not a number of days, so it is
+       worked out again from the new DOL rather than moved with everything else. Shifting it by days drifts
+       it whenever a 29 February falls between the two dates: a DOL moved from 02/06/2026 to 02/06/2027 is
+       +365 days, which takes an 02/06/2028 SOL to 02/05/2029 — a day early, on the one date on the file
+       that has to be exact. This is the rule the course's SOL updater keeps (js/cm-case-dates.js in
+       Case-Management-Training: the case only rolls to years where DOL + 2 years stays exact).
+       The span is read off the file rather than assumed: a SOL sitting a whole number of years after the
+       old DOL (1 to 6, so a 2-year state and a 3-year state both work) keeps that many years from the new
+       one. Anything else — a tolled or extended date, a typo, an empty box — is left to move by days as
+       before, because its span isn't a number of years we can trust. */
+    const SOL_FIELDS = ['sol-bar-field', 'sol-litigation-field'];
+    function solYears(solDay, dolDay) {
+        for (let y = 1; y <= 6; y++) if (plusYears(dolDay, y) === solDay) return y;
+        return 0;
+    }
+    function alignSol(was, now, keep) {
+        const changed = [];
+        SOL_FIELDS.forEach(id => {
+            const el = $id(id); if (!el || !mayEdit(el)) return;
+            const sol = dayOf(el.innerText); if (sol === null) return;
+            const years = solYears(sol, was); if (!years) return;      // not a whole-year span: shifted by days, as before
+            const to = plusYears(now, years); if (to === null || to === sol) return;
+            const before = el.innerHTML;
+            el.innerText = fmt(to);
+            changed.push({ el, before, n: 1 });
+            keep.add(sol);                                             // so the day-shift pass leaves it alone
+        });
+        return changed;
+    }
+
     const area = () => $id('capture-area');
     const isDol = (el) => el && el.id === 'date-of-loss-field';
     const dosList = (el) => el && el.closest && el.closest('#chrono-container .chrono-dos-list');
@@ -77,7 +115,10 @@
         const delta = now - was, keep = new Set();
         const fields = editable(root).filter(el => el !== dolEl);
         fields.filter(isDob).forEach(el => { const d = dayOf(el.innerText); if (d !== null) keep.add(d); });
-        const changed = fields.filter(el => !isDob(el)).map(el => shiftField(el, was, delta, keep)).filter(Boolean);
+        // the SOL first: worked out again from the new DOL, and added to `keep` so the day-shift leaves it
+        const sol = alignSol(was, now, keep);
+        const solEls = new Set(sol.map(c => c.el));
+        const changed = sol.concat(fields.filter(el => !isDob(el) && !solEls.has(el)).map(el => shiftField(el, was, delta, keep)).filter(Boolean));
         if (!changed.length) return;
         touched(changed.map(c => c.el));
         bar(`📅 The DOL moved ${days(delta)}: ${count(changed)} on the case moved with it (SOL, treatment, notes and tasks, letters and deadlines).`, changed);
@@ -158,5 +199,5 @@
             if (isDol(el)) alignToDol(el, was, now); else alignToDos(el, was, now);
         }, 0);
     });
-    window.lshCaseDates = { dayOf, fmt, shiftText };
+    window.lshCaseDates = { dayOf, fmt, shiftText, plusYears, solYears };
 })();
