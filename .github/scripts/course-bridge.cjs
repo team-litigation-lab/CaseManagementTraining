@@ -88,8 +88,8 @@ const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) f
     check(heard.length === 1 && heard[0].caseId === 'LSH-2026-MVA-000041', `the answer carries the open case's ID: ${JSON.stringify(heard[0] || null)}`);
     // the header shows the client in capitals, and innerText is what it shows
     check(!!heard[0] && /^john doe$/i.test(heard[0].client || ''), `and the client whose file it is: ${(heard[0] || {}).client}`);
-    check(!!heard[0] && Object.keys(heard[0]).sort().join(',') === 'at,caseId,client,lsh,phase',
-        `and nothing else from the file: ${Object.keys(heard[0] || {}).sort().join(',')}`);
+    check(!!heard[0] && Object.keys(heard[0]).sort().join(',') === 'at,caseId,client,dol,lsh,phase',
+        `and nothing else from the file (the DOL, which the course's case documents follow): ${Object.keys(heard[0] || {}).sort().join(',')}`);
 
     // 3. the answer follows the case: a save that assigns the ID, another file opened
     await frame.evaluate(() => { document.getElementById('case-id-field').innerText = 'LSH-2026-PRL-000042'; });
