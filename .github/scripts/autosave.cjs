@@ -10,6 +10,7 @@
 //   (it draws the case a little differently); one with unsaved work still is;
 // - after 5 idle minutes the inactivity prompt still archives, but only work the server doesn't have.
 // Fails on any page error.
+// Also checks that Save Case confirms in a toast, with no OK box to dismiss.
 // Usage: node .github/scripts/autosave.cjs   (from the repository root; needs `npm i playwright`)
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -49,7 +50,8 @@ const server = http.createServer((req, res) => {
     });
     const page = await context.newPage();
     page.on('pageerror', e => fail(`page error: ${e.message}`));
-    page.on('dialog', d => d.accept());
+    const dialogs = [];
+    page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
     await page.goto(base, { waitUntil: 'load' }); await page.waitForTimeout(1500);
     const since = (t) => saves.filter(s => s.at >= t);
     const type = async (text) => { await page.click('#client-name-field'); await page.keyboard.press('End'); await page.keyboard.type(text); };
@@ -155,7 +157,19 @@ const server = http.createServer((req, res) => {
     t0 = Date.now(); await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(3500);
     if (since(t0).length !== 1 || since(t0)[0].id !== null || !/New Unsaved/i.test(since(t0)[0].name)) fail(`the next visit didn't save the new case once: ${JSON.stringify(since(t0))}`);
 
+    // ---- Save Case says so in a toast, with no OK box to dismiss ----
+    saveMode = 'ok'; dialogs.length = 0;
+    await page.evaluate(() => { document.getElementById('client-name-field').textContent = 'Toast Tester'; });
+    await page.evaluate(() => saveCase()); await page.waitForTimeout(900);
+    const toast = await page.evaluate(() => {
+        const t = [...document.querySelectorAll('#toast-container .toast')].map(x => ({ cls: x.className, text: x.innerText.replace(/\s+/g, ' ').trim() }));
+        return t[t.length - 1] || null;
+    });
+    if (dialogs.length) fail(`saving a case still opened an OK box: ${JSON.stringify(dialogs)}`);
+    if (!toast || !/case saved/i.test(toast.text)) fail(`saving a case did not show a toast saying so: ${JSON.stringify(toast)}`);
+    else if (!/success/.test(toast.cls)) fail(`the save toast isn't a success toast: ${toast.cls}`);
+
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log('Autosave test passed (nothing while working; away, offline/online, freeze, closing, idle, and the next visit after a crash).');
+    console.log('Autosave test passed (nothing while working; away, offline/online, freeze, closing, idle, the next visit after a crash, and Save Case confirming in a toast).');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -1550,7 +1550,7 @@
                 // files uploaded before the case had its ID take it now, and that's saved too (once)
                 if (renameNoCaseIdFiles(data.caseId)) await saveCase({ quiet: true });
                 if (quiet) return { ok: true, caseId: data.caseId };
-                alert(wasAlreadyFinal ? 'Case saved.' : `Case saved. Case ID ${data.caseId} has been permanently assigned.`);
+                showToast('Case saved.', 'success', 4000, wasAlreadyFinal ? '' : `Case ID ${data.caseId} has been permanently assigned.`);
             } catch (e) {
                 if (quiet) return { ok: false, error: 'Network error while saving.' };
                 alert('Network error while saving. Check your connection and try again.');
@@ -1593,7 +1593,7 @@
                 noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
-                alert('Case archived as a draft. No Case ID has been assigned yet — open this draft and use "Save Case" whenever you\'re ready to finalize it.');
+                showToast('Case archived as a draft.', 'success', 6000, 'No Case ID yet — open the draft and use "Save Case" when you\'re ready to finalize it.');
             } catch (e) {
                 alert('Network error while archiving. Check your connection and try again.');
             }
@@ -1629,7 +1629,7 @@
                 noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
-                alert("Saved case updated.");
+                showToast('Saved case updated.', 'success');
             } catch (e) {
                 alert('Network error while updating. Check your connection and try again.');
             }

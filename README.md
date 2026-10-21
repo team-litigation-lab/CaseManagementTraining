@@ -680,6 +680,7 @@ Trainees see only the first three sidebar groups, so their sidebar is the progra
 - **💾 Save Case** saves it (and gives it its Case ID).
 - **⟳ Update Case** saves the changes to a saved case that's open.
 - The autosave note sits between them.
+- **Saving says so in a toast, with no OK box to dismiss.** Save Case, Update Case and 🗄 Archive each raise a notification toast and leave the case open, so saving never interrupts the work: "Case saved." (with the Case ID on a second line the first time it is assigned), "Saved case updated." and "Case archived as a draft." A save that **fails** still opens a dialog, because it must be noticed before the work is lost.
 
 Code: `closeCase()` and `discardCase()` in `app.js`. The bar is outside `#capture-area`, so it's never part of a saved case.
 
