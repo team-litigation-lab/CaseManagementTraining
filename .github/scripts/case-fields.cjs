@@ -133,6 +133,24 @@ const PARTY_FIELDS = ['Date of Birth', 'Sex', "Driver's License Number", 'DL Sta
         }, PARTY_FIELDS);
         parties.forEach(p => fail(p));
 
+        /* 3b. the intake fills Party Details through the block, not the row: fieldFor matches a label by
+               its start, and the row above has a "Statement" dropdown that "State" finds first. */
+        const scoped = await page.evaluate(() => {
+            document.getElementById('kx-parties').innerHTML = '';
+            addParty('At-Fault Driver');
+            const row = document.querySelector('#kx-parties .kx-row'), more = row.querySelector('.party-more');
+            const ff = window.caseFill && window.caseFill.fieldFor;
+            if (!ff) return ['window.caseFill.fieldFor is not available'];
+            const out = [];
+            const inRow = ff(row, 'State'), inMore = ff(more, 'State');
+            if (inRow && inRow.tagName !== 'SELECT') out.push('the "Statement" dropdown no longer shadows "State" in a party row: the intake could write the state unscoped now');
+            if (!inMore || inMore.tagName === 'SELECT') out.push('"State" inside Party Details does not resolve to the address field');
+            if (ff(more, "Driver's License Number") === null) out.push('"Driver\'s License Number" does not resolve inside Party Details');
+            if (ff(more, 'DL State') === null) out.push('"DL State" does not resolve inside Party Details');
+            return out;
+        });
+        scoped.forEach(x => fail(x));
+
         /* 4. the Profile cards CSS places by nth-child are still in their own places */
         const layout = await page.evaluate(() => {
             const at = (sel) => { const el = document.querySelector(sel); if (!el) return null; const s = getComputedStyle(el); return `${s.gridColumnStart}/${s.gridRowStart}`; };
