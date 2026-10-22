@@ -1,0 +1,41 @@
+# The CMS interface is locked. Its files are frozen — .github/scripts/interface-locked.cjs fails Checks on any
+# change to one of them (the list is .github/interface-lock.json), and the lock itself cannot be edited without
+# review, so it cannot be lifted quietly in the same pull request that changes the interface.
+#
+# Review here is the second gate, not the first: the red check is what stops the edit.
+/index.html                         @team-litigation-lab
+/styles.css                         @team-litigation-lab
+/app.js                             @team-litigation-lab
+/call-packs.js                      @team-litigation-lab
+/call-voice.js                      @team-litigation-lab
+/case-alerts.js                     @team-litigation-lab
+/case-dates.js                      @team-litigation-lab
+/case-fit.js                        @team-litigation-lab
+/case-library.js                    @team-litigation-lab
+/case-photos.js                     @team-litigation-lab
+/case-sections.js                   @team-litigation-lab
+/client-id.js                       @team-litigation-lab
+/cms-update.js                      @team-litigation-lab
+/contacts.js                        @team-litigation-lab
+/course-bridge.js                   @team-litigation-lab
+/drive-backup.js                    @team-litigation-lab
+/firm-calendar.js                   @team-litigation-lab
+/front-desk-drill.js                @team-litigation-lab
+/guest-access.js                    @team-litigation-lab
+/intake-folder.js                   @team-litigation-lab
+/intake-form.js                     @team-litigation-lab
+/library-pdf.js                     @team-litigation-lab
+/library-photos.js                  @team-litigation-lab
+/live-call.js                       @team-litigation-lab
+/live-view.js                       @team-litigation-lab
+/lsh-blueprint.js                   @team-litigation-lab
+/pd-photos.js                       @team-litigation-lab
+/portal.js                          @team-litigation-lab
+/time-tracker.js                    @team-litigation-lab
+/training-library.js                @team-litigation-lab
+/js/show-password.js                @team-litigation-lab
+/favicon.png                        @team-litigation-lab
+/lsh-logo-dark.png                  @team-litigation-lab
+/lsh-mark.png                       @team-litigation-lab
+/.github/interface-lock.json        @team-litigation-lab
+/.github/scripts/interface-locked.cjs @team-litigation-lab

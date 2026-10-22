@@ -1,0 +1,185 @@
+{
+  "Locking the CMS interface": [
+    "The CMS interface is frozen. The files below are recorded by SHA-256 and",
+    ".github/scripts/interface-locked.cjs fails Checks on any change to one of them, on a pull request or a push to main.",
+    "Locked: the page (index.html), its look (styles.css), every front-end script, and the firm's marks.",
+    "Not locked: the server (functions/), the deploy configuration, the docs, and the Training Library's data",
+    "(mock-cases.js, mock-id-photos/, blueprint-content.js), so the API can still be fixed and the cases kept up.",
+    "To change a locked file: set its \"locked\" to false in this file, in its own commit, with the reason in the",
+    "commit message. Once the change is approved, run `node .github/scripts/interface-locked.cjs --relock` to",
+    "record the new hashes and set \"locked\" back to true.",
+    "A red check here is not a thing to work around: it means an edit reached the frozen CMS interface."
+  ],
+  "files": {
+    "index.html": {
+      "locked": true,
+      "sha256": "e720e892f70e80962d2d1c5bd4b9288c028a12a7bf34130bd4d813236743f489",
+      "what": "The page and its look"
+    },
+    "styles.css": {
+      "locked": true,
+      "sha256": "4cb523801992190811886fd9599c9810c1917c5094a28a7939db42675e943154",
+      "what": "The page and its look"
+    },
+    "app.js": {
+      "locked": true,
+      "sha256": "23e4edfb398660bb12cc08b9abee0e01909abf54ff1b08e0e37f436a24166198",
+      "what": "Front-end script"
+    },
+    "call-packs.js": {
+      "locked": true,
+      "sha256": "3f124f45f7cb0ec16b9a5159f691b7992d7af6de76153cfe34552ef889aade15",
+      "what": "Front-end script"
+    },
+    "call-voice.js": {
+      "locked": true,
+      "sha256": "1cfb1af472c7282dee0a86debe4dc54ee5b97ca517e1dd73ad6817b0e7df6325",
+      "what": "Front-end script"
+    },
+    "case-alerts.js": {
+      "locked": true,
+      "sha256": "f1d4a1a5b95ddf6ac8f5fd7e0a2be6578d42ae9511e5b468ba4e87f22bc5f2ee",
+      "what": "Front-end script"
+    },
+    "case-dates.js": {
+      "locked": true,
+      "sha256": "48a2a90b29a58bbb91ec1ea52caa98fcffbb92da10bee1ffc7197856dcaf63a8",
+      "what": "Front-end script"
+    },
+    "case-fit.js": {
+      "locked": true,
+      "sha256": "f76446006d6aafc30c744eeaa765c0219d704fabba289b3aaed9b5a2a47acef8",
+      "what": "Front-end script"
+    },
+    "case-library.js": {
+      "locked": true,
+      "sha256": "bf395083c0a7e740b203df8b6a8e4d3dab83d64fe9cd1e0722fce351a79a0951",
+      "what": "Front-end script"
+    },
+    "case-photos.js": {
+      "locked": true,
+      "sha256": "f79049f631a939b4f1e36caa47af5999424c77bc0fa230c952e32057996b268c",
+      "what": "Front-end script"
+    },
+    "case-sections.js": {
+      "locked": true,
+      "sha256": "4c0ebbee7a3ac5446dda6bbb24b93b92e583dcc846c7bc21a13e9ed87b662985",
+      "what": "Front-end script"
+    },
+    "client-id.js": {
+      "locked": true,
+      "sha256": "3aebbb0be1f6d288c91b19a45a229eee792ef4da2a11442e49a492712577f4f4",
+      "what": "Front-end script"
+    },
+    "cms-update.js": {
+      "locked": true,
+      "sha256": "b20028e040a78c0d8a04135d86c6ca3a434c8284b35fda7e687439f395533e1d",
+      "what": "Front-end script"
+    },
+    "contacts.js": {
+      "locked": true,
+      "sha256": "943c1c2199bdb9e8dbaf5179a34eb5d2cbed61b65fb9368aead832b27aca674d",
+      "what": "Front-end script"
+    },
+    "course-bridge.js": {
+      "locked": true,
+      "sha256": "d5fecc36a6d0b3580cb1afc02ef23f970606bfa175961c91a0be1dd26d3a9963",
+      "what": "Front-end script"
+    },
+    "drive-backup.js": {
+      "locked": true,
+      "sha256": "5455a5719757913774f1c5b857ea842167fd6c95bb6f5f8d6f37d33822c3a3f0",
+      "what": "Front-end script"
+    },
+    "firm-calendar.js": {
+      "locked": true,
+      "sha256": "05b63f53671cc38f6b5d9aa60e20b195f6c8f7d005fefe12c1a1667e5b7b76e7",
+      "what": "Front-end script"
+    },
+    "front-desk-drill.js": {
+      "locked": true,
+      "sha256": "d9e8c368eaa53c09d20620fbe0a1e86ff160208ec0f51cb51ce4172eed1bd498",
+      "what": "Front-end script"
+    },
+    "guest-access.js": {
+      "locked": true,
+      "sha256": "8fbc491b20c948878d01aa8c1b0ba87bdee79bd97a77a59670e2f0c91e60f5e8",
+      "what": "Front-end script"
+    },
+    "intake-folder.js": {
+      "locked": true,
+      "sha256": "0b9ce16be73a8bddb9e741cda51cdbbbcbcc07f13b200e5e8a2fbd482d69877c",
+      "what": "Front-end script"
+    },
+    "intake-form.js": {
+      "locked": true,
+      "sha256": "ed11a09ef2d60f66f7044e9d9b328df71e97a648d5b44a90f1e0b6886477a55f",
+      "what": "Front-end script"
+    },
+    "library-pdf.js": {
+      "locked": true,
+      "sha256": "0d553a989e948e8e2c7fb3643d31298dbcfab4cb98eedd1f37e88ec68a9d4733",
+      "what": "Front-end script"
+    },
+    "library-photos.js": {
+      "locked": true,
+      "sha256": "066149009efa7dbc151db4085a66e7fe95965ec8de6829ef6b1c4396d920c703",
+      "what": "Front-end script"
+    },
+    "live-call.js": {
+      "locked": true,
+      "sha256": "99e896b3f4a418df463485e126baee381442721c4cfb9ccb2e1a9270881e3107",
+      "what": "Front-end script"
+    },
+    "live-view.js": {
+      "locked": true,
+      "sha256": "2d6f69f95310277661793141e65b6f4d0e6925ce3a9512e43dc4f3c4a9e1b4b5",
+      "what": "Front-end script"
+    },
+    "lsh-blueprint.js": {
+      "locked": true,
+      "sha256": "59f234b5182806b36d19d0b3bfa6891b842e8d7ce5b2760290b0535c50be76db",
+      "what": "Front-end script"
+    },
+    "pd-photos.js": {
+      "locked": true,
+      "sha256": "1d238261744b4792caea49db2515ccb318988a7b2b3015724f6cd935010f4d6b",
+      "what": "Front-end script"
+    },
+    "portal.js": {
+      "locked": true,
+      "sha256": "abd8ee2f6f5896a42a27af1b47a8ca97dbfc22fb1cc77d0715d4816603369e5d",
+      "what": "Front-end script"
+    },
+    "time-tracker.js": {
+      "locked": true,
+      "sha256": "a620902d8e86e5c7e8b9625571707595d95a10cc2a05289ce888db571dfd349f",
+      "what": "Front-end script"
+    },
+    "training-library.js": {
+      "locked": true,
+      "sha256": "eb9e861f267adbb74ce4d92e6a7dede0caf9d18649f6bb4355eac01a56de1c8d",
+      "what": "Front-end script"
+    },
+    "js/show-password.js": {
+      "locked": true,
+      "sha256": "f663c4b65161018ded6aae878165dba5f036029139313eac29cc699d46e4f228",
+      "what": "Front-end script"
+    },
+    "favicon.png": {
+      "locked": true,
+      "sha256": "8ddb431f540ad3ace1831e971b151103be23ee6ba29fcb50819a8646a72bbde6",
+      "what": "The firm's marks"
+    },
+    "lsh-logo-dark.png": {
+      "locked": true,
+      "sha256": "32dbfcffe7ee471fa53a3b13d3ea6c850bfad182066c187a578d2892b5915d89",
+      "what": "The firm's marks"
+    },
+    "lsh-mark.png": {
+      "locked": true,
+      "sha256": "8ddb431f540ad3ace1831e971b151103be23ee6ba29fcb50819a8646a72bbde6",
+      "what": "The firm's marks"
+    }
+  }
+}

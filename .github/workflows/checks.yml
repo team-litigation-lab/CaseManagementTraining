@@ -28,6 +28,8 @@ jobs:
           node-version: 22
       - name: JavaScript syntax, local files, JSON
         run: node .github/scripts/check-site.mjs
+      - name: The CMS interface is locked (the page, its look and its scripts are frozen; a change fails here on purpose)
+        run: node .github/scripts/interface-locked.cjs
       - name: Training Library cases and Front Desk Drill calls are consistent
         run: node .github/scripts/check-data.mjs
       - name: Gemini key pool, /api/call-ai and practice call results (Google answered by the test)
