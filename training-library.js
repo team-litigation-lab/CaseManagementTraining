@@ -611,6 +611,7 @@
     function addNewerParts(c, content) {
         const keyed = (content && content.keyed) || {};
         if (!keyed['kx-critical']) setVal(document.querySelector('#kx-critical [data-k="note"]'), c.critical);
+        if (!((keyed['kx-noneconomic'] || {}).fields || {}).text) setVal(document.querySelector('#kx-noneconomic [data-k="text"]'), c.nonEconomic);
         // A save made before the file carried its parties has the tab saved empty: the rows come from the file
         // again (and a save from then on keeps them), so an older save never hides the report's units.
         if (!String((keyed['kx-parties'] || {}).html || '').trim()) fillParties(c);
@@ -655,6 +656,10 @@
         // Primary Injury (a keyed card: its fields are named by data-k)
         const inj = $id('kx-injury');
         if (inj && c.injury) Object.entries(c.injury).forEach(([k, v]) => setVal(inj.querySelector(`[data-k="${k}"]`), v));
+        // Other Pertinent Info · Non-Economic Damages (a keyed card, on Identity): how the injury changed the
+        // client's life — including what the property damage costs him day to day, which is where the facts of a
+        // separate property damage claim earn their place in the bodily injury demand.
+        setVal(document.querySelector('#kx-noneconomic [data-k="text"]'), c.nonEconomic);
 
         // Parties Involved (the police report's units), then the report itself
         fillParties(c);

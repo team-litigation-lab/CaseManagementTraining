@@ -21,6 +21,7 @@
 //     date of birth or phone number;
 //   - a file's practice brief (mock-cases.js `practice`) has no brief, no conflict
 //     checks, or a step with no points or no "done well";
+//   - a file's Non-Economic Damages box (`nonEconomic`) is there but empty;
 //   - a case number is missing, repeats, or doesn't look like one the CMS issues
 //     (LSH-<year>-<type code>-<number>: the type code the editor would give the
 //     case type, a year no earlier than the DOL, and a number in the 9xxxxx range
@@ -98,6 +99,7 @@ for (const c of MOCK_CASES) {
         for (const k of ['notified']) if (l[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(l[k])) bad(`${where}: lien ${k} must be MM/DD/YYYY`);
     }
     if (c.critical !== undefined && (!String(c.critical).trim() || String(c.critical).length > 500)) bad(`${where}: critical note must be 1–500 characters`);
+    if (c.nonEconomic !== undefined && !String(c.nonEconomic).trim()) bad(`${where}: nonEconomic is empty (leave it out instead)`);
     if (c.pd && (c.pd.pdClaim || c.pd.pdPhotos)) bad(`${where}: pdClaim / pdPhotos are inside pd: they belong on the case itself`);
     if (c.pd && c.pd.client && !c.pdClaim) bad(`${where}: a file with the client's vehicle (pd) needs its property damage claim (pdClaim)`);
     if (c.pdClaim && !(c.pdPhotos || []).length) bad(`${where}: a file with a property damage claim needs its photos (pdPhotos)`);

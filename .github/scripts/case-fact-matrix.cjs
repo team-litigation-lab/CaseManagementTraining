@@ -13,6 +13,9 @@
 //   - the Police Report tab has the report number, agency, officer and the contributing cause;
 //   - the ⚖ Practice brief panel lists all six entities the conflict check covers and every
 //     practice step, for a trainee as well as a trainer, with no undefined values in it;
+//   - the property damage is handled as its own claim, but what losing the car costs the
+//     client is in the Non-Economic Damages box as loss of transportation, in the dates and
+//     counts a demand can stand up;
 //   - the caller scenarios (the trainer's key, Admins only) never reach a trainee;
 //   - a trainee's saved work on the file keeps the three units, and a save made before the
 //     file carried them gets them back from the file.
@@ -142,6 +145,7 @@ const MC = 'MC-53';
                 const l = [...c.querySelectorAll('label')].find(x => x.textContent.trim().startsWith('Insurance Carrier'));
                 return l && l.nextElementSibling ? l.nextElementSibling.innerText.trim() : null; })(),
             injury: (document.querySelector('#kx-injury [data-k="primary"]') || {}).innerText || '',
+            noneco: (document.querySelector('#kx-noneconomic [data-k="text"]') || {}).innerText || '',
             pdCarrier: (document.querySelector('#kx-pd-claim [data-k="carrier"]') || {}).innerText,
             pdClient: field('#pane-pd', 'Year'), clientPlate: field('#pane-pd', 'License Plate'),
             crit: (document.querySelector('#kx-critical [data-k="note"]') || {}).innerText || ''
@@ -162,6 +166,10 @@ const MC = 'MC-53';
     // the client has a bodily injury claim of his own: that is what puts him on the per-accident limit with the Unit 2 driver
     if (!/rotator cuff|shoulder/i.test(file.injury || '')) fail(`the Primary Injury card doesn't carry the client's injury: "${file.injury}"`);
     if (file.pipum2 !== 'Harbor Point Insurance') fail(`the host vehicle's UM/UIM policy is "${file.pipum2}", not Harbor Point Insurance (the client was a passenger in Unit 2)`);
+    // the property damage is its own claim, but what losing the car costs him is part of the injury claim:
+    // the Non-Economic Damages box carries it, in dates and counts a demand can stand up
+    if (!/LOSS OF TRANSPORTATION/i.test(file.noneco)) fail(`the Non-Economic Damages box doesn't carry the loss of transportation: ${JSON.stringify(file.noneco.slice(0, 200))}`);
+    for (const want of ['02/06/2026', '11 round trips']) if (!file.noneco.includes(want)) fail(`the Non-Economic Damages box doesn't say "${want}" — a demand needs dates and counts, not "inconvenienced"`);
 
     // ---------- the ⚖ Practice brief: a trainee gets it; the trainer's key stays with Admins ----------
     if (!(await page.isVisible('#mock-banner button:has-text("Practice brief")'))) fail('a trainee has no ⚖ Practice brief button on the case banner');
@@ -179,7 +187,7 @@ const MC = 'MC-53';
     for (const t of wantSteps) if (!brief.steps.some(s => s.includes(t))) fail(`the practice brief is missing the step "${t}"`);
     if (!brief.points) fail('the practice brief shows no points under its steps');
     if (/\bundefined\b|\bnull\b|\[object/.test(brief.text)) fail('the practice brief has undefined/null values in it');
-    for (const want of ['per accident', 'per person', 'unauthorized practice of law', 'informed consent', 'passenger']) {
+    for (const want of ['per accident', 'per person', 'unauthorized practice of law', 'informed consent', 'passenger', 'loss of transportation', 'non-economic damages']) {
         if (!new RegExp(want, 'i').test(brief.text)) fail(`the practice brief doesn't cover "${want}"`);
     }
     await page.evaluate(() => closeCallsPanel());
