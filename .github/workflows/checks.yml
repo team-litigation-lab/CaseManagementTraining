@@ -168,7 +168,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/case-alerts.cjs
-      - name: Case fact matrix (MC-53 / RPD-26-018842: the report's three units, the carriers on their own units, the practice brief)
+      - name: "Case fact matrix (MC-53 / RPD-26-018842: the report's three units, the carriers on their own units, the practice brief)"
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/case-fact-matrix.cjs
