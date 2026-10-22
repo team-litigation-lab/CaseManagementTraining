@@ -57,15 +57,15 @@
     .lbp-top button:hover{background:rgba(255,255,255,.16)}
     .lbp-top button:disabled{opacity:.6;cursor:default}
     #lbp-tabs{display:flex;gap:2px;background:#e2e8f0;padding:0 20px;flex-shrink:0;overflow-x:auto}
-    #lbp-tabs button{padding:12px 18px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#64748b;cursor:pointer;border:0;border-bottom:3px solid transparent;background:none;white-space:nowrap;font-family:inherit}
-    #lbp-tabs button.on{color:#f97316;border-bottom-color:#f97316;background:#f8fafc}
+    #lbp-tabs button{padding:12px 18px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#334155;cursor:pointer;border:0;border-bottom:3px solid transparent;background:none;white-space:nowrap;font-family:inherit}
+    #lbp-tabs button.on{color:#9a3412;border-bottom-color:#f97316;background:#f8fafc}
     #lbp-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:18px 22px 12px;gap:12px}
     #lbp-stage{flex:1;min-height:0;position:relative;overflow:hidden}
-    #lbp-slide{position:absolute;left:50%;top:50%;transform-origin:center center;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(15,33,72,.16);overflow:hidden;color:#1e293b;text-align:left}
+    #lbp-slide{position:absolute;left:50%;top:50%;transform-origin:center center;background:rgba(255,255,255,.80);backdrop-filter:saturate(118%) blur(10px);-webkit-backdrop-filter:saturate(118%) blur(10px);border-radius:14px;box-shadow:0 10px 30px rgba(15,33,72,.16);overflow:hidden;color:#1e293b;text-align:left}
     #lbp-nav{display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
     #lbp-nav>button{width:40px;height:34px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f2148;font-size:13px;font-weight:800;cursor:pointer}
     #lbp-nav>button:disabled{opacity:.35;cursor:default}
-    #lbp-count{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:700;color:#475569;min-width:52px;text-align:center;white-space:nowrap}
+    #lbp-count{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:700;color:#334155;min-width:52px;text-align:center;white-space:nowrap}
     #lbp-toc{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
     #lbp-toc button{min-width:26px;height:26px;padding:0 6px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:11px;font-weight:800;cursor:pointer}
     #lbp-toc button.on{background:#0f2148;border-color:#0f2148;color:#fff;box-shadow:inset 0 -2px 0 #f97316}
@@ -81,41 +81,42 @@
     .lbp-brand img{height:112px;width:auto;display:block}
     #lbp-slide .lbp-brand-name{color:#fff;font-size:17px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;line-height:1.1;-webkit-font-smoothing:antialiased}
     .lbp-cover h1{margin:8px 0 0;color:#fff;font-size:50px;font-weight:800;letter-spacing:.01em;line-height:1.1}
-    .lbp-cover-body{flex:1;min-height:0;padding:34px 70px 24px;display:flex;flex-direction:column}
+    .lbp-cover-body{flex:1;min-height:0;padding:34px 70px 24px;display:flex;flex-direction:column;justify-content:safe center}
     .lbp-cover-sub{margin:0 0 26px;font-size:26px;color:#334155;font-weight:600}
-    .lbp-contents{list-style:none;margin:0;padding:0;columns:2;column-gap:50px;flex:1}
+    .lbp-contents{list-style:none;margin:0;padding:0;columns:2;column-gap:50px;flex:0 1 auto}
     .lbp-contents li{break-inside:avoid;display:flex;align-items:center;gap:14px;font-size:calc(22px * var(--lbp-k,1));color:#1e293b;margin-bottom:calc(15px * var(--lbp-k,1))}
-    .lbp-contents li span{flex:0 0 auto;width:calc(32px * var(--lbp-k,1));height:calc(28px * var(--lbp-k,1));border-radius:6px;background:#f97316;color:#fff;font-size:calc(15px * var(--lbp-k,1));font-weight:800;display:flex;align-items:center;justify-content:center}
-    .lbp-version{font-size:14px;font-weight:700;color:#94a3b8;letter-spacing:.03em}
+    .lbp-contents li span{flex:0 0 auto;width:calc(32px * var(--lbp-k,1));height:calc(28px * var(--lbp-k,1));border-radius:6px;background:#f97316;color:#081226;font-size:calc(15px * var(--lbp-k,1));font-weight:800;display:flex;align-items:center;justify-content:center}
+    .lbp-version{margin-top:26px;font-size:14px;font-weight:700;color:#475569;letter-spacing:.03em}
     .lbp-card{height:100%;display:flex;flex-direction:column}
     .lbp-head{display:flex;align-items:center;gap:24px;background:#0f2148;padding:30px 52px 28px;border-bottom:6px solid #f97316}
     .lbp-head h1{margin:6px 0 0;color:#fff;font-size:40px;font-weight:800;line-height:1.15}
     .lbp-icon{flex:0 0 auto;width:78px;height:78px;border-radius:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:42px}
-    .lbp-main{flex:1;min-height:0;display:flex;gap:44px;padding:40px 52px 22px}
-    .lbp-points{flex:1;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:calc(22px * var(--lbp-k,1))}
+    .lbp-main{flex:1;min-height:0;display:flex;align-items:safe center;gap:44px;padding:40px 52px 22px}
+    .lbp-points{flex:1;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;justify-content:safe center;gap:calc(22px * var(--lbp-k,1))}
     .lbp-points li{position:relative;padding-left:32px;font-size:calc(26px * var(--lbp-k,1));line-height:1.38;color:#1e293b}
     .lbp-points li::before{content:'';position:absolute;left:0;top:.5em;width:11px;height:11px;border-radius:2px;background:#f97316}
-    .lbp-side{flex:0 0 360px;display:flex;flex-direction:column;gap:20px}
+    .lbp-side{flex:0 0 360px;display:flex;flex-direction:column;justify-content:safe center;gap:20px}
     .lbp-where,.lbp-tip{border-radius:12px;padding:calc(22px * var(--lbp-k,1)) 24px;font-size:calc(21px * var(--lbp-k,1));line-height:1.42;color:#1e293b}
     .lbp-where{background:#f1f5f9;border:1px solid #e2e8f0}
     .lbp-tip{background:#fff7ed;border:1px solid #fed7aa;border-left:6px solid #f97316}
     #lbp-slide .lbp-tip .lbp-label{color:#c2410c}
     .lbp-main.lbp-has-shot{gap:36px}
-    .lbp-col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:calc(20px * var(--lbp-k,1))}
-    .lbp-col.lbp-col-shot{flex:0 0 calc(560px * var(--lbp-k,1))}
-    .lbp-col .lbp-points{flex:1 1 auto}
+    .lbp-col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;justify-content:safe center;gap:calc(20px * var(--lbp-k,1))}
+    .lbp-col.lbp-col-shot{flex:0 0 calc(600px * var(--lbp-k,1))}
+    .lbp-col .lbp-points{flex:0 1 auto}
     .lbp-col .lbp-side{flex:0 0 auto}
     .lbp-shot{margin:0;display:block;border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;box-shadow:0 6px 18px rgba(15,33,72,.14);cursor:zoom-in;background:#f8fafc;position:relative}
-    .lbp-shot img{display:block;width:100%;height:auto}
+    .lbp-shot img{display:block;width:100%;height:auto;max-height:calc(430px * var(--lbp-k,1));object-fit:cover;object-position:top}
     .lbp-shot span{position:absolute;right:8px;bottom:8px;background:rgba(15,33,72,.82);color:#fff;font-size:12px;font-weight:800;letter-spacing:.04em;padding:5px 9px;border-radius:6px}
     #lbp-zoom{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(15,33,72,.94);cursor:zoom-out;padding:44px 20px 16px}
     #lbp-zoom.open{display:flex}
     #lbp-zoom img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.4);background:#fff}
     #lbp-zoom span{position:absolute;top:14px;right:20px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
-    .lbp-foot{display:flex;justify-content:space-between;gap:20px;padding:14px 52px 18px;border-top:1px solid #e2e8f0;font-size:14px;font-weight:700;color:#94a3b8;letter-spacing:.04em}
+    .lbp-foot{display:flex;justify-content:space-between;gap:20px;padding:14px 52px 18px;border-top:1px solid #e2e8f0;font-size:14px;font-weight:700;color:#475569;letter-spacing:.04em}
     #lbp-slide.portrait .lbp-head{padding:28px 34px;gap:18px}
     #lbp-slide.portrait .lbp-head h1{font-size:36px}
-    #lbp-slide.portrait .lbp-main{flex-direction:column;padding:28px 34px 16px;gap:22px}
+    #lbp-slide.portrait .lbp-main{flex-direction:column;align-items:stretch;justify-content:flex-start;padding:28px 34px 16px;gap:22px}
+    #lbp-slide.portrait .lbp-points,#lbp-slide.portrait .lbp-side,#lbp-slide.portrait .lbp-col,#lbp-slide.portrait .lbp-cover-body{justify-content:flex-start}
     #lbp-slide.portrait .lbp-points li{font-size:calc(23px * var(--lbp-k,1))}
     #lbp-slide.portrait .lbp-side{flex:0 0 auto}
     #lbp-slide.portrait .lbp-col,#lbp-slide.portrait .lbp-col.lbp-col-shot{flex:0 0 auto}
@@ -259,6 +260,9 @@
         const tabs = allowed();
         $id('lbp-tabs').style.display = tabs.length > 1 ? '' : 'none';
         $id('lbp-tabs').innerHTML = tabs.map(k => `<button type="button" data-deck="${k}" class="${k === cur ? 'on' : ''}" onclick="LSHBlueprint.deck('${k}')">${esc(k === 'trainee' && !deckOf('trainee') ? (cfg().traineeTab.label || NAMES.trainee) : NAMES[k])}</button>`).join('');
+        // a screenshot has no height until it has loaded: lay the slide out again when it does,
+        // or its text is measured as if the picture weren't there and the slide overflows
+        slide.querySelectorAll('img').forEach(im => { if (!im.complete) im.addEventListener('load', fit, { once: true }); });
         fit();
     }
 
