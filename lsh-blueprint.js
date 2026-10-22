@@ -62,9 +62,9 @@
     #lbp-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:18px 22px 12px;gap:12px}
     /* The standard deck frame, the same one the courses wear: a solid navy stage with the orange
        corner, the slide a glass sheet in an orange keyline, and a glass nav strip under it. */
-    #lbp-stage{flex:1;min-height:0;position:relative;overflow:hidden;background:#0f2148;border-radius:18px;padding:14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+    #lbp-stage{flex:1;min-height:0;position:relative;overflow:hidden;background:#0f2148;border-radius:18px;padding:52px 14px 14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
     #lbp-stage::before{content:'';position:absolute;top:0;right:0;width:min(200px,20%);height:46px;border-radius:0 0 0 100%;background:#f97316;opacity:.95;pointer-events:none}
-    #lbp-slide{position:absolute;left:50%;top:50%;z-index:1;transform-origin:center center;background:rgba(255,255,255,.80);backdrop-filter:saturate(118%) blur(10px);-webkit-backdrop-filter:saturate(118%) blur(10px);border:3px solid #f97316;border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,.18);overflow:hidden;color:#1e293b;text-align:left}
+    #lbp-slide{position:absolute;left:50%;top:50%;z-index:1;transform-origin:center center;background:rgba(255,253,248,.94);backdrop-filter:saturate(118%) blur(10px);-webkit-backdrop-filter:saturate(118%) blur(10px);border:3px solid #f97316;border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,.18);overflow:hidden;color:#1e293b;text-align:left}
     #lbp-nav{display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;flex-wrap:wrap;padding:8px 12px;background:rgba(255,255,255,.82);border:1px solid rgba(15,33,72,.12);border-radius:14px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
     #lbp-nav>button{width:40px;height:34px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f2148;font-size:13px;font-weight:800;cursor:pointer}
     #lbp-nav>button:disabled{opacity:.35;cursor:default}
@@ -135,7 +135,7 @@
     #lbp-slide.portrait .lbp-cover-sub{font-size:23px}
     #lbp-slide.portrait .lbp-contents{columns:1}
     #lbp-slide.portrait .lbp-contents li{font-size:calc(21px * var(--lbp-k,1));margin-bottom:calc(12px * var(--lbp-k,1))}
-    @media (max-width:760px){.lbp-top{padding:12px 14px}.lbp-top h2{font-size:16px}#lbp-body{padding:10px 10px 8px}#lbp-stage{padding:8px;border-radius:14px}#lbp-toc{display:none}}
+    @media (max-width:760px){.lbp-top{padding:12px 14px}.lbp-top h2{font-size:16px}#lbp-body{padding:10px 10px 8px}#lbp-stage{padding:40px 8px 8px;border-radius:14px}#lbp-toc{display:none}}
     @media print{#lbp-page{display:none!important}}`;
 
     function build() {
@@ -219,7 +219,13 @@
     function fit() {
         const stage = $id('lbp-stage'), slide = $id('lbp-slide'), page = $id('lbp-page');
         if (!stage || !slide || !page || !page.classList.contains('open')) return;
-        const W = stage.clientWidth, H = stage.clientHeight;
+        // the stage's padding is the navy band the slide sits in (abspos ignores padding, so take it off by hand)
+        const cs = getComputedStyle(stage);
+        const pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+        const pl = parseFloat(cs.paddingLeft) || 0, pr = parseFloat(cs.paddingRight) || 0;
+        const W = Math.max(1, stage.clientWidth - pl - pr), H = Math.max(1, stage.clientHeight - pt - pb);
+        slide.style.top = `calc(50% + ${(pt - pb) / 2}px)`;
+        slide.style.left = `calc(50% + ${(pl - pr) / 2}px)`;
         const portrait = W < 760;
         const BW = portrait ? 620 : 1280, BH = portrait ? 1000 : 720;
         slide.classList.toggle('portrait', portrait);
