@@ -40,16 +40,38 @@ jobs:
   smoke:
     name: Smoke test in a browser
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The suite takes about 13 minutes on a healthy runner. The cap is the one that
+    # stops a hung browser running all day, not a budget the suite should sit against:
+    # a slow dependency install used to eat the headroom and cancel the run partway
+    # through, losing the last steps.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # Both halves of the install are cached on the pinned versions below, so a
+      # normal run restores them in seconds. Change a version and the key changes
+      # with it, which installs afresh.
+      - name: Cache Playwright, Chromium and the PDF libraries
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/pw/node_modules
+            ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-playwright1.56.1-jspdf4.2.1-autotable5.0.8
       - name: Install Playwright and Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         run: |
           npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/pw" playwright@1.56.1 jspdf@4.2.1 jspdf-autotable@5.0.8
           "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      # The browser is restored from the cache, but the system libraries it loads are
+      # the runner image's own and are not, so they are put back on a cache hit.
+      - name: Chromium's system libraries
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: |
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install-deps chromium
       - name: Open every library case and play the whole drill
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

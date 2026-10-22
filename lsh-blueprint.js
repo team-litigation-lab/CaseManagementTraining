@@ -7,7 +7,8 @@
    Trainees (and an admin in Trainee view) get the trainee deck only; admins get both as tabs,
    so they can share the Trainee blueprint in Google Meet. ◀ ▶, the ← → keys or the contents strip
    move through it; Esc closes it. ⬇ Download PDF saves the deck that's showing: a landscape PDF,
-   one page a slide, real text (jsPDF from cdnjs, loaded the first time). The PDF is made from the
+   one page a slide wearing the deck's own frame, real text (jsPDF from cdnjs, loaded the first
+   time). The PDF is made from the
    deployed platform each time, and its cover and footers carry the platform's version, so a new
    deploy always gives an up-to-date PDF.
 
@@ -57,15 +58,18 @@
     .lbp-top button:hover{background:rgba(255,255,255,.16)}
     .lbp-top button:disabled{opacity:.6;cursor:default}
     #lbp-tabs{display:flex;gap:2px;background:#e2e8f0;padding:0 20px;flex-shrink:0;overflow-x:auto}
-    #lbp-tabs button{padding:12px 18px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#64748b;cursor:pointer;border:0;border-bottom:3px solid transparent;background:none;white-space:nowrap;font-family:inherit}
-    #lbp-tabs button.on{color:#f97316;border-bottom-color:#f97316;background:#f8fafc}
+    #lbp-tabs button{padding:12px 18px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#334155;cursor:pointer;border:0;border-bottom:3px solid transparent;background:none;white-space:nowrap;font-family:inherit}
+    #lbp-tabs button.on{color:#9a3412;border-bottom-color:#f97316;background:#f8fafc}
     #lbp-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:18px 22px 12px;gap:12px}
-    #lbp-stage{flex:1;min-height:0;position:relative;overflow:hidden}
-    #lbp-slide{position:absolute;left:50%;top:50%;transform-origin:center center;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(15,33,72,.16);overflow:hidden;color:#1e293b;text-align:left}
-    #lbp-nav{display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+    /* The standard deck frame, the same one the courses wear: a solid navy stage with the orange
+       corner, the slide a glass sheet in an orange keyline, and a glass nav strip under it. */
+    #lbp-stage{flex:1;min-height:0;position:relative;overflow:hidden;background:#0f2148;border-radius:18px;padding:52px 14px 14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+    #lbp-stage::before{content:'';position:absolute;top:0;right:0;width:min(200px,20%);height:46px;border-radius:0 0 0 100%;background:#f97316;opacity:.95;pointer-events:none}
+    #lbp-slide{position:absolute;left:50%;top:50%;z-index:1;transform-origin:center center;background:rgba(255,253,248,.94);backdrop-filter:saturate(118%) blur(10px);-webkit-backdrop-filter:saturate(118%) blur(10px);border:3px solid #f97316;border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,.18);overflow:hidden;color:#1e293b;text-align:left}
+    #lbp-nav{display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;flex-wrap:wrap;padding:8px 12px;background:rgba(255,255,255,.82);border:1px solid rgba(15,33,72,.12);border-radius:14px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
     #lbp-nav>button{width:40px;height:34px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f2148;font-size:13px;font-weight:800;cursor:pointer}
     #lbp-nav>button:disabled{opacity:.35;cursor:default}
-    #lbp-count{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:700;color:#475569;min-width:52px;text-align:center;white-space:nowrap}
+    #lbp-count{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;font-weight:700;color:#334155;min-width:52px;text-align:center;white-space:nowrap}
     #lbp-toc{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
     #lbp-toc button{min-width:26px;height:26px;padding:0 6px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:11px;font-weight:800;cursor:pointer}
     #lbp-toc button.on{background:#0f2148;border-color:#0f2148;color:#fff;box-shadow:inset 0 -2px 0 #f97316}
@@ -81,41 +85,42 @@
     .lbp-brand img{height:112px;width:auto;display:block}
     #lbp-slide .lbp-brand-name{color:#fff;font-size:17px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;line-height:1.1;-webkit-font-smoothing:antialiased}
     .lbp-cover h1{margin:8px 0 0;color:#fff;font-size:50px;font-weight:800;letter-spacing:.01em;line-height:1.1}
-    .lbp-cover-body{flex:1;min-height:0;padding:34px 70px 24px;display:flex;flex-direction:column}
+    .lbp-cover-body{flex:1;min-height:0;padding:34px 70px 24px;display:flex;flex-direction:column;justify-content:safe center}
     .lbp-cover-sub{margin:0 0 26px;font-size:26px;color:#334155;font-weight:600}
-    .lbp-contents{list-style:none;margin:0;padding:0;columns:2;column-gap:50px;flex:1}
+    .lbp-contents{list-style:none;margin:0;padding:0;columns:2;column-gap:50px;flex:0 1 auto}
     .lbp-contents li{break-inside:avoid;display:flex;align-items:center;gap:14px;font-size:calc(22px * var(--lbp-k,1));color:#1e293b;margin-bottom:calc(15px * var(--lbp-k,1))}
-    .lbp-contents li span{flex:0 0 auto;width:calc(32px * var(--lbp-k,1));height:calc(28px * var(--lbp-k,1));border-radius:6px;background:#f97316;color:#fff;font-size:calc(15px * var(--lbp-k,1));font-weight:800;display:flex;align-items:center;justify-content:center}
-    .lbp-version{font-size:14px;font-weight:700;color:#94a3b8;letter-spacing:.03em}
+    .lbp-contents li span{flex:0 0 auto;width:calc(32px * var(--lbp-k,1));height:calc(28px * var(--lbp-k,1));border-radius:6px;background:#f97316;color:#081226;font-size:calc(15px * var(--lbp-k,1));font-weight:800;display:flex;align-items:center;justify-content:center}
+    .lbp-version{margin-top:26px;font-size:14px;font-weight:700;color:#475569;letter-spacing:.03em}
     .lbp-card{height:100%;display:flex;flex-direction:column}
     .lbp-head{display:flex;align-items:center;gap:24px;background:#0f2148;padding:30px 52px 28px;border-bottom:6px solid #f97316}
     .lbp-head h1{margin:6px 0 0;color:#fff;font-size:40px;font-weight:800;line-height:1.15}
     .lbp-icon{flex:0 0 auto;width:78px;height:78px;border-radius:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:42px}
-    .lbp-main{flex:1;min-height:0;display:flex;gap:44px;padding:40px 52px 22px}
-    .lbp-points{flex:1;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:calc(22px * var(--lbp-k,1))}
+    .lbp-main{flex:1;min-height:0;display:flex;align-items:safe center;gap:44px;padding:40px 52px 22px}
+    .lbp-points{flex:1;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;justify-content:safe center;gap:calc(22px * var(--lbp-k,1))}
     .lbp-points li{position:relative;padding-left:32px;font-size:calc(26px * var(--lbp-k,1));line-height:1.38;color:#1e293b}
     .lbp-points li::before{content:'';position:absolute;left:0;top:.5em;width:11px;height:11px;border-radius:2px;background:#f97316}
-    .lbp-side{flex:0 0 360px;display:flex;flex-direction:column;gap:20px}
+    .lbp-side{flex:0 0 360px;display:flex;flex-direction:column;justify-content:safe center;gap:20px}
     .lbp-where,.lbp-tip{border-radius:12px;padding:calc(22px * var(--lbp-k,1)) 24px;font-size:calc(21px * var(--lbp-k,1));line-height:1.42;color:#1e293b}
     .lbp-where{background:#f1f5f9;border:1px solid #e2e8f0}
     .lbp-tip{background:#fff7ed;border:1px solid #fed7aa;border-left:6px solid #f97316}
     #lbp-slide .lbp-tip .lbp-label{color:#c2410c}
     .lbp-main.lbp-has-shot{gap:36px}
-    .lbp-col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:calc(20px * var(--lbp-k,1))}
-    .lbp-col.lbp-col-shot{flex:0 0 calc(560px * var(--lbp-k,1))}
-    .lbp-col .lbp-points{flex:1 1 auto}
+    .lbp-col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;justify-content:safe center;gap:calc(20px * var(--lbp-k,1))}
+    .lbp-col.lbp-col-shot{flex:0 0 calc(600px * var(--lbp-k,1))}
+    .lbp-col .lbp-points{flex:0 1 auto}
     .lbp-col .lbp-side{flex:0 0 auto}
     .lbp-shot{margin:0;display:block;border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;box-shadow:0 6px 18px rgba(15,33,72,.14);cursor:zoom-in;background:#f8fafc;position:relative}
-    .lbp-shot img{display:block;width:100%;height:auto}
+    .lbp-shot img{display:block;width:100%;height:auto;max-height:calc(430px * var(--lbp-k,1));object-fit:cover;object-position:top}
     .lbp-shot span{position:absolute;right:8px;bottom:8px;background:rgba(15,33,72,.82);color:#fff;font-size:12px;font-weight:800;letter-spacing:.04em;padding:5px 9px;border-radius:6px}
     #lbp-zoom{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(15,33,72,.94);cursor:zoom-out;padding:44px 20px 16px}
     #lbp-zoom.open{display:flex}
     #lbp-zoom img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.4);background:#fff}
     #lbp-zoom span{position:absolute;top:14px;right:20px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
-    .lbp-foot{display:flex;justify-content:space-between;gap:20px;padding:14px 52px 18px;border-top:1px solid #e2e8f0;font-size:14px;font-weight:700;color:#94a3b8;letter-spacing:.04em}
+    .lbp-foot{display:flex;justify-content:space-between;gap:20px;padding:14px 52px 18px;border-top:1px solid #e2e8f0;font-size:14px;font-weight:700;color:#475569;letter-spacing:.04em}
     #lbp-slide.portrait .lbp-head{padding:28px 34px;gap:18px}
     #lbp-slide.portrait .lbp-head h1{font-size:36px}
-    #lbp-slide.portrait .lbp-main{flex-direction:column;padding:28px 34px 16px;gap:22px}
+    #lbp-slide.portrait .lbp-main{flex-direction:column;align-items:stretch;justify-content:flex-start;padding:28px 34px 16px;gap:22px}
+    #lbp-slide.portrait .lbp-points,#lbp-slide.portrait .lbp-side,#lbp-slide.portrait .lbp-col,#lbp-slide.portrait .lbp-cover-body{justify-content:flex-start}
     #lbp-slide.portrait .lbp-points li{font-size:calc(23px * var(--lbp-k,1))}
     #lbp-slide.portrait .lbp-side{flex:0 0 auto}
     #lbp-slide.portrait .lbp-col,#lbp-slide.portrait .lbp-col.lbp-col-shot{flex:0 0 auto}
@@ -131,7 +136,7 @@
     #lbp-slide.portrait .lbp-cover-sub{font-size:23px}
     #lbp-slide.portrait .lbp-contents{columns:1}
     #lbp-slide.portrait .lbp-contents li{font-size:calc(21px * var(--lbp-k,1));margin-bottom:calc(12px * var(--lbp-k,1))}
-    @media (max-width:760px){.lbp-top{padding:12px 14px}.lbp-top h2{font-size:16px}#lbp-body{padding:10px 10px 8px}#lbp-toc{display:none}}
+    @media (max-width:760px){.lbp-top{padding:12px 14px}.lbp-top h2{font-size:16px}#lbp-body{padding:10px 10px 8px}#lbp-stage{padding:40px 8px 8px;border-radius:14px}#lbp-toc{display:none}}
     @media print{#lbp-page{display:none!important}}`;
 
     function build() {
@@ -215,7 +220,13 @@
     function fit() {
         const stage = $id('lbp-stage'), slide = $id('lbp-slide'), page = $id('lbp-page');
         if (!stage || !slide || !page || !page.classList.contains('open')) return;
-        const W = stage.clientWidth, H = stage.clientHeight;
+        // the stage's padding is the navy band the slide sits in (abspos ignores padding, so take it off by hand)
+        const cs = getComputedStyle(stage);
+        const pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+        const pl = parseFloat(cs.paddingLeft) || 0, pr = parseFloat(cs.paddingRight) || 0;
+        const W = Math.max(1, stage.clientWidth - pl - pr), H = Math.max(1, stage.clientHeight - pt - pb);
+        slide.style.top = `calc(50% + ${(pt - pb) / 2}px)`;
+        slide.style.left = `calc(50% + ${(pl - pr) / 2}px)`;
         const portrait = W < 760;
         const BW = portrait ? 620 : 1280, BH = portrait ? 1000 : 720;
         slide.classList.toggle('portrait', portrait);
@@ -259,6 +270,9 @@
         const tabs = allowed();
         $id('lbp-tabs').style.display = tabs.length > 1 ? '' : 'none';
         $id('lbp-tabs').innerHTML = tabs.map(k => `<button type="button" data-deck="${k}" class="${k === cur ? 'on' : ''}" onclick="LSHBlueprint.deck('${k}')">${esc(k === 'trainee' && !deckOf('trainee') ? (cfg().traineeTab.label || NAMES.trainee) : NAMES[k])}</button>`).join('');
+        // a screenshot has no height until it has loaded: lay the slide out again when it does,
+        // or its text is measured as if the picture weren't there and the slide overflows
+        slide.querySelectorAll('img').forEach(im => { if (!im.complete) im.addEventListener('load', fit, { once: true }); });
         fit();
     }
 
@@ -354,11 +368,45 @@
     // by the file's first bytes, whatever type the server gave it (JPEG starts /9j/ in base64)
     const imgType = (data) => /^data:[^,]*,\/9j\//.test(data) || /^data:image\/jpe?g/i.test(data) ? 'JPEG' : 'PNG';
 
+    // The handout wears the deck's frame: each page is the navy stage with the orange corner, and the
+    // page's own content is the slide — a cream sheet in an orange keyline inside it. The content is
+    // written in the sheet's own coordinates, so `shift` hands buildPdf a doc whose drawing calls are
+    // moved into the sheet; everything else (addPage, save, splitTextToSize) goes straight through.
+    const SHIFT_XY = { text: [1, 2], rect: [0, 1], roundedRect: [0, 1], ellipse: [0, 1], line: [0, 1], circle: [0, 1] };
+    function shift(pdf, dx, dy) {
+        return new Proxy(pdf, {
+            get(t, k) {
+                const v = t[k];
+                if (typeof v !== 'function') return v;
+                if (k === 'addImage') return (data, type, x, y, ...rest) => v.call(t, data, type, x + dx, y + dy, ...rest);
+                if (k === 'line') return (x1, y1, x2, y2, ...rest) => v.call(t, x1 + dx, y1 + dy, x2 + dx, y2 + dy, ...rest);
+                const ix = SHIFT_XY[k];
+                if (ix) return (...a) => { a[ix[0]] += dx; a[ix[1]] += dy; return v.apply(t, a); };
+                return v.bind(t);
+            }
+        });
+    }
+    // the navy stage and the sheet it holds, drawn on every page before its content
+    function stage(pdf, pw, ph, S, BAND, W, H, R) {
+        pdf.setFillColor(...NAVY); pdf.rect(0, 0, pw, ph, 'F');
+        // the orange corner: a quarter of an ellipse centred on the page's top right, the rest off the page
+        pdf.setFillColor(...ORANGE); pdf.ellipse(pw, 0, Math.min(120, pw * 0.16), BAND + 10, 'F');
+        pdf.setFillColor(255, 253, 248); pdf.setDrawColor(...ORANGE); pdf.setLineWidth(3);
+        pdf.roundedRect(S, S + BAND, W, H, R, R, 'FD');
+    }
+
     function buildPdf(d, logo, shots) {
         shots = shots || [];
         const c = cfg();
-        const doc = new JsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape', compress: true });
-        const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 46;
+        const pdf = new JsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape', compress: true });
+        const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+        const S = 18, BAND = 26, R = 12;                       // stage inset, the band the corner sits in, the sheet's radius
+        const W = pw - 2 * S, H = ph - S - (S + BAND), M = 40;  // the sheet is the page the content is written on
+        const doc = shift(pdf, S, S + BAND);
+        const sheetTop = (h, fill) => {                         // a band across the top of the sheet, following its rounded corners
+            doc.setFillColor(...fill); doc.roundedRect(0, 0, W, h, R, R, 'F'); doc.rect(0, h - R, W, R, 'F');
+        };
+        stage(pdf, pw, ph, S, BAND, W, H, R);
         const total = d.slides.length + 1;
         const font = (size, style, color) => { doc.setFont('helvetica', style || 'normal'); doc.setFontSize(size); doc.setTextColor(...(color || INK)); };
         const stamp = clean(`${version ? 'Version ' + version + ' · ' : ''}made ${today()}`);
@@ -369,7 +417,7 @@
             doc.text(i === 0 ? 'Cover' : `${i} / ${total - 1}`, W - M, H - 20, { align: 'right' });
         };
         // the cover
-        doc.setFillColor(...NAVY); doc.rect(0, 0, W, 150, 'F');
+        sheetTop(150, NAVY);
         doc.setFillColor(...ORANGE); doc.rect(0, 150, W, 5, 'F');
         let tx = M;
         if (logo && c.brand) {
@@ -386,18 +434,20 @@
         font(13, 'normal', INK); doc.text(doc.splitTextToSize(clean(d.sub || ''), W - 2 * M), M, 190);
         font(10, 'bold', MUTED); doc.text('CONTENTS', M, 228, { charSpace: 1 });
         const half = Math.ceil(d.slides.length / 2), colW = (W - 2 * M - 30) / 2;
+        // the rows close up rather than run into the footer: the sheet is shorter than the page
+        const pitch = Math.min(26, (H - 46 - 254) / Math.max(1, half - 1));
         d.slides.forEach((s, k) => {
-            const x = k < half ? M : M + colW + 30, y = 254 + (k % half) * 26;
+            const x = k < half ? M : M + colW + 30, y = 254 + (k % half) * pitch;
             doc.setFillColor(...ORANGE); doc.roundedRect(x, y - 12, 18, 16, 3, 3, 'F');
             font(9, 'bold', [255, 255, 255]); doc.text(String(k + 1), x + 9, y - 1, { align: 'center' });
             font(12, 'normal', INK); doc.text(clean(s.title), x + 28, y);
         });
-        font(10, 'normal', MUTED); doc.text(stamp, M, H - 52);
         footer(0);
         // one page a slide
         d.slides.forEach((s, k) => {
             doc.addPage();
-            doc.setFillColor(...NAVY); doc.rect(0, 0, W, 92, 'F');
+            stage(pdf, pw, ph, S, BAND, W, H, R);
+            sheetTop(92, NAVY);
             doc.setFillColor(...ORANGE); doc.rect(0, 92, W, 4, 'F');
             font(9.5, 'bold', ORANGE); doc.text(clean(`${d.name} · ${k + 1} of ${d.slides.length}`).toUpperCase(), M, 38, { charSpace: 1 });
             font(23, 'bold', [255, 255, 255]); doc.text(clean(s.title), M, 70);
@@ -453,8 +503,8 @@
             }
             footer(k + 1);
         });
-        doc.setProperties({ title: clean(`${c.site || 'LSH'} ${d.name}`), subject: clean(`How ${c.product || 'the platform'} works · ${stamp}`), creator: clean(c.site || 'LSH') });
-        return doc;
+        pdf.setProperties({ title: clean(`${c.site || 'LSH'} ${d.name}`), subject: clean(`How ${c.product || 'the platform'} works · ${stamp}`), creator: clean(c.site || 'LSH') });
+        return pdf;
     }
 
     async function makePdf(which) {
