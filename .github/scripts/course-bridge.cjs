@@ -197,12 +197,34 @@ const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) f
     const onCase = await frame.evaluate(() => {
         const a = document.querySelector('#doc-body .doc-attachment a[data-r2-key]');
         const row = a && a.closest('tr'), label = row && row.querySelector('td div');
-        return { name: a && a.getAttribute('download'), category: label && label.textContent.trim(), summary: row && row.querySelector('[contenteditable="true"]').innerText.trim() };
+        // the summary is read whether or not it is still editable: a filed row is locked (cms-doc-lock.js)
+        const sum = row && row.querySelector('[contenteditable]');
+        return { name: a && a.getAttribute('download'), category: label && label.textContent.trim(), summary: sum && sum.innerText.trim(),
+                 locked: !!(row && row.classList.contains('doc-row-locked')),
+                 // the summary keeps contenteditable="true" on purpose (the case saves by position); it is
+                 // locked by event instead, so the check is that typing into it does nothing.
+                 summaryLocked: !!(sum && sum.dataset.docLocked === '1'),
+                 typedIn: (() => {
+                     if (!sum) return null;
+                     const before = sum.innerText;
+                     const ev = new InputEvent('beforeinput', {bubbles: true, cancelable: true, inputType: 'insertText', data: 'X'});
+                     const allowed = sum.dispatchEvent(ev);
+                     return {allowed, changed: sum.innerText !== before};
+                 })(),
+                 uploads: row ? row.querySelectorAll('input[type="file"]').length : -1,
+                 buttons: row ? row.querySelectorAll('button').length : -1 };
     });
     check(onCase.name === naming.right, `it is on the case under that name: ${JSON.stringify(onCase)}`);
     check(/medical records/i.test(onCase.category || ''), 'under the category the trainee chose');
     check(/Dr Patel/.test(onCase.summary || ''), 'with what it is in the row');
     check(filed.saved === true, 'and the case is saved, so the document is still there on the next visit');
+    // a filed document is part of the case record: its row is locked (cms-doc-lock.js)
+    check(onCase.locked === true, 'the filed row is locked');
+    check(onCase.summaryLocked === true, 'its summary is locked');
+    check(onCase.typedIn && onCase.typedIn.allowed === false && onCase.typedIn.changed === false,
+        `and typing into it does nothing: ${JSON.stringify(onCase.typedIn)}`);
+    check(onCase.uploads === 0, 'no second file can replace what was filed');
+    check(onCase.buttons === 0, 'and it cannot be detached or the row deleted');
 
     // a category this case does not have is refused, and says which it has
     const badCat = await page.evaluate(async () => {

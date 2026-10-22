@@ -978,3 +978,9 @@
 #auth-gate.sso-only:not(.mode-admin) .auth-register-link,
 #auth-gate.sso-only:not(.mode-admin) #auth-login-view > .auth-submit { display: none; }
 .sso-trainee .sso-go { display: block; text-align: center; text-decoration: none; margin-top: 10px; }
+
+/* 🔒 A filed document is part of the case record: its Doc Hub row is locked (cms-doc-lock.js).
+   The file stays open to read and download; nothing on the row can be replaced, removed or retyped. */
+.doc-filed-note { color: #64748b; font-weight: 700; cursor: help; white-space: nowrap; }
+.doc-summary-locked { color: #475569 !important; font-style: normal !important; cursor: default; }
+#doc-body tr.doc-row-locked, #lit-body tr.doc-row-locked { background: #f8fafc; }
