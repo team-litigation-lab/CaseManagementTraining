@@ -109,6 +109,9 @@
         F('employer', 'Your employer / occupation', 'text', { w: 4 }),
         F('employerAddress', 'Address', 'text', { w: 4 }),
         F('supervisor', 'Name of supervisor and telephone number', 'text', { w: 4 }),
+        F('previousEmployer', 'Previous employer', 'text', { w: 4, added: 1 }),
+        F('demandsClient', 'Physical demands of the job', 'area', { rows: 2, added: 1, ph: 'Lifting, standing, driving, climbing \u2014 what the job asks of the body' }),
+        F('timeMissedToDate', 'Time missed to date', 'text', { w: 4, added: 1 }),
     ] });
     const sfAdditional = () => ({ id: 'additional', title: 'Additional Information', items: [
         F('bankruptcy', 'Have you or are you filing for bankruptcy?', 'yn'),
@@ -230,6 +233,10 @@
                     F('employDate', 'Date of Employment', 'date'), F('wage', 'Hourly Wage', 'money'),
                     F('lostFrom', 'Dates lost from work because of injury: From', 'date'), F('lostTo', 'To', 'date'),
                     F('lostTotal', 'Total Amount of Income Lost', 'money'),
+                    F('previousEmployer', 'Previous employer', 'text', { w: 4, added: 1 }),
+                    F('demandsClient', 'Physical demands of the job', 'area', { rows: 2, added: 1, ph: 'Lifting, standing, driving, climbing \u2014 what the job asks of the body' }),
+                    F('demandsDriver', "Physical demands of the driver's job (if the client was a passenger)", 'area', { rows: 2, added: 1 }),
+                    F('timeMissedToDate', 'Time missed to date', 'text', { w: 4, added: 1 }),
                 ] },
                 ackSection(),
             ],
@@ -328,6 +335,9 @@
                     F('supervisor', 'Name of supervisor'), F('payRate', 'Rate of pay', 'money'),
                     F('payPer', 'Paid', 'choice', { choices: ['Per hour', 'Per week', 'Per month', 'Per year'] }),
                     F('lostWagesYn', 'Have you lost wages due to your injuries in this incident?', 'yn'), F('lostWagesAmt', 'How much?', 'money', { when: 'lostWagesYn' }),
+                    F('previousEmployer', 'Previous employer', 'text', { w: 4, added: 1 }),
+                    F('demandsClient', 'Physical demands of the job', 'area', { rows: 2, added: 1, ph: 'Lifting, standing, driving, climbing \u2014 what the job asks of the body' }),
+                    F('timeMissedToDate', 'Time missed to date', 'text', { w: 4, added: 1 }),
                 ] },
                 { id: 'medical', title: 'Medical', items: [
                     G('providers', 'The names and addresses of all medical providers you have seen for your injuries', [F('name', 'Name'), F('phone', 'Telephone', 'phone'),
@@ -472,6 +482,8 @@
                     F('benefits', 'Benefits received (pension, 401K contributions, medical coverage)', 'text', { w: 4 }),
                     F('lostTimeYn', 'Have you lost time from work because of your injury?', 'yn'),
                     F('timeOut', 'The period of time you were out of work', 'text', { when: 'lostTimeYn' }), F('lostWagesAmt', 'Total wages lost to date', 'money', { when: 'lostTimeYn' }),
+                    F('previousEmployer', 'Previous employer', 'text', { w: 4, added: 1 }),
+                    F('demandsClient', 'Physical demands of the job', 'area', { rows: 2, added: 1, ph: 'Lifting, standing, driving, climbing \u2014 what the job asks of the body' }),
                 ] },
                 { id: 'limitations', title: 'Limitations', items: [
                     F('limitations', 'Other ways these injuries have affected your life (cannot pick up children, garden, walk, drive, cook, etc.): "enjoyment of life" items and physical limitations', 'area', { rows: 3 }),
@@ -1197,7 +1209,9 @@
         if (v('missedWork') === 'No' || v('lostWagesYn') === 'No' || v('lostTimeYn') === 'No') w.notes.push('Client says no work time was lost.');
         if (employer || w.rate || w.claimed || w.from || w.notes.length) p.wages = w;
         // Profile → Employment Details: the employer's address, pay rate and time missed so far
-        p.employment2 = { 'employer-address': fullAddr('employerAddress'), 'pay-rate': w.rate || '', 'time-missed': peek('timeMissed') || peek('timeOut') };
+        p.employment2 = { 'employer-address': fullAddr('employerAddress'), 'pay-rate': w.rate || '',
+            'time-missed': peek('timeMissedToDate') || peek('timeMissed') || peek('timeOut'),
+            'previous-employer': v('previousEmployer'), 'demands-client': v('demandsClient'), 'demands-driver': v('demandsDriver') };
 
         // property damage (MVA)
         const anyVehicle = ['vMake', 'vModel', 'vYear', 'vPlate', 'vOwner', 'vDriver', 'dMake', 'dModel', 'dYear', 'dPlate', 'dOwner', 'dDriver'].some(k => peek(k));

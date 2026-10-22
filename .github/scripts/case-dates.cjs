@@ -6,6 +6,9 @@
 //     the chronology's dates of service and next visits, the providers' treatment periods ("– present" stays), the notes'
 //     and tasks' dates and dates inside their text; the DOB (header and Profile) doesn't move; the bar says so, and ↶ Undo
 //     puts every date back;
+//   - the SOL is a span of years, not a number of days: moving MC-01's DOL to 03/01/2028 (across 29 February
+//     2028) leaves the SOL at exactly 03/01/2030, where moving it by days would drift it to 03/02/2030; a SOL
+//     that isn't a whole number of years from the DOL still moves by days;
 //   - editing a date of service (City Spine & Rehab's first visit, 06/16 → 06/18) moves the row's later visit and its next
 //     visit by 2 days and sets the provider's treatment period from its first visit ("– present" stays); the other
 //     providers' rows don't move;
@@ -48,6 +51,18 @@ const failures = []; const fail = (m) => failures.push(m);
     });
     if (!h.md || h.bad !== null) fail(`the date reader is wrong: ${JSON.stringify(h)}`);
     if (h.text !== 'Seen 06/22/2026 and 02/30/2026; prior 05/01/2019; DOB 03/22/1988; range 06/22/2026 – 09/28/2026; pain 7/10.') fail(`shifting a text: ${h.text}`);
+
+    // the SOL is a span of years, not a number of days
+    const y = await page.evaluate(() => {
+        const D = window.lshCaseDates, d = (s) => D.dayOf(s);
+        return { two: D.fmt(D.plusYears(d('06/09/2026'), 2)), overLeap: D.fmt(D.plusYears(d('03/01/2028'), 2)),
+            feb29: D.fmt(D.plusYears(d('02/29/2028'), 1)),
+            span2: D.solYears(d('06/09/2028'), d('06/09/2026')), span3: D.solYears(d('06/09/2029'), d('06/09/2026')),
+            none: D.solYears(d('08/15/2028'), d('06/09/2026')) };
+    });
+    if (y.two !== '06/09/2028' || y.overLeap !== '03/01/2030') fail(`two years on is not the same day and month: ${JSON.stringify(y)}`);
+    if (y.feb29 !== '02/28/2029') fail(`a 29 February deadline a year on should be read as the 28th: ${y.feb29}`);
+    if (y.span2 !== 2 || y.span3 !== 3 || y.none !== 0) fail(`the SOL's span in years is read wrong: ${JSON.stringify(y)}`);
 
     // the case's dates, as the trainee sees them
     const read = () => page.evaluate(() => {
@@ -134,7 +149,26 @@ const failures = []; const fail = (m) => failures.push(m);
     if (t1.sol !== '06/15/2028' || !/06\/18\/2026/.test(t1.note)) fail(`an Intake trainee's DOL didn't move the header SOL or the notes: ${JSON.stringify(t1)}`);
     if (t1.dos !== t0.dos || t1.lit !== t0.lit) fail(`an Intake trainee's DOL moved parts of the file they can't edit (the chronology or the litigation SOL): ${JSON.stringify({ before: t0, after: t1 })}`);
 
+    /* The SOL is worked out again from the new DOL, so it never drifts across a leap year.
+       MC-01's DOL is 06/09/2026 and its SOL 06/09/2028, exactly two years. Moving the DOL to
+       03/01/2028 crosses 29 February 2028: that two-year window holds no leap day where the old one
+       did, so moving the SOL by the same number of days would land it on 03/02/2030 — a day late on
+       the one date on the file that has to be exact. It must be 03/01/2030. */
+    await page.evaluate(() => openMockCase('MC-01', { silent: true })); await page.waitForTimeout(600);
+    const before = await read();
+    if (before.dol !== '06/09/2026' || before.sol !== '06/09/2028') fail(`MC-01 didn't reopen as it is: ${JSON.stringify({ dol: before.dol, sol: before.sol })}`);
+    await typeInto('#date-of-loss-field', '03012028');
+    const leap = await read();
+    if (leap.dol !== '03/01/2028') fail(`the DOL didn't take the new date: ${leap.dol}`);
+    if (leap.sol !== '03/01/2030') fail(`the SOL drifted across the leap year: ${leap.sol} (should be 03/01/2030, two years from the new DOL)`);
+    // and a SOL that isn't a whole number of years from the DOL still moves by days, as before
+    await page.evaluate(() => openMockCase('MC-01', { silent: true })); await page.waitForTimeout(600);
+    await page.evaluate(() => { const el = document.getElementById('sol-bar-field'); el.innerText = '08/15/2028'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+    await typeInto('#date-of-loss-field', '06152026');
+    const odd = await read();
+    if (odd.sol !== '08/21/2028') fail(`a SOL that is not a whole number of years from the DOL should still move by days (+6): ${odd.sol}`);
+
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log('Case dates test passed (the DOL moves every later date on the case, the DOB stays, Undo; a date of service moves its row and its provider\'s treatment period).');
+    console.log('Case dates test passed (the DOL moves every later date on the case, the DOB stays, Undo; a date of service moves its row and its provider\'s treatment period; the SOL is worked out again as a span of years, so it never drifts across a leap year).');
 })().catch(e => { console.error(e); process.exit(1); });
