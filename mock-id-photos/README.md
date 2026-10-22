@@ -20,6 +20,7 @@ To add one: put a 256 px (or larger) square JPG here as `<name>-<birth year>.jpg
 | `bjorn-courthope-1988.jpg` | `SFHQ_pt4_00006169.jpg` |
 | `ahmed-rahman-1985.jpg` | `SFHQ_pt4_00006953.jpg` |
 | `james-wilson-1983.jpg` | `SFHQ_pt4_00005443.jpg` |
+| `john-doe-1982.jpg` | `SFHQ_pt4_00000488.jpg` |
 | `carlos-mendoza-1977.jpg` | `SFHQ_pt4_00001405.jpg` |
 | `derek-thompson-1975.jpg` | `SFHQ_pt4_00002547.jpg` |
 | `brian-o-neill-1972.jpg` | `SFHQ_pt4_00001308.jpg` |

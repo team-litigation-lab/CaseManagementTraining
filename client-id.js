@@ -53,7 +53,7 @@
     const ID_PHOTOS = new Set(`
         marcus-lee-2000 schuyler-beauchamp-2000 jose-hernandez-1994 andre-coleman-1991
         rhys-beaumont-1991 bjorn-courthope-1988 ahmed-rahman-1985 james-wilson-1983
-        carlos-mendoza-1977 derek-thompson-1975 brian-o-neill-1972 samuel-boateng-1970
+        john-doe-1982 carlos-mendoza-1977 derek-thompson-1975 brian-o-neill-1972 samuel-boateng-1970
         cian-masserene-1970 robert-chen-1969 walter-grant-1968 tomas-rivera-1964
         jose-hernandez-1962 william-harris-1958 james-wilson-1956 george-hammond-1949
         harold-jenkins-1948 keisha-brown-1995 brittany-kirkcudbright-1996 niamh-cholmondeley-1998
