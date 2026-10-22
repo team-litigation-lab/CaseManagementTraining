@@ -7,6 +7,10 @@
    (the firm's naming: caseFileName in app.js); the Litigation tab's documents (the Discovery & Filing Tracker) go in the case folder's
    own Litigation folder. Backing up again only sends what's new. The same bar is on both tabs.
 
+   The course asks for the same backup: a lesson's Email Workspace files its memorandum into the open case and
+   then needs it backed up, so course-bridge.js answers "cms-drive-backup" by calling driveBackupForCourse and
+   handing the course what came back. The backup, the Google connection and the folder stay the CMS's.
+
    The server side is /api/drive-backup (functions/api/drive-backup.js, functions/_google_drive.js). The app
    asks Google only for drive.file: it can see the folders and files it made, nothing else in the Drive.
    It needs Google sign-in set up for the site (README → Doc Hub → Google Drive backup); until then the bar
@@ -171,10 +175,16 @@
         catch (e) { error = e.message; }
         paint();
     };
-    window.driveBackupNow = async function () {
-        if (!D || !D.connected || busy) return;
+    // The backup itself, with what happened: the bar calls it and shows a toast; the course's Email Workspace
+    // asks for it through course-bridge.js and needs the outcome, so the work is here and both read the answer.
+    async function runBackup() {
+        if (!D) return { ok: false, error: 'The Google Drive connection has not been checked yet. Open Doc Hub in the CMS and try again.' };
+        if (!D.configured) return { ok: false, error: "Backing up to Google Drive isn't switched on for this site yet (README → Doc Hub → Google Drive backup)." };
+        if (!D.connected) return { ok: false, error: 'Connect your Google account on the case\'s Doc Hub first, then back it up.' };
+        if (busy) return { ok: false, error: 'A backup is already running.' };
         const id = caseIdentity(), files = caseFiles();
-        if (!id.key || !files.length) { paint(); return; }
+        if (!id.key) return { ok: false, error: 'Open a case (or give it a client name) to back up its files.' };
+        if (!files.length) return { ok: false, error: 'No uploaded files on this case yet. File the document first.' };
         busy = true; error = ''; progress = ''; paint();
         let copied = 0, skipped = 0;
         const failed = [];
@@ -187,11 +197,23 @@
                 if (r.drive) D = r.drive;
             }
             const parts = [copied ? `${copied} file${copied === 1 ? '' : 's'} copied` : '', skipped ? `${skipped} already backed up` : '', failed.length ? `${failed.length} not copied` : ''].filter(Boolean);
-            toast(`Google Drive backup: ${parts.join(', ') || 'nothing to copy'}.`, failed.length ? 'error' : 'success', 6000);
             if (failed.length) error = failed.map(f => `${(files.find(x => x.key === f.key) || {}).name || f.key}: ${f.error}`).slice(0, 3).join(' · ');
-        } catch (e) { error = e.message; toast(e.message, 'error', 6000); }
-        busy = false; progress = ''; paint();
+            busy = false; progress = ''; paint();
+            return { ok: !failed.length, copied, skipped, failed: failed.length, folderUrl: lastFolder || (D && D.rootUrl) || '',
+                summary: `Google Drive backup: ${parts.join(', ') || 'nothing to copy'}.`, error: error || '' };
+        } catch (e) {
+            error = e.message; busy = false; progress = ''; paint();
+            return { ok: false, error: e.message };
+        }
+    }
+    window.driveBackupNow = async function () {
+        if (!D || !D.connected || busy) return;
+        const out = await runBackup();
+        if (out && out.summary) toast(out.summary, out.ok ? 'success' : 'error', 6000);
+        else if (out && out.error) toast(out.error, 'error', 6000);
     };
+    // what course-bridge.js hands the course: the same backup, with its outcome
+    window.driveBackupForCourse = runBackup;
 
     // The status is asked for once, when Doc Hub or Litigation is first opened; the bars redraw whenever one is opened.
     function onDocs() { if (!signedIn()) return; watchFiles(); paint(); if (!asked) { asked = true; load(); } }

@@ -228,6 +228,38 @@ const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) f
     const noId = await fileIt(naming.right);
     check(noId.ok === false && /Case ID/i.test(noId.error || ''), `a case with no Case ID files nothing: ${noId.error}`);
 
+    // ---- backing the case up to Drive, when the course asks -------------------------------------
+    // A course step that has just filed a document asks for the backup; the CMS runs its own and answers with
+    // what happened. The backup itself is drive-backup.js's (covered by docs-drive.cjs), so here it is stood in
+    // for: what matters is that the course's question reaches it and its answer comes back unchanged.
+    await frame.evaluate(() => { document.getElementById('case-id-field').innerText = 'LSH-2026-MVA-000041'; });
+    const askBackup = () => page.evaluate(async () => {
+        const f = document.getElementById('cms');
+        return await new Promise(res => {
+            const on = (e) => { if (e.data && e.data.lsh === 'cms-drive-backed-up') { removeEventListener('message', on); res(e.data); } };
+            addEventListener('message', on);
+            f.contentWindow.postMessage({ lsh: 'cms-drive-backup', id: 'b1' }, '*');
+            setTimeout(() => res({ timedOut: true }), 8000);
+        });
+    });
+    const noBackup = await frame.evaluate(() => { const was = window.driveBackupForCourse; delete window.driveBackupForCourse; return typeof was; });
+    const unavailable = await askBackup();
+    check(unavailable.ok === false && /not available/i.test(unavailable.error || ''),
+        `with no backup on the page the course is told so, in words it can show the trainee: ${unavailable.error}`);
+    check(noBackup === 'function', 'and drive-backup.js is what normally provides it (driveBackupForCourse)');
+    await frame.evaluate(() => {
+        window.__backupCalls = 0;
+        window.driveBackupForCourse = async () => { window.__backupCalls++; return { ok: true, copied: 2, skipped: 1, failed: 0, folderUrl: 'https://drive.example/f', summary: 'Google Drive backup: 2 files copied, 1 already backed up.' }; };
+    });
+    const backedUp = await askBackup();
+    check(backedUp.ok === true && backedUp.copied === 2 && /2 files copied/.test(backedUp.summary || ''),
+        `the backup's own outcome is handed back to the course unchanged: ${JSON.stringify(backedUp)}`);
+    check((await frame.evaluate(() => window.__backupCalls)) === 1, 'and the backup is run once per request, not twice');
+    await frame.evaluate(() => { window.driveBackupForCourse = async () => { throw new Error('Network error.'); }; });
+    const failedBackup = await askBackup();
+    check(failedBackup.ok === false && /Network error/.test(failedBackup.error || ''),
+        `a backup that fails comes back as a reason, not a hang: ${JSON.stringify(failedBackup)}`);
+
     // the course cannot ask the CMS to do anything else
     const other = await page.evaluate(async () => {
         const f = document.getElementById('cms');
@@ -261,5 +293,5 @@ const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) f
 
     await browser.close(); cms.close(); course.close();
     if (failures.length) { console.error(`\n${failures.length} check(s) failed.`); process.exit(1); }
-    console.log('\nAll good: the course is told which case is open, the convention is enforced on every name, and nothing else is answered.');
+    console.log('\nAll good: the course is told which case is open, the convention is enforced on every name, the Drive backup is run when it asks, and nothing else is answered.');
 })().catch(e => { console.error(e); process.exit(1); });

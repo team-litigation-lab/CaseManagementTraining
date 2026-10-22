@@ -23,6 +23,10 @@
    goes back to whoever asked (the asking window), not to window.parent by assumption, and the file works
    framed or not. Nothing else changes: an asker still has to be an allowed origin.
 
+   Backing up to Drive: a course step that has just filed a document asks for the open case's files to be backed
+   up to the trainee's own Google Drive, and the CMS runs its own backup (drive-backup.js) and answers with what
+   happened. The course never sees the Google account, the folder or the files; it asks and reads the outcome.
+
    What it does not do: nothing is sent to a page that did not ask, and only an LSH course, the Training
    Portal or one of its simulators may ask (ORIGINS). What it tells the course is the case header and
    nothing else from the file — no client details, no documents. What it will do is file a document an
@@ -85,6 +89,19 @@
         if (e.data.lsh === 'cms-doc-check') {
             const problems = nameProblems(e.data.name, e.data.category, e.data.original || e.data.name);
             tell(from, e.origin, { lsh: 'cms-doc-checked', id: e.data.id, ok: !problems.length, problems, categories: categories() });
+            return;
+        }
+        // backing the open case's filed documents up to the trainee's own Google Drive (drive-backup.js).
+        // The course only asks; the Google connection, the folder and the files stay the CMS's.
+        if (e.data.lsh === 'cms-drive-backup') {
+            const back = (out) => tell(from, e.origin, Object.assign({ lsh: 'cms-drive-backed-up', id: e.data.id }, out));
+            if (typeof window.driveBackupForCourse !== 'function') {
+                back({ ok: false, error: 'The Google Drive backup is not available on this page. Open the case\'s Doc Hub in the CMS and try again.' });
+                return;
+            }
+            Promise.resolve(window.driveBackupForCourse())
+                .then(out => back(out && typeof out === 'object' ? out : { ok: false, error: 'The backup did not report a result.' }))
+                .catch(err => back({ ok: false, error: (err && err.message) || 'The backup could not be run.' }));
             return;
         }
         // the document itself, filed into the open case under the trainee's chosen category
