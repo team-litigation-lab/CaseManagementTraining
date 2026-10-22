@@ -16,6 +16,11 @@
 //   - two files with the same client name have the same date of loss AND date of
 //     birth (the DOL and the DOB are how the front desk tells them apart; a father
 //     and son hurt in the same crash share a DOL but not a DOB);
+//   - a party row on the Parties Involved tab has no name, or a role, Sex, EMS or
+//     Statement value the tab doesn't offer (it would load blank), or a malformed
+//     date of birth or phone number;
+//   - a file's practice brief (mock-cases.js `practice`) has no brief, no conflict
+//     checks, or a step with no points or no "done well";
 //   - a case number is missing, repeats, or doesn't look like one the CMS issues
 //     (LSH-<year>-<type code>-<number>: the type code the editor would give the
 //     case type, a year no earlier than the DOL, and a number in the 9xxxxx range
@@ -43,6 +48,10 @@ const TYPES = optionsIn(html, 'main-case-type');
 const sections = fs.readFileSync(path.join(ROOT, 'case-sections.js'), 'utf8');
 const listIn = (src, name) => { const m = src.match(new RegExp(`const ${name} = \\[([^\\]]*)\\]`)); return m ? [...m[1].matchAll(/'((?:[^'\\]|\\.)*)'|"([^"]*)"/g)].map(x => (x[1] !== undefined ? x[1].replace(/\\'/g, "'") : x[2])) : []; };
 const LIEN_TYPES = listIn(app, 'LIEN_TYPES'), LIEN_STATUSES = listIn(app, 'LIEN_STATUSES');
+// the Parties Involved tab's roles and its rows' dropdowns (case-sections.js)
+const PARTY_ROLES = listIn(sections, 'ROLES'), PARTY_SEXES = listIn(sections, 'SEXES'), PARTY_YESNO = listIn(sections, 'YES_NO');
+const PARTY_STATEMENTS = [...(sections.match(/<label>Statement<\/label><select[^>]*>([\s\S]*?)<\/select>/) || ['', ''])[1].matchAll(/<option>([^<]*)</g)].map(m => m[1]);
+if (!PARTY_ROLES.length || !PARTY_SEXES.length || !PARTY_YESNO.length || !PARTY_STATEMENTS.length) bad('Could not read the Parties Involved roles / Sex / Yes-No / Statement options from case-sections.js; update check-data.mjs');
 const ADR = { type: listIn(sections, 'ADR_TYPES'), setBy: listIn(sections, 'ADR_SET_BY'), status: listIn(sections, 'ADR_STATUSES'), attend: listIn(sections, 'ADR_ATTEND') };
 if (!LIEN_TYPES.length || !LIEN_STATUSES.length) bad('Could not read LIEN_TYPES / LIEN_STATUSES from app.js; update check-data.mjs');
 // the Insurance tab's property damage claim card (keyed: its dropdowns are named by data-k) and the photo areas pd-photos.js draws
@@ -111,6 +120,32 @@ for (const c of MOCK_CASES) {
     }
     for (const f of c.facilities || []) if (!SPECIALTIES.includes(f.specialty)) bad(`${where}: facility specialty "${f.specialty}" isn't an option`);
     for (const k of ['dateOfLoss', 'sol']) if (c[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(c[k])) bad(`${where}: ${k} must be MM/DD/YYYY`);
+    // Parties Involved: the file's people (on a multi-vehicle file, the police report's units). The roles are the
+    // tab's own, because the conflict check reads them; a row with a bad role or dropdown would load blank.
+    for (const x of c.parties || []) {
+        const who = `${where}: party ${x.name || '(no name)'}`;
+        if (!String(x.name || '').trim()) bad(`${where}: a party row has no name`);
+        if (!PARTY_ROLES.includes(x.role)) bad(`${who}: role "${x.role}" isn't one the Parties Involved tab offers (${PARTY_ROLES.join(', ')})`);
+        if (x.sex && !PARTY_SEXES.includes(x.sex)) bad(`${who}: sex "${x.sex}" isn't an option (${PARTY_SEXES.join(', ')})`);
+        if (x.ems && !PARTY_YESNO.includes(x.ems)) bad(`${who}: EMS "${x.ems}" isn't an option (${PARTY_YESNO.join(', ')})`);
+        if (x.statement && !PARTY_STATEMENTS.includes(x.statement)) bad(`${who}: statement "${x.statement}" isn't an option (${PARTY_STATEMENTS.join(', ')})`);
+        if (x.dob && !/^\d{2}\/\d{2}\/\d{4}$/.test(x.dob)) bad(`${who}: date of birth must be MM/DD/YYYY`);
+        if (x.phone && !/^\(555\) 010-\d{4}$/.test(x.phone)) bad(`${who}: phone must be a fictional (555) 010-xxxx number`);
+    }
+    // The practice brief (⚖ Practice brief on the case banner): it is what the class works from, so an empty
+    // conflict roster or a step with nothing in it would show as a blank panel.
+    if (c.practice) {
+        const pr = c.practice;
+        if (!String(pr.brief || '').trim()) bad(`${where}: practice needs a brief`);
+        if (!(pr.conflicts || []).length) bad(`${where}: practice needs the conflict checks to run (practice.conflicts)`);
+        for (const x of pr.conflicts || []) for (const k of ['entity', 'role', 'why', 'expect']) if (!String(x[k] || '').trim()) bad(`${where}: practice conflict ${x.entity || '(no entity)'} has no ${k}`);
+        if (!(pr.steps || []).length) bad(`${where}: practice needs at least one step (practice.steps)`);
+        for (const x of pr.steps || []) {
+            if (!String(x.title || '').trim()) bad(`${where}: a practice step has no title`);
+            if (!(x.points || []).length) bad(`${where}: practice step "${x.title || ''}" has no points`);
+            if (!String(x.check || '').trim()) bad(`${where}: practice step "${x.title || ''}" doesn't say what good work looks like (check)`);
+        }
+    }
     if (!c.reception || !c.reception.verify || !(c.reception.calls || []).length) bad(`${where}: needs reception.verify and at least one reception call`);
     // a file in litigation names its defense counsel (the 📇 Contacts directory's opposing counsel)
     if (c.lit && !(c.counsel || []).length) bad(`${where}: in litigation but no counsel (the defense counsel: name, firm, represents, phone, email)`);

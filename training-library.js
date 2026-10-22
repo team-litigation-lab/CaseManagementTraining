@@ -30,6 +30,11 @@
    3. Caller scenarios (trainers/Admins only). For the front desk: how to
       verify the caller on this file, the calls it gets, the model handling
       and a reception call script for each, to run mock calls with trainees.
+   4. Practice brief (everyone, on a file that has one: mock-cases.js
+      `practice`). The activities this file is built for, in the order they
+      are done: the conflict checks to run and document before the file is
+      opened, what the case teaches, and what a trainer looks for. It opens
+      in the same side panel as the caller scenarios.
    Deep links: ?mock=MC-04 opens that case after sign-in (courses use it),
    ?library=1 opens the library.
    ========================================================= */
@@ -175,6 +180,7 @@
         (c.liens || []).forEach(x => bits.push(x.entity, x.file));
         (c.facilities || []).forEach(x => bits.push(x.name));
         if (c.pd) [c.pd.client, c.pd.tp].forEach(v => { if (v) bits.push(v.plate, v.owner, v.driver, v.make, v.model); });
+        (c.parties || []).forEach(x => bits.push(x.name, x.phone, x.dob, x.dl, x.plate, x.vehicleYmm, x.insurance, x.street));
         if (c.pdClaim) bits.push(c.pdClaim.claim, c.pdClaim.adjuster, c.pdClaim.carrier);
         (c.docs || []).forEach(x => bits.push(x.summary));
         return bits.filter(Boolean).join(' | ');
@@ -346,6 +352,19 @@
     .mcp-script .fdd-script{margin:8px 0 0}
     .mcp-scripts{border-top:2px solid #e2e8f0;margin:14px 0 12px;padding-top:12px}.mcp-scripts .mcp-sh{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#0f2148}
     .mcp-scripts p{font-size:11.5px;color:#64748b;margin:4px 0 8px}
+    .mpb-brief{background:#eff6ff;border-left:4px solid #2563eb;border-radius:6px;padding:9px 11px;font-size:12px;color:#1e3a5f;margin-bottom:12px;line-height:1.55}
+    .mpb-sh{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#0f2148;margin:14px 0 6px}
+    .mpb-cf{border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px;margin-bottom:8px}
+    .mpb-cf .who{font-size:12.5px;font-weight:800;color:#0f2148}
+    .mpb-cf .role{font-size:10.5px;font-weight:800;text-transform:uppercase;color:#64748b;margin:1px 0 5px}
+    .mpb-cf .why,.mpb-cf .expect{font-size:11.5px;color:#334155;line-height:1.5;margin-top:4px}
+    .mpb-cf .expect{color:#14532d;background:#f0fdf4;border-radius:6px;padding:6px 8px}
+    .mpb-step{border:1px solid #e2e8f0;border-left:4px solid #f97316;border-radius:8px;padding:10px 12px;margin-bottom:10px}
+    .mpb-step .t{font-size:13px;font-weight:800;color:#0f2148}
+    .mpb-step .why{font-size:11.5px;color:#64748b;margin:4px 0 6px;line-height:1.5}
+    .mpb-step ul{margin:0 0 6px;padding-left:18px}
+    .mpb-step li{font-size:12px;color:#334155;line-height:1.55;margin-bottom:4px}
+    .mpb-step .check{font-size:11.5px;color:#14532d;background:#f0fdf4;border-radius:6px;padding:7px 9px}
     `;
     document.head.appendChild(css);
 
@@ -554,6 +573,26 @@
         const box = $id('kx-pd-claim');
         if (box && c.pdClaim) Object.entries(c.pdClaim).forEach(([k, v]) => setVal(box.querySelector(`[data-k="${k}"]`), v));
     }
+    // Parties Involved: the file's people, one row each (on a multi-vehicle file, the police report's
+    // Unit 1 / Unit 2 / Unit 3 block). The roles are the tab's own, so the ⚖ conflict check (case-alerts.js)
+    // reads who is really on the other side off the rows.
+    function fillParties(c) {
+        (c.parties || []).forEach(x => {
+            if (typeof addParty !== 'function') return;
+            addParty(x.role); const row = $id('kx-parties') && $id('kx-parties').lastElementChild; if (!row) return;
+            set(row, 'Full Name', x.name); set(row, 'Phone', x.phone); set(row, 'Email / Address', x.contact);
+            set(row, 'Insurance Carrier', x.insurance); set(row, 'Vehicle / Location', x.vehicle);
+            set(row, 'Statement', x.statement); set(row, 'Represented By', x.represented);
+            set(row, 'Date of Birth', x.dob); set(row, 'Sex', x.sex); set(row, "Driver's License", x.dl);
+            set(row, 'Transported via EMS', x.ems);
+            set(row, 'Street Address', x.street); set(row, 'City', x.city);
+            set(row, 'State / ZIP', [x.state, x.zip].filter(Boolean).join(' '));
+            set(row, 'Vehicle Year', x.vehicleYmm); set(row, 'Vehicle Color', x.color); set(row, 'Plate', x.plate);
+            set(row, 'Vehicle Owner', x.owner); set(row, 'Vehicle Damage Status', x.damage);
+            set(row, 'Injury Details', x.injuries); set(row, 'General Notes', x.notes);
+        });
+        if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#kx-parties')) document.activeElement.blur();
+    }
     function fillAdr(c) {
         (c.adr || []).forEach(a => {
             if (typeof addAdr !== 'function') return;
@@ -572,6 +611,9 @@
     function addNewerParts(c, content) {
         const keyed = (content && content.keyed) || {};
         if (!keyed['kx-critical']) setVal(document.querySelector('#kx-critical [data-k="note"]'), c.critical);
+        // A save made before the file carried its parties has the tab saved empty: the rows come from the file
+        // again (and a save from then on keeps them), so an older save never hides the report's units.
+        if (!String((keyed['kx-parties'] || {}).html || '').trim()) fillParties(c);
         if (!keyed['kx-adr']) fillAdr(c);
         if (!keyed['kx-pd-claim']) fillPdClaim(c);
         if (String((content && content.html && content.html.liens) || '').includes('lien-more')) return;
@@ -614,7 +656,8 @@
         const inj = $id('kx-injury');
         if (inj && c.injury) Object.entries(c.injury).forEach(([k, v]) => setVal(inj.querySelector(`[data-k="${k}"]`), v));
 
-        // Police
+        // Parties Involved (the police report's units), then the report itself
+        fillParties(c);
         const pol = $id('pane-police');
         if (c.police) {
             set(pol, 'Responding Agency', c.police.agency); set(pol, 'Report Number', c.police.number);
@@ -1135,24 +1178,26 @@
         b.classList.add('open');
         const find = isAdmin() ? `<button onclick="openTrainingLibrary()">📚 Library</button>` : `<button onclick="focusCaseSearch()">🔍 Search cases</button>`;
         const calls = isAdmin() ? `<button onclick="openCallsPanel()">☎ Caller scenarios</button>` : '';   // trainers only
+        // ⚖ Practice brief: the activities this file is built for. Trainees get it too — it is the brief, not the key.
+        const brief = (c.practice ? `<button onclick="openPracticePanel()" title="What this file is for: the conflict checks, what it teaches, and what good work looks like">⚖ Practice brief</button>` : '');
         const close = `<button onclick="closeMockCase()">✕ Close</button>`;
         const ed = edits[c.id];
         const edNote = isAdmin() && ed ? `<span class="mb-ed">✎ Edited by ${esc(ed.updatedBy || 'an Admin')}${ed.updatedAt ? ' · ' + esc(ed.updatedAt) + ' UTC' : ''}</span>` : '';
         const who = `<b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)}`;
         if (mockEditing) {   // trainers: the library case, open to edit
             b.innerHTML = `<span class="mb-tag edit">TRAINING LIBRARY · EDITABLE · ${esc(fileRef(c))}</span><span>${who} — edit it like any case. <b>Save</b> saves it to the library for everyone; trainees work on it in their program's role. The practice calls on this file keep their own answers.</span>${edNote}<span class="mb-sp"></span>
-               ${calls}<button class="pri" onclick="saveLibraryEdit()">💾 Save to the library</button><button onclick="cancelLibraryEdit()">↺ Undo my changes</button>${ed ? `<button onclick="restoreLibraryOriginal()">↺ Restore the original</button>` : ''}${find}${close}`;
+               ${brief}${calls}<button class="pri" onclick="saveLibraryEdit()">💾 Save to the library</button><button onclick="cancelLibraryEdit()">↺ Undo my changes</button>${ed ? `<button onclick="restoreLibraryOriginal()">↺ Restore the original</button>` : ''}${find}${close}`;
             return;
         }
         if (mockMine) {   // a trainee, in their program's role
             const p = currentProgram();
             b.innerHTML = `<span class="mb-tag edit">CASE FILE · ${esc(fileRef(c))}</span><span>${who} — as <b>${esc(programLabel(p))}</b> you can edit: ${esc(areaList(p))} (✎ tabs). The rest is view only. <b>Save Case</b> saves your work on this file as your own case; reopen the file any time to carry on.</span><span class="mb-sp"></span>
-               ${programSelect()}<button onclick="mockStartOver()" title="The file as it is, again (Save Case then replaces your saved work)">↺ Start over</button>${find}${close}`;
+               ${brief}${programSelect()}<button onclick="mockStartOver()" title="The file as it is, again (Save Case then replaces your saved work)">↺ Start over</button>${find}${close}`;
             return;
         }
         if (isAdmin()) {   // a trainer whose library version couldn't load: view only for now
             b.innerHTML = `<span class="mb-tag">TRAINING LIBRARY · ${esc(fileRef(c))}</span><span>${who} — view only for now; you can add Notes and Tasks.</span>${edNote}<span class="mb-sp"></span>
-               ${calls}<button class="pri" onclick="openMockCase('${c.id}')">✎ Reopen to edit</button>${find}${close}`;
+               ${brief}${calls}<button class="pri" onclick="openMockCase('${c.id}')">✎ Reopen to edit</button>${find}${close}`;
             return;
         }
         const why = viewReason === 'drill' ? 'view only during the drill; look things up the way you would on a live call'
@@ -1160,7 +1205,7 @@
             : currentProgram() ? `view only for ${esc(programLabel(currentProgram()))}: log the calls you take in Notes and Tasks`
             : 'view only until you choose your program (it decides what you can edit); you can add Notes and Tasks now';
         b.innerHTML = `<span class="mb-tag">CASE FILE · ${esc(fileRef(c))}</span><span>${who} — ${why}.</span><span class="mb-sp"></span>
-               ${viewReason === 'drill' ? '' : programSelect()}${find}${close}`;
+               ${brief}${viewReason === 'drill' ? '' : programSelect()}${find}${close}`;
     }
 
     window.openMockCase = function (id, opts) {
@@ -1254,6 +1299,31 @@
         if (typeof updatePhaseDisplay === 'function') updatePhaseDisplay('INTAKE');
         if (typeof generateCaseId === 'function') generateCaseId();
         if (typeof showTab === 'function') showTab('profile');
+    };
+
+    /* ---------- ⚖ practice brief side panel (everyone, on a file that has one) ---------- */
+    // mock-cases.js `practice`: what this file is built to practise, in the order the work is done. It is the
+    // brief, not the trainer's key: the caller scenarios and the call scripts stay with Admins.
+    window.openPracticePanel = function () {
+        const c = mockId && findCase(mockId); const p = $id('mock-calls-panel'); if (!c || !p || !c.practice) return;
+        const pr = c.practice;
+        const conflicts = (pr.conflicts || []).map(x => `<div class="mpb-cf">
+            <div class="who">${esc(x.entity)}</div><div class="role">${esc(x.role)}</div>
+            ${x.why ? `<div class="why">${esc(x.why)}</div>` : ''}
+            ${x.expect ? `<div class="expect">${esc(x.expect)}</div>` : ''}</div>`).join('');
+        const steps = (pr.steps || []).map(x => `<div class="mpb-step">
+            <div class="t">${esc(x.icon || '')} ${esc(x.title)}</div>
+            ${x.why ? `<div class="why">${esc(x.why)}</div>` : ''}
+            ${(x.points || []).length ? `<ul>${x.points.map(q => `<li>${esc(q)}</li>`).join('')}</ul>` : ''}
+            ${x.check ? `<div class="check"><b>Done well:</b> ${esc(x.check)}</div>` : ''}</div>`).join('');
+        p.innerHTML = `<div class="mcp-h"><div><div style="font-size:10px;color:#93c5fd;font-weight:800;letter-spacing:1px">${esc(fileRef(c))} · PRACTICE BRIEF</div><b>${esc(c.client.name)}</b></div>
+            <button onclick="closeCallsPanel()" style="background:none;border:1px solid #334155;color:#fff;border-radius:6px;padding:4px 9px;cursor:pointer">✕</button></div>
+            <div class="mcp-b">
+            ${pr.brief ? `<div class="mpb-brief">${esc(pr.brief)}</div>` : ''}
+            ${conflicts ? `<div class="mpb-sh">⚖ Conflict checks to run and document before the file is opened</div>${conflicts}` : ''}
+            ${steps ? `<div class="mpb-sh">📘 The activities, in order</div>${steps}` : ''}
+            </div>`;
+        p.classList.add('open'); p.setAttribute('aria-hidden', 'false');
     };
 
     /* ---------- caller scenarios side panel (trainers/Admins only) ---------- */

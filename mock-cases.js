@@ -42,6 +42,19 @@
    surgery (each one of the card's options), prior and details. Only what the
    file says is filled in.
 
+   `parties` (optional) fills the Parties Involved tab, one row per person: role (one of
+   the tab's roles), name, phone, contact (email or mailing address), insurance (carrier and
+   claim #), vehicle (the Vehicle / Location line), statement, represented, dob, sex, dl,
+   ems, street, city, state, zip, vehicleYmm, color, plate, owner, damage, injuries and
+   notes. On a multi-vehicle file this is the police report's Unit 1 / Unit 2 / Unit 3 block,
+   so the ⚖ conflict check (case-alerts.js) reads the real roles off the tab. A case saved
+   before the file had parties gets them when it opens, and keeps its own rows if it has any.
+
+   `practice` (optional) is the brief the class works from, shown by ⚖ Practice brief on the
+   case banner (trainers and trainees alike): { brief, conflicts: [{ entity, role, why,
+   expect }], steps: [{ icon, title, why, points: [...], check }] }. It is keyed to the facts
+   above, so a changed fact has to be changed in both places.
+
    Each case carries a `reception` block: how to verify the caller and
    the calls the front desk is likely to get on that file, with the
    model handling. Other programs use the same cases for their own
@@ -2569,6 +2582,155 @@ const MOCK_CASES = [
         verify: 'Cian Masserene · DOB 03/24/1970 · 3401 Old Mill Road or SSN last 4 (1388). Only the client is authorized.',
         calls: [
             { from: 'Irene Park, clerk at Riverton County State Court (court official)', ask: '"The court needs the plaintiff at a status conference next Tuesday on Masserene v. Kestrel Logistics. Is Mr. Masserene in town?"', handle: 'Court calls are urgent: route now. Don\'t say where the plaintiff is (the note that he\'s out of the country is internal). Transfer to Atty. Brooks (ext 202, available) or Janelle Price (ext 221). Log a Note.' }
+        ]
+    }
+},
+{
+    // RPD-26-018842 — the multi-party file. One at-fault driver, two damaged vehicles, one set of limits.
+    // Every practice activity on this file is keyed to the police report: `parties` is the report's Unit 1 /
+    // Unit 2 / Unit 3 block (identity, address, vehicle, damage and tow, carrier), the Insurance and Property
+    // Damage tabs carry the same carriers and policy numbers, and `practice` is the brief the class works from
+    // (⚖ Practice brief on the case banner). Change a fact here and change it in `practice` too.
+    // This is NOT the "John Doe v. Apex Delivery Services" case summary used by the Case Management call line
+    // (call-packs.js): a different John Doe, a different crash and a different date of birth, on purpose.
+    id: 'MC-53', caseNumber: 'LSH-2026-MVA-902573', level: 'Advanced', programs: ['reception', 'intake', 'cm', 'pd'],
+    summary: 'Four-way stop, three units: the at-fault truck hit a third party and pushed it into our client\'s parked, unoccupied car. Conflict checks on six entities, one per-accident limit shared by more than one claimant, and a representation decision on the Unit 2 driver.',
+    client: { name: 'John Doe', phone: '(555) 010-9026', email: 'john.doe@example.com', dob: '04/22/1982', ssn: 'XXX-XX-9026',
+        address: '2214 Maple Hollow Rd, Riverton, GA 30301',
+        emergency: { name: 'Jane Doe', phone: '(555) 010-9027', relationship: 'Wife' },
+        employment: { status: 'Employed', employer: 'Riverton Logistics Group', title: 'Warehouse Supervisor' } },
+    caseType: 'MVA', phase: 'Intake', attorney: 'Atty. Marcus Reyes', caseManager: 'Priya Natarajan',
+    dateOfLoss: '02/06/2026', sol: '02/06/2028', target: '',
+    narrative: 'At about 7:10 AM on 02/06/2026, at the four-way stop where Maple Hollow Rd meets Birch Ave, Unit 1 (Robert Smith, 2017 black Chevrolet Silverado 1500) disregarded the stop sign — the only contributing cause on the report (Code 04) — and struck Unit 2 (Kevin Alvarez, 2021 silver Ford Escape) on the right side, disabling it. Unit 2 was deflected into our client\'s Unit 3, a 2019 blue Honda Civic LX parked and unoccupied at the east curb of Birch Ave facing north, outside his home at 2214 Maple Hollow Rd; the Civic took a disabling left-side impact and Unit 2 a second impact to its left side. Our client was indoors and was neither in nor at the car, and reports no injury: on opening, his claim is property damage. The Unit 2 driver was injured. Liability is clear — only Unit 1 was cited.',
+    critical: 'Three units, one set of limits: Keystone\'s $50,000 per-accident BI limit and $25,000 property damage limit answer for every claimant out of this one crash. Unit 2\'s driver, Kevin Alvarez, is an injured third party the firm may offer to represent — the attorney decides, and only after the conflict check clears. Until then do not discuss his claim with our client, or our client\'s claim with him.',
+    injury: { primary: 'No injury claim on opening — the client was not in or at the vehicle', parts: '', type: '', surgery: 'No', prior: '',
+        details: 'The Civic was parked and unoccupied (per RPD-26-018842) and the client was indoors. Property damage only for now. Ask again at the first client call and amend the file if he reports any injury: it changes which coverages are in play and puts him in the per-accident BI limit with Mr. Alvarez.' },
+    police: { agency: 'Riverton Police Department', number: 'RPD-26-018842', officer: 'Ofc. M. Devlin #2274',
+        narrative: 'Report No. RPD-26-018842. 02/06/2026 at 07:10 AM, Maple Hollow Rd at Birch Ave (four-way stop). Contributing cause: Unit 1 (Smith) disregarded stop sign (Code 04). UNIT 1 — Robert Smith (DOB 07/19/1979, M), 118 Larkspur Ln, Riverton; DL S530-4419-7731C; 2017 black Chevrolet Silverado 1500, plate RKT-4471, owner same as driver; insured by Keystone Mutual Insurance, policy KMI-PA-7731045; moderate front / front-right damage, driven from the scene. UNIT 2 — Kevin Alvarez (DOB 11/03/1988, M), 47 Fenwick St, Riverton; DL A417-2203-8851C; 2021 silver Ford Escape, plate HMV-2318, owner same as driver; insured by Harbor Point Insurance, policy HPA-4402917; right side disabling, left side second impact; towed to Eastline Auto Body. UNIT 3 — owner John Doe, 2214 Maple Hollow Rd, Riverton; 2019 blue Honda Civic LX, plate JLD-9026, parked and unoccupied at the east curb of Birch Ave facing north; insured by Bluewater Auto Insurance, policy BWA-209-66184; left side disabling; towed by Riverton Towing. No citation to Unit 2 or Unit 3.' },
+    // The report's Unit 1 / Unit 2 / Unit 3 block, as the Parties Involved tab holds it. Unit 3's owner is the
+    // client, so he is the Client row; Unit 1's driver is the at-fault driver (the ⚖ conflict check reads this
+    // role); Unit 2's driver is another injured claimant, not someone on the other side of our client's claim.
+    parties: [
+        { role: 'Client', name: 'John Doe', phone: '(555) 010-9026', contact: 'john.doe@example.com', dob: '04/22/1982', sex: 'Male',
+            street: '2214 Maple Hollow Rd', city: 'Riverton', state: 'GA', zip: '30301',
+            insurance: 'Bluewater Auto Insurance · BWA-209-66184', vehicle: 'Unit 3 — 2019 Honda Civic LX (parked, unoccupied)',
+            vehicleYmm: '2019 Honda Civic LX', color: 'Blue', plate: 'JLD-9026', owner: 'John Doe (same as client)',
+            damage: 'Left side disabling · parked on the east curb of Birch Ave, facing north · towed by Riverton Towing',
+            ems: 'No', injuries: 'None reported — the client was indoors, not in or at the vehicle', statement: 'Not taken',
+            notes: 'Owner of Unit 3 and our client. The car was parked and unoccupied when Unit 2 was pushed into it. Property damage claim on opening; re-screen for injury at the first call.' },
+        { role: 'At-Fault Driver', name: 'Robert Smith', phone: '(555) 010-6630', contact: '118 Larkspur Ln, Riverton, GA 30301', dob: '07/19/1979', sex: 'Male',
+            dl: 'S530-4419-7731C', street: '118 Larkspur Ln', city: 'Riverton', state: 'GA', zip: '30301',
+            insurance: 'Keystone Mutual Insurance · KMI-PA-7731045 · claim KMI-26-018842', vehicle: 'Unit 1 — 2017 Chevrolet Silverado 1500',
+            vehicleYmm: '2017 Chevrolet Silverado 1500', color: 'Black', plate: 'RKT-4471', owner: 'Robert Smith (same as driver)',
+            damage: 'Moderate front / front-right damage · driven from the scene', ems: 'No', injuries: 'None reported on the report',
+            statement: 'Not taken', represented: 'Not known — all contact goes through Keystone Mutual',
+            notes: 'The only driver cited: disregarded the stop sign at the four-way stop (contributing cause Code 04). Owner and driver of Unit 1. His Keystone policy is the liability coverage both damaged vehicles look to.' },
+        { role: 'Other', name: 'Kevin Alvarez', phone: '(555) 010-5172', contact: '47 Fenwick St, Riverton, GA 30301', dob: '11/03/1988', sex: 'Male',
+            dl: 'A417-2203-8851C', street: '47 Fenwick St', city: 'Riverton', state: 'GA', zip: '30301',
+            insurance: 'Harbor Point Insurance · HPA-4402917', vehicle: 'Unit 2 — 2021 Ford Escape',
+            vehicleYmm: '2021 Ford Escape', color: 'Silver', plate: 'HMV-2318', owner: 'Kevin Alvarez (same as driver)',
+            damage: 'Right side disabling (first impact), left side second impact · towed to Eastline Auto Body',
+            ems: 'Yes', injuries: 'Transported from the scene; injuries reported on the report. We hold no records: he is not our client.',
+            statement: 'Not taken', represented: 'None known as of 02/09/2026 — confirm before any outreach',
+            notes: 'Unit 2\'s driver and owner: a third party struck by the same at-fault driver, not someone on the other side of our client\'s claim. Injured, so his bodily injury claim shares Keystone\'s per-accident BI limit with any other injured claimant, and his disabling property damage claim shares the property damage limit with our client\'s. The firm may evaluate offering him representation — attorney decision, after the conflict check. Do not discuss either claim with him until then.' }
+    ],
+    bi: [{ holder: 'Robert Smith', carrier: 'Keystone Mutual Insurance', policy: 'KMI-PA-7731045', claim: 'KMI-26-018842',
+        adjuster: 'Dana Whitfield', contact: '(555) 010-7702 · dwhitfield@keystonemutual.example.com', liability: 'Pending',
+        limits: '$25,000 per person / $50,000 per accident (BI) · $25,000 property damage' }],
+    pipum: [{ type: 'UM/UIM', holder: 'John Doe', carrier: 'Bluewater Auto Insurance', policy: 'BWA-209-66184', claim: 'Not opened',
+        adjuster: 'Not yet assigned', contact: '(555) 010-7815', limits: '$50,000 / $100,000 · collision ACV, $500 deductible' }],
+    liens: [],
+    facilities: [],
+    chrono: [],
+    treatmentNotes: 'No treatment and no providers: the client was not in the vehicle and reports no injury. If that changes, open the Treatment tab from the first visit and tell the attorney the same day — an injury claim puts him in the per-accident BI limit with the Unit 2 driver.',
+    pd: { client: { year: '2019', make: 'Honda', model: 'Civic LX', plate: 'JLD-9026', owner: 'John Doe', driver: 'None — parked and unoccupied' },
+        tp: { year: '2017', make: 'Chevrolet', model: 'Silverado 1500', plate: 'RKT-4471', owner: 'Robert Smith', driver: 'Robert Smith', insured: 'Yes',
+            carrierPolicy: 'Keystone Mutual Insurance · KMI-PA-7731045', driverPhone: '(555) 010-6630', driverInsurer: 'Keystone Mutual Insurance' } },
+    pdClaim: { against: 'At-fault party\'s carrier (property damage liability)', carrier: 'Keystone Mutual Insurance', claim: 'KMI-26-018842-PD',
+        adjuster: 'Renee Castellano', phone: '(555) 010-7401', email: 'rcastellano@keystonemutual.example.com', liability: 'Pending',
+        limit: '$ 25,000.00', deductible: '$ 500.00', rental: 'Not opened: the client was not driving the Civic and has a second car. Ask before assuming he needs one.',
+        estimate: '$ 9,480.00', outcome: 'Not inspected yet', status: 'Open', shop: '',
+        notes: 'The Civic was towed by Riverton Towing on 02/06/2026 and is still in their storage yard, where storage runs daily: book the inspection or get the car released this week. Keystone faces two property damage claims out of this one crash — our client\'s Civic and Unit 2\'s Escape, both disabling, both towed — against a single $25,000 property damage limit. Bluewater (BWA-209-66184) carries collision with a $500 deductible as the faster route if Keystone will not move; ask the attorney before choosing.' },
+    pdPhotos: [
+        { vehicle: 'client', area: 'left side', caption: 'The parked Civic: driver side caved in, door inoperable (disabling)' },
+        { vehicle: 'client', area: 'rear left', caption: 'Rear left quarter panel and wheel pushed in' },
+        { vehicle: 'other', area: 'front right', caption: 'The Silverado: front and front-right bumper, moderate' }
+    ],
+    lit: null,
+    finance: [{ date: '02/09/2026', staff: 'Records Specialist', desc: 'Police report fee (RPD-26-018842)', amount: '$ 15.00' }],
+    docs: [
+        { cat: 'Police Report', summary: 'RPD-26-018842 (Riverton PD, Ofc. M. Devlin #2274). Three units; Unit 1 cited for disregarding the stop sign (Code 04). The file\'s parties, vehicles, damage and carriers are keyed to this report.' },
+        { cat: 'Intake Documents', summary: 'Conflict check worksheet, run 02/09/2026 before the file was opened: John Doe, Robert Smith, Keystone Mutual, Kevin Alvarez, Harbor Point and Bluewater Auto. Results are in the Case Notes.' },
+        { cat: 'Case Files', summary: 'Signed retainer and HIPAA authorization (02/09/2026). Only the client is authorized to receive case information.' },
+        { cat: 'Property Damage', summary: 'Riverton Towing invoice and storage ledger for the Civic (towed 02/06/2026); scene and vehicle photos.' }
+    ],
+    notes: [
+        { date: '02/09/2026', staff: 'Intake Specialist', text: 'Conflict check run on all six entities before opening, against the case files and our own matters: John Doe (client / owner Unit 3) — no match. Robert Smith (at-fault driver, Unit 1) — no match; name checked both ways. Keystone Mutual Insurance (Unit 1 carrier) — no adverse representation. Kevin Alvarez (third-party driver, Unit 2) — no match, no prior or existing representation by this firm and no adverse interest found. Harbor Point Insurance (Unit 2 carrier) — no adverse representation. Bluewater Auto Insurance (Unit 3 carrier, our client\'s own) — no adverse representation. Cleared to open. Worksheet filed under Intake Documents.' },
+        { date: '02/09/2026', staff: 'Intake Specialist', text: 'Retainer and HIPAA signed. Only the client is authorized. He was indoors when the crash happened and reports no injury; the claim is property damage on opening. Asked him to call us if any injury shows up.' },
+        { date: '02/10/2026', staff: 'Case Manager', text: 'Keystone\'s limits confirmed from the declarations page: $25,000 per person / $50,000 per accident bodily injury, $25,000 property damage. Those limits are per accident, so every claimant out of this crash looks to the same money: Unit 2\'s driver is injured, and both his Escape and our client\'s Civic are disabling, towed property damage claims. Escalated to Atty. Reyes for the order we press the claims in.' },
+        { date: '02/10/2026', staff: 'Case Manager', text: 'Unit 2 driver Kevin Alvarez is an injured third party hit by the same at-fault driver. Conflict check on him came back clear and nobody appears to represent him. Referred to Atty. Reyes to decide whether to offer representation and, if so, to run the co-representation analysis and take informed consent in writing. No contact with Mr. Alvarez until the attorney says so; if he calls first, take a message only.' },
+        { date: '02/11/2026', staff: 'Case Manager', text: 'Civic still in Riverton Towing\'s storage yard; storage accrues daily. Keystone PD adjuster Renee Castellano has the claim but no inspection booked. Chasing. Bluewater collision ($500 deductible) is the fallback if Keystone stalls — attorney decision.' }
+    ],
+    tasks: [
+        { date: '02/10/2026', staff: 'Case Manager', text: 'Atty. Reyes: decide on offering representation to Kevin Alvarez (Unit 2), and the order the competing claims are pressed in against Keystone\'s per-accident limits.' },
+        { date: '02/11/2026', staff: 'Case Manager', text: 'Book the Keystone inspection of the Civic or get it released from Riverton Towing — storage is running daily.' },
+        { date: '02/11/2026', staff: 'Records Specialist', text: 'Request the certified copy of RPD-26-018842 and the Eastline Auto Body estimate on Unit 2 (property damage exposure against the same $25,000 limit).' }
+    ],
+    // The brief the class works from: ⚖ Practice brief on the case banner (training-library.js).
+    practice: {
+        brief: 'One at-fault driver, two damaged vehicles, one injured third party and a single set of limits. Work this file in the order below: conflict checks first, then the limits, then the representation decision on Unit 2, then the CMS entry. Every value you key comes from RPD-26-018842 — if it is not on the report or on a declarations page, it does not go in a field.',
+        conflicts: [
+            { entity: 'John Doe', role: 'Client · owner of Unit 3', why: 'Our own client: check him against the other side of every other file before we take him on.', expect: 'No match. If his name turned up as a party at fault on another file, the attorney decides before anything is said to him.' },
+            { entity: 'Robert Smith', role: 'At-fault driver · Unit 1', why: 'The person we are making a claim against. The firm cannot act against its own client.', expect: 'No match. Check the name written both ways ("Smith, Robert") and watch for a different Robert Smith — the date of birth (07/19/1979) decides.' },
+            { entity: 'Keystone Mutual Insurance', role: 'Unit 1 carrier (liability)', why: 'The carrier we will be negotiating against on both the BI and the property damage claim.', expect: 'No adverse representation. A carrier is not a person, so the CMS will not flag it: this one is checked by hand and written down.' },
+            { entity: 'Kevin Alvarez', role: 'Third-party driver · Unit 2', why: 'Injured by the same driver, and a person the firm may offer to represent. Check for any prior or existing representation by this firm and for any adverse interest before anyone speaks to him.', expect: 'No match and no representation found. He is not on the other side of our client\'s claim, so the CMS will not raise a flag for him — this check is the one the trainee has to remember.' },
+            { entity: 'Harbor Point Insurance', role: 'Unit 2 carrier', why: 'Unit 2\'s own carrier. Not a party to our client\'s claim, but it matters the moment the firm considers representing Mr. Alvarez.', expect: 'No adverse representation. Checked by hand and written down.' },
+            { entity: 'Bluewater Auto Insurance', role: 'Unit 3 carrier (our client\'s own)', why: 'Our client\'s own carrier: collision and UM/UIM may both be in play.', expect: 'No adverse representation. Checked by hand and written down.' }
+        ],
+        steps: [
+            { icon: '⚖', title: 'Run and document the conflict check before the file is opened', why: 'The check is worthless if nobody can show it was run. Six entities on this crash, and only two of them are the kind the CMS raises by itself.',
+                points: [
+                    'Search every one of the six names in the table above. Search the person both ways round and by date of birth where the report gives one.',
+                    'The CMS raises a flag by itself only for our client against another file\'s at-fault party, and for an at-fault party here who is a client elsewhere. Carriers and a third-party driver like Mr. Alvarez are checked by hand.',
+                    'Write the result of all six in one Case Note, named one by one, with the date you ran it — that note is the record.',
+                    'A possible match is not yours to decide: Escalate to attorney, leave the warning up, and open nothing until it is cleared.'],
+                check: 'A Case Note dated before the file was opened that names all six entities and says what each one came back as, plus the worksheet under Intake Documents.' },
+            { icon: '🧮', title: 'One set of limits, more than one claimant', why: 'Robert Smith\'s coverage is written per accident, not per claimant. Everyone hurt or damaged in this one crash looks to the same money, and the order the claims are pressed in changes what each one gets.',
+                points: [
+                    'Keystone KMI-PA-7731045: $25,000 per person / $50,000 per accident bodily injury, $25,000 property damage.',
+                    'Bodily injury: the $50,000 per-accident limit is shared by every injured claimant out of this crash. Mr. Alvarez (Unit 2) was transported from the scene, so his claim is on that limit already.',
+                    'Our client was not in or at the Civic and reports no injury, so on the report as written his claim is property damage only — he is not on the BI limit. The moment he reports an injury he is, alongside Mr. Alvarez, and the attorney has to be told the same day.',
+                    'Property damage: our client\'s disabling Civic and Unit 2\'s disabling Escape are both claims against the same $25,000 property damage limit. Two towed, disabling vehicles can exhaust it.',
+                    'When a limit may not stretch, the firm asks the carrier to confirm the limits in writing and to say what else is pending on them, and the attorney decides how to proceed. A case manager never tells a claimant what the limits mean for their share.'],
+                check: 'The trainee can say, from the file, which limit each claim sits on, who else is on it, and what would change if the client reported an injury — without giving an opinion on value.' },
+            { icon: '🤝', title: 'Offering representation to the Unit 2 driver', why: 'Mr. Alvarez was hurt by the same driver and appears to have nobody acting for him. The firm may want to help him — and the way that is handled is what keeps it proper.',
+                points: [
+                    'The decision is the attorney\'s. A case manager never offers representation, quotes a fee, or says whether somebody has a case: that is legal advice and giving it is the unauthorized practice of law.',
+                    'Nothing is said to Mr. Alvarez until the conflict check on him is clear and the attorney has approved the outreach. If he calls first, take his name and number, say the attorney will call him, and log it.',
+                    'Before the firm can act for both: the attorney looks at whether the two claims actually run against each other. Two claimants on one per-accident limit can compete for the same money, and that is a conflict the rules take seriously.',
+                    'If the attorney judges the firm can act for both anyway, each client is told in plain terms what the shared limit means for them, what the firm will and will not do if the limits run short, and that either of them can take their own lawyer instead — and each gives informed consent in writing before the second file is opened.',
+                    'Keep the two matters separate from the first day: separate files, separate Case Notes, and nothing from one client\'s file repeated to the other. Our client\'s claim is not discussed with Mr. Alvarez, and his is not discussed with our client.',
+                    'If the attorney cannot act for both, the proper answer is a referral out, not a quiet second file.'],
+                check: 'The trainee routes the whole question to the attorney, can name why two claimants on one limit is a conflict question, and knows that written informed consent comes before the second file — not after.' },
+            { icon: '⌨', title: 'Key the CMS from the report, value for value', why: 'The whole file is built from RPD-26-018842. A plate or a policy number typed from memory is the error nobody finds until the demand goes out.',
+                points: [
+                    'Parties Involved carries all three units: full name, date of birth, sex, driver\'s licence, phone, street, city, state and ZIP, and the vehicle year, make, model, colour, plate and registered owner.',
+                    'Unit 1 (Robert Smith): moderate front / front-right damage; driven from the scene.',
+                    'Unit 2 (Kevin Alvarez): right side disabling on first impact, left side second impact; towed to Eastline Auto Body.',
+                    'Unit 3 (John Doe, our client): left side disabling; parked at the east curb of Birch Ave facing north; towed by Riverton Towing.',
+                    'Insurance goes to the right unit and nowhere else: Keystone Mutual · KMI-PA-7731045 on Unit 1 (the BI and property damage liability claims), Harbor Point · HPA-4402917 on Unit 2\'s row only, Bluewater Auto · BWA-209-66184 on Unit 3 as our client\'s own policy.',
+                    'The Police Report tab takes the report number, the date and time, the agency, the officer and the contributing cause exactly as written: RPD-26-018842, 02/06/2026 07:10 AM, Maple Hollow Rd at Birch Ave, four-way stop, Unit 1 disregarded stop sign (Code 04).',
+                    'Read every number back against the report before you save. Nothing that is not on the report or a declarations page goes in a field.'],
+                check: 'Every field on Parties Involved, Police Report, Insurance and Property Damage matches the report character for character, and the three carriers are on the three right units.' }
+        ]
+    },
+    reception: {
+        verify: 'John Doe · DOB 04/22/1982 · address 2214 Maple Hollow Rd or SSN last 4 (9026). Only the client is authorized. Not the John Doe of the Apex Delivery case summary — check the date of birth and the date of the accident (02/06/2026).',
+        calls: [
+            { from: 'Kevin Alvarez (the Unit 2 driver — not a client)', ask: '"The police report says your office is on this. I got hurt in that crash too. Do I have a case? Can you take mine?"', handle: 'Do not answer either question: whether he has a case and whether the firm will take it are the attorney\'s to answer, and answering them yourself is the unauthorized practice of law. Say nothing about our client\'s claim. Take his name, callback number and the best time, say Atty. Reyes (ext 201) will call him, and log a Note for the attorney and Priya Natarajan (ext 311) — the file already has this referred to Atty. Reyes.' },
+            { from: 'Dana Whitfield, Keystone Mutual (the at-fault carrier\'s BI adjuster)', ask: '"I have two claimants on this one accident and $50,000 to go round. Is your client hurt or not?"', handle: 'The at-fault carrier is on the other side: no injury or treatment details, and no comment on the other claimant. Transfer to Priya Natarajan (ext 311) or Atty. Reyes (ext 201), or take a message. Log a Note — the limits question is already with the attorney.' },
+            { from: 'Riverton Towing', ask: '"The blue Civic from Birch Ave is still on our lot and storage is running. Who is paying?"', handle: 'Urgent: storage runs daily and this is already a task on the file. Do not promise payment. Take the lot location, the daily rate and the running total, and route it to Priya Natarajan (ext 311) now. Log a Note.' },
+            { from: '"A neighbour on Birch Ave"', ask: '"I saw the whole thing. Is John suing? How much is he getting?"', handle: 'Not authorized: only the client is on file. Do not confirm the firm represents him. A witness is worth having, though: take the caller\'s name and number as a possible witness and pass it to the case manager. Share nothing.' }
         ]
     }
 }

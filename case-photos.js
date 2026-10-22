@@ -85,7 +85,12 @@
             photos: [{ vehicle: 'client', area: 'rear', caption: 'The Pilot: tailgate and rear bumper pushed in' }, { vehicle: 'other', area: 'front', caption: "Gary Lund's F-250: front bumper and grille" }] },
         'MC-50': { type: 't-bone', place: 'Main St & 3rd', setting: 'intersection', signal: 'red', client: { color: 'white', hit: 'left side' }, other: { color: 'green', hit: 'front' } },
         'MC-51': { type: 'backing', place: 'Route 9 (pulling out of a gas station)', setting: 'gas station', client: { color: 'gray', hit: 'right side' }, other: { color: 'red', hit: 'rear' } },
-        'MC-52': { type: 'rear-end', place: 'I-85', setting: 'highway', client: { color: 'blue', hit: 'rear' }, other: { color: 'white', hit: 'front' } }
+        'MC-52': { type: 'rear-end', place: 'I-85', setting: 'highway', client: { color: 'blue', hit: 'rear' }, other: { color: 'white', hit: 'front' } },
+        // RPD-26-018842: Unit 1 ran the stop sign into Unit 2's right side; Unit 2 was pushed into the client's
+        // parked Civic (Unit 3). client = Unit 3, other = Unit 1 (the file's pd block), third = Unit 2.
+        'MC-53': { type: 't-bone', place: 'Maple Hollow Rd & Birch Ave', setting: 'intersection', signal: 'stop',
+            client: { color: 'blue', hit: 'left side' }, other: { color: 'black', hit: 'front right' },
+            third: { body: 'suv', label: '2021 Ford Escape · Kevin Alvarez (Unit 2)', color: 'silver', hit: 'right side' } }
     };
 
     /* ---------- paint ---------- */
@@ -506,7 +511,7 @@ ${finish(id, W, H)}`}
     const WOMEN = new Set(['MC-01', 'MC-03', 'MC-05', 'MC-07', 'MC-09', 'MC-10', 'MC-11', 'MC-13', 'MC-15', 'MC-16', 'MC-18', 'MC-21', 'MC-22', 'MC-27', 'MC-29',
         'MC-31', 'MC-33', 'MC-35', 'MC-38', 'MC-39', 'MC-40', 'MC-44', 'MC-46', 'MC-47', 'MC-48']);
     const MEN = new Set(['MC-02', 'MC-04', 'MC-06', 'MC-08', 'MC-12', 'MC-14', 'MC-17', 'MC-19', 'MC-20', 'MC-23', 'MC-24', 'MC-25', 'MC-26', 'MC-28', 'MC-30',
-        'MC-32', 'MC-34', 'MC-36', 'MC-37', 'MC-41', 'MC-42', 'MC-43', 'MC-45', 'MC-49', 'MC-50', 'MC-51', 'MC-52']);
+        'MC-32', 'MC-34', 'MC-36', 'MC-37', 'MC-41', 'MC-42', 'MC-43', 'MC-45', 'MC-49', 'MC-50', 'MC-51', 'MC-52', 'MC-53']);
     const SKIN_NAMES = ['fair', 'light', 'light olive', 'olive', 'light brown', 'brown', 'dark brown'];
     const SHIRTS = [[[215, 40, 30], 'navy blue'], [[0, 0, 92], 'white'], [[150, 25, 30], 'dark green'], [[350, 35, 32], 'burgundy'], [[210, 10, 40], 'charcoal gray'], [[30, 30, 40], 'brown']];
     function looksOf(mc) {
