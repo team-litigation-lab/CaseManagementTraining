@@ -374,7 +374,9 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     for (let i = 1; i <= 6; i++) {
         await trainee.waitForTimeout(1300 + Math.round(Math.random() * 1000));   // (not in step with the Admin's reads)
         const mark = ` k${i}`, at = Date.now();
-        await trainee.keyboard.type(mark);
+        // one change, timed from when it is made: typed key by key, a send could go between the keys and carry
+        // only part of the mark, and the rest would wait out the page's once-a-second gap between changes
+        await trainee.keyboard.insertText(mark);
         const seen = await inFrame((m) => { const r = { ok: ((document.getElementById('client-name-field') || {}).textContent || '').includes(m) }; return r; }, mark.trim(), 6000, 40);
         M.lag.push(seen.ok ? Date.now() - at : null);
         if (process.env.LV_DEBUG) { const ts = log.find(x => x.c === tia && x.path === '/api/live-screen' && x.at >= at), ta = ts && log.find(x => x.c === ann && x.path === '/api/live-view' && x.at >= ts.at + ts.ms); console.log('lag', M.lag[M.lag.length - 1], 'sent +' + (ts ? ts.at - at : '?') + ' (' + (ts && ts.ms) + ' ms)', 'read +' + (ta ? ta.at - at : '?') + ' (' + (ta && ta.ms) + ' ms)', JSON.stringify(await admin.evaluate(() => lshLiveViewStats()))); }
