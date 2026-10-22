@@ -232,8 +232,30 @@ const traineeTicket = (o) => mint({ first: 'Tia', last: 'Trainee', b: 'B300926' 
         await ctx.close();
     }
 
+    // Single sign-on: locked to the Portal, a trainee who opens the CMS with no ticket and no session is sent to the Portal's
+    // launch (which signs them back in with their account), at most once in two minutes; the Trainee tab never asks for a username.
+    {
+        const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+        const page = await ctx.newPage();
+        page.on('dialog', d => d.accept());
+        const launches = [];
+        await page.route('**/api/**', bridge(ctx, env));
+        await page.route(/cdn\.tailwindcss\.com|html2pdf/, rr => rr.fulfill({ contentType: 'text/javascript', body: '' }));
+        await page.route(/cm-training-activity\.pages\.dev\/api\/launch/, rr => { launches.push(rr.request().url()); return rr.fulfill({ contentType: 'text/html', body: '<p>Portal</p>' }); });
+        await page.goto(base + '?drill=1', { waitUntil: 'load' }); await page.waitForTimeout(2200);
+        if (launches.length !== 1 || !/[?&]tool=cms&to=drill$/.test(launches[0] || '')) fail(`opening the CMS with no ticket should go to the Portal's launch once, keeping the drill (${JSON.stringify(launches)})`);
+        await page.goto(base, { waitUntil: 'load' }); await page.waitForTimeout(2200);
+        if (launches.length !== 1) fail(`a second visit within two minutes bounced to the Portal again (${launches.length} launches)`);
+        const tab = await page.evaluate(() => { showLoginView(); switchPortalTab('Trainee'); const vis = (sel) => { const el = document.querySelector(sel); return !!(el && el.offsetParent); };
+            return { username: vis('#login-username'), register: vis('.auth-register-link'), portal: vis('#sso-trainee .sso-go'), href: (document.querySelector('#sso-trainee .sso-go') || {}).href || '' }; });
+        if (tab.username || tab.register || !tab.portal || !/api\/launch\?tool=cms/.test(tab.href)) fail(`locked to the Portal, the Trainee tab should offer only the Portal (no username, no registration): ${JSON.stringify(tab)}`);
+        const admin = await page.evaluate(() => { switchPortalTab('Admin'); return !!(document.getElementById('login-password') || {}).offsetParent; });
+        if (!admin) fail('the Admin tab lost its admin password');
+        await ctx.close();
+    }
+
     await browser.close(); server.close();
     if (failures.length) { console.error(failures.map((m, i) => `${i + 1}. ${m}`).join('\n')); process.exit(1); }
-    console.log(`Training tools open signed in: ticket checked here (signature, expiry and system tickets refused; a trainer's admin ticket signs them in once); ${LANDINGS.length} landing pages open with no log-in form.`);
+    console.log(`Training tools open signed in: ticket checked here (signature, expiry and system tickets refused; a trainer's admin ticket signs them in once); ${LANDINGS.length} landing pages open with no log-in form; with no ticket, single sign-on through the Portal, never a username.`);
     process.exit(0);
 })().catch(e => { console.error(e); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); });

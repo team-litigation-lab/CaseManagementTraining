@@ -8,15 +8,6 @@
 //   - Identity has "Other Pertinent Info · Non-Economic Damages", saved by id (keyed) and loaded back; a new case starts it empty;
 //   - Litigation has an Opposing Counsel section: + Add Opposing Counsel adds an attorney (name, firm, who they represent,
 //     phone, email, assistant, notes), saved and loaded back; a library file in litigation shows its defense counsel;
-//   - the fields added for the case file — Employment Details (employer address, pay rate and period,
-//     previous employer, the physical demands of the job for the client and the driver, time missed),
-//     Primary Injury (treatment, medications, hospital, ambulance), "Did the client call their
-//     insurance?" with the conversation, Social Media & Communications, and each party's Party Details
-//     (date of birth, sex, licence, full address, vehicle, damage, EMS, injuries) — are each inside a
-//     [data-keyed] block, save under their own names and come back; a case saved before them opens with
-//     them empty; a party row saved before Party Details is given it, once, without losing anything; the
-//     intake writes them scoped to the block ("Statement" shadows "State" in the row); and the Profile
-//     cards CSS places by nth-child stay in their places;
 //   - each demand has ⬆ Upload Demand: the letter is uploaded (/api/upload) and linked on the demand, saved with it, survives
 //     the cleaning a saved case goes through, can be removed; a demand saved before this gets the upload box; a file over
 //     2 MB is refused; on a view-only file the upload and remove buttons are hidden.
@@ -173,111 +164,48 @@ let base;
         return { rows: document.querySelectorAll('#kx-demand .kx-row').length, boxes: document.querySelectorAll('#kx-demand .kx-row .kx-dl-btn').length, hadBox: /kx-dl/.test(html) };
     });
     if (legacy.hadBox || legacy.rows !== 1 || legacy.boxes !== 1) fail(`a demand saved before the upload box should get one: ${JSON.stringify(legacy)}`);
-    await page.close();
 
-    // ---- the fields added for the case file: Employment Details, Primary Injury, the client's own
-    //      insurer, Social Media & Communications and Party Details. Each is inside a [data-keyed]
-    //      block and saved under its own name (the positional count above proves none was added to
-    //      the positional fields), so a case saved before them opens unchanged and shows them empty.
-    page = await openPage(browser, '', uploads);
-    const WANT = {
-        'kx-employment': { 'employer-address': '41 Industrial Way, Tampa, FL 33602', 'pay-rate': '$22.50 / hour', 'pay-period': 'Hourly',
-            'previous-employer': 'Gulf Coast Freight, 2022-2024', 'demands-client': 'Lifting 50 lb totes, standing all shift',
-            'demands-driver': "Driving a box truck, loading by hand", 'time-missed': '3 weeks off, light duty since 03/14' },
-        'kx-injury': { treatment: 'Chiro 3x a week since 02/10, PT to start', medications: 'Flexeril 10mg, Dr. Patel',
-            hospital: 'Yes', 'hospital-ambulance': 'Yes \u2014 ambulance / EMS' },
-        'kx-own-insurer': { called: 'Yes', conversation: 'Called GEICO 02/07, spoke to Dana, gave claim 0456-22-918, told to get an estimate.' },
-        'kx-social': { posts: 'Two photos at a barbecue 02/14', advice: 'Told 02/08 to stop posting about the crash', notes: 'Instagram @jdoe, public' }
-    };
-    const PARTY_FIELDS = ['Date of Birth', 'Sex', "Driver's License Number", 'DL State', 'Street Address', 'City', 'State', 'Zip Code',
-        'Vehicle Year', 'Vehicle Make', 'Vehicle Model', 'Color', 'Plate Number', 'Vehicle Owner', 'Vehicle Damage Status',
-        'Vehicle Damage Location', 'Transported via EMS / Ambulance?', 'Injury Details'];
-
-    const added = await page.evaluate((WANT) => {
-        const out = [];
-        const set = (el, v) => { if (el.tagName === 'SELECT') el.value = v; else el.textContent = v; };
-        const get = (el) => el.tagName === 'SELECT' ? el.value : el.textContent.trim();
-        showTab('profile');
-        Object.keys(WANT).forEach(id => {
-            const box = document.getElementById(id);
-            if (!box) { out.push(`${id} (the whole block) is missing`); return; }
-            if (!box.hasAttribute('data-keyed')) out.push(`${id} is not [data-keyed]: its fields would be saved by position`);
-            Object.keys(WANT[id]).forEach(k => {
-                const el = box.querySelector(`[data-k="${k}"]`);
-                if (!el) { out.push(`${id} has no field ${k}`); return; }
-                set(el, WANT[id][k]);
-            });
-        });
-        // save the case the way the app does, clear the editor, then load it back
-        const content = JSON.parse(JSON.stringify(buildCaseContentPayload()));
-        blankCaseEditorContent(); applyCaseContentToDOM(content);
-        Object.keys(WANT).forEach(id => {
-            const box = document.getElementById(id); if (!box) return;
-            Object.keys(WANT[id]).forEach(k => {
-                const el = box.querySelector(`[data-k="${k}"]`); if (!el) return;
-                if (get(el) !== WANT[id][k]) out.push(`${id}.${k}: saved "${WANT[id][k]}", came back "${get(el)}"`);
-            });
-        });
-        return out;
-    }, WANT);
-    added.forEach(m => fail(`a field added for the case file: ${m}`));
-
-    // a case saved before these blocks existed opens with them empty, and its own fields in place
-    const before = await page.evaluate((OLD) => {
-        blankCaseEditorContent(); applyCaseContentToDOM(OLD);
-        const empty = ['kx-employment', 'kx-own-insurer', 'kx-social'].every(id =>
-            [...document.querySelectorAll(`#${id} [data-k]`)].every(el => !(el.tagName === 'SELECT' ? el.value : el.textContent.trim())));
-        return { empty, name: (document.getElementById('client-name-field') || {}).textContent };
-    }, OLD);
-    if (!before.empty) fail('a case saved before these blocks opened with something in them');
-
-    // Party Details: on a new row, and given to a row saved before them
-    const parties = await page.evaluate((PARTY_FIELDS) => {
-        const out = [];
-        showTab('parties');
-        document.getElementById('kx-parties').innerHTML = '';
-        addParty('Passenger');
-        const row = document.querySelector('#kx-parties .kx-row');
-        const labels = [...row.querySelectorAll('label')].map(l => l.textContent.trim());
-        PARTY_FIELDS.concat(['General Notes']).forEach(f => { if (!labels.includes(f)) out.push(`a new party row has no "${f}"`); });
-        // the intake fills these through the block, not the row: fieldFor matches a label by its start,
-        // and the row above has a "Statement" dropdown that "State" finds first
-        const ff = window.caseFill && window.caseFill.fieldFor, more = row.querySelector('.party-more');
-        if (!ff) out.push('window.caseFill.fieldFor is not available');
-        else {
-            const inRow = ff(row, 'State'), inMore = ff(more, 'State');
-            if (inRow && inRow.tagName !== 'SELECT') out.push('"Statement" no longer shadows "State" in a party row: the intake could write the state unscoped now');
-            if (!inMore || inMore.tagName === 'SELECT') out.push('"State" inside Party Details does not resolve to the address field');
-            if (!ff(more, 'DL State')) out.push('"DL State" does not resolve inside Party Details');
-        }
-        // a row saved before Party Details: the old markup, restored from its own HTML
-        document.getElementById('kx-parties').innerHTML =
-            '<div class="kx-row"><div><label>Role</label><select data-role><option selected>Witness</option></select></div>' +
-            '<div><label>Full Name</label><div contenteditable="true">Ana Reyes</div></div></div>';
-        upgradePartyRows();
-        const old = document.querySelector('#kx-parties .kx-row');
-        const after = [...old.querySelectorAll('label')].map(l => l.textContent.trim());
-        PARTY_FIELDS.forEach(f => { if (!after.includes(f)) out.push(`a party row saved earlier was not given "${f}"`); });
-        if (old.querySelector('[contenteditable]').textContent !== 'Ana Reyes') out.push('upgrading a saved party row lost what was in it');
-        if (old.querySelector('select[data-role]').value !== 'Witness') out.push('upgrading a saved party row lost its role');
-        upgradePartyRows();
-        if (old.querySelectorAll('.party-more').length !== 1) out.push('a party row was given Party Details twice');
-        return out;
-    }, PARTY_FIELDS);
-    parties.forEach(m => fail(m));
-
-    // the Profile cards CSS places by nth-child are still in their own places
-    const places = await page.evaluate(() => {
-        showTab('profile');
-        const at = (sel) => { const el = document.querySelector(sel); if (!el) return null; const c = getComputedStyle(el); return `${c.gridColumnStart}/${c.gridRowStart}`; };
-        const head = (sel) => { const el = document.querySelector(sel), h = el && el.querySelector('.section-head'); return h ? h.textContent.trim() : null; };
-        return { identity: head('#profile-grid > div:nth-child(1) > .pdf-card:nth-child(1)'), emergency: head('#profile-grid > div:nth-child(1) > .pdf-card:nth-child(2)'),
-            authorized: head('#profile-grid > div:nth-child(1) > .pdf-card:nth-child(3)'), social: at('#kx-social'), injury: at('#kx-injury') };
+    // ---- the newer fields: Employment Details, Primary Injury, the insurance call, Social Media & Communications, Parties Involved ----
+    const more = await page.evaluate(() => {
+        blankCaseEditorContent(); showTab('profile');
+        const set = (sel, v) => { const el = document.querySelector(sel); if (!el) return false; if (el.tagName === 'SELECT') el.value = v; else el.innerText = v; return true; };
+        const ok = [set('#kx-employment [data-k="employer-address"]', '100 Peachtree St, Atlanta, GA 30303'), set('#kx-employment [data-k="pay-rate"]', '$22.50 / hour'),
+            set('#kx-employment [data-k="previous-employer"]', 'Home Depot, 2019–2023'), set('#kx-employment [data-k="demands-client"]', 'Lifts 50 lb'),
+            set('#kx-employment [data-k="demands-driver"]', 'n/a'), set('#kx-employment [data-k="time-missed"]', '9 work days'),
+            set('#kx-injury [data-k="treatment"]', 'Chiropractic 3x a week'), set('#kx-injury [data-k="medications"]', 'Cyclobenzaprine 10 mg'),
+            set('#kx-injury [data-k="hospital"]', 'Yes'), set('#kx-injury [data-k="ambulance"]', 'Yes, by ambulance'),
+            set('#kx-ins-call [data-k="called"]', 'Yes'), set('#kx-ins-call [data-k="details"]', 'Spoke to Keystone on 02/07'),
+            set('#kx-social [data-k="posts"]', 'Posted a photo of the car'), set('#kx-social [data-k="advice"]', 'Told not to post'), set('#kx-social [data-k="notes"]', 'Accounts private now')];
+        showTab('parties'); addParty('At-Fault Driver');
+        const row = document.querySelector('#kx-parties .kx-row:last-child');
+        const lab = (t) => [...row.querySelectorAll('label')].find(l => l.textContent.trim() === t);
+        const field = (t) => { const l = lab(t); return l && (l.nextElementSibling || l.parentElement.querySelector('[contenteditable], select')); };
+        const want = ['Date of Birth', 'Sex', "Driver's License #", 'Transported via EMS / Ambulance?', 'Street Address', 'City', 'State / ZIP', 'Vehicle Year / Make / Model', 'Vehicle Color', 'Plate #', 'Vehicle Owner', 'Vehicle Damage Status / Location', 'Injury Details', 'General Notes'];
+        const missing = want.filter(t => !field(t));
+        field('Plate #').innerText = 'GA ABC1234'; field('Sex').value = 'Male'; field('Transported via EMS / Ambulance?').value = 'No';
+        const pos = { edits: posEdits().length, sels: posSels().length };
+        const content = buildCaseContentPayload(); blankCaseEditorContent();
+        const cleared = !!document.querySelector('#kx-social [data-k="posts"]').innerText.trim();
+        applyCaseContentToDOM(content);
+        const get = (sel) => { const el = document.querySelector(sel); return el ? (el.tagName === 'SELECT' ? el.value : el.innerText.trim()) : null; };
+        const back = { addr: get('#kx-employment [data-k="employer-address"]'), amb: get('#kx-injury [data-k="ambulance"]'), called: get('#kx-ins-call [data-k="called"]'),
+            posts: get('#kx-social [data-k="posts"]'), meds: get('#kx-injury [data-k="medications"]'), party: (document.querySelector('#kx-parties .kx-row') || {}).innerText || '',
+            sels: [...document.querySelectorAll('#kx-parties .kx-row select')].map(x => x.value) };
+        // a party row saved before these fields gets them when the case opens, keeping what it had
+        const old = buildCaseContentPayload();
+        old.keyed['kx-parties'].html = old.keyed['kx-parties'].html.replace(/<div class="kx-party-more[\s\S]*?<\/div>\s*<\/div>\s*(?=<label)/, '').replace('General Notes', 'Notes');
+        old.keyed['kx-parties'].sels = [old.keyed['kx-parties'].sels[0], old.keyed['kx-parties'].sels[1]];
+        blankCaseEditorContent(); applyCaseContentToDOM(old);
+        const up = document.querySelector('#kx-parties .kx-row');
+        return { ok, missing, pos, cleared, back, upgraded: !!(up && up.querySelector('.kx-party-more')), notesLabel: up && [...up.querySelectorAll('label')].some(l => l.textContent.trim() === 'General Notes') };
     });
-    if (places.identity !== 'Identity' || places.emergency !== 'Emergency Contact' || places.authorized !== 'Authorized to Access Case')
-        fail(`the Profile cards placed by nth-child moved: ${JSON.stringify(places)}`);
-    if (places.social !== '3/3') fail(`Social Media & Communications is not placed in the grid (${places.social})`);
-    if (places.injury !== '2/2') fail(`Primary Injury moved out of its place (${places.injury})`);
+    if (more.ok.some(x => !x)) fail(`a newer field is missing from the page: ${JSON.stringify(more.ok)}`);
+    if (more.missing.length) fail(`Parties Involved is missing: ${more.missing.join(', ')}`);
+    if (more.pos.edits !== POSITIONAL.edits || more.pos.sels !== POSITIONAL.selects) fail(`the newer fields moved the positional ones (${JSON.stringify(more.pos)})`);
+    if (more.cleared) fail('a new case keeps the last Social Media notes');
+    if (more.back.addr !== '100 Peachtree St, Atlanta, GA 30303' || more.back.amb !== 'Yes, by ambulance' || more.back.called !== 'Yes' || more.back.posts !== 'Posted a photo of the car' || more.back.meds !== 'Cyclobenzaprine 10 mg') fail(`the newer fields didn't load back: ${JSON.stringify(more.back)}`);
+    if (!/GA ABC1234/.test(more.back.party) || !more.back.sels.includes('Male') || !more.back.sels.includes('No')) fail(`a party's newer details didn't load back: ${JSON.stringify(more.back)}`);
+    if (!more.upgraded || !more.notesLabel) fail(`a party row saved before the newer details didn't get them: ${JSON.stringify({ upgraded: more.upgraded, notes: more.notesLabel })}`);
     await page.close();
 
     // ---- a library file: DOB in the header, its defense counsel, view only for the Front Desk ----
@@ -293,5 +221,5 @@ let base;
 
     await browser.close(); server.close();
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
-    console.log('Case file fields test passed (DOB in the header beside the SSN and Target Settlement beside Case Manager, DOB off the Profile tab, both saved where they were; Non-Economic Damages on Identity; Opposing Counsel on Litigation, and the library files\' defense counsel; ⬆ Upload Demand on each demand, saved, removable, 2 MB limit, older demands get the box, hidden on view-only files; the fields added for the case file — employment, injury, the client\'s own insurer, social media and each party\'s details — saved by name, empty on older cases, and the Profile cards in their places).');
+    console.log('Case file fields test passed (DOB in the header beside the SSN and Target Settlement beside Case Manager, DOB off the Profile tab, both saved where they were; Non-Economic Damages on Identity; Opposing Counsel on Litigation, and the library files\' defense counsel; ⬆ Upload Demand on each demand, saved, removable, 2 MB limit, older demands get the box, hidden on view-only files; Employment Details, Primary Injury, the insurance call, Social Media & Communications and each party\'s details saved by id, older party rows upgraded).');
 })().catch(e => { console.error(e); process.exit(1); });

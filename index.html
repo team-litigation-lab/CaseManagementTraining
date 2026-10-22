@@ -228,30 +228,19 @@
                         <div class="pdf-card border-l-4 border-emerald-500 shadow-sm"><div class="flex justify-between items-center mb-2"><div class="section-head" style="margin-bottom:0;background:#ecfdf5;color:#047857;">Authorized to Access Case</div><button onclick="addAuthorized()" class="add-btn no-print">+ Add Person</button></div>
                             <div id="kx-authorized" data-keyed="rows" class="space-y-3"></div>
                         </div>
-                        <!-- Social Media & Communications: saved by id (data-keyed) under its own names. -->
-                        <div id="kx-social" data-keyed class="pdf-card shadow-sm"><div class="section-head">Social Media &amp; Communications</div>
-                            <div class="mb-4"><label>Posts Since the Accident</label><div contenteditable="true" data-k="posts" data-ph="What the client has posted since the accident, and where — photos, check-ins, comments about the crash or their injuries" class="multiline-field text-sm text-slate-700" style="min-height:80px"></div></div>
-                            <div class="mb-4"><label>Advice Given</label><div contenteditable="true" data-k="advice" data-ph="What the client was told about posting and about talking to anyone else about the case, and when" class="multiline-field text-sm text-slate-700" style="min-height:80px"></div></div>
-                            <div><label>Additional Notes</label><div contenteditable="true" data-k="notes" data-ph="Accounts, handles, privacy settings, anything to watch" class="multiline-field text-sm text-slate-700" style="min-height:70px"></div></div>
-                        </div>
                     </div>
                     <div class="space-y-6">
                         <div class="pdf-card shadow-sm"><div class="section-head">Employment Details</div>
                             <div class="mb-4"><label>Status</label><select class="prof-input"><option>N/A</option><option>Employed</option><option>Self-Employed</option><option>Unemployed</option><option>Retired</option><option>Student</option></select></div>
                             <div class="mb-4"><label>Employer Name</label><div contenteditable="true" data-ph="Enter employer" data-fmt="name"></div></div>
                             <div class="mb-4"><label>Job Position / Title</label><div contenteditable="true" data-ph="Enter title"></div></div>
-                            <!-- The rest of the employment details: saved by id (data-keyed) under their own names, so the
-                                 three fields above keep their saved positions and cases saved before these load unchanged. -->
+                            <!-- More employment details: saved by id (data-keyed), not by position, so cases saved before load unchanged. -->
                             <div id="kx-employment" data-keyed>
                                 <div class="mb-4"><label>Employer Address</label><div contenteditable="true" data-k="employer-address" data-ph="Street, City, State, ZIP"></div></div>
-                                <div class="grid grid-cols-2 gap-4 mb-4">
-                                    <div><label>Pay Rate</label><div contenteditable="true" data-k="pay-rate" data-ph="e.g. $22.50 / hour"></div></div>
-                                    <div><label>Pay Period</label><select class="prof-input" data-k="pay-period"><option value="">—</option><option>Hourly</option><option>Weekly</option><option>Bi-weekly</option><option>Semi-monthly</option><option>Monthly</option><option>Annual</option><option>Per job / 1099</option></select></div>
-                                </div>
-                                <div class="mb-4"><label>Previous Employer</label><div contenteditable="true" data-k="previous-employer" data-ph="Employer before this one, with dates if known"></div></div>
-                                <div class="mb-4"><label>Physical Demands of the Job · Client</label><div contenteditable="true" data-k="demands-client" data-ph="Lifting, standing, driving, climbing — what the job asks of the body" class="multiline-field text-sm text-slate-700" style="min-height:70px"></div></div>
-                                <div class="mb-4"><label>Physical Demands of the Job · Driver</label><div contenteditable="true" data-k="demands-driver" data-ph="If the client was a passenger: what the driver's job asks of the body" class="multiline-field text-sm text-slate-700" style="min-height:70px"></div></div>
-                                <div><label>Time Missed to Date</label><div contenteditable="true" data-k="time-missed" data-ph="e.g. 3 weeks full time, then light duty since 03/14"></div></div>
+                                <div class="grid grid-cols-2 gap-4 mb-4"><div><label>Pay Rate</label><div contenteditable="true" data-k="pay-rate" data-ph="e.g. $22.50 / hour"></div></div><div><label>Time Missed to Date</label><div contenteditable="true" data-k="time-missed" data-ph="e.g. 9 work days"></div></div></div>
+                                <div class="mb-4"><label>Previous Employer</label><div contenteditable="true" data-k="previous-employer" data-ph="Name, job and dates, if recent"></div></div>
+                                <div class="mb-4"><label>Physical Demands of the Job (Client)</label><div contenteditable="true" data-k="demands-client" data-ph="e.g. Lifts 50 lb, stands 8 hours, drives a forklift"></div></div>
+                                <div><label>Physical Demands of the Job (Driver)</label><div contenteditable="true" data-k="demands-driver" data-ph="When someone else drove the client's vehicle: their job's physical demands"></div></div>
                             </div>
                         </div>
                         <!-- Primary Injury: saved by id (data-keyed), not by position, so cases saved before it existed load unchanged. -->
@@ -262,20 +251,26 @@
                             <div class="mb-4"><label>Surgery</label><select class="prof-input" data-k="surgery"><option value="">—</option><option>No</option><option>Recommended</option><option>Scheduled</option><option>Completed</option></select></div>
                             <div class="mb-4"><label>Prior Injury to Same Area</label><div contenteditable="true" data-k="prior" data-ph="Any earlier injury or treatment to the same body part"></div></div>
                             <div class="mb-4"><label>Diagnosis / Details</label><div contenteditable="true" data-k="details" data-ph="Diagnosis, imaging, restrictions, future care..." style="min-height:90px"></div></div>
-                            <div class="mb-4"><label>Treatment Details</label><div contenteditable="true" data-k="treatment" data-ph="Where the client has treated, how often, what was done, what is still to come" class="multiline-field text-sm text-slate-700" style="min-height:70px"></div></div>
-                            <div class="mb-4"><label>Prescribed Medications</label><div contenteditable="true" data-k="medications" data-ph="Medication, dose and who prescribed it" class="multiline-field text-sm text-slate-700" style="min-height:70px"></div></div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label>Transported to Hospital?</label><select class="prof-input" data-k="hospital"><option value="">—</option><option>No</option><option>Yes</option><option>Unknown</option></select></div>
-                                <div><label>If Yes, by Ambulance?</label><select class="prof-input" data-k="hospital-ambulance"><option value="">—</option><option>No — private vehicle</option><option>Yes — ambulance / EMS</option><option>Unknown</option></select></div>
-                            </div>
+                            <div class="mb-4"><label>Treatment Details</label><div contenteditable="true" data-k="treatment" data-ph="Who is treating, what kind, how often (e.g. Chiropractic 3x a week)" style="min-height:60px"></div></div>
+                            <div class="mb-4"><label>Prescribed Medications</label><div contenteditable="true" data-k="medications" data-ph="Medication, dose and who prescribed it"></div></div>
+                            <div class="grid grid-cols-2 gap-4"><div><label>Transported to Hospital?</label><select class="prof-input" data-k="hospital" onchange="toggleInjuryAmbulance()"><option value="">—</option><option>Yes</option><option>No</option></select></div>
+                                <div data-amb-wrap><label>By Ambulance?</label><select class="prof-input" data-k="ambulance"><option value="">—</option><option>Yes, by ambulance</option><option>No, other transport</option></select></div></div>
                         </div>
                     </div>
+                    <div class="space-y-6">
                     <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div>
-                        <!-- The client's own call to their insurer: saved by id (data-keyed), so the narrative above keeps its saved position. -->
-                        <div id="kx-own-insurer" data-keyed style="margin-top:16px;">
-                            <div class="mb-4"><label>Did the Client Call Their Insurance?</label><select class="prof-input" data-k="called"><option value="">—</option><option>No</option><option>Yes</option><option>Unknown</option></select></div>
-                            <div><label>Conversation Details</label><div contenteditable="true" data-k="conversation" data-ph="Who they spoke to and when, what they were asked, what they said, the claim number given, what the carrier told them to do…" class="multiline-field text-sm text-slate-700" style="min-height:120px"></div></div>
+                        <!-- Did the client call their insurance? Saved by id (data-keyed). -->
+                        <div id="kx-ins-call" data-keyed style="margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0;">
+                            <div class="mb-3"><label>Did the client call their insurance?</label><select class="prof-input" data-k="called"><option value="">—</option><option>Yes</option><option>No</option><option>Not yet asked</option></select></div>
+                            <label>Conversation details</label><div contenteditable="true" data-k="details" data-ph="Who they spoke to, the date, the claim # given, and what was said, in the client's words" class="multiline-field text-sm text-slate-700 min-h-[80px]"></div>
                         </div>
+                    </div>
+                    <!-- Social Media & Communications: saved by id (data-keyed). -->
+                    <div id="kx-social" data-keyed class="pdf-card shadow-sm"><div class="section-head">Social Media &amp; Communications</div>
+                        <div class="mb-4"><label>Posts Since the Accident</label><div contenteditable="true" data-k="posts" data-ph="What the client has posted since the accident, where and when" class="multiline-field text-sm min-h-[60px]"></div></div>
+                        <div class="mb-4"><label>Advice Given</label><div contenteditable="true" data-k="advice" data-ph="e.g. Told not to post about the accident, injuries or activities; set accounts to private (date, by whom)" class="multiline-field text-sm min-h-[60px]"></div></div>
+                        <div><label>Additional Notes</label><div contenteditable="true" data-k="notes" data-ph="Anything else about the client's communications" class="multiline-field text-sm min-h-[60px]"></div></div>
+                    </div>
                     </div>
                 </div>
                 <!-- Passenger Records: retired (passengers go in the Parties Involved tab). The container stays so older

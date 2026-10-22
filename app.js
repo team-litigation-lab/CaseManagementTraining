@@ -624,7 +624,7 @@
             const file = input.files && input.files[0];
             if (!file) return;
             if (file.size > DOC_UPLOAD_MAX_BYTES) {
-                alert('That file is too large to attach (max ' + formatBytes(DOC_UPLOAD_MAX_BYTES) + '). Try a smaller file or a compressed copy.');
+                showToast('That file is too large to attach (max ' + formatBytes(DOC_UPLOAD_MAX_BYTES) + '). Try a smaller file or a compressed copy.', 'error', 6000);
                 input.value = '';
                 return;
             }
@@ -644,7 +644,7 @@
                 }
             } catch (err) {
                 if (holder) holder.innerHTML = '';
-                alert('Could not attach that file: ' + (err && err.message ? err.message : 'unknown error'));
+                showToast('Could not attach that file: ' + (err && err.message ? err.message : 'unknown error'), 'error', 6000);
             }
             input.value = '';
         }
@@ -729,7 +729,7 @@
         const CASE_HTML_URL_ATTRS = new Set(['href', 'src', 'xlink:href', 'action', 'formaction', 'background', 'poster', 'data', 'srcset', 'lowsrc', 'dynsrc', 'cite', 'ping']);
         const CASE_HANDLER_FNS = new Set(['handleDocUpload', 'handleOtherSystem', 'revertOther', 'addChronoDate', 'updateTotals', 'afterKeyedApplied',
             'window.afterKeyedApplied', 'applyReportKind', 'calcSettlement', 'calcWages', 'toggleDriverInsuredExtra', 'toggleOwnerExtra', 'updatePhaseDisplay',
-            'generateCaseId', 'sortChronology', 'docDropCat', 'docDrop', 'docDragOver', 'docDragLeave', 'addRow', 'addBI', 'addPIPUM', 'addLien',
+            'generateCaseId', 'sortChronology', 'toggleInjuryAmbulance', 'docDropCat', 'docDrop', 'docDragOver', 'docDragLeave', 'addRow', 'addBI', 'addPIPUM', 'addLien',
             'addFacility', 'addChronology', 'addDocument', 'addDocLink', 'addParty', 'addAuthorized', 'addDemand', 'addCounsel', 'addAdr', 'addInsurance', 'uploadDemandLetter', 'showTab',
             'lshClientId.pick', 'lshClientId.open', 'lshClientId.remove', 'lshPdPhotos.add']);
         const CASE_HANDLER_ARG = /^(?:'[\w .:#\-]*'|-?\d+(?:\.\d+)?|this|this\.(?:id|value|checked)|event|true|false|null)$/;
@@ -1532,7 +1532,7 @@
                 const data = await res.json();
                 if (!data || !data.success) {
                     if (quiet) return { ok: false, error: (data && data.error) || 'Unknown error.' };
-                    alert('Could not save: ' + ((data && data.error) || 'Unknown error.')); return;
+                    showToast('Could not save: ' + ((data && data.error) || 'Unknown error.'), 'error', 6000); return;
                 }
                 if (gen !== _editorGen) {   // the editor moved on to another case while this one was saving
                     refreshRepoCache();
@@ -1550,10 +1550,10 @@
                 // files uploaded before the case had its ID take it now, and that's saved too (once)
                 if (renameNoCaseIdFiles(data.caseId)) await saveCase({ quiet: true });
                 if (quiet) return { ok: true, caseId: data.caseId };
-                showToast('Case saved.', 'success', 4000, wasAlreadyFinal ? '' : `Case ID ${data.caseId} has been permanently assigned.`);
+                showToast(wasAlreadyFinal ? 'Case saved.' : `Case saved. Case ID ${data.caseId} has been permanently assigned.`, 'success', wasAlreadyFinal ? 3500 : 6000);   // a notification, not an OK to press
             } catch (e) {
                 if (quiet) return { ok: false, error: 'Network error while saving.' };
-                alert('Network error while saving. Check your connection and try again.');
+                showToast('Network error while saving. Check your connection and try again.', 'error', 6000);
             }
         }
 
@@ -1584,7 +1584,7 @@
                     body: JSON.stringify({ id: targetId, content, clientName, phase, medTotal, isDraft: true })
                 });
                 const data = await res.json();
-                if (!data || !data.success) { alert('Could not archive: ' + ((data && data.error) || 'Unknown error.')); return; }
+                if (!data || !data.success) { showToast('Could not archive: ' + ((data && data.error) || 'Unknown error.'), 'error', 6000); return; }
                 if (gen !== _editorGen) { refreshRepoCache(); showToast(`${clientName} was archived as a draft.`, 'success'); return; }   // the editor moved on meanwhile
                 currentCaseId = data.id;
                 currentCaseIsDraft = true;
@@ -1593,16 +1593,16 @@
                 noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
-                showToast('Case archived as a draft.', 'success', 6000, 'No Case ID yet — open the draft and use "Save Case" when you\'re ready to finalize it.');
+                showToast('Case archived as a draft.', 'success', 6000, 'No Case ID yet: open this draft and use "Save Case" when you\'re ready to finalize it.');
             } catch (e) {
-                alert('Network error while archiving. Check your connection and try again.');
+                showToast('Network error while archiving. Check your connection and try again.', 'error', 6000);
             }
         }
         async function updateCase() {
             if (window.mockBlocksSave && window.mockBlocksSave()) return; // view-only Training Library case
             if (currentCaseId === null && window.mockIsMine && window.mockIsMine()) return saveCase(); // the first save of a trainee's work on a case file
             if (currentCaseId === null) {
-                alert("No saved case is currently open to update. Load a case from the repository first, or use \"Archive Case (Save as Draft)\" / \"Save Case\" to save this as a new one.");
+                showToast('No saved case is open to update.', 'error', 6000, 'Load a case from the repository first, or use "Archive Case (Save as Draft)" / "Save Case" to save this as a new one.');
                 return;
             }
             if (!currentCaseCanEdit) {
@@ -1624,14 +1624,14 @@
                     body: JSON.stringify({ id: currentCaseId, content, clientName, phase, medTotal })
                 });
                 const data = await res.json();
-                if (!data || !data.success) { alert('Could not update: ' + ((data && data.error) || 'Unknown error.')); return; }
+                if (!data || !data.success) { showToast('Could not update: ' + ((data && data.error) || 'Unknown error.'), 'error', 6000); return; }
                 if (gen !== _editorGen) { refreshRepoCache(); showToast(`${clientName} was updated.`, 'success'); return; }   // the editor moved on meanwhile
                 noteServerCopy(sig);
                 persistCurrentEditorState();
                 refreshRepoCache();
-                showToast('Saved case updated.', 'success');
+                showToast('Saved case updated.', 'success');   // a notification, not an OK to press
             } catch (e) {
-                alert('Network error while updating. Check your connection and try again.');
+                showToast('Network error while updating. Check your connection and try again.', 'error', 6000);
             }
         }
 
@@ -3687,7 +3687,7 @@
            ========================================================= */
         function requestDownload() {
             if (currentCaseIsDraft || currentCaseId === null) {
-                alert('This case doesn\'t have a permanent Case ID yet. Use "Save Case" to finalize it before downloading the summary.');
+                showToast('This case doesn\'t have a permanent Case ID yet.', 'error', 6000, 'Use "Save Case" to finalize it before downloading the summary.');
                 return;
             }
             const session = getSession();
