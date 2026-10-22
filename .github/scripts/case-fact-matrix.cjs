@@ -5,6 +5,9 @@
 //     identity, address, licence, vehicle, damage/tow and carrier the file says, and the
 //     roles the ⚖ conflict check reads (the at-fault driver is the at-fault driver, the
 //     other injured driver is not on the other side of our client's claim);
+//   - the client's row says where he actually was: the front-seat passenger in Unit 2, and
+//     the owner of the parked Unit 3 — the fact that puts him on the per-accident bodily
+//     injury limit with the Unit 2 driver, and gives him a property damage claim as well;
 //   - each carrier is on its own unit, and nowhere else: Keystone Mutual on Unit 1 (and the
 //     BI and property damage claims), Harbor Point on Unit 2's row only, Bluewater on Unit 3;
 //   - the Police Report tab has the report number, agency, officer and the contributing cause;
@@ -73,7 +76,7 @@ const MC = 'MC-53';
             return el ? (el.tagName === 'SELECT' ? el.value : el.innerText.replace(/\s+/g, ' ').trim()) : null;
         };
         return [...document.querySelectorAll('#kx-parties > .kx-row')].map(r => ({
-            role: (r.querySelector('select[data-role]') || {}).value,
+            role: (r.querySelector('select[data-role]') || {}).value, vehicle: label(r, 'Vehicle / Location'),
             name: label(r, 'Full Name'), phone: label(r, 'Phone'), dob: label(r, 'Date of Birth'), sex: label(r, 'Sex'),
             dl: label(r, "Driver's License"), street: label(r, 'Street Address'), city: label(r, 'City'), stateZip: label(r, 'State / ZIP'),
             ymm: label(r, 'Vehicle Year'), color: label(r, 'Vehicle Color'), plate: label(r, 'Plate'), owner: label(r, 'Vehicle Owner'),
@@ -83,7 +86,9 @@ const MC = 'MC-53';
     });
     const WANT = [
         { role: 'Client', name: 'John Doe', dob: '04/22/1982', sex: 'Male', street: '2214 Maple Hollow Rd', city: 'Riverton', stateZip: 'GA 30301',
-            ymm: '2019 Honda Civic LX', color: 'Blue', plate: 'JLD-9026', insurance: 'Bluewater Auto Insurance', damage: 'Left side disabling', tow: 'Riverton Towing' },
+            ymm: '2019 Honda Civic LX', color: 'Blue', plate: 'JLD-9026', insurance: 'Bluewater Auto Insurance', damage: 'Unit 3: left side disabling', tow: 'Riverton Towing',
+            // he is on the report twice: the front-seat passenger in Unit 2 and the owner of the parked Unit 3
+            ems: 'Yes', seat: 'Front-seat passenger in Unit 2' },
         { role: 'At-Fault Driver', name: 'Robert Smith', phone: '(555) 010-6630', dob: '07/19/1979', sex: 'Male', dl: 'S530-4419-7731C',
             street: '118 Larkspur Ln', city: 'Riverton', stateZip: 'GA 30301', ymm: '2017 Chevrolet Silverado 1500', color: 'Black', plate: 'RKT-4471',
             insurance: 'Keystone Mutual Insurance', damage: 'Moderate front / front-right damage' },
@@ -96,8 +101,10 @@ const MC = 'MC-53';
         const got = rows[i]; if (!got) return;
         Object.entries(w).forEach(([k, v]) => {
             if (k === 'tow') { if (!String(got.damage || '').includes(v)) fail(`${MC} unit ${i + 1} (${w.name}): the damage line doesn't say where it was towed ("${v}"): "${got.damage}"`); return; }
+            // the client's row has to say where he actually was, or the file reads as if he was in his own car
+            if (k === 'seat') { if (!String(got.vehicle || '').includes(v)) fail(`${MC} unit ${i + 1} (${w.name}): the Vehicle / Location line doesn't say "${v}": "${got.vehicle}"`); return; }
             const have = String(got[k] == null ? '' : got[k]);
-            const ok = (k === 'damage' || k === 'insurance') ? have.includes(v) : have === v;
+            const ok = (k === 'damage' || k === 'insurance' || k === 'ymm') ? have.includes(v) : have === v;
             if (!ok) fail(`${MC} unit ${i + 1} (${w.name}): ${k} is "${have}", not the report's "${v}"`);
         });
     });
@@ -131,6 +138,10 @@ const MC = 'MC-53';
             report: field('#pane-police', 'Report Number'), agency: field('#pane-police', 'Responding Agency'), officer: field('#pane-police', 'Reporting Officer'),
             bi: field('#bi-container', 'Carrier'), biPolicy: field('#bi-container', 'Policy #'), biLimits: field('#bi-container', 'Policy Limits'),
             pipum: field('#pip-um-container', 'Insurance Carrier'), pipumPolicy: field('#pip-um-container', 'Policy #'),
+            pipum2: (() => { const c = document.querySelectorAll('#pip-um-container > div')[1]; if (!c) return null;
+                const l = [...c.querySelectorAll('label')].find(x => x.textContent.trim().startsWith('Insurance Carrier'));
+                return l && l.nextElementSibling ? l.nextElementSibling.innerText.trim() : null; })(),
+            injury: (document.querySelector('#kx-injury [data-k="primary"]') || {}).innerText || '',
             pdCarrier: (document.querySelector('#kx-pd-claim [data-k="carrier"]') || {}).innerText,
             pdClient: field('#pane-pd', 'Year'), clientPlate: field('#pane-pd', 'License Plate'),
             crit: (document.querySelector('#kx-critical [data-k="note"]') || {}).innerText || ''
@@ -139,7 +150,7 @@ const MC = 'MC-53';
     if (file.report !== 'RPD-26-018842') fail(`the Police Report tab's report number is "${file.report}", not RPD-26-018842`);
     if (file.agency !== 'Riverton Police Department') fail(`the responding agency is "${file.agency}"`);
     if (!/#2274/.test(file.officer || '')) fail(`the reporting officer is "${file.officer}"`);
-    for (const want of ['02/06/2026', '07:10 AM', 'Maple Hollow Rd at Birch Ave', 'four-way stop', 'disregarded stop sign (Code 04)']) {
+    for (const want of ['02/06/2026', '07:10 AM', 'Maple Hollow Rd at Birch Ave', 'four-way stop', 'disregarded stop sign (Code 04)', 'front-seat passenger (John Doe']) {
         if (!String(file.police || '').includes(want)) fail(`the Police Report tab doesn't carry "${want}"`);
     }
     if (file.bi !== 'Keystone Mutual Insurance' || file.biPolicy !== 'KMI-PA-7731045') fail(`the BI policy is ${file.bi} / ${file.biPolicy}, not Keystone Mutual / KMI-PA-7731045`);
@@ -148,6 +159,9 @@ const MC = 'MC-53';
     if (file.pdCarrier !== 'Keystone Mutual Insurance') fail(`the property damage claim is against "${file.pdCarrier}", not Keystone Mutual Insurance`);
     if (file.clientPlate !== 'JLD-9026') fail(`the client vehicle's plate on the Property Damage tab is "${file.clientPlate}", not JLD-9026`);
     for (const want of ['Kevin Alvarez', 'conflict check']) if (!file.crit.includes(want)) fail(`the critical note doesn't mention ${want}: "${file.crit}"`);
+    // the client has a bodily injury claim of his own: that is what puts him on the per-accident limit with the Unit 2 driver
+    if (!/rotator cuff|shoulder/i.test(file.injury || '')) fail(`the Primary Injury card doesn't carry the client's injury: "${file.injury}"`);
+    if (file.pipum2 !== 'Harbor Point Insurance') fail(`the host vehicle's UM/UIM policy is "${file.pipum2}", not Harbor Point Insurance (the client was a passenger in Unit 2)`);
 
     // ---------- the ⚖ Practice brief: a trainee gets it; the trainer's key stays with Admins ----------
     if (!(await page.isVisible('#mock-banner button:has-text("Practice brief")'))) fail('a trainee has no ⚖ Practice brief button on the case banner');
@@ -165,7 +179,7 @@ const MC = 'MC-53';
     for (const t of wantSteps) if (!brief.steps.some(s => s.includes(t))) fail(`the practice brief is missing the step "${t}"`);
     if (!brief.points) fail('the practice brief shows no points under its steps');
     if (/\bundefined\b|\bnull\b|\[object/.test(brief.text)) fail('the practice brief has undefined/null values in it');
-    for (const want of ['per accident', 'unauthorized practice of law', 'informed consent']) {
+    for (const want of ['per accident', 'per person', 'unauthorized practice of law', 'informed consent', 'passenger']) {
         if (!new RegExp(want, 'i').test(brief.text)) fail(`the practice brief doesn't cover "${want}"`);
     }
     await page.evaluate(() => closeCallsPanel());
