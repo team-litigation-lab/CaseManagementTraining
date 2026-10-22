@@ -75,7 +75,8 @@ function inspect(buf) {
     await page.evaluate(() => openTrainingLibrary());
     await page.waitForSelector('#library-modal.open .lib-dl', { timeout: 5000 }).catch(() => fail('the Training Library window has no PDF download bar'));
     if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, 'library-pdf.png') });
-    if (!/Download the 52 cases listed/.test(await page.textContent('.lib-dl'))) fail(`the download bar doesn't count the ${ids.length} cases listed: ${await page.textContent('.lib-dl')}`);
+    // the count the library actually holds, not a literal: a case added to mock-cases.js used to fail here
+    if (!new RegExp(`Download the ${ids.length} cases listed`).test(await page.textContent('.lib-dl'))) fail(`the download bar doesn't count the ${ids.length} cases listed: ${await page.textContent('.lib-dl')}`);
     const t = await download(() => page.click('.lib-dl button:has-text("trainer copy")'));
     if (!t.pdf || t.name !== 'LSH-Training-Library-Mock-Cases-Trainer-Copy.pdf') fail(`trainer copy: not a PDF or wrong name (${t.name})`);
     if (t.sections.join() !== ids.join()) fail(`trainer copy: the case sections aren't every case in order (${t.sections.length} of ${ids.length})`);
