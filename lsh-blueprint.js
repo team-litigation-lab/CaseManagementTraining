@@ -7,7 +7,8 @@
    Trainees (and an admin in Trainee view) get the trainee deck only; admins get both as tabs,
    so they can share the Trainee blueprint in Google Meet. ◀ ▶, the ← → keys or the contents strip
    move through it; Esc closes it. ⬇ Download PDF saves the deck that's showing: a landscape PDF,
-   one page a slide, real text (jsPDF from cdnjs, loaded the first time). The PDF is made from the
+   one page a slide wearing the deck's own frame, real text (jsPDF from cdnjs, loaded the first
+   time). The PDF is made from the
    deployed platform each time, and its cover and footers carry the platform's version, so a new
    deploy always gives an up-to-date PDF.
 
@@ -367,11 +368,45 @@
     // by the file's first bytes, whatever type the server gave it (JPEG starts /9j/ in base64)
     const imgType = (data) => /^data:[^,]*,\/9j\//.test(data) || /^data:image\/jpe?g/i.test(data) ? 'JPEG' : 'PNG';
 
+    // The handout wears the deck's frame: each page is the navy stage with the orange corner, and the
+    // page's own content is the slide — a cream sheet in an orange keyline inside it. The content is
+    // written in the sheet's own coordinates, so `shift` hands buildPdf a doc whose drawing calls are
+    // moved into the sheet; everything else (addPage, save, splitTextToSize) goes straight through.
+    const SHIFT_XY = { text: [1, 2], rect: [0, 1], roundedRect: [0, 1], ellipse: [0, 1], line: [0, 1], circle: [0, 1] };
+    function shift(pdf, dx, dy) {
+        return new Proxy(pdf, {
+            get(t, k) {
+                const v = t[k];
+                if (typeof v !== 'function') return v;
+                if (k === 'addImage') return (data, type, x, y, ...rest) => v.call(t, data, type, x + dx, y + dy, ...rest);
+                if (k === 'line') return (x1, y1, x2, y2, ...rest) => v.call(t, x1 + dx, y1 + dy, x2 + dx, y2 + dy, ...rest);
+                const ix = SHIFT_XY[k];
+                if (ix) return (...a) => { a[ix[0]] += dx; a[ix[1]] += dy; return v.apply(t, a); };
+                return v.bind(t);
+            }
+        });
+    }
+    // the navy stage and the sheet it holds, drawn on every page before its content
+    function stage(pdf, pw, ph, S, BAND, W, H, R) {
+        pdf.setFillColor(...NAVY); pdf.rect(0, 0, pw, ph, 'F');
+        // the orange corner: a quarter of an ellipse centred on the page's top right, the rest off the page
+        pdf.setFillColor(...ORANGE); pdf.ellipse(pw, 0, Math.min(120, pw * 0.16), BAND + 10, 'F');
+        pdf.setFillColor(255, 253, 248); pdf.setDrawColor(...ORANGE); pdf.setLineWidth(3);
+        pdf.roundedRect(S, S + BAND, W, H, R, R, 'FD');
+    }
+
     function buildPdf(d, logo, shots) {
         shots = shots || [];
         const c = cfg();
-        const doc = new JsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape', compress: true });
-        const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 46;
+        const pdf = new JsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape', compress: true });
+        const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+        const S = 18, BAND = 26, R = 12;                       // stage inset, the band the corner sits in, the sheet's radius
+        const W = pw - 2 * S, H = ph - S - (S + BAND), M = 40;  // the sheet is the page the content is written on
+        const doc = shift(pdf, S, S + BAND);
+        const sheetTop = (h, fill) => {                         // a band across the top of the sheet, following its rounded corners
+            doc.setFillColor(...fill); doc.roundedRect(0, 0, W, h, R, R, 'F'); doc.rect(0, h - R, W, R, 'F');
+        };
+        stage(pdf, pw, ph, S, BAND, W, H, R);
         const total = d.slides.length + 1;
         const font = (size, style, color) => { doc.setFont('helvetica', style || 'normal'); doc.setFontSize(size); doc.setTextColor(...(color || INK)); };
         const stamp = clean(`${version ? 'Version ' + version + ' · ' : ''}made ${today()}`);
@@ -382,7 +417,7 @@
             doc.text(i === 0 ? 'Cover' : `${i} / ${total - 1}`, W - M, H - 20, { align: 'right' });
         };
         // the cover
-        doc.setFillColor(...NAVY); doc.rect(0, 0, W, 150, 'F');
+        sheetTop(150, NAVY);
         doc.setFillColor(...ORANGE); doc.rect(0, 150, W, 5, 'F');
         let tx = M;
         if (logo && c.brand) {
@@ -399,18 +434,20 @@
         font(13, 'normal', INK); doc.text(doc.splitTextToSize(clean(d.sub || ''), W - 2 * M), M, 190);
         font(10, 'bold', MUTED); doc.text('CONTENTS', M, 228, { charSpace: 1 });
         const half = Math.ceil(d.slides.length / 2), colW = (W - 2 * M - 30) / 2;
+        // the rows close up rather than run into the footer: the sheet is shorter than the page
+        const pitch = Math.min(26, (H - 46 - 254) / Math.max(1, half - 1));
         d.slides.forEach((s, k) => {
-            const x = k < half ? M : M + colW + 30, y = 254 + (k % half) * 26;
+            const x = k < half ? M : M + colW + 30, y = 254 + (k % half) * pitch;
             doc.setFillColor(...ORANGE); doc.roundedRect(x, y - 12, 18, 16, 3, 3, 'F');
             font(9, 'bold', [255, 255, 255]); doc.text(String(k + 1), x + 9, y - 1, { align: 'center' });
             font(12, 'normal', INK); doc.text(clean(s.title), x + 28, y);
         });
-        font(10, 'normal', MUTED); doc.text(stamp, M, H - 52);
         footer(0);
         // one page a slide
         d.slides.forEach((s, k) => {
             doc.addPage();
-            doc.setFillColor(...NAVY); doc.rect(0, 0, W, 92, 'F');
+            stage(pdf, pw, ph, S, BAND, W, H, R);
+            sheetTop(92, NAVY);
             doc.setFillColor(...ORANGE); doc.rect(0, 92, W, 4, 'F');
             font(9.5, 'bold', ORANGE); doc.text(clean(`${d.name} · ${k + 1} of ${d.slides.length}`).toUpperCase(), M, 38, { charSpace: 1 });
             font(23, 'bold', [255, 255, 255]); doc.text(clean(s.title), M, 70);
@@ -466,8 +503,8 @@
             }
             footer(k + 1);
         });
-        doc.setProperties({ title: clean(`${c.site || 'LSH'} ${d.name}`), subject: clean(`How ${c.product || 'the platform'} works · ${stamp}`), creator: clean(c.site || 'LSH') });
-        return doc;
+        pdf.setProperties({ title: clean(`${c.site || 'LSH'} ${d.name}`), subject: clean(`How ${c.product || 'the platform'} works · ${stamp}`), creator: clean(c.site || 'LSH') });
+        return pdf;
     }
 
     async function makePdf(which) {
