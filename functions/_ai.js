@@ -50,7 +50,7 @@ function keyOrder(env) {
 
 export function aiStatus(env) {
     const names = keyNames(env);
-    return { gateway: gatewayOn(env), keys: names.length, resting: names.filter(n => [...rest.keys()].some(k => k.startsWith(n + '|') && resting(k))) };
+    return { gateway: gatewayOn(env), claude: claudeOn(env), keys: names.length, resting: names.filter(n => [...rest.keys()].some(k => k.startsWith(n + '|') && resting(k))) };
 }
 // For tests: forget which keys are resting.
 export function _resetAi() { rest.clear(); }
@@ -91,6 +91,58 @@ export async function portalPost(env, path, body) {
     return { status: res.status, data };
 }
 
+/* Claude (the primary provider on this site's own pool) */
+// When ANTHROPIC_API_KEY is set on this Pages project, the practice caller's lines and the call reviews try Claude first;
+// the GEMINI_API_KEY pool below answers only when Claude can't (a rate limit, no credits, a rejected key, too slow, a refusal).
+// Same rules as the Portal's AI gateway (Training-Portal functions/_ai-gateway.js callClaude). Live voice stays on Gemini Live:
+// Claude has no live-audio API. (With AI_GATEWAY_SECRET set every call goes to the Portal, which also puts Claude first.)
+//   CLAUDE_CHAT_MODEL     claude-haiku-5-5    the caller's lines
+//   CLAUDE_GRADING_MODEL  claude-sonnet-5-5   the call reviews (json)
+export const claudeOn = (env) => !!String((env && env.ANTHROPIC_API_KEY) || '').trim();
+const claudeModel = (env, grading) => String((grading ? env.CLAUDE_GRADING_MODEL : env.CLAUDE_CHAT_MODEL) || '').trim() || (grading ? 'claude-sonnet-5-5' : 'claude-haiku-5-5');
+let claudeRest = 0;
+export const _resetClaude = () => { claudeRest = 0; };   // (tests)
+export async function callClaude(env, { system, messages, json, maxTokens, feature }) {
+    if (claudeRest > Date.now()) return { ok: false, status: 429, error: 'Claude is resting after an error.' };
+    const grading = !!(json || feature === 'review');
+    // Claude takes alternating turns that start and end with the user: same-role lines are joined, and an opening
+    // line from the caller gets a short user turn before it.
+    const turns = [];
+    for (const m of messages || []) {
+        const role = m.role === 'model' || m.role === 'assistant' ? 'assistant' : 'user', text = String(m.text || '').trim();
+        if (!text) continue;
+        const prev = turns[turns.length - 1];
+        if (prev && prev.role === role) prev.content += '\n\n' + text; else turns.push({ role, content: text });
+    }
+    if (!turns.length || turns[0].role !== 'user') turns.unshift({ role: 'user', content: '(Begin.)' });
+    if (turns[turns.length - 1].role !== 'user') turns.push({ role: 'user', content: '(Continue.)' });
+    const sys = (String(system || '') + (json ? '\n\nReply with only the JSON object: no code fences and no text before or after it.' : '')).trim();
+    const model = claudeModel(env, grading), cap = Math.min(Math.max(Number(maxTokens) || 800, 128), 4096);
+    const body = { model, max_tokens: Math.max(cap * 2, grading ? 8192 : 2048), messages: turns, output_config: { effort: grading ? 'medium' : 'low' } };
+    if (sys) body.system = sys;
+    const headers = { 'Content-Type': 'application/json', 'x-api-key': String(env.ANTHROPIC_API_KEY).trim(), 'anthropic-version': '2026-10-21' };
+    if (model === 'claude-sonnet-5-5') { headers['anthropic-beta'] = 'server-side-fallback-2026-07-01'; body.fallbacks = 'default'; }
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), grading ? 45000 : 20000);
+    try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctl.signal, headers, body: JSON.stringify(body) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            const msg = String((data.error && data.error.message) || `Claude error ${res.status}`);
+            if (res.status === 401 || res.status === 403) claudeRest = Date.now() + 600000;
+            else if (/credit balance|billing/i.test(msg)) claudeRest = Date.now() + 3600000;
+            else if (res.status === 429) claudeRest = Date.now() + Math.min(Math.max(Number(res.headers.get('retry-after')) || 60, 5), 600) * 1000;
+            return { ok: false, status: res.status, error: msg };
+        }
+        if (data.stop_reason === 'refusal') return { ok: false, status: 502, error: 'Claude declined this request.' };
+        let text = (data.content || []).filter(b => b && b.type === 'text').map(b => b.text || '').join('');
+        if (json) text = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+        if (!text.trim()) return { ok: false, status: 502, error: `Claude returned no text (${data.stop_reason || 'empty'}).` };
+        return { ok: true, status: 200, text, model: data.model || model };
+    } catch (e) {
+        return { ok: false, status: 502, error: ctl.signal.aborted ? 'Claude took too long to answer.' : 'Claude unreachable: ' + (e && e.message || e) };
+    } finally { clearTimeout(timer); }
+}
+
 // The Portal gateway's budget modules a CMS request may count under (a Call Simulator line's call counts under its line).
 export const GATEWAY_MODULES = ['cms', 'standard', 'reception', 'intake', 'calendaring', 'ea-pa', 'pd'];
 // req: { system, messages: [{ role: 'user'|'model', text }], json, maxTokens, feature: 'caller'|'review', module }
@@ -103,8 +155,14 @@ export async function callAI(env, req) {
             return { ok: false, status: g.status === 429 ? 429 : g.status === 501 || g.status === 401 ? 502 : (g.status || 502), error: (g.data && g.data.error) || `AI gateway error ${g.status}` };
         } catch (e) { return { ok: false, status: 502, error: 'The shared AI gateway is unreachable: ' + (e && e.message || e) }; }
     }
+    if (claudeOn(env)) {
+        const c = await callClaude(env, req);
+        if (c.ok) return c;
+        console.error('call-ai: Claude failed, Gemini takes over:', c.status, c.error);
+        if (!keyNames(env).length) return { ok: false, status: c.status === 429 ? 429 : 502, error: 'Claude: ' + c.error };
+    }
     const names = keyOrder(env).filter(n => !resting(n + '|*'));
-    if (!keyNames(env).length) return { ok: false, status: 500, error: 'The practice caller isn\'t set up on this site yet (GEMINI_API_KEY).' };
+    if (!keyNames(env).length) return { ok: false, status: 500, error: 'The practice caller isn\'t set up on this site yet (ANTHROPIC_API_KEY or GEMINI_API_KEY).' };
     const payload = {
         contents: req.messages.map(m => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: String(m.text || '') }] })),
         // extra headroom: Gemini 3.x can spend part of the budget thinking before it answers

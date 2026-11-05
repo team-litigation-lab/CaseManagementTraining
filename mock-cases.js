@@ -65,7 +65,7 @@
    ========================================================= */
 
 const MOCK_FIRM = {
-    name: 'LSH Training Law Group (fictional)',
+    name: 'LSH Law Firm',
     mainLine: '(555) 010-2000',
     fax: '(555) 010-2099',
     hours: 'Monday–Friday, 8:30 AM – 5:30 PM (Eastern). After hours: voicemail is checked at 8:30 AM.',
@@ -99,7 +99,7 @@ const MOCK_FIRM = {
     // and the Call Simulator lists it with the rules.
     sop: [
         'Answer at once: the one-ring policy.',
-        'Open every call with the spiel: "Thank you for calling Legal Support Help. This is (your name)." (In these practice calls the firm is also called LSH Training Law Group.)',
+        'Open every call with the spiel: "Thank you for calling Legal Support Help. This is (your name)." (In these practice calls the firm is also called LSH Law Firm.)',
         'Before you transfer a call, tell the person who takes it the caller\'s name and why they are calling. Always a cold transfer unless you are told otherwise. Tell the caller who you are putting them through to.',
         'Never give out a Social Security number or any part of it. A provider or an adjuster who asks for it sends the request in writing to prelit@legalsupporthelp.com.',
         'Case updates follow the case status and who is calling (the client, a medical provider or an adjuster): say only what the file supports. Adjusters put their requests and offers in writing to prelit@legalsupporthelp.com. Litigation matters go to the litigation team, or a paralegal follows up.',
