@@ -759,6 +759,8 @@
             if (!who) return null;
             const u = new URL(location.href); u.searchParams.delete('watch'); u.searchParams.delete('watchBatch');
             history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+            // A watch link is the trainer as themselves: an earlier 👁 Trainee view in this tab would hide that they're an Admin.
+            try { sessionStorage.removeItem('LSH_TRAINEE_VIEW_V1'); } catch (e) { /* storage blocked */ }
             return { who, batch: String(q.get('watchBatch') || '').trim().slice(0, 60), until: Date.now() + 15 * 60000, shown: false };
         } catch (e) { return null; }
     })();
@@ -768,8 +770,9 @@
         const seen = (raw) => { const s = String(raw || ''); const t = Date.parse(s.replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? '' : 'Z')); return isFinite(t) ? t : 0; };   // heartbeats.last_seen is UTC with no zone
         const isAdmin = () => { try { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); } catch (e) { return false; } };
         const want = norm(WATCH.who), wantWords = words(WATCH.who), batch = norm(WATCH.batch);
-        const nameOf = (u) => u.username === WATCH.who || norm(u.full_name) === want
-            || (wantWords.length > 1 && wantWords.every((w) => words(u.full_name).includes(w)));
+        // An exact match (username or full name) wins over a looser one (every word of the name given, in a longer name).
+        const exact = (u) => u.username === WATCH.who || norm(u.full_name) === want;
+        const loose = (u) => wantWords.length > 1 && wantWords.every((w) => words(u.full_name).includes(w));
         const showMonitoring = () => {
             if (WATCH.shown) return;
             WATCH.shown = true;
@@ -777,14 +780,18 @@
         };
         const look = async () => {
             if (Date.now() > WATCH.until || W) return;   // given up, or a watch is open (this one or one the trainer chose)
-            if (!isAdmin()) { setTimeout(look, 1000); return; }   // still signing in from the ticket
+            if (!isAdmin()) { WATCH.shown = false; setTimeout(look, 1000); return; }   // still signing in from the ticket
+            let list = null;
+            try { const r = await fetch('/api/heartbeat', { credentials: 'include' }); list = r.ok ? await r.json() : null; } catch (e) { list = null; }
+            if (!Array.isArray(list)) { setTimeout(look, 2000); return; }   // the cookie isn't a live Admin's yet (a stale session in this tab)
+            const mc = document.getElementById('master-control-page');
+            if (mc && !mc.classList.contains('open')) WATCH.shown = false;   // signed out and in again meanwhile: Monitoring again
             showMonitoring();
-            let list = [];
-            try { const r = await fetch('/api/heartbeat', { credentials: 'include' }); list = r.ok ? await r.json() : []; } catch (e) { list = []; }
             const now = Date.now();
-            const online = (Array.isArray(list) ? list : []).filter((u) => (u.user_type || 'Trainee') !== 'Admin' && now - seen(u.last_seen) < 90000 && nameOf(u))   // online: a heartbeat in the last 90 s, as Monitoring counts it
+            // online: a heartbeat in the last 90 s, as Monitoring counts it; on their batch when a batch is given (never someone else's)
+            const online = list.filter((u) => (u.user_type || 'Trainee') !== 'Admin' && now - seen(u.last_seen) < 90000 && (!batch || norm(u.batch_id) === batch))
                 .sort((a, b) => seen(b.last_seen) - seen(a.last_seen));
-            const pick = (batch && online.find((u) => norm(u.batch_id) === batch)) || online[0];
+            const pick = online.find(exact) || online.find(loose);
             if (pick && !W) { window.openLiveView(pick.username); return; }
             setTimeout(look, 4000);
         };
