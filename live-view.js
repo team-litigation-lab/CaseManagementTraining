@@ -744,44 +744,48 @@
     window.lshLiveWhere = where;   // for the checks
     window.lshLiveFrameDoc = frameDoc;   // for the checks: what the Admin's frame is given for a copy
 
-    /* 👁 Watch a trainee from a link: ?watch=<their full name or username>&watchBatch=<their Batch ID>.
-       LSH Ring Channel opens this (signed in with the trainer's Portal ticket) on the trainer's console as soon as
-       the trainee on a mock call opens the CMS, so the trainer sees their CMS screen without going to Master
-       Control. Admins only: /api/heartbeat, which says who is online, answers nobody else. Once signed in, the
-       trainee is found among those online by username, or by full name (and batch, when given), and 👁 Watch live
-       opens on them. Not online yet: the link keeps looking (every few seconds, for 15 minutes), with a line
-       saying so. The link's watch= is taken off the address, so a reload doesn't start it again. */
+    /* 👁 Monitoring from a link: ?watch=<the trainee's full name or username>&watchBatch=<their Batch ID>.
+       LSH Ring Channel opens this beside the call on the trainer's console (signed in with the trainer's Portal
+       ticket) as soon as the trainee on a mock call opens the CMS. It opens Master Control → Monitoring, the
+       Admin's list of who is online with 👁 Watch live on each, and opens Watch live on the trainee straight away
+       once it finds them online: by username, by full name, or by every word of the name given (a middle name
+       or initial on the CMS account doesn't stop it), on their batch when there's one to choose from. Until then
+       Monitoring stays up (it looks again every few seconds, for 15 minutes), so the trainer can pick them from
+       the list. Admins only: /api/heartbeat answers nobody else. The link's watch= is taken off the address, so
+       a reload doesn't start it again. */
     const WATCH = (() => {
         try {
             const q = new URLSearchParams(location.search), who = String(q.get('watch') || '').trim().slice(0, 120);
             if (!who) return null;
             const u = new URL(location.href); u.searchParams.delete('watch'); u.searchParams.delete('watchBatch');
             history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
-            return { who, batch: String(q.get('watchBatch') || '').trim().slice(0, 60), until: Date.now() + 15 * 60000 };
+            return { who, batch: String(q.get('watchBatch') || '').trim().slice(0, 60), until: Date.now() + 15 * 60000, shown: false };
         } catch (e) { return null; }
     })();
     if (WATCH) {
         const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const words = (s) => String(s || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
         const seen = (raw) => { const s = String(raw || ''); const t = Date.parse(s.replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? '' : 'Z')); return isFinite(t) ? t : 0; };   // heartbeats.last_seen is UTC with no zone
         const isAdmin = () => { try { const s = typeof getSession === 'function' ? getSession() : null; return !!(s && s.userType === 'Admin'); } catch (e) { return false; } };
-        const line = (text) => {
-            let el = $id('lv-watch-wait');
-            if (!text) { if (el) el.remove(); return; }
-            if (!el) { el = document.createElement('div'); el.id = 'lv-watch-wait'; el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;background:#0f172a;color:#e2e8f0;padding:10px 16px;border-radius:10px;font:600 13px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3)'; document.body.appendChild(el); }
-            el.textContent = text;
+        const want = norm(WATCH.who), wantWords = words(WATCH.who), batch = norm(WATCH.batch);
+        const nameOf = (u) => u.username === WATCH.who || norm(u.full_name) === want
+            || (wantWords.length > 1 && wantWords.every((w) => words(u.full_name).includes(w)));
+        const showMonitoring = () => {
+            if (WATCH.shown) return;
+            WATCH.shown = true;
+            try { if (typeof openAdminDashboard === 'function') openAdminDashboard(); if (typeof showAdminDashTab === 'function') showAdminDashTab('monitoring'); } catch (e) { /* the CMS as it is */ }
         };
         const look = async () => {
-            if (Date.now() > WATCH.until) { line(`${WATCH.who} didn't come online in the CMS. Open 👁 Watch live from Master Control → Monitoring.`); return; }
+            if (Date.now() > WATCH.until || W) return;   // given up, or a watch is open (this one or one the trainer chose)
             if (!isAdmin()) { setTimeout(look, 1000); return; }   // still signing in from the ticket
+            showMonitoring();
             let list = [];
             try { const r = await fetch('/api/heartbeat', { credentials: 'include' }); list = r.ok ? await r.json() : []; } catch (e) { list = []; }
-            const want = norm(WATCH.who), batch = norm(WATCH.batch), now = Date.now();
-            const hits = (Array.isArray(list) ? list : [])
-                .filter((u) => (u.user_type || 'Trainee') !== 'Admin' && (u.username === WATCH.who || norm(u.full_name) === want) && (!batch || !u.batch_id || norm(u.batch_id) === batch))
+            const now = Date.now();
+            const online = (Array.isArray(list) ? list : []).filter((u) => (u.user_type || 'Trainee') !== 'Admin' && now - seen(u.last_seen) < 90000 && nameOf(u))   // online: a heartbeat in the last 90 s, as Monitoring counts it
                 .sort((a, b) => seen(b.last_seen) - seen(a.last_seen));
-            const on = hits.find((u) => now - seen(u.last_seen) < 90000);   // online: a heartbeat in the last 90 s, as Monitoring counts it
-            if (on) { line(''); window.openLiveView(on.username); return; }
-            line(`👁 Waiting for ${WATCH.who} to open the CMS… their screen shows here as soon as they do.`);
+            const pick = (batch && online.find((u) => norm(u.batch_id) === batch)) || online[0];
+            if (pick && !W) { window.openLiveView(pick.username); return; }
             setTimeout(look, 4000);
         };
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(look, 300)); else setTimeout(look, 300);
