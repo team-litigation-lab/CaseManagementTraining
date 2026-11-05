@@ -149,7 +149,6 @@ function attemptLogin() {
             setSession(normalizedUser);
             applySessionUI();
             startHeartbeat();
-            startIdleTracking();
             refreshSiteState();
 
             // Signing in lands on the case workspace, whoever you are. It is what the CMS is for, and

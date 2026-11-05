@@ -178,7 +178,6 @@
         const HEARTBEAT_HIDDEN_MS = 45000;
         const HEARTBEAT_HOLD_S = 29;
         const HEARTBEAT_GRACE_MS = 45000;   // "online" = a heartbeat in the last 90 s (twice this)
-        const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes — adjust if needed
         const ANNOUNCE_KEY = 'LSH_ANNOUNCEMENT_V1';
         // Agency logo is hardcoded (no admin-editable/localStorage-backed
         // system anymore) — a corrupted/truncated localStorage value was
@@ -2271,7 +2270,7 @@
             }
         }
 
-        // Log Out (or the inactivity timeout): work the server doesn't have yet is sent first (a new case as a
+        // Log Out (or an expired session): work the server doesn't have yet is sent first (a new case as a
         // draft), then this computer forgets the case, so the next person here never gets it. If it can't be
         // sent (offline), it stays in this browser for this person only (the draft's owner).
         async function logoutSession(reason) {
@@ -2281,7 +2280,6 @@
                 if (sent) clearPersistedEditorState();
             } else clearPersistedEditorState();
             stopHeartbeat();
-            stopIdleTracking();
             fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
             clearSession();
             exitMasterControl();
@@ -2291,7 +2289,6 @@
 
         function handleSessionExpired(message) {
             stopHeartbeat();
-            stopIdleTracking();
             fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
             clearSession();
             exitMasterControl();
@@ -2308,7 +2305,6 @@
         function handleSessionTakenOver(who) {
             _takenOver = true;
             stopHeartbeat();
-            stopIdleTracking();
             clearSession();
             exitMasterControl();
             applySessionUI();
@@ -2965,7 +2961,6 @@
         function closeMonitorCase() { document.getElementById('monitor-case-modal').classList.remove('open'); }
         let heartbeatTimer = null;
         let heartbeatRunning = false, heartbeatBusy = false, heartbeatAgain = false;
-        let idleTimer = null;
 
         // opts.hold: wait at the server for a trainer to start watching (only the scheduled heartbeats of a
         // trainee nobody watches; never the one sent to revive a lapsed session)
@@ -3109,38 +3104,8 @@
             heartbeatLoop();
         }
 
-        function onUserActivity() {
-            if (!getSession()) return;
-            resetIdleTimer();
-        }
-
-        function resetIdleTimer() {
-            if (!getSession()) return;
-            if (idleTimer) clearTimeout(idleTimer);
-            idleTimer = setTimeout(onIdleTimeout, IDLE_TIMEOUT_MS);
-        }
-
-        function onIdleTimeout() {
-            logoutSession('Logged out due to inactivity.');
-        }
-
-        function startIdleTracking() {
-            stopIdleTracking();
-            ['mousemove', 'keydown', 'click'].forEach(evt => {
-                document.addEventListener(evt, onUserActivity, { passive: true });
-            });
-            resetIdleTimer();
-        }
-
-        function stopIdleTracking() {
-            if (idleTimer) {
-                clearTimeout(idleTimer);
-                idleTimer = null;
-            }
-            ['mousemove', 'keydown', 'click'].forEach(evt => {
-                document.removeEventListener(evt, onUserActivity);
-            });
-        }
+        // No idle sign-out: a session stays signed in while its tab is open (the heartbeat keeps it alive);
+        // only Log Out, a closed tab or the session's own 12-hour limit ends it.
 
         function resumeSession() {
             const session = getSession();
@@ -3152,7 +3117,6 @@
                 if (alive) {
                     applySessionUI();
                     startHeartbeat();
-                    startIdleTracking();
                 } else {
                     applySessionUI();
                 }
