@@ -60,7 +60,14 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     }
     for (const l of K.LINES) if (!K.callsIn(l.program, l.line).length) fail(`the line ${l.program} · ${l.line} has no calls`);
     const names = (k) => K.linesIn(k).map(l => l.program + ':' + l.line).join(', ');
-    if (names('FT') !== 'FT:Reception Mock Calls, FT:Calendar Management Mock Calls, FT:Intake Mock Calls') fail(`Standard Training's lines: ${names('FT')}`);
+    if (names('FT') !== 'FT:Reception Mock Calls, FT:Calendar Management Mock Calls, FT:Intake Mock Calls, FT:Claims Mock Calls') fail(`Standard Training's lines: ${names('FT')}`);
+    // the claims line: outbound calls on Training Library files, opening the claim, checking liability and updating the adjuster,
+    // each file with its claim details (on this line only), and a Claims & Adjusters tab across the programs
+    const clm = K.callsIn('FT', 'Claims Mock Calls');
+    if (clm.length < 9 || !clm.every(c => c.dir === 'out' && c.doc && K.docOf(c).text.includes('CLAIMS:'))) fail('the claims calls should be outbound, on Training Library files with their claim details');
+    if (!['ft_clm_open_', 'ft_clm_liab_', 'ft_clm_upd_'].every(p => clm.filter(c => c.id.startsWith(p)).length >= 3)) fail('the claims line should open claims, check liability and update adjusters (3 calls each)');
+    if (K.docOf(K.find('ft_cal_depo')).text.includes('CLAIMS:')) fail('a file shows its claim details off the claims line');
+    if (!names('claims').startsWith('FT:Claims Mock Calls, CM:Adjusters & Carriers')) fail(`the Claims & Adjusters tab: ${names('claims')}`);
     if (K.linesIn('EA').length !== 6 || K.callsIn('EA').length < 25) fail(`EA / PA should have 6 lines and at least 25 calls: ${names('EA')} (${K.callsIn('EA').length} calls)`);
     if (names('intake') !== 'FT:Intake Mock Calls, CM:Intake Calls, EA:Intake Calls') fail(`the Intake tab: ${names('intake')}`);
     if (!names('calendaring').includes('FT:Calendar Management Mock Calls') || !names('reception').includes('CM:Reception & Front Desk')) fail('the Calendaring or Reception tab is missing a line');
@@ -171,8 +178,8 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
         lines: [...document.querySelectorAll('.fdd-line')].map(r => [r.querySelector('.nm').childNodes[0].textContent.trim(), [...r.querySelectorAll('button')].map(b => b.textContent).join('|')]) }));
     if (!/Call Simulator/.test(home.title)) fail(`the panel is titled "${home.title}"`);
     if (home.secs.length !== 1 || !/Call lines/.test(home.secs[0]) || home.gone.length || home.results.join() !== '📊 Results and saved calls') fail(`the home screen should be the call lines only, with the way to the results: ${JSON.stringify({ secs: home.secs, gone: home.gone, buttons: home.results })}`);
-    if (home.tabs.length !== 7 || !home.tabs.includes('🧑‍💼 EA / PA') || !home.tabs.includes('📋 Intake') || !home.tabs.includes('📘 Standard Training')) fail(`the Calls dropdown: ${home.tabs.join(', ')}`);
-    if (home.lines.length !== 3 || home.lines.some(l => l[1] !== 'Practice|Graded')) fail(`the Standard tab's lines don't each have Practice and Graded: ${JSON.stringify(home.lines)}`);
+    if (home.tabs.length !== 8 || !home.tabs.includes('🛡 Claims & Adjusters') || !home.tabs.includes('🧑‍💼 EA / PA') || !home.tabs.includes('📋 Intake') || !home.tabs.includes('📘 Standard Training')) fail(`the Calls dropdown: ${home.tabs.join(', ')}`);
+    if (home.lines.length !== 4 || home.lines.some(l => l[1] !== 'Practice|Graded')) fail(`the Standard tab's lines don't each have Practice and Graded: ${JSON.stringify(home.lines)}`);
     await page.selectOption('#fdd-calls-view', 'EA');
     if (await page.locator('.fdd-line').count() !== 6) fail('the EA / PA tab doesn\'t list its 6 lines');
     await page.selectOption('#fdd-calls-view', 'intake');

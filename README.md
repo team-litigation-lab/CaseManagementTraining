@@ -83,7 +83,7 @@ Every program's mock calls, by line, on the same phone as the practice calls bel
 
 | Program | Lines |
 |---|---|
-| 📘 Standard Training (FT) | ☎ Reception Mock Calls · 🗓 Calendar Management Mock Calls · 📋 Intake Mock Calls (played on the Training Library files: the caller's file is one of MC-01 …) |
+| 📘 Standard Training (FT) | ☎ Reception Mock Calls · 🗓 Calendar Management Mock Calls · 📋 Intake Mock Calls · 🛡 Claims Mock Calls (played on the Training Library files: the caller's file is one of MC-01 …). The Claims Mock Calls are outbound calls to carriers, in the order a claim moves: opening the claim (MC-36, MC-12, a UIM notice on MC-01), checking liability (MC-22, MC-10, MC-36) and updating the adjuster (MC-01, MC-08, MC-45); on that line each file also shows its claim details (`CLAIM_FILES`). The 🛡 Claims & Adjusters tab lists them with CM Adjusters & Carriers and the PD claim lines. |
 | 🗂 Case Management | Nguyen Case Calls · Reception & Front Desk · Intake Calls · Client Communication · Attorney Reporting · Adjusters & Carriers · Providers & Records (John Doe v. Apex) |
 | 🚗 Property Damage | Claim Setup · Coverage & Liability · Rental, Tow & Shop · Negotiation & Total Loss · Settlement & Close (Angela Carter's PD claim) |
 | 🧑‍💼 EA / PA | Executive Calls · Gatekeeping & Stakeholders · Legal Operations · Lifestyle & Estate · Intake Calls · Revenue & Outreach (Elias Thorne's world, from the EA-PA program's client profile, Live Roleplay topics and intake callers) |
