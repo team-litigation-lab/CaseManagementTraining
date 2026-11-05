@@ -579,7 +579,7 @@
         const admin = !!me().admin;
         $id('fc-head').innerHTML = `
             ${attyMode() ? `<div style="margin-right:6px"><h2 class="serif">🗓 Attorney's Calendar</h2><div class="fc-sub">Calendaring · the attorney's week, the same every week, with the firm's calendars · Eastern (firm time)</div></div>`
-                : `<div style="margin-right:6px"><h2 class="serif">📅 Firm Calendar</h2><div class="fc-sub">LSH Training Law Group · all times Eastern (firm time)</div></div>`}
+                : `<div style="margin-right:6px"><h2 class="serif">📅 Firm Calendar</h2><div class="fc-sub">LSH Law Firm · all times Eastern (firm time)</div></div>`}
             <button class="fc-btn" onclick="fcNav(0)">Today</button>
             <button class="fc-btn" onclick="fcNav(-1)" aria-label="Previous">‹</button>
             <button class="fc-btn" onclick="fcNav(1)" aria-label="Next">›</button>

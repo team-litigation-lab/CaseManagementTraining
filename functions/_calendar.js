@@ -1,7 +1,7 @@
 import { ensureTemplate, templateRows, templateEvents, resetTemplate } from './_attorney_calendar.js';
 // Firm Calendar: shared logic for /api/calendar and /api/calendar-feed.
 //
-// The fictional firm (LSH Training Law Group, mock-cases.js) has one calendar per
+// The fictional firm (LSH Law Firm, mock-cases.js) has one calendar per
 // attorney plus a firm/staff calendar. Each attorney already has a working
 // schedule (court, depositions, mediations, client meetings, blocked time) that
 // repeats week to week, built here from a weekly pattern, so trainees schedule

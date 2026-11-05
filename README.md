@@ -83,7 +83,7 @@ Every program's mock calls, by line, on the same phone as the practice calls bel
 
 | Program | Lines |
 |---|---|
-| 📘 Standard Training (FT) | ☎ Reception Mock Calls · 🗓 Calendar Management Mock Calls · 📋 Intake Mock Calls (played on the Training Library files: the caller's file is one of MC-01 …) |
+| 📘 Standard Training (FT) | ☎ Reception Mock Calls · 🗓 Calendar Management Mock Calls · 📋 Intake Mock Calls · 🛡 Claims Mock Calls (played on the Training Library files: the caller's file is one of MC-01 …). The Claims Mock Calls are outbound calls to carriers, in the order a claim moves: opening the claim (MC-36, MC-12, a UIM notice on MC-01), checking liability (MC-22, MC-10, MC-36) and updating the adjuster (MC-01, MC-08, MC-45); on that line each file also shows its claim details (`CLAIM_FILES`). The 🛡 Claims & Adjusters tab lists them with CM Adjusters & Carriers and the PD claim lines. |
 | 🗂 Case Management | Nguyen Case Calls · Reception & Front Desk · Intake Calls · Client Communication · Attorney Reporting · Adjusters & Carriers · Providers & Records (John Doe v. Apex) |
 | 🚗 Property Damage | Claim Setup · Coverage & Liability · Rental, Tow & Shop · Negotiation & Total Loss · Settlement & Close (Angela Carter's PD claim) |
 | 🧑‍💼 EA / PA | Executive Calls · Gatekeeping & Stakeholders · Legal Operations · Lifestyle & Estate · Intake Calls · Revenue & Outreach (Elias Thorne's world, from the EA-PA program's client profile, Live Roleplay topics and intake callers) |
@@ -182,9 +182,9 @@ Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. Th
 - **Spreading the load:** each new call goes to the key with the fewest calls in progress. When a call ends (or the page closes), its place is freed.
 - **When a key is busy:** if Google refuses a call (busy, out of quota, model unavailable), the drill tries the next key, then the next model. Only when none takes the call does that one call run as text. The next call tries live again, so a trainee is never stuck.
 - **Paid price:** Gemini Live costs about $0.005 per minute of the trainee's audio and $0.018 per minute of the caller's. That is about $0.023 per minute of call when the caller talks the whole time, so a 3-minute call costs a few cents. Ten trainees each doing an 8-call drill is roughly 80 calls, about 240 minutes, **roughly $5–6**. Google's billing page has the exact amounts.
-- **Time limit:** every call hangs up at 4 minutes, with a warning 30 seconds before. A forgotten open call can't keep running.
+- **Time limit:** every call hangs up at 8 minutes, with a warning 30 seconds before. A forgotten open call can't keep running.
 - **Optional caps:** set these Cloudflare variables (plain text):
-  - `LIVE_MAX_MINUTES`: a shorter time limit per call (1–4; the default, and the most, is 4).
+  - `LIVE_MAX_MINUTES`: a shorter time limit per call (1–8; the default, and the most, is 8).
   - `LIVE_CALLS_PER_KEY`: the most calls at once on one key. Calls past it run as text. Use it to stay under a free-tier limit on concurrent calls.
   - `LIVE_DAILY_MINUTES`: the whole site's live minutes in any 24 hours. Past it, the drill runs as text until minutes free up. This is a spending cap.
 - **Usage for Admins:** the drill panel shows **🎙 Live voice calls**:

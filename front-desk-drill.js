@@ -623,8 +623,7 @@
         const u = liveUsage; if (!u) return '';
         const lim = u.limits || {};
         return `<div class="fdd-sec"><h4>🎙 Live voice calls</h4>
-            <div class="fdd-grid"><div><span>On calls now</span><b>${u.activeNow}</b></div><div><span>Calls · 24 h</span><b>${u.last24h.calls}</b></div><div><span>Minutes · 24 h</span><b>${u.last24h.minutes}${lim.dailyMinutes ? `<span style="display:inline;font-size:10px"> / ${lim.dailyMinutes}</span>` : ''}</b></div><div><span>Est. cost · 24 h</span><b>$${u.last24h.estCost.toFixed(2)}</b></div></div>
-            <p style="margin:4px 0 0;font-size:11.5px;color:#64748b;line-height:1.5">${u.keys.length} key${u.keys.length === 1 ? '' : 's'}: ${u.keys.map(k => `${esc(k.slot)} (${k.activeNow} now)`).join(', ') || 'none set'} · calls end at ${lim.maxMinutes} min${lim.perKey ? ` · at most ${lim.perKey} at once per key` : ''}${u.last24h.refused ? ` · ${u.last24h.refused} tr${u.last24h.refused === 1 ? 'y' : 'ies'} refused by Google (busy), moved to another key or to text` : ''}. The cost is an estimate at Google's paid per-minute price (Google's billing page has the exact amount). Google's limits are per Google Cloud project, so keys from different projects add capacity.</p></div>`;
+            <div class="fdd-grid"><div><span>On calls now</span><b>${u.activeNow}</b></div><div><span>Calls · 24 h</span><b>${u.last24h.calls}</b></div><div><span>Minutes · 24 h</span><b>${u.last24h.minutes}${lim.dailyMinutes ? `<span style="display:inline;font-size:10px"> / ${lim.dailyMinutes}</span>` : ''}</b></div><div><span>Est. cost · 24 h</span><b>$${u.last24h.estCost.toFixed(2)}</b></div></div></div>`;
     }
     function historyHTML() {
         if (!history) return `<p style="color:#64748b;font-size:12px">Loading results…</p>`;
@@ -1441,7 +1440,7 @@ The call has just been answered. When the receptionist greets you, say why you'r
         const c = l.call, you = l.msgs.filter(m => m.who === 'you');
         // the opening spiel: thanks, the firm's name, your name
         const first = you.length ? you[0].text : '';
-        const firm = /legal support help|\blsh\b|training law group/i.test(first) || first.toLowerCase().includes(firmName().toLowerCase());
+        const firm = /legal support help|\blsh\b|training law group|law firm/i.test(first) || first.toLowerCase().includes(firmName().toLowerCase());
         const thanks = /thank(s| you) for calling|good (morning|afternoon|evening|day)/i.test(first);
         const self = /\b(this is|my name is|you'?re (speaking|talking) (with|to)|i'?m|i am)\s+(?!(the|a|an|front|reception|legal|lsh|training|calling|here|glad|happy|sorry|so|just|going|not|regarding|about|your|our|my|with|from)\b)[a-z]+/i.test(first)
             || /\b(?!(desk|help|reception|group|lsh|office)\b)[a-z]+ speaking\b/i.test(first);
@@ -1825,7 +1824,7 @@ Reply with exactly this JSON:
             ? `<p class="fdd-bnote">🗂 The call is about one of the Training Library files: get the caller's name, verify them and find their file (search below or at the top).</p>`
             : `<p class="fdd-bnote">🗂 The call is about <b>${esc(doc.title)}</b>. <button class="fdd-chip" onclick="fddPick('${esc(doc.id)}')">Open ${esc(doc.id)}</button></p>`;
         return `<details class="fdd-sec fdd-brief" ${l.answered ? '' : 'open'}><summary>${esc(K.iconOf(c))} ${esc(c.line)} · ${l.graded ? `graded call ${l.num}` : 'practice'}${l.graded ? '' : `: ${esc(c.title)}`}</summary>
-            <p>${esc(l.graded && doc ? 'You answer the phone at LSH Training Law Group (fictional). The call is about one of the firm\'s Training Library files.' : c.you)}</p>
+            <p>${esc(l.graded && doc ? 'You answer the phone at LSH Law Firm. The call is about one of the firm\'s Training Library files.' : c.you)}</p>
             <p><b>${l.graded ? 'When' : 'What you know'}:</b> ${esc(c.facts)}</p>
             ${docLine}
             ${file ? `<details class="fdd-file"><summary>📂 ${esc(file.label)}</summary><pre>${esc(file.text)}</pre></details>` : ''}

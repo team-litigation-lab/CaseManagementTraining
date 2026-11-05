@@ -124,9 +124,9 @@ const failures = []; const fail = (m) => failures.push(m);
     const a1 = (await post({ callId: 'D01' })).data, k1 = lastKey();
     const a2 = (await post({ callId: 'D02' })).data, k2 = lastKey();
     if (!a1.id || !a2.id || k1 === k2) fail(`two calls at once didn't go to different keys (${k1}, ${k2})`);
-    if (a1.maxSeconds !== 240) fail(`calls should be limited to 4 minutes (${a1.maxSeconds})`);
+    if (a1.maxSeconds !== 480) fail(`calls should be limited to 8 minutes (${a1.maxSeconds})`);
     const exp = Date.parse(google[google.length - 1].body.expireTime) - Date.now();
-    if (exp < 5 * 60000 || exp > 6.5 * 60000) fail(`the token should expire shortly after the 4-minute limit (${Math.round(exp / 1000)} s)`);
+    if (exp < 9 * 60000 || exp > 10.5 * 60000) fail(`the token should expire shortly after the 8-minute limit (${Math.round(exp / 1000)} s)`);
     await post({ end: a1.id });
     const a3 = (await post({ callId: 'D03' })).data;
     if (lastKey() !== k1) fail('after a call ended, the next call didn\'t go to the key it freed');
@@ -159,7 +159,7 @@ const failures = []; const fail = (m) => failures.push(m);
     if ((await post({ callId: 'D01' })).data.maxSeconds !== 180) fail('LIVE_MAX_MINUTES isn\'t applied');
     env.LIVE_MAX_MINUTES = '10';
     const long = (await post({ callId: 'D01' })).data;
-    if (long.maxSeconds !== 240) fail('LIVE_MAX_MINUTES made calls longer than 4 minutes');
+    if (long.maxSeconds !== 480) fail('LIVE_MAX_MINUTES made calls longer than 8 minutes');
     sql.prepare('DELETE FROM live_call_log WHERE id = ?').run(long.id);   // (not counted in the usage below)
     delete env.LIVE_MAX_MINUTES;
     // Admins see the usage; trainees don't
@@ -446,7 +446,7 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.evaluate(() => fddPracticeStart(DRILL_CALLS.find(d => d.level === 1).id));   // the first Core caller (no longer listed on the home screen)
     await page.click('#fdd-pc-id button:has-text("Answer")');
     await page.waitForSelector('.fdd-pc-note:has-text("set up")', { timeout: 5000 }).catch(() => fail('without live voice set up, the practice call doesn\'t say so'));
-    await page.fill('#fdd-pc-in', 'Good morning, LSH Training Law Group.');
+    await page.fill('#fdd-pc-in', 'Good morning, LSH Law Firm.');
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => /I can hold on/.test(document.getElementById('fdd-pc-tr').textContent), null, { timeout: 5000 }).catch(() => fail('without live voice set up, the practice call didn\'t go on with the standard voice'));
     await page.evaluate(() => { fddClose(); openFrontDeskDrill(); }); await page.waitForTimeout(200);
