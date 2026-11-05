@@ -169,6 +169,16 @@
 
     .sol-font-fix { color: #000000 !important; font-weight: 900 !important; }
 
+    /* Case Notes and Tasks: the note itself big enough to read, bold and upright (cases saved before this
+       kept "text-xs italic" on their rows, so this goes by the table, not the class) */
+    #note-body .multiline-field, #task-body .multiline-field, .note-text {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        font-style: normal !important;
+        line-height: 1.45;
+        color: #0f172a;
+    }
+
     /* placeholders — single, non-flickering, CSS-driven */
     [contenteditable="true"]:empty:before {
         content: attr(data-ph);

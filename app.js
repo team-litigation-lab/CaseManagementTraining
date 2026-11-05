@@ -319,7 +319,7 @@
             } else if (id === 'fin-body') {
                 tr.innerHTML = `<td><div contenteditable="true" class="text-xs">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="text-xs" data-ph="Enter description"></div></td><td><div contenteditable="true" class="font-black exp-field text-xs text-blue-600" data-ph="$ 0.00" data-fmt="currency"></div></td><td><button onclick="this.parentElement.parentElement.remove(); updateTotals();" class="text-red-500 font-bold">×</button></td>`;
             } else if (id === 'note-body' || id === 'task-body') {
-                tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold text-slate-400">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="multiline-field text-xs min-h-[40px] italic" data-ph="Enter details"></div></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
+                tr.innerHTML = `<td><div contenteditable="true" class="text-xs font-bold text-slate-400">${today}</div></td><td><select class="prof-input text-xs">${staffOptions}</select></td><td><div contenteditable="true" class="multiline-field note-text min-h-[40px]" data-ph="Enter details"></div></td><td><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 font-bold">×</button></td>`;
             }
             document.getElementById(id).appendChild(tr);
             applyPlaceholders(tr);
