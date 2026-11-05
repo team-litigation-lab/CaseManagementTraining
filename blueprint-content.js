@@ -291,7 +291,7 @@
                 'One admin password for the Master Account and every trainer: the MASTER_ADMIN_PASSWORD secret.',
                 'The Master Account (LSHADMIN123) is made the first time and can never be suspended or revoked.',
                 'A trainer\'s first sign-in creates their own account. A permanently revoked name is refused for good.',
-                'Sessions last 12 hours. A page unheard from for 2 minutes is signed out, and so is 15 minutes idle. A suspension takes effect on their next click.'],
+                'Sessions last 12 hours. A page unheard from for 2 minutes is signed out (a closed tab); an open page is never signed out for being idle. A suspension takes effect on their next click.'],
               where: 'Cloudflare → Workers & Pages → lshcmtraining-trainingcrm → Settings → Variables and Secrets.',
               tip: 'Anyone with the admin password can sign in as the Master Account. When a trainer leaves, revoke them and change the password.' },
             { icon: '👥', title: 'Accounts and batches', points: [

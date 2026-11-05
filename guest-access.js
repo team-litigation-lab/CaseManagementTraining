@@ -86,7 +86,6 @@
             const o = document.getElementById('portal-only-overlay'); if (o) o.remove();
             applySessionUI();
             startHeartbeat();
-            startIdleTracking();
             refreshSiteState();
             try { sessionStorage.removeItem(BOUNCE_KEY); } catch (e) { /* ignore */ }
             if (typeof showToast === 'function') showToast('Signed in as ' + u.fullName + '.', 'success');
