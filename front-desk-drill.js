@@ -1546,7 +1546,7 @@ ${k && k.reception ? `On the file: ${k.reception.verify}\n` : ''}Identifiers the
 The right way to handle it: ${c.actions[c.answer]}
 Why: ${c.why}
 Wrong ways (for reference): ${c.actions.filter((_, i) => i !== c.answer).join(' | ')}
-The training phones can't transfer calls yet. Where the rules, the SOP or the answer key say to transfer, put the caller through or route now, a complete message for that person (a priority message when it's urgent), with the caller told who will call them back, is the right handling: score it in full, and never mark the receptionist down for not transferring.
+The training phones can't transfer calls yet. Where the rules, the SOP or the answer key say to transfer, put the caller through or route now, the routing is done by message here: a complete message for that person (a priority message when it's urgent), with the caller told who will call them back. Grade it on how well that was done, and don't take points off only because the call wasn't transferred.
 
 TRANSCRIPT (${a.spoken ? 'a spoken call' : 'a typed call: the receptionist typed their side'})
 ${tx}
@@ -1569,7 +1569,7 @@ RATE THESE from 0 to 5 (5: what a senior receptionist would do; 4: good, small g
 - comprehension (Comprehension): understood the request and the file (status, who's who) and gave only correct information.
 - details (Attention to Details): caught the details: names (spelled and read back when they're hard), numbers, identifiers that don't match the file, the right file when names repeat; read back the callback number; a complete message when one was needed.${a.file.ok ? '' : ' They matched the wrong file, or none: at most 2.'}
 - resolution (Resolution): reached the right outcome from the key, or the right next step, and the caller knew what happens next.
-- transfer (Transfer Procedure): when the call needed routing to someone: the right person from the directory, a complete message for them (the caller's name, callback number and reason, marked urgent when it is), and the caller told who will call them back. The training phones can't transfer calls yet, so a message is how every call is routed here: never mark the receptionist down for not transferring, not putting the caller through or not briefing the person who takes it. null when no routing was needed.
+- transfer (Transfer Procedure): graded whenever the call needed routing to someone (the answer key, the rules or the SOP send it to a person or team): the right person from the directory, a complete message for them (the caller's name, callback number and reason, marked urgent when it is), and the caller told who will call them back. The training phones can't transfer calls yet, so the routing is done by message: don't take points off only for not putting the caller through or not briefing the person who takes it. When the call needed routing and they didn't route it, routed it to the wrong person, or left the caller not knowing who will call back, score it low. null only when the call needed no routing at all.
 - clarity (Clarity of Speech): ${a.spoken ? 'from the transcript of what they said: clear, complete sentences, no garbled or trailing phrases.' : 'null: this call was typed.'}
 - tone (Tone of Voice): ${a.spoken ? 'from what they said: warm, calm and professional (the transcript can\'t carry the voice itself, so judge the wording).' : 'null: this call was typed.'}
 

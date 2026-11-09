@@ -1739,7 +1739,7 @@ THE FIRM'S SCORECARD (${sc.title}): rate every metric from 0 to 5 for this call$
 ${sc.metrics.map((m, i) => `${i + 1}. ${m.name}: ${m.about}`).join('\n')}
 A metric the call gave no chance to show (for example, no new time was needed): score it on the nearest thing the call did need, say so in its feedback, and don't mark the trainee down for what the call never asked of them.
 The call's score is the weighted average of these ratings out of 5, as a percentage, so "score" must match it.` : ''}
-The training phones can't transfer calls yet. Where a goal, the file or the firm's rules say to transfer, put the caller through or route now, a complete message for that person (a priority message when it's urgent), with the caller told who will call them back, meets it in full: never mark the trainee down for not transferring.
+The training phones can't transfer calls yet. Where a goal, the file or the firm's rules say to transfer, put the caller through or route now, the routing is done by message here: grade it on the right person, a complete message (a priority message when it's urgent) and the caller told who will call them back, and don't take points off only because the call wasn't transferred. A call that needed routing and wasn't routed, or went to the wrong person, misses that goal.
 Any legal advice, case valuation, guarantee, or disclosure of confidential or privileged information to someone not entitled to it should pull the score well below 70${sc ? ' (score the metrics it breaks accordingly)' : ''}.
 
 Return ONLY JSON:
