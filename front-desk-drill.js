@@ -955,7 +955,7 @@
         failed: 'You say this is your case (or that you may speak for the client), but you can only give the details listed below, and some are missing or don\'t match what the firm has. If the receptionist says they can\'t verify you, push back once, then accept what they offer (a callback to the number on file, or a message).',
         unauthorized: 'You are NOT on the client\'s file as someone who may get information, but you feel you should be told (you are family, a friend, or similar). Push for an answer once or twice, politely but firmly. If the receptionist holds the line kindly, accept leaving a message. Never get abusive.',
         business: 'You are calling from a business (an insurance company, a medical provider, another law office, a vendor). You are professional and brief. When asked, you give your name, your company, any claim or reference number and your callback number. You don\'t know the client\'s personal details (date of birth, SSN, home address). You expect to be put through to the right person, or to leave a detailed message.',
-        newcaller: 'You are not a client of this firm. You were hurt recently and are calling to ask whether the firm can help you. Answer questions about what happened simply. You expect to be put through to the intake team or to get a callback.'
+        newcaller: 'You are not a client of this firm. You were hurt recently and are calling to ask whether the firm can help you. Answer questions about what happened simply. You expect a callback from the intake team.'
     };
     const GIVES = [['name', 'Your name'], ['dob', 'A date of birth, if asked'], ['address', 'An address, if asked'], ['ssn4', 'Last 4 of the Social Security number, if asked'],
         ['callback', 'Your callback number'], ['relationship', 'Who you are to the client'], ['dol', 'The date of the accident, if asked']];
@@ -1546,6 +1546,7 @@ ${k && k.reception ? `On the file: ${k.reception.verify}\n` : ''}Identifiers the
 The right way to handle it: ${c.actions[c.answer]}
 Why: ${c.why}
 Wrong ways (for reference): ${c.actions.filter((_, i) => i !== c.answer).join(' | ')}
+The training phones can't transfer calls yet. Where the rules, the SOP or the answer key say to transfer, put the caller through or route now, the routing is done by message here: a complete message for that person (a priority message when it's urgent), with the caller told who will call them back. Grade it on how well that was done, and don't take points off only because the call wasn't transferred.
 
 TRANSCRIPT (${a.spoken ? 'a spoken call' : 'a typed call: the receptionist typed their side'})
 ${tx}
@@ -1568,7 +1569,7 @@ RATE THESE from 0 to 5 (5: what a senior receptionist would do; 4: good, small g
 - comprehension (Comprehension): understood the request and the file (status, who's who) and gave only correct information.
 - details (Attention to Details): caught the details: names (spelled and read back when they're hard), numbers, identifiers that don't match the file, the right file when names repeat; read back the callback number; a complete message when one was needed.${a.file.ok ? '' : ' They matched the wrong file, or none: at most 2.'}
 - resolution (Resolution): reached the right outcome from the key, or the right next step, and the caller knew what happens next.
-- transfer (Transfer Procedure): when the call needed a transfer or routing to someone: the right person from the directory, the caller told who they're being put through to, and the person taking it told the caller's name and reason (SOP). null when no transfer or routing was needed.
+- transfer (Transfer Procedure): graded whenever the call needed routing to someone (the answer key, the rules or the SOP send it to a person or team): the right person from the directory, a complete message for them (the caller's name, callback number and reason, marked urgent when it is), and the caller told who will call them back. The training phones can't transfer calls yet, so the routing is done by message: don't take points off only for not putting the caller through or not briefing the person who takes it. When the call needed routing and they didn't route it, routed it to the wrong person, or left the caller not knowing who will call back, score it low. null only when the call needed no routing at all.
 - clarity (Clarity of Speech): ${a.spoken ? 'from the transcript of what they said: clear, complete sentences, no garbled or trailing phrases.' : 'null: this call was typed.'}
 - tone (Tone of Voice): ${a.spoken ? 'from what they said: warm, calm and professional (the transcript can\'t carry the voice itself, so judge the wording).' : 'null: this call was typed.'}
 
@@ -1605,7 +1606,7 @@ Reply with exactly this JSON:
             if (how === 'auto') { s = a[key].score; note = a[key].note; }
             else if (rv) { s = rv.ratings[key]; note = rv.notes[key] || ''; }
             if ((key === 'clarity' || key === 'tone') && !a.spoken) { s = null; note = 'Rated on spoken calls only: this call was typed.'; }
-            if (key === 'transfer' && rv && s == null && !note) note = 'No transfer was needed on this call.';
+            if (key === 'transfer' && rv && s == null && !note) note = 'No routing was needed on this call.';
             if (key === 'details' && typeof s === 'number' && !a.file.ok && s > 2) { s = 2; note = (note ? note + ' ' : '') + 'The file you matched isn\'t the caller\'s.'; }
             if (rv && rv.breach && (key === 'auth' || key === 'resolution')) { s = 0; note = `Disclosure: ${rv.breachNote || 'information was shared that shouldn\'t have been'}.`; }
             return { key, label, how, s, note };
