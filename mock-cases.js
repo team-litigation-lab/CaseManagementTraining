@@ -100,7 +100,7 @@ const MOCK_FIRM = {
     sop: [
         'Answer at once: the one-ring policy.',
         'Open every call with the spiel: "Thank you for calling Legal Support Help. This is (your name)." (In these practice calls the firm is also called LSH Law Firm.)',
-        'Before you transfer a call, tell the person who takes it the caller\'s name and why they are calling. Always a cold transfer unless you are told otherwise. Tell the caller who you are putting them through to.',
+        'Before you transfer a call, tell the person who takes it the caller\'s name and why they are calling. Always a cold transfer unless you are told otherwise. Tell the caller who you are putting them through to. (The training phones can\'t transfer calls yet: in these practice calls, take a complete message for that person and tell the caller who will call them back.)',
         'Never give out a Social Security number or any part of it. A provider or an adjuster who asks for it sends the request in writing to prelit@legalsupporthelp.com.',
         'Case updates follow the case status and who is calling (the client, a medical provider or an adjuster): say only what the file supports. Adjusters put their requests and offers in writing to prelit@legalsupporthelp.com. Litigation matters go to the litigation team, or a paralegal follows up.',
         'Close every call: offer more help ("Is there anything else I can help you with?"), thank the caller, and say goodbye.'
@@ -430,7 +430,7 @@ const MOCK_CASES = [
         verify: 'James Wilson · DOB 09/17/1983 · 17 Birchwood Lane or SSN last 4 (3390).',
         calls: [
             { from: 'James Wilson (client)', ask: '"Is my check ready? I need it this week."', handle: 'Verify. Not yet: the firm is waiting on one provider\'s written lien reduction; then he signs the final settlement statement, and the check is ready about 3 business days later. Don\'t promise a date. Message Priya Natarajan (ext 311).' },
-            { from: 'James Wilson (client)', ask: '"Can my buddy Troy pick up my check for me?"', handle: 'Not on the front desk\'s say-so. Checks are released only to the client with photo ID, unless the attorney approves a signed written authorization. Route to Accounting (ext 500) / Priya.' },
+            { from: 'James Wilson (client)', ask: '"Can my buddy Troy pick up my check for me?"', handle: 'Not on the front desk\'s say-so. Checks are released only to the client with photo ID, unless the attorney approves a signed written authorization. Take a message for Priya Natarajan (CM, ext 311).' },
             { from: 'Align Chiropractic billing', ask: '"We\'re sending our reduction today. Who gets it?"', handle: 'Rosa Delgado, Lien Negotiator (ext 341). Give the firm fax/email for liens per office procedure and log a Note.' }
         ]
     }
