@@ -203,6 +203,8 @@ Optional: `LIVE_MODEL` (plain text) puts a different Gemini Live model first. Th
 
 The case editor is laid out for a wide window (the case itself needs about 1,030 px). `case-fit.js` fits it to the browser window whenever the window is resized, the Call Simulator panel opens or closes, or a case is opened or closed, and for a few seconds after, if the case grows as it fills in (never while a mouse button is down or something is being dragged, so the case doesn't change size under the mouse): in a narrower window the case is shown smaller so all of it is in view (never below 70%; past that it scrolls sideways), and in a wide one it's full size. In a window under 1,100 px (a browser beside a Google Meet, say) the sidebar is narrower, to leave the case more room. Only the case is scaled; the sidebar, the top bars, the windows and the case's action bar keep their size. With the Call Simulator panel open, the case sits beside it (above).
 
+**On a phone** (760 px wide or less) the case is never shrunk: it's laid out for the phone instead (`styles.css`, "PHONES"). The sidebar becomes a drawer, opened with **☰** at the left of the strip over the case and closed with ✕, a tap beside it, Esc, or any button in it (`phone-layout.js`). The case header stacks (the client's boxes two to a row, then the ID card, then the case number, status and search), the tabs' three- and four-column grids go two to a row and their cards one, the Date of Loss / SOL / Location boxes wrap, and a wide table scrolls sideways in its own box. Wider screens are not affected.
+
 ## Using the CMS from any training program
 
 Link to the CMS with a program so it opens in that program's context:
