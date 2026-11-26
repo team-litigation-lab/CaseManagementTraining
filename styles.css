@@ -453,18 +453,19 @@
         background: white; border-radius: 10px; width: 380px; max-width: 90vw;
         padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
         border-top: 6px solid var(--orange);
+        font-size: 14.5px; color: #0f172a;   /* pop-ups: larger, darker text by default */
     }
     .modal-box.wide { width: 560px; }
-    .modal-box h2 { font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:19px; font-weight:800; margin:0 0 4px; }
-    .modal-box .sub { font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:18px; }
+    .modal-box h2 { font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:22px; font-weight:800; margin:0 0 4px; }
+    .modal-box .sub { font-size:12.5px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:18px; }
     .modal-box input[type=text], .modal-box input[type=password] {
         width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:6px;
-        font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:13px; margin-bottom:12px; outline:none;
+        font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:15px; font-weight:600; margin-bottom:12px; outline:none;
     }
     .modal-box input:focus { border-color: var(--orange); }
     .modal-btn-row { display:flex; gap:8px; margin-top:16px; }
     .modal-btn-row button {
-        flex:1; padding:10px; border-radius:6px; font-weight:800; font-size:11px;
+        flex:1; padding:12px; border-radius:6px; font-weight:800; font-size:13px;
         text-transform:uppercase; letter-spacing:0.04em; cursor:pointer; border:none;
     }
     .btn-primary { background: var(--navy); color: var(--orange); }
@@ -1260,3 +1261,7 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 #capture-area .header-card .cid-card { border-color: #c9973f !important; }
 @media print { #capture-area .pdf-card.header-card { background: #fff; border: 2px solid #1E2340 !important; box-shadow: none; } }
+
+/* the Case ID line above the phase: a larger label, and the number (or "Assigned on Save Case") bold and dark enough to read */
+#capture-area .header-card .text-right > :has(> #case-id-field) > label { font-size: 14px !important; }
+#capture-area .header-card #case-id-field { font-size: 14px !important; font-weight: 800 !important; color: #0f2148 !important; padding: 4px 12px !important; background: #eef2f7 !important; border: 1px solid #cbd5e1; border-radius: 7px !important; }
