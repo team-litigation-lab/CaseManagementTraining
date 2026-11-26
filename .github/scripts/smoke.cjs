@@ -45,6 +45,9 @@ const SAVED = [
     // (CI saw this page navigate right after a Save Case: log every navigation of the page and its console errors, so a
     // failure says where it went and why)
     page.on('framenavigated', f => { if (f === page.mainFrame()) console.log(`[nav] ${new Date().toISOString()} ${f.url()}`); });
+    page.on('request', r => { if (r.isNavigationRequest() && r.frame() === page.mainFrame()) console.log(`[nav-start] ${new Date().toISOString()} ${r.method()} ${r.url()}${r.redirectedFrom() ? ' (redirected)' : ''}`); });
+    page.on('download', d => console.log(`[download] ${d.suggestedFilename()}`));
+    page.on('crash', () => console.log('[crash] the page crashed'));
     page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[console ${m.type()}] ${m.text().slice(0, 300)}`); });
     page.on('requestfailed', r => { if (!/tailwind|html2pdf|fonts\.g/.test(r.url())) console.log(`[requestfailed] ${r.url()} ${(r.failure() || {}).errorText || ''}`); });
     page.on('dialog', d => d.accept());
