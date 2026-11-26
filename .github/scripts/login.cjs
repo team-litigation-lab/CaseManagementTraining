@@ -368,7 +368,7 @@ const failures = []; const fail = (m) => failures.push(m);
     if (JSON.stringify(last) !== JSON.stringify({ username: 'rosa_n', portalMode: 'Trainee' })) fail(`the Trainee tab sent ${JSON.stringify(last)} (expected the username only)`);
     if (/required/.test(await page.textContent('#auth-login-msg'))) fail(`the Trainee tab still asks for something besides the username: ${await page.textContent('#auth-login-msg')}`);
 
-    // an Admin changes Batch IDs from the Registrations and Users tabs (the real /api/users and /api/update-batch)
+    // an Admin changes Batch IDs from the Registrations tab (the real /api/users and /api/update-batch)
     sql.prepare("UPDATE heartbeats SET last_seen = datetime('now') WHERE username = ?").run(utils.MASTER_USERNAME);
     const admin = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     admin.on('pageerror', e => fail(`admin page error: ${e.message}`));
@@ -401,17 +401,8 @@ const failures = []; const fail = (m) => failures.push(m);
         if (saved !== 'B060126' || !/Batch B060126/.test(await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent())) fail(`changing a registration's Batch ID: saved ${saved}, the row shows ${await rowOf('registrations-list', 'ana_r').locator('.reg-meta').textContent()}`);
         if (!(await admin.isVisible('text=Batch ID changed to B060126'))) fail('no message said the Batch ID was changed');
     }
-    await admin.evaluate(() => showAdminDashTab('users')); await admin.waitForTimeout(500);
-    const juanRow = rowOf('users-list', 'juan_dc');
-    if (!(await juanRow.count()) || !(await juanRow.locator('button:has-text("Batch ID")').count())) fail('an approved trainee has no Batch ID button in the Users tab');
-    else {
-        const groups = await admin.$$eval('#users-list .group-heading', els => els.map(e => e.textContent.split(' ')[0]).filter(t => /^B/.test(t)));
-        if (groups.join() !== 'B121026,B300926,B050226,B1') fail(`trainees aren't grouped by Batch ID, the newest batch first: ${groups.join()}`);
-        await juanRow.locator('button:has-text("Batch ID")').click();
-        await juanRow.locator('.batch-edit input').press('Escape');
-        if (await juanRow.locator('.batch-edit').count()) fail('Escape did not close the Batch ID box');
-    }
-    if (await rowOf('users-list', 'trainer-maria-lopez').locator('button:has-text("Batch ID")').count()) fail('an Admin account has a Batch ID button');
+    // (the Users tab was removed from Master Control: users are run from the Portal)
+    if (await admin.locator('.mc-tab', { hasText: 'Users' }).count()) fail('Master Control still has a Users tab');
     await admin.close();
 
     await browser.close(); server.close();
