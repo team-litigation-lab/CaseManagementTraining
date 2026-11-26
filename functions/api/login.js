@@ -129,7 +129,7 @@ export async function onRequestPost({ request, env }) {
         // Single sign-on: while the CMS is locked to the Portal (the admin password set, PORTAL_ONLY not "off"), a trainee
         // is signed in only by the Portal's ticket, as the account they are logged in with there, never by a typed username.
         if (portalOnly(env) && (trainee || portalMode === 'Trainee')) {
-            return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Trainees sign in on the LSH Training Portal. Open the CMS from the Portal and it signs you in.' }, 403);
+            return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Trainees sign in on the LSH Training Portal. Open CaseWorX from the Portal and it signs you in.' }, 403);
         }
         // Any other account needs its own password (an older tab may still send a Batch ID: a trainee doesn't need it).
         const secret = String(password || body.batchId || '');

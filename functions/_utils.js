@@ -1,4 +1,4 @@
-// Shared helpers for LSH Case Management System Cloudflare Pages Functions.
+// Shared helpers for LSH CaseWorX Cloudflare Pages Functions.
 
 export function json(data, status = 200, extraHeaders = {}) {
     return new Response(JSON.stringify(data), {
@@ -134,7 +134,7 @@ export async function upsertSessionHeartbeat(db, { username, fullName, batchId, 
    what made 👁 Watch live show the wrong trainee, and it put one trainee's work
    in another's My cases.
 
-   So every request from a CMS page says which account it believes it is:
+   So every request from a CaseWorX page says which account it believes it is:
    X-LSH-As (app.js puts it on every /api/ request), or `as` in the JSON body of
    the heartbeat and the live screen, which already carry it. When that isn't the
    account the request authenticated as, nothing is read or written — 409
@@ -156,7 +156,7 @@ export function claimedAccount(request, body) {
 export const wrongAccount = (claimed, username) => !!claimed && claimed !== username;
 export const sessionChangedResponse = () => json({
     success: false, code: 'SESSION_CHANGED',
-    error: 'This browser is signed in as someone else now. Open the CMS again from your course to carry on.'
+    error: 'This browser is signed in as someone else now. Open CaseWorX again from your course to carry on.'
 }, 409);
 
 /**

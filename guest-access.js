@@ -1,12 +1,12 @@
 /* =========================================================
-   LSH CMS — SIGN-IN FROM THE LSH TRAINING PORTAL ONLY
+   LSH CaseWorX — SIGN-IN FROM THE LSH TRAINING PORTAL ONLY
    Typing a name no longer signs anyone in: that door (/api/guest-login and
-   the name-only form) is gone, so the CMS is reached with a CMS account —
+   the name-only form) is gone, so CaseWorX is reached with a CaseWorX account —
    a trainee through the Portal, an admin with the admin password.
    ========================================================= */
 /* =========================================================
    LSH TRAINING PORTAL SIGN-IN ONLY (see functions/_portal.js, functions/api/portal-login.js)
-   Trainees sign in once on the Portal and open the CMS from there; the link carries a signed, short-lived
+   Trainees sign in once on the Portal and open CaseWorX from there; the link carries a signed, short-lived
    ticket (?ticket=…) that signs them in here. Nobody is signed in by a typed name or a username alone.
    Without a ticket (and without a session) the sign-in screen is replaced by a pointer to the Portal;
    trainers and admins still use the admin password ("Trainer or admin?").
@@ -37,9 +37,9 @@
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     function showNotice() {
         if (dismissed) return;
-        const el = card('<h1 style="font-size:22px;margin:0 0 10px">Case Management System</h1>'
+        const el = card('<h1 style="font-size:22px;margin:0 0 10px">LSH CaseWorX™</h1>'
             + (notice ? '<p style="color:#fca5a5;font-size:14px;margin:0 0 14px">' + esc(notice) + '</p>' : '')
-            + '<p style="color:#cbd5e1;font-size:14px;line-height:1.5;margin:0 0 22px">You sign in once, on the LSH Training Portal, and open the CMS from there. There is no separate sign-in here.</p>'
+            + '<p style="color:#cbd5e1;font-size:14px;line-height:1.5;margin:0 0 22px">You sign in once, on the LSH Training Portal, and open CaseWorX from there. There is no separate sign-in here.</p>'
             + '<a href="' + PORTAL_LOGIN + '" style="display:block;background:#f97316;color:#fff;font-weight:700;text-decoration:none;padding:12px;border-radius:10px">Go to the LSH Training Portal</a>'
             + '<p style="margin:22px 0 0;font-size:12px;color:#94a3b8">Trainer or admin? <a href="#" id="portal-admin-link" style="color:#fff;font-weight:700">Sign in with the admin password</a></p>');
         const a = el.querySelector('#portal-admin-link');
@@ -75,12 +75,12 @@
 
     async function signInFromTicket() {
         busy = true;
-        card('<h1 style="font-size:20px;margin:0 0 8px">Signing you in…</h1><p style="color:#cbd5e1;font-size:14px;margin:0">Opening the CMS from the LSH Training Portal.</p>');
+        card('<h1 style="font-size:20px;margin:0 0 8px">Signing you in…</h1><p style="color:#cbd5e1;font-size:14px;margin:0">Opening CaseWorX from the LSH Training Portal.</p>');
         try {
             const res = await fetch('/api/portal-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ticket }) });
             const data = await res.json().catch(() => ({}));
             if (data.code === 'ADMIN_PASSWORD_REQUIRED') { openAdminLogin(); return; }
-            if (!res.ok || !data.success) { notice = data.error || 'We couldn’t sign you in from the LSH Training Portal. Open the CMS from the Portal again.'; return; }
+            if (!res.ok || !data.success) { notice = data.error || 'We couldn’t sign you in from the LSH Training Portal. Open CaseWorX from the Portal again.'; return; }
             const u = data.user;
             setSession({ fullName: u.fullName, batchId: u.batchId, userType: u.userType, username: u.username });
             const o = document.getElementById('portal-only-overlay'); if (o) o.remove();
@@ -90,7 +90,7 @@
             try { sessionStorage.removeItem(BOUNCE_KEY); } catch (e) { /* ignore */ }
             if (typeof showToast === 'function') showToast('Signed in as ' + u.fullName + '.', 'success');
         } catch (e) {
-            notice = 'We couldn’t reach the CMS to sign you in. Check your connection and open it from the LSH Training Portal again.';
+            notice = 'We couldn’t reach CaseWorX to sign you in. Check your connection and open it from the LSH Training Portal again.';
         } finally {
             busy = false;
             if (!session()) ticketFailed();

@@ -71,20 +71,20 @@ export async function onRequestPost({ request, env }) {
     const who = await readPortalTicket(env, body.ticket, why);
     if (!who) {
         return json({ success: false, code: why.r || 'format', error: why.r === 'unreachable'
-            ? 'The CMS couldn\'t reach the LSH Training Portal to confirm your sign-in. Please try again in a moment.'
+            ? 'CaseWorX couldn\'t reach the LSH Training Portal to confirm your sign-in. Please try again in a moment.'
             : why.r === 'signature'
-            ? 'The LSH Training Portal couldn\'t be verified (code: bad-signature). Please tell your administrator: the Portal and the CMS need the same sign-in secret.'
-            : 'This sign-in link has expired. Open the CMS again from the LSH Training Portal.' }, 401);
+            ? 'The LSH Training Portal couldn\'t be verified (code: bad-signature). Please tell your administrator: the Portal and CaseWorX need the same sign-in secret.'
+            : 'This sign-in link has expired. Open CaseWorX again from the LSH Training Portal.' }, 401);
     }
     if (who.system) return json({ success: false, code: 'SYSTEM_TICKET', error: 'This link can\'t sign anyone in.' }, 403);
     // A trainer, signed in to the Portal with their own admin account: their own CMS Admin account, no password here.
     // An admin ticket works once (a trainee's doesn't need to: the courses put it on every link out).
     if (who.admin) {
         if (!(await useTicketOnce(db, body.ticket))) {
-            return json({ success: false, code: 'used', error: 'This sign-in link was already used. Open the CMS again from the LSH Training Portal.' }, 401);
+            return json({ success: false, code: 'used', error: 'This sign-in link was already used. Open CaseWorX again from the LSH Training Portal.' }, 401);
         }
         const admin = who.name ? await trainerUser(db, who.name) : await adminPortalUser(db);
-        if (!admin || admin.revoked) return json({ success: false, error: 'Access for this trainer has been revoked in the CMS. Please contact the Master Account.' }, 403);
+        if (!admin || admin.revoked) return json({ success: false, error: 'Access for this trainer has been revoked in CaseWorX. Please contact the Master Account.' }, 403);
         if (admin.user_type !== 'Admin' || admin.status !== 'Approved') return json({ success: false, error: BLOCKED[admin.status] || 'This trainer account isn\'t available. Please contact the Master Account.' }, 403);
         return signIn(env, admin, { viaPortal: true, admin: true });
     }
@@ -120,7 +120,7 @@ export async function onRequestPost({ request, env }) {
         if (matches.length === 1) {
             user = matches[0];
         } else if (matches.length > 1) {
-            return json({ success: false, code: 'NEED_BATCH', error: 'More than one CMS account has your name, so the CMS can\'t tell which one is yours. Please tell your trainer: in Master Control → Users they can remove the extra account, or give each one its own Batch ID.' }, 409);
+            return json({ success: false, code: 'NEED_BATCH', error: 'More than one CaseWorX account has your name, so CaseWorX can\'t tell which one is yours. Please tell your trainer: in Master Control → Users they can remove the extra account, or give each one its own Batch ID.' }, 409);
         } else {
             // No registered account under that name. The trainee registered on the Portal and a trainer
             // approved them there, and the CMS's own registration is closed while it is Portal-only
@@ -134,7 +134,7 @@ export async function onRequestPost({ request, env }) {
                 return json({ success: false, error: BLOCKED.Revoked }, 403);
             }
             if (!user) {
-                return json({ success: false, error: 'Couldn\'t open your CMS account. Please open the CMS from the LSH Training Portal again.' }, 500);
+                return json({ success: false, error: 'Couldn\'t open your CaseWorX account. Please open CaseWorX from the LSH Training Portal again.' }, 500);
             }
             guest = true;
         }

@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — MOCK PHOTOS FOR THE TRAINING LIBRARY'S FILES
+   LSH CaseWorX — MOCK PHOTOS FOR THE TRAINING LIBRARY'S FILES
    ---------------------------------------------------------
    Drawn here (SVG), from each file in mock-cases.js, so they always match
    the file; every one is marked as a mock training photo. The library's

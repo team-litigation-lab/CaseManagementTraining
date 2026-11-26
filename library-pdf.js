@@ -8,7 +8,7 @@
      the caller scenarios and the Front Desk practice calls), and a subtitle.
    - The Training Library window's "PDF" buttons (training-library.js) call it with
      the cases it lists (program filter and search), or with one case.
-   A case an Admin edited in the CMS carries a note: its key details (name, phone,
+   A case an Admin edited in CaseWorX carries a note: its key details (name, phone,
    DOB, DOL, phase…) are the edited ones; the rest is the library original.
    ========================================================= */
 (function () {
@@ -100,10 +100,10 @@
         // cover
         const count = (k) => cases.filter(c => c.level === k).length;
         if (logo) { try { doc.addImage(logo, 'PNG', M + 10, 170, 80, 80); } catch (e) { /* no logo */ } }
-        font(9, 'bold', [234, 88, 12]); doc.text('LEGAL SUPPORT HELP  ·  CASE MANAGEMENT SYSTEM', M + 10, 285);
+        font(9, 'bold', [234, 88, 12]); doc.text('LEGAL SUPPORT HELP  ·  LSH CASEWORX™', M + 10, 285);
         font(30, 'bold', NAVY); doc.text('Training Library', M + 10, 322); doc.text('Mock Cases', M + 10, 356);
         font(11, 'normal', [71, 85, 105]);
-        const blurb = `${opts.title ? opts.title + ': ' : ''}${cases.length} fictional personal-injury case file${cases.length === 1 ? '' : 's'} from the CMS Training Library, with every tab of the case: profile, narrative, police report, insurance, liens, treatment, property damage, litigation, ADR, case costs, documents, notes and tasks.${opts.trainer ? ' Each file ends with its trainer-only front-desk key: how to verify the caller, the caller scenarios and the Front Desk practice calls.' : ''}`;
+        const blurb = `${opts.title ? opts.title + ': ' : ''}${cases.length} fictional personal-injury case file${cases.length === 1 ? '' : 's'} from the CaseWorX Training Library, with every tab of the case: profile, narrative, police report, insurance, liens, treatment, property damage, litigation, ADR, case costs, documents, notes and tasks.${opts.trainer ? ' Each file ends with its trainer-only front-desk key: how to verify the caller, the caller scenarios and the Front Desk practice calls.' : ''}`;
         doc.text(doc.splitTextToSize(clean(blurb), CW - 40), M + 10, 382);
         let fx = M + 10;
         [[cases.length, 'CASE FILES'], [count('Starter'), 'STARTER'], [count('Intermediate'), 'INTERMEDIATE'], [count('Advanced'), 'ADVANCED']]
@@ -111,7 +111,7 @@
             .forEach(([n, l]) => { doc.setFillColor(...ORANGE); doc.rect(fx, 468, 2.5, 30, 'F'); font(18, 'bold', NAVY); doc.text(String(n), fx + 9, 485); font(6.8, 'normal', MUTED); doc.text(l, fx + 9, 496); fx += 92; });
         doc.setDrawColor(...LINE); doc.setLineWidth(0.6); doc.line(M + 10, 530, M + CW - 20, 530);
         font(8.2, 'normal', MUTED);
-        doc.text(doc.splitTextToSize(clean(`${opts.trainer ? 'Trainer copy: contains the answer keys. Not for trainees.' : 'Case files only: no answer keys.'} All names, numbers and facts are fictional. Downloaded ${new Date().toLocaleString()} from the CMS Training Library.`), CW - 40), M + 10, 546);
+        doc.text(doc.splitTextToSize(clean(`${opts.trainer ? 'Trainer copy: contains the answer keys. Not for trainees.' : 'Case files only: no answer keys.'} All names, numbers and facts are fictional. Downloaded ${new Date().toLocaleString()} from the CaseWorX Training Library.`), CW - 40), M + 10, 546);
 
         // index
         doc.addPage(); y = M;
@@ -136,7 +136,7 @@
             if (has(c.critical)) table({ body: [[clean('CRITICAL: ' + c.critical)]], theme: 'plain', styles: { fontSize: 9, fontStyle: 'bold', textColor: [153, 27, 27], fillColor: [254, 242, 242], cellPadding: 6 } });
             const ed = typeof window.mockEditInfo === 'function' ? window.mockEditInfo(c.id) : null;
             if (has(c.summary) || ed) {
-                table({ body: [[clean((c.summary || '') + (ed ? `${c.summary ? '\n' : ''}Edited in the CMS by ${ed.updatedBy || 'an Admin'}${ed.updatedAt ? ' (' + ed.updatedAt + ' UTC)' : ''}: the key details here (name, phone, DOB, DOL, phase…) are the edited ones; open the case in the CMS for the whole edited file.` : ''))]],
+                table({ body: [[clean((c.summary || '') + (ed ? `${c.summary ? '\n' : ''}Edited in CaseWorX by ${ed.updatedBy || 'an Admin'}${ed.updatedAt ? ' (' + ed.updatedAt + ' UTC)' : ''}: the key details here (name, phone, DOB, DOL, phase…) are the edited ones; open the case in CaseWorX for the whole edited file.` : ''))]],
                     theme: 'plain', styles: { fontSize: 8.6, textColor: [124, 45, 18], fillColor: [255, 247, 237], cellPadding: 6 } });
             }
             heading('Client profile');
@@ -176,7 +176,7 @@
                         ['PD limit', pc.limit], ['Deductible', pc.deductible], ['Rental / loss of use', pc.rental], ['Repair or total loss', pc.outcome], ['Estimate / ACV', pc.estimate], ['Body shop', pc.shop]], 4);
                     if (has(pc.notes)) para(pc.notes);
                 }
-                if ((c.pdPhotos || []).length) para(`Photos in the CMS (mock, for training): ${c.pdPhotos.map(p => `${p.vehicle === 'other' ? 'other vehicle' : 'client vehicle'}, ${p.area}: ${p.caption || ''}`).join('; ')}.`);
+                if ((c.pdPhotos || []).length) para(`Photos in CaseWorX (mock, for training): ${c.pdPhotos.map(p => `${p.vehicle === 'other' ? 'other vehicle' : 'client vehicle'}, ${p.area}: ${p.caption || ''}`).join('; ')}.`);
             }
             if (c.lit) {
                 heading('Litigation');
@@ -211,7 +211,7 @@
             doc.text(clean(`LSH Training Library · Mock Cases${opts.trainer ? ' · Trainer copy' : ''}${opts.title ? ' · ' + opts.title : ''}`), M, H - 22);
             doc.text(`${i} / ${n}`, W - M, H - 22, { align: 'right' });
         }
-        doc.setProperties({ title: 'LSH Training Library · Mock Cases', subject: opts.trainer ? 'Trainer copy' : 'Case files only', creator: 'LSH Case Management System' });
+        doc.setProperties({ title: 'LSH Training Library · Mock Cases', subject: opts.trainer ? 'Trainer copy' : 'Case files only', creator: 'LSH CaseWorX™' });
         return doc;
     }
 

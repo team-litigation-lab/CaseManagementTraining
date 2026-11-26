@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — TRAINING LIBRARY: HARDCODED MOCK CASES
+   LSH CaseWorX — TRAINING LIBRARY: HARDCODED MOCK CASES
    ---------------------------------------------------------
    Fictional personal-injury files every training program can open
    (Receptionist / Front Desk, Intake, Case Management, EA/PA, …).
@@ -21,7 +21,7 @@
    numbers here are invented for training. SSNs are masked on purpose:
    the front desk never needs, reads out or keys a full SSN.
 
-   `caseNumber` is the file's firm case number, in the CMS's Case ID format
+   `caseNumber` is the file's firm case number, in CaseWorX's Case ID format
    (LSH-<year opened>-<type code>-<number>; functions/_utils.js nextCaseId).
    Mock numbers use the 900000+ range, which the server's counter (saved
    cases get 000001 and up) won't reach for a long time, and follow the order the files
@@ -470,7 +470,7 @@ const MOCK_CASES = [
     reception: {
         verify: 'Keisha Brown · DOB 12/01/1995 · the address ON FILE (640 Crescent Ave Apt 22) or SSN last 4 (5149). If she says she moved, verify with the old address first, then take the new one.',
         calls: [
-            { from: 'Keisha Brown (client)', ask: '"Nobody ever calls me back! I have a new phone number and I moved."', handle: 'Acknowledge the frustration without blaming the team. Verify with the address on file, then take the new phone and address, read them back, and send them to Luis Ortega (ext 314) as a priority message so the CMS is updated. The file shows Luis tried her old number on 09/18 (mailbox full).' },
+            { from: 'Keisha Brown (client)', ask: '"Nobody ever calls me back! I have a new phone number and I moved."', handle: 'Acknowledge the frustration without blaming the team. Verify with the address on file, then take the new phone and address, read them back, and send them to Luis Ortega (ext 314) as a priority message so CaseWorX is updated. The file shows Luis tried her old number on 09/18 (mailbox full).' },
             { from: 'Howard Linn, Pinnacle Commercial Auto', ask: '"I need Ms. Brown\'s new address for a check."', handle: 'Never give out client contact information. Route to Luis Ortega (ext 314) / Atty. Reyes (ext 201); settlement funds are always sent to the firm.' }
         ]
     }
@@ -2678,20 +2678,20 @@ const MOCK_CASES = [
     ],
     // The brief the class works from: ⚖ Practice brief on the case banner (training-library.js).
     practice: {
-        brief: 'One at-fault driver, two damaged vehicles, one injured third party and a single set of limits. Work this file in the order below: conflict checks first, then the limits, then the representation decision on Unit 2, then the CMS entry. Every value you key comes from RPD-26-018842 — if it is not on the report or on a declarations page, it does not go in a field.',
+        brief: 'One at-fault driver, two damaged vehicles, one injured third party and a single set of limits. Work this file in the order below: conflict checks first, then the limits, then the representation decision on Unit 2, then CaseWorX entry. Every value you key comes from RPD-26-018842 — if it is not on the report or on a declarations page, it does not go in a field.',
         conflicts: [
             { entity: 'John Doe', role: 'Client · owner of Unit 3', why: 'Our own client: check him against the other side of every other file before we take him on.', expect: 'No match. If his name turned up as a party at fault on another file, the attorney decides before anything is said to him.' },
             { entity: 'Robert Smith', role: 'At-fault driver · Unit 1', why: 'The person we are making a claim against. The firm cannot act against its own client.', expect: 'No match. Check the name written both ways ("Smith, Robert") and watch for a different Robert Smith — the date of birth (07/19/1979) decides.' },
-            { entity: 'Keystone Mutual Insurance', role: 'Unit 1 carrier (liability)', why: 'The carrier we will be negotiating against on both the BI and the property damage claim.', expect: 'No adverse representation. A carrier is not a person, so the CMS will not flag it: this one is checked by hand and written down.' },
-            { entity: 'Kevin Alvarez', role: 'Third-party driver · Unit 2', why: 'Injured by the same driver, and a person the firm may offer to represent. Check for any prior or existing representation by this firm and for any adverse interest before anyone speaks to him.', expect: 'No match and no representation found. He is not on the other side of our client\'s claim, so the CMS will not raise a flag for him — this check is the one the trainee has to remember.' },
+            { entity: 'Keystone Mutual Insurance', role: 'Unit 1 carrier (liability)', why: 'The carrier we will be negotiating against on both the BI and the property damage claim.', expect: 'No adverse representation. A carrier is not a person, so CaseWorX will not flag it: this one is checked by hand and written down.' },
+            { entity: 'Kevin Alvarez', role: 'Third-party driver · Unit 2', why: 'Injured by the same driver, and a person the firm may offer to represent. Check for any prior or existing representation by this firm and for any adverse interest before anyone speaks to him.', expect: 'No match and no representation found. He is not on the other side of our client\'s claim, so CaseWorX will not raise a flag for him — this check is the one the trainee has to remember.' },
             { entity: 'Harbor Point Insurance', role: 'Unit 2 carrier', why: 'Unit 2\'s own carrier. Not a party to our client\'s claim, but it matters the moment the firm considers representing Mr. Alvarez.', expect: 'No adverse representation. Checked by hand and written down.' },
             { entity: 'Bluewater Auto Insurance', role: 'Unit 3 carrier (our client\'s own)', why: 'Our client\'s own carrier: collision and UM/UIM may both be in play.', expect: 'No adverse representation. Checked by hand and written down.' }
         ],
         steps: [
-            { icon: '⚖', title: 'Run and document the conflict check before the file is opened', why: 'The check is worthless if nobody can show it was run. Six entities on this crash, and only two of them are the kind the CMS raises by itself.',
+            { icon: '⚖', title: 'Run and document the conflict check before the file is opened', why: 'The check is worthless if nobody can show it was run. Six entities on this crash, and only two of them are the kind CaseWorX raises by itself.',
                 points: [
                     'Search every one of the six names in the table above. Search the person both ways round and by date of birth where the report gives one.',
-                    'The CMS raises a flag by itself only for our client against another file\'s at-fault party, and for an at-fault party here who is a client elsewhere. Carriers and a third-party driver like Mr. Alvarez are checked by hand.',
+                    'CaseWorX raises a flag by itself only for our client against another file\'s at-fault party, and for an at-fault party here who is a client elsewhere. Carriers and a third-party driver like Mr. Alvarez are checked by hand.',
                     'Write the result of all six in one Case Note, named one by one, with the date you ran it — that note is the record.',
                     'A possible match is not yours to decide: Escalate to attorney, leave the warning up, and open nothing until it is cleared.'],
                 check: 'A Case Note dated before the file was opened that names all six entities and says what each one came back as, plus the worksheet under Intake Documents.' },
@@ -2712,7 +2712,7 @@ const MOCK_CASES = [
                     'Keep the two matters separate from the first day: separate files, separate Case Notes, and nothing from one client\'s file repeated to the other. Our client\'s claim is not discussed with Mr. Alvarez, and his is not discussed with our client.',
                     'If the attorney cannot act for both, the proper answer is a referral out, not a quiet second file.'],
                 check: 'The trainee routes the whole question to the attorney, can name why two claimants on one limit is a conflict question, and knows that written informed consent comes before the second file — not after.' },
-            { icon: '⌨', title: 'Key the CMS from the report, value for value', why: 'The whole file is built from RPD-26-018842. A plate or a policy number typed from memory is the error nobody finds until the demand goes out.',
+            { icon: '⌨', title: 'Key CaseWorX from the report, value for value', why: 'The whole file is built from RPD-26-018842. A plate or a policy number typed from memory is the error nobody finds until the demand goes out.',
                 points: [
                     'Parties Involved carries all three units: full name, date of birth, sex, driver\'s licence, phone, street, city, state and ZIP, and the vehicle year, make, model, colour, plate and registered owner.',
                     'Unit 1 (Robert Smith): moderate front / front-right damage; driven from the scene.',
@@ -2738,7 +2738,7 @@ const MOCK_CASES = [
 /* =========================================================
    FRONT DESK DRILL: incoming calls (front-desk-drill.js)
    For each call the trainee must (1) find the caller's case in the
-   CMS, (2) authenticate the caller by asking for identifiers and
+   CaseWorX, (2) authenticate the caller by asking for identifiers and
    comparing them to the file, (3) choose how to handle it.
    `gives` is what the caller answers when asked (null = "I don't
    know / I'd rather not say"). `gives.dol` is the caller's answer for
@@ -2774,7 +2774,7 @@ const DRILL_CALLS = [
     { id: 'D05', mock: 'MC-07', auth: 'client', level: 2, voice: 'f',
       opening: '"This is Keisha Brown. Nobody ever calls me back! I moved and I have a new number."',
       gives: { name: 'Keisha Brown', dob: '12/01/1995', address: '88 Elm Street, Apt 4 (my new place)', ssn4: '5149', callback: '(555) 010-5080', relationship: 'It\'s my case.' },
-      actions: ['Verified by SSN last 4. Acknowledge, take the new phone and address, read them back, and send a priority message to Luis Ortega (ext 314)', 'Not verified: her address doesn\'t match, so end the call', 'Update the address in the CMS yourself and close the call', 'Tell her the case manager has been trying her old number'],
+      actions: ['Verified by SSN last 4. Acknowledge, take the new phone and address, read them back, and send a priority message to Luis Ortega (ext 314)', 'Not verified: her address doesn\'t match, so end the call', 'Update the address in CaseWorX yourself and close the call', 'Tell her the case manager has been trying her old number'],
       answer: 0, why: 'The new address can\'t verify her, but the SSN last 4 matches the file. The case manager must update the file (Notes 09/18: her old mailbox was full).' },
     { id: 'D06', mock: 'MC-08', auth: 'authorized', level: 2, voice: 'f',
       opening: '"Hi, I\'m calling for my father, Tomás Rivera. What time is his surgery?"',

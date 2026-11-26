@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — CASE ALERTS (in the case header, seen on every tab)
+   LSH CaseWorX — CASE ALERTS (in the case header, seen on every tab)
    ---------------------------------------------------------
      ⚠ Critical note  One short note (500 characters at most) that everyone
                        must see before talking about the case: "Spanish only",

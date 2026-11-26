@@ -68,7 +68,7 @@ function submitRegistration() {
     })
     .catch(error => {
         console.error("Network error:", error);
-        const msg = error && error.serverOff ? "The CMS server isn't answering right now, so your registration can't be sent. Please try again later (it's usually back by 00:00 UTC), or let your trainer know." : "Network error. Failed to connect to server.";
+        const msg = error && error.serverOff ? "The CaseWorX server isn't answering right now, so your registration can't be sent. Please try again later (it's usually back by 00:00 UTC), or let your trainer know." : "Network error. Failed to connect to server.";
         say(msg, "error");
         showToast(msg, 'error');
     });
@@ -81,7 +81,7 @@ async function readServerReply(response) {
     const text = await response.text();
     try { return JSON.parse(text); } catch (e) { const err = new Error('The server answered ' + response.status + ' without JSON.'); err.serverOff = true; throw err; }
 }
-const SERVER_OFF_MSG = "The CMS server isn't answering right now, so sign-in can't be checked. It isn't your details: please try again later (it's usually back by 00:00 UTC), or let your trainer know.";
+const SERVER_OFF_MSG = "The CaseWorX server isn't answering right now, so sign-in can't be checked. It isn't your details: please try again later (it's usually back by 00:00 UTC), or let your trainer know.";
 
 function attemptLogin() {
     const loginMsgDiv = document.getElementById('auth-login-msg');

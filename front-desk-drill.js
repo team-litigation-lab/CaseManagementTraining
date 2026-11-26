@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — CALL SIMULATOR (the front desk drill and the call lines)
+   LSH CaseWorX — CALL SIMULATOR (the front desk drill and the call lines)
    ---------------------------------------------------------
    Measures a receptionist's (or any VA's) front-desk ability on the
    Training Library cases. Each drill is a set of incoming calls, the
@@ -10,7 +10,7 @@
         callback number, relationship, date of the accident) — the
         caller answers from a script, and some answers are wrong on
         purpose;
-     2. FIND the caller's case with the CMS search (by name, phone,
+     2. FIND the caller's case with the CaseWorX search (by name, phone,
         claim #, plate…), open it and read the file — or decide the
         caller isn't in the system;
      3. AUTHENTICATE: client, authorized person on file, not verified,
@@ -746,7 +746,7 @@
                 ${lv.status === 'live' ? `<button class="hang" onclick="fddHangUp()">✆ Hang up</button>` : ''}</div>
             ${lv.note ? `<div class="note">${esc(lv.note)}</div>` : ''}
             ${lv.speaker && lv.status !== 'ended' ? `<details class="meet" id="fdd-meet" ${lv.meetOpen ? 'open' : ''} ontoggle="fddMeetOpen(this.open)"><summary>🔊 Speakerphone is on · showing this call in Google Meet</summary>
-                <ol><li>In Meet, click <b>Present now → A tab</b> (or <b>Share screen → Chrome tab</b>) and pick this CMS tab.</li>
+                <ol><li>In Meet, click <b>Present now → A tab</b> (or <b>Share screen → Chrome tab</b>) and pick this CaseWorX tab.</li>
                 <li>Turn on <b>Also share tab audio</b>, then <b>Share</b>. The class hears the caller.</li>
                 <li>Keep your Meet microphone on, so the class hears you too.</li></ol>
                 <p>On speakerphone your microphone pauses while the caller talks (so the caller doesn't hear its own voice and cut in). Wait for them to finish, then answer.</p></details>` : ''}
@@ -1780,7 +1780,7 @@ Reply with exactly this JSON:
         const calls = lineCalls(l), course = l.program === 'FT' ? 'your Standard Training progress' : `your ${programLabel(l.program)} progress`;
         const out = (c) => c.dir === 'out' ? '<span class="fdd-tag">You call</span> ' : '';
         const graded = `<div class="fdd-sec fdd-graded-calls"><h4>🎯 Graded calls (${calls.length})</h4>
-                <p style="margin:0 0 4px;font-size:11.5px;color:#64748b;line-height:1.45">Who's calling isn't shown until the debrief${l.program === 'FT' ? ': find their file in the CMS while you talk' : ''}. Each counts toward ${esc(course)}.</p>
+                <p style="margin:0 0 4px;font-size:11.5px;color:#64748b;line-height:1.45">Who's calling isn't shown until the debrief${l.program === 'FT' ? ': find their file in CaseWorX while you talk' : ''}. Each counts toward ${esc(course)}.</p>
                 ${gradedCalls(l).map((c, i) => `<div class="fdd-row" data-call="${esc(c.id)}" onclick="fddLineCall('${esc(c.id)}','graded')"><span class="id">#${i + 1}</span><span class="nm">Graded call ${i + 1}</span>
                     <span class="mt">${out(c)}${esc(c.level || '')}</span>${bestHTML(c.id, 'graded')}</div>`).join('')}</div>`;
         const practice = `<div class="fdd-sec fdd-practice-calls"><h4>📞 Practice calls (${calls.length})</h4>
@@ -1900,7 +1900,7 @@ Reply with exactly this JSON:
         const where = c.program === 'FT' && c.lesson ? `your Standard Training, lesson ${c.lesson}` : `your ${programLabel(c.program)} course (${c.line})`;
         return c.counted ? ` It counts toward ${where}${c.best && typeof c.best.score === 'number' ? `: your best there is ${c.best.score}%` : ''}.`
             : c.reason === 'not-connected' ? ' It isn\'t counting toward your course: this site isn\'t connected to the Training Portal yet. Tell your trainer; they still see it here.'
-            : c.reason === 'no-name' ? ' It isn\'t counting toward your course: your CMS account has no first and last name. Tell your trainer; they still see it here.'
+            : c.reason === 'no-name' ? ' It isn\'t counting toward your course: your CaseWorX account has no first and last name. Tell your trainer; they still see it here.'
             : ' It couldn\'t reach your course just now; your trainer still sees it here.';
     }
     // The firm's scorecard (FT Calendar Management), laid out as the trainers' sheet: each metric rated 0-5 with its
@@ -1966,7 +1966,7 @@ Reply with exactly this JSON:
         const day = (evs && evs[0] && evs[0].date) || String(row.created_at || '').slice(0, 10);
         const open = admin ? `<button class="fdd-chip" onclick='fddTraineeCalendar(${JSON.stringify(String(row.username || ''))}, ${JSON.stringify(String(row.full_name || row.username || ''))}, ${JSON.stringify(day)})'>🗓 Open ${esc(row.full_name || row.username || 'the trainee')}'s calendar</button>` : '';
         const list = evs && evs.length ? `<ul class="fdd-cal-out">${evs.map(e => `<li><b>${esc(e.title || '(No title)')}</b><span>${esc(e.date || '')}${e.allDay ? ' · all day' : e.start ? ` · ${esc(t12(e.start))}${e.end ? '–' + esc(t12(e.end)) : ''} ET` : ''} · ${esc(CAL_NAMES[e.calendar] || e.calendar || '')}${e.type ? ` · ${esc(e.type)}` : ''}</span>${e.location ? `<span>📍 ${esc(e.location)}</span>` : ''}${e.caseLabel ? `<span>📂 ${esc(e.caseLabel)}</span>` : ''}${e.invite && e.invite.length ? `<span>👥 ${esc(e.invite.join(', '))}</span>` : ''}${e.notes ? `<small>${esc(e.notes)}</small>` : ''}</li>`).join('')}</ul>`
-            : `<p style="margin:0;color:#64748b;font-size:12px">${evs ? 'Nothing was booked or changed on the CMS calendar during this call.' : 'This call was saved before calendar output was kept with it.'}</p>`;
+            : `<p style="margin:0;color:#64748b;font-size:12px">${evs ? 'Nothing was booked or changed on the CaseWorX calendar during this call.' : 'This call was saved before calendar output was kept with it.'}</p>`;
         return `<div class="fdd-sec"><h4>🗓 Calendar output</h4>${list}${d.note ? `<p style="margin:8px 0 2px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">The calendar entry and note they wrote</p><p style="margin:0;white-space:pre-wrap;font-size:12px">${esc(d.note)}</p>` : ''}${open ? `<div style="margin-top:8px">${open}</div>` : ''}</div>`;
     }
     // An Admin opens the trainee's own calendar (the 🗓 Attorney's Calendar with only that trainee's appointments) on the call's week.

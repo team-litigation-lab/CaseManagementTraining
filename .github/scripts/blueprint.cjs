@@ -145,7 +145,7 @@ let base;
     // the PDF
     let [dl] = await Promise.all([page.waitForEvent('download'), page.click('#lbp-pdf-btn')]);
     let pdf = inspect(fs.readFileSync(await dl.path()));
-    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Trainee.pdf' || !pdf.pdf || pdf.pages !== 13) fail(`the trainee PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
+    if (dl.suggestedFilename() !== 'LSH_CaseWorX_Blueprint_Trainee.pdf' || !pdf.pdf || pdf.pages !== 13) fail(`the trainee PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
     // its numbers match the slides (Cover, 1 / 12 … 12 / 12, never 13 / 13), and it carries the logo and the screenshots
     const shotCount = await page.evaluate(() => LSHBlueprint.decks().trainee.slides.filter(s => s.shot).length);
     if (!/\bCover\b/.test(pdf.text) || !pdf.text.includes(`${tn} / ${tn}`) || pdf.text.includes(`${tn + 1} / ${tn + 1}`)) fail('the trainee PDF\'s page numbers don\'t match the slides');
@@ -181,14 +181,14 @@ let base;
     if (await page.evaluate(() => !!document.querySelector('#lbp-tabs button[data-deck="admin"]'))) fail('a trainer has an Admin blueprint tab');
     [dl] = await Promise.all([page.waitForEvent('download'), page.click('#lbp-pdf-btn')]);
     pdf = inspect(fs.readFileSync(await dl.path()));
-    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Trainer.pdf' || pdf.pages !== 21 || !/Master Control/.test(pdf.text) || !/Facilitated mock calls/.test(pdf.text)) fail(`the trainer PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
+    if (dl.suggestedFilename() !== 'LSH_CaseWorX_Blueprint_Trainer.pdf' || pdf.pages !== 21 || !/Master Control/.test(pdf.text) || !/Facilitated mock calls/.test(pdf.text)) fail(`the trainer PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages`);
     const trainerShots = await page.evaluate(() => LSHBlueprint.decks().trainer.slides.filter(s => s.shot).length);
     if (trainerShots < 12 || pdf.images < trainerShots + 1 || !pdf.text.includes('20 / 20') || pdf.text.includes('21 / 21')) fail(`the trainer PDF: ${pdf.images} images for ${trainerShots} screenshots, or its page numbers`);
-    if (!/program link is the CMS address/.test(pdf.text)) fail('the trainer PDF doesn\'t explain what a program link is');
+    if (!/program link is the CaseWorX address/.test(pdf.text)) fail('the trainer PDF doesn\'t explain what a program link is');
     await page.click('#lbp-tabs button[data-deck="trainee"]');
     if (await page.evaluate(() => document.getElementById('lbp-slide').dataset.deck) !== 'trainee') fail('the Trainee blueprint tab didn\'t switch the deck');
     [dl] = await Promise.all([page.waitForEvent('download'), page.click('#lbp-pdf-btn')]);
-    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Trainee.pdf') fail(`an Admin on the Trainee tab downloaded ${dl.suggestedFilename()}`);
+    if (dl.suggestedFilename() !== 'LSH_CaseWorX_Blueprint_Trainee.pdf') fail(`an Admin on the Trainee tab downloaded ${dl.suggestedFilename()}`);
     if (/chartswap|casepeer/i.test(inspect(fs.readFileSync(await dl.path())).text + JSON.stringify(await page.evaluate(() => LSHBlueprint.decks())))) fail('the Blueprint names another product');
     await page.click('#lbp-close');
     // 👁 Trainee view: the trainee deck only
@@ -210,7 +210,7 @@ let base;
     pdf = inspect(fs.readFileSync(await dl.path()));
     const adminTitles = await page.evaluate(() => LSHBlueprint.decks().admin.slides.map(s => s.title));
     const adminMissing = adminTitles.filter(x => !pdf.text.includes(x.replace(/[^\x00-\xff]/g, '').trim()));
-    if (dl.suggestedFilename() !== 'LSH_CMS_Blueprint_Admin.pdf' || pdf.pages !== 16 || adminMissing.length) fail(`the admin PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages, missing ${adminMissing.join(' | ')}`);
+    if (dl.suggestedFilename() !== 'LSH_CaseWorX_Blueprint_Admin.pdf' || pdf.pages !== 16 || adminMissing.length) fail(`the admin PDF: ${dl.suggestedFilename()}, ${pdf.pages} pages, missing ${adminMissing.join(' | ')}`);
     await page.click('#lbp-tabs button[data-deck="trainer"]');
     if (await page.evaluate(() => document.getElementById('lbp-slide').dataset.deck) !== 'trainer') fail('the Master Account\'s Trainer blueprint tab didn\'t switch the deck');
     await page.context().close();

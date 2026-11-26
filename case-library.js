@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — CASE LIBRARY (search-first)
+   LSH CaseWorX — CASE LIBRARY (search-first)
    ---------------------------------------------------------
    Every case in one place: the cases trainees save (the server's
    Case Repository) and the Training Library mock cases

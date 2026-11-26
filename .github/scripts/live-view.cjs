@@ -294,7 +294,7 @@ const CRAFTED = `<!DOCTYPE html><html onmouseover="top.postMessage('lv-xss','*')
     await admin.click('#monitoring-online-list .reg-row[data-username="tia"] button:has-text("Watch live")');
     await admin.waitForSelector('#live-view-modal.open', { timeout: 4000 }).catch(() => fail('👁 Watch live didn\'t open the live view'));
     if (!(await admin.isVisible('#lv-pane-screen.on')) || await admin.isVisible('#lv-pane-summary')) fail('🖥 Screen isn\'t what the live view shows first');
-    if (!/CMS tab only/.test(await admin.textContent('#lv-pane-screen .lv-note'))) fail('the live view doesn\'t say it mirrors their CMS tab only');
+    if (!/CaseWorX tab only/.test(await admin.textContent('#lv-pane-screen .lv-note'))) fail('the live view doesn\'t say it mirrors their CaseWorX tab only');
     const sendingAt = trainee.waitForFunction(() => lshLiveStats().watched, null, { timeout: 8000, polling: 50 }).then(() => Date.now(), () => null);
     await admin.waitForFunction(() => !!document.querySelector('#lv-stage iframe.lv-frame.lv-on'), null, { timeout: 8000, polling: 50 }).catch(() => {});
     M.startMs = Date.now() - watchAt; M.toldMs = (await sendingAt) ? (await sendingAt) - watchAt : null;
