@@ -1292,14 +1292,14 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 #capture-area .header-card .hdr-id { margin-left: 28px; display: flex; flex-direction: column; gap: 8px; }
 #capture-area .header-card .hdr-f > [contenteditable="true"], #capture-area .header-card .hdr-input {
     background: #fff !important; border: 1.5px solid #d3d9e6 !important; border-radius: 9px !important;
-    font-size: 14px !important; font-weight: 800 !important; color: #1E2340 !important; padding: 7px 11px !important;
+    font-size: 14px !important; font-weight: 800 !important; color: #1E2340 !important; padding: 7px 11px !important; line-height: 20px !important;   /* one line height for every box (Target Settlement's bigger type too), so a row's boxes line up */
     box-shadow: inset 0 1px 2px rgba(15,23,42,.05); transition: border-color .15s ease, box-shadow .15s ease;
 }
 #capture-area .header-card .hdr-f > [contenteditable="true"]:focus, #capture-area .header-card .hdr-input:focus {
     outline: none; border-color: #DB8437 !important; box-shadow: 0 0 0 3px rgba(219,132,55,.18) !important;
 }
 #capture-area .header-card .hdr-name > #client-name-field {
-    font-size: 20px !important; font-weight: 900 !important; letter-spacing: .01em; min-height: 44px;
+    font-size: 20px !important; font-weight: 900 !important; letter-spacing: .01em; min-height: 44px; line-height: 26px !important;
     border-color: #c9973f !important; border-bottom-width: 3px !important;
 }
 #capture-area .header-card .hdr-client .target-settlement-display {
