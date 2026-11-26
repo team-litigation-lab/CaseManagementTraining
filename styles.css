@@ -85,6 +85,8 @@
         background-image: radial-gradient(circle, rgba(15,33,72,0.06) 1px, transparent 1px);
         background-size: 24px 24px;
     }
+    /* the case sits close under the top strip (half of p-8's 32px); 16px still clears the ✕, which pokes 13px above the card */
+    #capture-area { padding-top: 16px; }
     #capture-area::before {
         content: "CONFIDENTIAL — LSH INTERNAL RECORD";
         position: fixed;
@@ -127,7 +129,7 @@
     .hdr-client .target-settlement-display { font-size: 16px !important; padding: 6px 10px; }
     .hdr-input { width: 100%; font-size: 12px; font-weight: 700; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; outline: none; }
     .hdr-input:focus { background: #fff; border-color: var(--orange); box-shadow: 0 0 0 2px rgba(249,115,22,0.12); }
-    .hdr-id { flex: 0 1 240px; min-width: 160px; margin: 0 auto; }
+    .hdr-id { flex: 0 1 240px; min-width: 160px; margin: 0 auto 0 96px; }   /* an inch after the client's demographics (not centred between them and the Case ID) */
     /* when the window is narrower the right side (case number, status, search) gives up room first, then the ID card,
        and the client's boxes least */
     .header-card > .flex.justify-between > .text-right { flex: 0 1.5 auto; min-width: 260px; }
@@ -439,8 +441,10 @@
     .session-btn.logout-btn { border-color: #7f1d1d; color: #fca5a5; }
     .session-btn.trainee-view-btn { border-color: #0369a1; color: #7dd3fc; }
     .session-btn.logout-btn:hover { border-color: var(--classified-red); background: rgba(185,28,28,0.12); }
-    .session-user-tag { text-align:center; font-size:10.5px; line-height:1.45; color:#94a3b8; margin-bottom:8px; font-family:'IBM Plex Mono','Courier New',monospace; }
-    .session-user-tag b { color:#cbd5e1; font-size:10.5px; font-weight:700; }
+    /* who is signed in: a small two-row card, labels on the left and values lined up on the right */
+    .session-user-tag { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:baseline; gap:4px 10px; margin-bottom:10px; padding:8px 11px; border:1px solid rgba(201,151,63,.3); border-radius:9px; background:rgba(255,255,255,.03); font-family:'IBM Plex Mono','Courier New',monospace; line-height:1.3; }
+    .session-user-tag span { font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#94a3b8; }
+    .session-user-tag b { text-align:right; font-size:11px; font-weight:700; color:#fde7b0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
     /* ===== MODALS ===== */
     .modal-overlay {
@@ -1220,6 +1224,16 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 #sidebar .side-card-orange, #sidebar .lib-btn, #sidebar .if-open-btn { background: linear-gradient(180deg, #3a2412 0%, #24170c 100%); color: #fdba74; border-color: #f97316; border-bottom-color: #c2410c; }
 #sidebar .fdd-btn { background: linear-gradient(180deg, #0d3a2b 0%, #082a1f 100%); color: #6ee7b7; border-color: #10b981; border-bottom-color: #047857; }
 #sidebar .side-card-blue { background: linear-gradient(180deg, #13306a 0%, #0c2150 100%); color: #93c5fd; border-color: #3b82f6; border-bottom-color: #1d4ed8; }
+/* Trainer tools: three matching slim keys (navy, gold edge, one line each) instead of two chunky brown ones and a thin outline */
+#sidebar #sb-trainer button {
+    display: flex; align-items: center; gap: 5px; width: 100%; margin: 0 0 7px; text-align: left; white-space: nowrap; overflow: hidden;
+    padding: 9px 12px; border-radius: 9px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    background: linear-gradient(180deg, #16244a 0%, #0f1a38 100%); color: #fde7b0;
+    border: 1px solid rgba(201,151,63,.45); border-left: 3px solid #DB8437; box-shadow: 0 4px 10px -8px rgba(0,0,0,.8); filter: none;
+}
+#sidebar #sb-trainer button:hover { background: linear-gradient(180deg, #1d3f86 0%, #16306a 100%); border-color: #c9973f; border-left-color: #f97316; color: #fff; transform: none; }
+#sidebar #sb-trainer .sb-lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#sidebar #sb-trainer .sb-count { flex-shrink: 0; font-size: 10px; letter-spacing: 0; padding: 1px 7px; border-radius: 999px; background: rgba(219,132,55,.2); color: #fdba74; border: 1px solid rgba(219,132,55,.5); }
 #sidebar .side-card:hover, #sidebar .fdd-btn:hover, #sidebar .lib-btn:hover, #sidebar .if-open-btn:hover { transform: translateY(-1px); filter: brightness(1.18); }
 #sidebar .side-card:active, #sidebar .fdd-btn:active, #sidebar .lib-btn:active, #sidebar .if-open-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,.6) inset; }
 #sidebar .side-card:focus-visible, #sidebar .fdd-btn:focus-visible, #sidebar .lib-btn:focus-visible, #sidebar .if-open-btn:focus-visible { outline: none; box-shadow: var(--cwx-ring); }
@@ -1255,11 +1269,46 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 18px -12px rgba(30,35,64,.6);
 }
 #capture-area .header-card #lsh-integrated-bar .bar-box { box-shadow: 0 0 0 1px rgba(201,151,63,.55); }
+/* a shorter Date of Loss bar: less padding around and inside the boxes, and slimmer fields */
+#capture-area .header-card #lsh-integrated-bar { padding: 8px 18px !important; min-height: 0 !important; margin: 14px 0 !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box { height: auto !important; padding: 5px 12px 6px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box label { margin-bottom: 3px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box > div { min-height: 0 !important; height: 28px !important; padding-top: 3px !important; padding-bottom: 3px !important; line-height: 20px !important; }
 #capture-area .header-card .case-tabs {
     border: 2px solid transparent;
     background: linear-gradient(#dfe6ef, #dfe6ef) padding-box, linear-gradient(90deg, #1E2340 0%, #2c3360 40%, #a8692f 80%, #DB8437 100%) border-box;
 }
 #capture-area .header-card .cid-card { border-color: #c9973f !important; }
+/* the case phase picker (above the big phase name): a navy-to-orange key with white text, easy to spot */
+#capture-area .header-card #phase-selector {
+    -webkit-appearance: none; appearance: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center,
+                linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #c2410c 85%, #f97316 100%) !important;
+    color: #fff !important; border: 1px solid #c9973f !important; border-radius: 8px !important;
+    font-size: 12.5px !important; letter-spacing: .06em; padding: 6px 32px 6px 12px !important; min-width: 170px;
+    box-shadow: 0 2px 0 rgba(8,18,38,.25);
+}
+#capture-area .header-card #phase-selector:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+#capture-area .header-card #phase-selector option { color: #0f172a; background: #fff; }
+/* the case Type picker at the right of the Date of Loss bar: bigger, easier to read and to hit */
+#capture-area .header-card #lsh-integrated-bar .ml-auto > span { font-size: 13px !important; letter-spacing: .06em; margin-right: 14px !important; }
+#capture-area .header-card #lsh-integrated-bar .ml-auto > div { padding: 6px 4px !important; border-radius: 10px !important; border: 1px solid #c9973f !important; }
+#capture-area .header-card #main-case-type { font-size: 15px !important; padding: 4px 18px !important; min-width: 190px; color: #93c5fd !important; }
+#capture-area .header-card #main-case-type option { font-size: 14px; color: #0f172a; }
+/* the tab keys: each one framed in the same navy-to-gold gradient, and the open tab filled with it */
+#capture-area .header-card .case-tabs .tab-btn {
+    border: 2px solid transparent;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box;
+    color: #1E2340;
+}
+#capture-area .header-card .case-tabs .tab-btn:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #fdf3e1 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box;
+}
+#capture-area .header-card .case-tabs .tab-btn.active-tab {
+    border-color: transparent !important; color: #fff !important;
+    background: linear-gradient(135deg, #1E2340 0%, #2c3360 45%, #a8692f 85%, #DB8437 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #DB8437 100%) border-box;
+    box-shadow: inset 0 -3px 0 #f5c451, 0 2px 0 rgba(8,18,38,.3);
+}
 @media print { #capture-area .pdf-card.header-card { background: #fff; border: 2px solid #1E2340 !important; box-shadow: none; } }
 
 /* the Case ID line above the phase: a larger label, and the number (or "Assigned on Save Case") bold and dark enough to read */

@@ -2256,14 +2256,14 @@
 
             if (session.userType === 'Admin') {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b>${session.batchId && session.batchId !== 'null' ? `<br>Batch ID: <b>${session.batchId}</b>` : ''}</div>
+                    <div class="session-user-tag"><span>Signed in as</span><b>${session.fullName || session.username}</b>${session.batchId && session.batchId !== 'null' ? `<span>Batch ID</span><b>${session.batchId}</b>` : ''}</div>
                     <button class="session-btn active-admin" onclick="openAdminDashboard()">⇄ Master Control</button>
                     <button class="session-btn trainee-view-btn" onclick="setTraineeView(true)" title="See the site the way trainees see it">👁 Trainee view</button>
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;
             } else {
                 footer.innerHTML = `
-                    <div class="session-user-tag">Signed in as: <b>${session.fullName || session.username}</b>${session.batchId && session.batchId !== 'null' ? `<br>Batch ID: <b>${session.batchId}</b>` : ''}</div>
+                    <div class="session-user-tag"><span>Signed in as</span><b>${session.fullName || session.username}</b>${session.batchId && session.batchId !== 'null' ? `<span>Batch ID</span><b>${session.batchId}</b>` : ''}</div>
                     ${session.traineeView ? '<button class="session-btn active-admin" onclick="setTraineeView(false)">⇦ Back to trainer view</button>' : ''}
                     <button class="session-btn logout-btn" onclick="logoutSession()">Log Out</button>
                 `;

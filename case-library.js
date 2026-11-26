@@ -101,8 +101,7 @@
     .clb-field:focus-within{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.15)}
     .clb-field .clb-icon{font-size:15px}
     #cl-bar-input{flex:1;min-width:0;border:none;outline:none;padding:10px 2px;font-size:14px;color:#0f2148;background:transparent}
-    .clb-kbd{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:800;color:#64748b;border:1px solid #cbd5e1;border-radius:5px;padding:2px 6px;white-space:nowrap}
-    @media (max-width:700px){#cl-bar{padding:8px 12px}.clb-kbd{display:none}}
+    @media (max-width:700px){#cl-bar{padding:8px 12px}}
     #cl-bar.in-header{padding:0;background:none;border:none;margin-top:14px;text-align:left}
     #cl-bar.in-header .clb-wrap{width:min(460px,100%);margin-left:auto}
     #cl-bar.in-header #cl-bar-input{padding:8px 2px;font-size:13px}
@@ -179,7 +178,6 @@
                     <div class="clb-field" onclick="document.getElementById('cl-bar-input').focus()">
                         <span class="clb-icon" aria-hidden="true">🔍</span>
                         <input type="search" id="cl-bar-input" name="cl-bar-q" placeholder="Search cases: client, case #, DOL, DOB, phone, claim #, plate" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search cases" aria-controls="cl-bar-results" aria-expanded="false" aria-autocomplete="list">
-                        <span class="clb-kbd" aria-hidden="true">Ctrl K</span>
                     </div>
                     <div id="cl-bar-results" class="clb-results" role="listbox" aria-label="Matching cases"></div>
                 </div>
