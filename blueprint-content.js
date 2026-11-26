@@ -71,7 +71,7 @@
             { icon: '💾', title: 'Saving your work', points: [
                 '💾 Save Case saves a new case and gives it its Case ID.',
                 '⟳ Update Case saves your changes to a case that\'s already saved.',
-                '🗄 Archive keeps it as a draft. 🗑 Discard Case throws it away (it asks first). ✕ Close closes it.',
+                '🗄 Archive keeps it as a draft. 🗑 Discard Case throws it away (it asks first). the ✕ at its top right corner closes it.',
                 'Autosave steps in only when something interrupts you: the network drops, the tab closes, or you\'ve been away for 2 minutes.'],
               where: 'The bar at the bottom of the open case.',
               tip: 'Case files from the firm\'s library are view only, except their Notes and Tasks.',

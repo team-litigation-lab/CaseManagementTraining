@@ -385,8 +385,8 @@ const SAVED = [
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
     if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || side.hidden.length || side.oldButtons
-        // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
-        || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
+        // (a library case is open here: no 🗄 Archive, it's never saved as a draft; one key saves and updates: 💾 Save Case until it's saved)
+        || side.bar.join('|') !== '🗑 Discard Case|💾 Save Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
     // The page's frame: the sidebar (and its logo) runs to the top, the announcements strip is over the main area only and has no
     // "LEGAL SUPPORT HELP TRAINING INTERFACE - TRAINEE PORTAL" label; Download Case Summary and My Dashboard are at
     // its right; the date and time are right above the case's Case ID, outside the case; the timer is in the case header under the

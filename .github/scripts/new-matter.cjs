@@ -324,7 +324,7 @@ const failures = []; const fail = (m) => failures.push(m);
     if (!dialogs.some(m => /Close this case\?/.test(m)) || closed.name || closed.id !== null || closed.rec || closed.bar || saved.length !== savesBefore) fail(`Close Case: ${JSON.stringify({ asked: dialogs, closed, saves: saved.length - savesBefore })}`);
     if (!(await page.isVisible('text=Case closed.'))) fail('no "Case closed." message');
     dialogs.length = 0;
-    await page.click('#case-actions-bar button:has-text("Close")'); await page.waitForTimeout(200);
+    await page.click('#case-close-x'); await page.waitForTimeout(200);
     if (dialogs.length || !(await page.isVisible('text=No case is open.'))) fail(`Close with nothing open: ${dialogs.join(' / ') || 'no message'}`);
 
     // 12. 🗑 Discard Case: nothing open says so; a case never saved is cleared (nothing deleted); a saved case is deleted
