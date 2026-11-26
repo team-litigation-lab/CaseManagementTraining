@@ -29,7 +29,7 @@
                     Open Case Library and Latest Updates
                  3. #sb-work: New Intake, the Call Simulator (front-desk-drill.js adds it after New Intake), the Attorney's Calendar
                  Download Case Summary, Main Portal and My Dashboard are at the top right (#top-actions); the date and time
-                 are above the case (#case-clock-row); the billable timer is in the case header under the search bars (time-tracker.js).
+                 are in the strip beside the announcement (#classification-bar .clock-widget); the billable timer is in the case header under the search bars (time-tracker.js).
                  4. #sb-trainer (Admins only): Training Library, Intake Folder, Firm Calendar
                  The open case's own actions (Close, Archive, Discard, Save, Update) are in the bar at the bottom of
                  the case (#case-actions-bar), with ✕ at its top right. -->
@@ -70,15 +70,8 @@
                     <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
                 </div>
             </div>
-            <div id="top-actions" class="cls-actions">
-                <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cls-btn" title="Download Case Summary (PDF)">📄 <span class="lbl">Download Case Summary</span></button>
-                <a id="portal-home-btn" href="https://cm-training-activity.pages.dev/programs.html" class="cls-btn" title="Back to the LSH Training Portal (Training Directory)">🏠 <span class="lbl">Main Portal</span></a>
-                <button id="dash-open-btn" type="button" onclick="openTraineeDashboard()" class="cls-btn" title="My Dashboard">📊 <span class="lbl">My Dashboard</span></button>
-            </div>
-        </div>
-        <!-- the date and time, right above the case's Case ID. Outside #capture-area on purpose: the time zone picker
-             isn't part of a case (a case's dropdowns are saved by position, counted from the top of the page). -->
-        <div id="case-clock-row" class="no-print">
+            <!-- the date and time, beside the announcement (outside #capture-area on purpose: the time zone picker
+                 isn't part of a case; a case's dropdowns are saved by position, counted from the top of the page) -->
             <div class="clock-widget">
                 <span id="live-clock">--:--:--</span>
                 <select id="tz-select" onchange="refreshClock()" style="max-width:220px;">
@@ -92,6 +85,11 @@
                     <option value="Asia/Tokyo">Tokyo (JST)</option>
                     <option value="Australia/Sydney">Sydney (AEST)</option>
                 </select>
+            </div>
+            <div id="top-actions" class="cls-actions">
+                <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cls-btn" title="Download Case Summary (PDF)">📄 <span class="lbl">Download Case Summary</span></button>
+                <a id="portal-home-btn" href="https://cm-training-activity.pages.dev/programs.html" class="cls-btn" title="Back to the LSH Training Portal (Training Directory)">🏠 <span class="lbl">Main Portal</span></a>
+                <button id="dash-open-btn" type="button" onclick="openTraineeDashboard()" class="cls-btn" title="My Dashboard">📊 <span class="lbl">My Dashboard</span></button>
             </div>
         </div>
         <div class="flex-1 overflow-y-auto p-8 custom-scrollbar" id="capture-area">

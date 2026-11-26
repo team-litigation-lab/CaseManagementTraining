@@ -387,7 +387,7 @@
         const main = $id('capture-area') && $id('capture-area').parentElement;
         if (main && !$id('mock-banner')) {
             // under the announcements strip, above the date and time (which stays right on top of the case)
-            ($id('case-clock-row') || $id('capture-area')).insertAdjacentHTML('beforebegin', `<div id="mock-banner" class="no-print"></div>`);
+            $id('capture-area').insertAdjacentHTML('beforebegin', `<div id="mock-banner" class="no-print"></div>`);
         }
         if (!$id('library-modal')) {
             document.body.insertAdjacentHTML('beforeend', `
