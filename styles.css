@@ -1047,3 +1047,178 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     :where(input, select, textarea) { max-width: 100%; }
 }
 @media (max-width: 760px) and (prefers-reduced-motion: reduce) { #sidebar { transition: none; } }
+
+/* ============================================================================
+   LSH CaseWorX™ LEVEL-UP — the same design language as the LSH Nexus portal,
+   made to feel like a real firm's case management system.
+
+   Visual only: no ids, handlers, fields or text change. Added last, so it wins
+   on source order. Three ideas:
+   1. Readable: the case is drawn a little larger, and labels, tabs and buttons
+      are bolder and a step bigger, so a trainee reads a file at a glance.
+   2. Solid: the case sits on a calm, solid slate desk; every section is a
+      solid white sheet with a navy header bar. Fewer see-through layers means
+      each tab looks the same every time, which is what helps it stick.
+   3. Tactile: buttons look and behave like real controls (a raised face, a
+      darker lip, a press-down on click) and keep each one's own colour.
+   ========================================================================= */
+:root {
+    --main-scale: .88;                       /* was .8: the whole case ~10% larger */
+    --cwx-desk: #e8edf4;                     /* the solid desk behind the case */
+    --cwx-line: #cbd5e1;
+    --cwx-ink: #0b1a3a;
+    --cwx-lift: 0 1px 0 rgba(255,255,255,.55) inset, 0 2px 0 rgba(8,18,38,.18), 0 4px 10px -4px rgba(8,18,38,.35);
+    --cwx-lift-hover: 0 1px 0 rgba(255,255,255,.55) inset, 0 3px 0 rgba(8,18,38,.2), 0 8px 16px -6px rgba(8,18,38,.4);
+    --cwx-press: 0 1px 0 rgba(8,18,38,.22), 0 1px 3px rgba(8,18,38,.25) inset;
+    --cwx-ring: 0 0 0 3px rgba(249,115,22,.45);
+}
+
+/* ---------- the desk and the sheets ---------- */
+body:not(.bg-photo-active) #capture-area {
+    background-color: var(--cwx-desk);
+    background-image: radial-gradient(circle, rgba(15,33,72,.07) 1px, transparent 1px);
+}
+.pdf-card {
+    background: #fff;
+    border: 1px solid var(--cwx-line);
+    border-top: 4px solid var(--navy);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15,33,72,.08), 0 10px 24px -16px rgba(15,33,72,.35);
+}
+/* each section's header: a solid navy bar with an orange tab on its left edge */
+.section-head {
+    background: linear-gradient(180deg, #16306a 0%, var(--navy) 100%);
+    color: #fdba74;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    padding: 9px 14px 9px 16px;
+    border-radius: 7px;
+    min-height: 36px;
+    box-shadow: inset 4px 0 0 var(--orange), 0 2px 6px -3px rgba(8,18,38,.45);
+}
+
+/* ---------- labels and fields: bolder, a step bigger ---------- */
+:where(.tab-pane) label:not(:where(.hub-btn, .add-btn, .kx-dl-btn, .btn-ghost)) {
+    font-size: 13px !important;
+    font-weight: 800;
+    color: var(--cwx-ink);
+    letter-spacing: .05em;
+}
+:where(.header-card) label { font-weight: 800; }
+[contenteditable="true"] {
+    background: #fff;
+    border: 1.5px solid var(--cwx-line);
+    border-radius: 7px;
+    font-weight: 600;
+    color: var(--cwx-ink);
+    box-shadow: inset 0 1px 2px rgba(15,33,72,.06);
+}
+:where(.tab-pane) [contenteditable="true"] { font-size: 14.5px; }
+[contenteditable="true"]:hover { border-color: #94a3b8; }
+[contenteditable="true"]:focus { border-color: var(--orange); box-shadow: var(--cwx-ring); }
+select.prof-input {
+    background: #fff; border: 1.5px solid var(--cwx-line); border-radius: 7px;
+    font-size: 14px; font-weight: 700; color: var(--cwx-ink);
+}
+select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-ring); }
+
+/* tables: a solid header row and zebra rows, like a real records grid */
+.treat-table th { background: #e2e8f0; color: var(--cwx-ink); font-size: 12.5px; border-bottom: 2px solid #94a3b8; }
+.treat-table tbody tr:nth-child(even) td { background: #f8fafc; }
+.treat-table tbody tr:hover td { background: #fff7ed; }
+
+/* ---------- the case's tab bar: real keys ---------- */
+.case-tabs {
+    background: #dfe6ef;
+    border: 1px solid var(--cwx-line);
+    border-radius: 14px;
+    padding: 5px 7px;
+    box-shadow: inset 0 1px 3px rgba(15,33,72,.12);
+}
+.case-tabs .tab-btn {
+    font-size: 12.5px;
+    font-weight: 800;
+    min-height: 42px;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    border: 1px solid var(--cwx-line);
+    border-bottom-color: #94a3b8;
+    color: var(--cwx-ink);
+    box-shadow: 0 2px 0 rgba(8,18,38,.14);
+    transition: background .15s, border-color .15s, color .15s, transform .08s, box-shadow .15s;
+}
+.case-tabs .tab-btn:hover { background: #fff; border-color: #94a3b8; transform: translateY(-1px); box-shadow: 0 3px 0 rgba(8,18,38,.16); }
+.case-tabs .tab-btn:active { transform: translateY(1px); box-shadow: 0 0 0 rgba(8,18,38,0); }
+.case-tabs .tab-btn.active-tab {
+    background: linear-gradient(180deg, #1a3878 0%, var(--navy) 100%);
+    border-color: var(--navy-deep) !important;
+    box-shadow: inset 0 -4px 0 var(--orange), 0 2px 0 rgba(8,18,38,.3);
+    transform: none;
+}
+@container (max-width: 1120px) { .case-tabs .tab-btn { font-size: 11.5px; } }
+@container (max-width: 960px)  { .case-tabs .tab-btn { font-size: 11px; } }
+@container (max-width: 760px)  { .case-tabs .tab-btn { font-size: 11px; } }
+
+/* ---------- buttons: raised, with a lip, and a press ---------- */
+.add-btn, .hub-btn, .cab-btn, .mini-btn, .btn-primary, .btn-ghost, .cls-btn, .session-btn, .crit-add, .revert-btn {
+    position: relative;
+    box-shadow: var(--cwx-lift);
+    transition: transform .08s ease, box-shadow .15s ease, background-color .15s, border-color .15s, color .15s, filter .15s;
+}
+.add-btn:hover, .hub-btn:hover, .cab-btn:hover, .mini-btn:hover:not([disabled]), .btn-primary:hover, .btn-ghost:hover,
+.cls-btn:hover, .session-btn:hover, .crit-add:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--cwx-lift-hover);
+}
+.add-btn:active, .hub-btn:active, .cab-btn:active, .mini-btn:active:not([disabled]), .btn-primary:active, .btn-ghost:active,
+.cls-btn:active, .session-btn:active, .crit-add:active {
+    transform: translateY(1px);
+    box-shadow: var(--cwx-press);
+}
+.add-btn:focus-visible, .hub-btn:focus-visible, .cab-btn:focus-visible, .mini-btn:focus-visible, .btn-primary:focus-visible,
+.btn-ghost:focus-visible, .cls-btn:focus-visible, .session-btn:focus-visible, .case-tabs .tab-btn:focus-visible {
+    outline: none; box-shadow: var(--cwx-ring);
+}
+/* bigger, bolder labels on the controls a trainee uses all day */
+.add-btn { font-size: 11.5px !important; padding: 9px 18px !important; border-radius: 8px !important;
+    background: linear-gradient(180deg, #fb923c 0%, var(--orange) 100%) !important; border-bottom: 2px solid #c2410c !important; }
+.add-btn:hover { background: linear-gradient(180deg, #16306a 0%, #0f172a 100%) !important; border-bottom-color: #000 !important; }
+.hub-btn { font-size: 11px; font-weight: 900; border: 1.5px solid #fdba74; border-bottom-width: 3px; border-bottom-color: #ea580c;
+    background: linear-gradient(180deg, #fffaf3 0%, #ffedd5 100%); color: #9a3412; border-radius: 10px; }
+.hub-btn:hover { background: linear-gradient(180deg, #fb923c 0%, var(--orange) 100%); border-color: #c2410c; color: #fff; }
+.cab-btn { font-size: 12px; font-weight: 900; padding: 10px 16px; border-radius: 9px; border-bottom-width: 3px; }
+.cab-save   { background: linear-gradient(180deg, #22c55e 0%, #059669 100%); border-color: #047857; }
+.cab-update { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); border-color: #1e3a8a; }
+#case-actions-bar { background: #f8fafc; border-top: 3px solid var(--navy); }
+.mini-btn { font-size: 11px; font-weight: 900; padding: 7px 13px; border-radius: 7px; border-bottom: 2px solid rgba(0,0,0,.22); }
+.cls-btn { font-size: 11.5px; padding: 6px 11px; border-radius: 7px; background: linear-gradient(180deg, #1a3366 0%, #13284f 100%); border-bottom: 2px solid #020617; }
+.btn-primary { background: linear-gradient(180deg, #1a3878 0%, var(--navy) 100%); border-bottom: 2px solid var(--navy-deep); }
+.btn-ghost { border: 1px solid var(--cwx-line); border-bottom: 2px solid #94a3b8; color: #334155; }
+.session-btn { border-bottom-width: 2px; }
+
+
+/* ---------- the sidebar's tools: solid, raised, bigger labels ---------- */
+#sidebar .side-card, #sidebar .fdd-btn, #sidebar .lib-btn, #sidebar .if-open-btn {
+    font-size: 12px; font-weight: 900; letter-spacing: .04em;
+    padding-top: 11px; padding-bottom: 11px; border-radius: 10px;
+    border-width: 1.5px; border-bottom-width: 3px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 6px 14px -8px rgba(0,0,0,.7);
+    transition: transform .08s ease, box-shadow .15s ease, background-color .15s, color .15s, filter .15s;
+}
+#sidebar .side-card-orange, #sidebar .lib-btn, #sidebar .if-open-btn { background: linear-gradient(180deg, #3a2412 0%, #24170c 100%); color: #fdba74; border-color: #f97316; border-bottom-color: #c2410c; }
+#sidebar .fdd-btn { background: linear-gradient(180deg, #0d3a2b 0%, #082a1f 100%); color: #6ee7b7; border-color: #10b981; border-bottom-color: #047857; }
+#sidebar .side-card-blue { background: linear-gradient(180deg, #13306a 0%, #0c2150 100%); color: #93c5fd; border-color: #3b82f6; border-bottom-color: #1d4ed8; }
+#sidebar .side-card:hover, #sidebar .fdd-btn:hover, #sidebar .lib-btn:hover, #sidebar .if-open-btn:hover { transform: translateY(-1px); filter: brightness(1.18); }
+#sidebar .side-card:active, #sidebar .fdd-btn:active, #sidebar .lib-btn:active, #sidebar .if-open-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,.6) inset; }
+#sidebar .side-card:focus-visible, #sidebar .fdd-btn:focus-visible, #sidebar .lib-btn:focus-visible, #sidebar .if-open-btn:focus-visible { outline: none; box-shadow: var(--cwx-ring); }
+
+@media (prefers-reduced-motion: reduce) {
+    .add-btn, .hub-btn, .cab-btn, .mini-btn, .btn-primary, .btn-ghost, .cls-btn, .session-btn, .crit-add, .case-tabs .tab-btn,
+    #sidebar .side-card, #sidebar .fdd-btn, #sidebar .lib-btn, #sidebar .if-open-btn { transition: none; }
+    .add-btn:hover, .hub-btn:hover, .cab-btn:hover, .mini-btn:hover, .btn-primary:hover, .btn-ghost:hover, .cls-btn:hover,
+    .session-btn:hover, .crit-add:hover, .case-tabs .tab-btn:hover { transform: none; }
+}
+@media print {
+    .pdf-card, .section-head, .add-btn, .hub-btn, .cab-btn, .mini-btn, .case-tabs .tab-btn { box-shadow: none !important; }
+    body:not(.bg-photo-active) #capture-area { background: #fff; }
+}
