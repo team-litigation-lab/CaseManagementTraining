@@ -2,7 +2,7 @@
    LSH CaseWorX — CASE SECTIONS (the newer parts of the case editor)
    ---------------------------------------------------------
      - Parties Involved (passengers, at-fault party, witnesses…)
-     - Authorized to Access Case (Profile)
+     - Authorized Representative (Profile; was "Authorized to Access Case")
      - Lost Wages, Demand and Settlement tabs, with their math; each
        demand can carry its demand letter (⬆ Upload Demand)
      - Opposing Counsel (Litigation): the defense attorneys
@@ -92,20 +92,33 @@
         out.innerHTML = keys.length ? keys.map(k => `<span class="kx-chip">${esc(k)}: <b>${counts[k]}</b></span>`).join('') : '<span class="kx-hint" style="margin:0;">No parties added yet.</span>';
     }
 
-    /* ---------- Authorized to Access Case ---------- */
+    /* ---------- Authorized Representative (was "Authorized to Access Case") ----------
+       Who may speak for the client, how they were authorized, and where the proof is saved. Rows are saved as
+       their own HTML (data-keyed="rows"), so rows saved before keep their old fields and load as they were. */
+    const REL = ['Spouse', 'Parent', 'Guardian', 'Child', 'Sibling', 'Grandparent', 'Partner', 'Friend', 'Interpreter', 'Other'];
+    // How the representative was authorized. The last three are the ones the law or a court gives, not the client.
+    const VIA = ['Email from the client', 'Call with the client (recorded in a Case Note)', 'Text from the client',
+        'Signed authorization (HIPAA / client consent form)', 'Power of attorney (SPA / durable POA)',
+        'Statutory heir / next of kin (client deceased)', 'Court-appointed guardian or conservator (incl. guardian ad litem)',
+        'Personal representative of the estate (letters testamentary / of administration)',
+        'Government agency (e.g. state custody caseworker, SSA representative payee)'];
+    const repOpts = (list, first) => `<option value="">${first}</option>` + list.map(o => `<option>${o}</option>`).join('');
     window.addAuthorized = function () {
         const box = $id('kx-authorized'); if (!box) return;
         const div = document.createElement('div');
-        div.className = 'kx-row relative bg-slate-50 rounded-lg p-4';
+        div.className = 'kx-row kx-rep relative bg-slate-50 rounded-lg p-4';
         div.innerHTML = `${removeBtn}
             <div class="grid grid-cols-2 gap-4">
                 <div><label>Full Name</label><div contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
-                <div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse, Parent, Guardian"></div></div>
                 <div><label>Phone</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div>
+                <div><label>Relationship</label><select class="prof-input kx-pill">${repOpts(REL, 'Relationship…')}</select></div>
+                <div><label>Authorized Via</label><select class="prof-input kx-pill">${repOpts(VIA, 'How were they authorized?')}</select></div>
                 <div><label>Authorization on File</label><select class="prof-input"><option>Pending</option><option>Signed (HIPAA / authorization)</option><option>Verbal only (not enough)</option><option>Revoked</option></select></div>
             </div>
             <label style="margin-top:8px;">May Discuss</label>
-            <div contenteditable="true" data-ph="e.g. Scheduling and case status only; no settlement figures"></div>`;
+            <div contenteditable="true" data-ph="e.g. Scheduling and case status only; no settlement figures"></div>
+            <label style="margin-top:8px;">Notes</label>
+            <div contenteditable="true" class="multiline-field" data-ph="Where the documentation is saved (e.g. Doc Hub → Authorizations → POA signed 11/02), who confirmed it, any limits"></div>`;
         box.appendChild(div);
         placeholders(div);
         div.querySelector('[contenteditable="true"]').focus();
