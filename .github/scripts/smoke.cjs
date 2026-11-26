@@ -138,7 +138,7 @@ const SAVED = [
         return { inHeader: !!(b && b.closest('.header-card')), below: !!(b && ph) && b.getBoundingClientRect().top >= ph.getBoundingClientRect().bottom - 1, free: !!(b && b.hasAttribute('data-free-edit')) }; });
     if (!bar.inHeader || !bar.below || !bar.free) fail(`the search bar is not in the case header under the case status: ${JSON.stringify(bar)}`);
     // the Profile tab: Identity | Case Narrative | Primary Injury across the top, Employment Details and Emergency Contact under
-    // Identity and the Case Narrative, with Authorized to Access Case inside the Emergency Contact card (placed by CSS; the page
+    // Identity and the Case Narrative, with Authorized Representative inside the Emergency Contact card (placed by CSS; the page
     // order, which the positional save relies on, is unchanged: the Authorized list is a keyed list, saved by id)
     await page.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('profile'); }); await page.waitForTimeout(200);
     const prof = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#profile-grid .pdf-card')].map(c => { const r = c.getBoundingClientRect(); return [c.querySelector('.section-head').textContent.trim(), { x: Math.round(r.x), y: Math.round(r.y), b: Math.round(r.bottom) }]; })));
@@ -385,8 +385,8 @@ const SAVED = [
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
     if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || side.hidden.length || side.oldButtons
-        // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
-        || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
+        // (a library case is open here: no 🗄 Archive, it's never saved as a draft; one key saves and updates: 💾 Save Case until it's saved)
+        || side.bar.join('|') !== '🗑 Discard Case|💾 Save Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
     // The page's frame: the sidebar (and its logo) runs to the top, the announcements strip is over the main area only and has no
     // "LEGAL SUPPORT HELP TRAINING INTERFACE - TRAINEE PORTAL" label; Download Case Summary and My Dashboard are at
     // its right; the date and time are right above the case's Case ID, outside the case; the timer is in the case header under the

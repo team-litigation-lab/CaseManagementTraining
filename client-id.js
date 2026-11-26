@@ -61,7 +61,8 @@
         tanya-reed-1990 maria-santos-1988 latoya-jackson-1987 hannah-pierce-1987
         rachel-donovan-1986 nicole-adams-1984 denise-carter-1981 ngozi-okonkwo-1979
         maria-santos-1971 siobhan-masserene-1968 linda-garcia-1961 saoirse-shaughnessy-1955
-        patricia-lewis-1946`.split(/\s+/).filter(Boolean));
+        patricia-lewis-1946 darnell-brooks-1984 keisha-brooks-1986 victor-salazar-1971 mateo-salazar-2001
+        tanya-wells-1989`.split(/\s+/).filter(Boolean));
     const photoSlug = (who, dob) => `${who} ${String(dob || '').slice(-4)}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     function builtInPhoto(mc) {
         if (window.LSHCasePhotos && window.LSHCasePhotos.looksOf(mc).minor) return null;

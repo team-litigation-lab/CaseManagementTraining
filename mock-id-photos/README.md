@@ -54,3 +54,8 @@ To add one: put a 256 px (or larger) square JPG here as `<name>-<birth year>.jpg
 | `linda-garcia-1961.jpg` | `SFHQ_pt4_00003542.jpg` |
 | `saoirse-shaughnessy-1955.jpg` | `SFHQ_pt4_00002514.jpg` |
 | `patricia-lewis-1946.jpg` | `SFHQ_pt4_00001827.jpg` |
+| `darnell-brooks-1984.jpg` | `SFHQ_pt4_00003178.jpg` (shard 12) |
+| `keisha-brooks-1986.jpg` | `SFHQ_pt4_00009460.jpg` (shard 12) |
+| `victor-salazar-1971.jpg` | `SFHQ_pt4_00007674.jpg` (shard 12) |
+| `mateo-salazar-2001.jpg` | `SFHQ_pt4_00009674.jpg` (shard 12) |
+| `tanya-wells-1989.jpg` | `SFHQ_pt4_00011746.jpg` (shard 12) |

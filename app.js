@@ -350,6 +350,7 @@
         function generateCaseId() {
             const field = document.getElementById('case-id-field');
             field.dataset.series = '';
+            paintSaveKey();
             if (currentCaseId !== null && !currentCaseIsDraft) {
                 return; // finalized case — its ID is fixed, never regenerated here
             }
@@ -1597,6 +1598,19 @@
                 showToast('Network error while archiving. Check your connection and try again.', 'error', 6000);
             }
         }
+        // 💾 Save Case / ⟳ Update Case, one key: a saved (final) case that's open is updated as it is; anything else
+        // (a new case, a draft) is saved and gets its Case ID.
+        function saveOrUpdateCase() {
+            return (currentCaseId !== null && !currentCaseIsDraft) ? updateCase() : saveCase();
+        }
+        function paintSaveKey() {
+            const b = document.getElementById('cab-save'); if (!b) return;
+            const update = currentCaseId !== null && !currentCaseIsDraft;
+            b.textContent = update ? '\u27F3 Update Case' : '\uD83D\uDCBE Save Case';
+            b.title = update ? 'Save the changes to the saved case you opened' : 'Save this case: it gets its Case ID';
+            b.classList.toggle('cab-update', update);
+        }
+        window.saveOrUpdateCase = saveOrUpdateCase; window.paintSaveKey = paintSaveKey;
         async function updateCase() {
             if (window.mockBlocksSave && window.mockBlocksSave()) return; // view-only Training Library case
             if (currentCaseId === null && window.mockIsMine && window.mockIsMine()) return saveCase(); // the first save of a trainee's work on a case file

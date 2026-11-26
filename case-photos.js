@@ -90,7 +90,22 @@
         // parked Civic (Unit 3). client = Unit 3, other = Unit 1 (the file's pd block), third = Unit 2.
         'MC-53': { type: 't-bone', place: 'Maple Hollow Rd & Birch Ave', setting: 'intersection', signal: 'stop',
             client: { color: 'blue', hit: 'left side' }, other: { color: 'black', hit: 'front right' },
-            third: { body: 'suv', label: '2021 Ford Escape · Kevin Alvarez (Unit 2)', color: 'silver', hit: 'right side' } }
+            third: { body: 'suv', label: '2021 Ford Escape · Kevin Alvarez (Unit 2)', color: 'silver', hit: 'right side' } },
+        // 🔗 the connected files: one crash each, drawn the same on every file of the group
+        'MC-54': { type: 'rear-end', place: 'I-75', setting: 'highway', client: { body: 'sedan', label: '2020 Toyota Camry · Darnell Brooks', color: 'silver', hit: 'rear' }, other: { body: 'semi', label: 'Hollis Freight tractor-trailer · Wade Kessler', color: 'white', hit: 'front', decal: 'HOLLIS FREIGHT' },
+            photos: [{ vehicle: 'client', area: 'rear', caption: 'The Brooks Camry: trunk and rear bumper crushed by the tractor-trailer' }] },
+        'MC-55': { type: 'rear-end', place: 'I-75', setting: 'highway', client: { body: 'sedan', label: '2020 Toyota Camry · driven by Darnell Brooks (Keisha: front passenger)', color: 'silver', hit: 'rear' }, other: { body: 'semi', label: 'Hollis Freight tractor-trailer · Wade Kessler', color: 'white', hit: 'front', decal: 'HOLLIS FREIGHT' },
+            photos: [{ vehicle: 'client', area: 'rear', caption: 'The Camry Keisha rode in: trunk and rear bumper crushed' }] },
+        'MC-56': { type: 't-bone', place: 'Elm St & 5th Ave', setting: 'intersection', signal: 'red', client: { body: 'pickup', label: '2019 Ford F-150 · owner Victor Salazar (Mateo driving)', color: 'red', hit: 'right side' }, other: { body: 'sedan', label: '2017 Nissan Altima · Courtney Hale', color: 'gray', hit: 'front' },
+            photos: [{ vehicle: 'client', area: 'right side', caption: 'Victor\'s F-150: passenger doors pushed in by the red-light runner' }] },
+        'MC-57': { type: 't-bone', place: 'Elm St & 5th Ave', setting: 'intersection', signal: 'red', client: { body: 'pickup', label: '2019 Ford F-150 · driven by Mateo Salazar (owner Victor)', color: 'red', hit: 'right side' }, other: { body: 'sedan', label: '2017 Nissan Altima · Courtney Hale', color: 'gray', hit: 'front' },
+            photos: [{ vehicle: 'other', area: 'front', caption: 'The Altima that ran the red light: front end crushed' }] },
+        'MC-58': { type: 'head-on', place: 'Hwy 20', setting: 'road', client: { body: 'van', label: '2018 Honda Odyssey · Tanya Wells (Jayden and Lily in back)', color: 'navy', hit: 'front' }, other: { body: 'pickup', label: '2016 Chevrolet Silverado · Russell Gant', color: 'black', hit: 'front' },
+            photos: [{ vehicle: 'client', area: 'front', caption: 'The Wells minivan: front end and windshield after the head-on' }] },
+        'MC-59': { type: 'head-on', place: 'Hwy 20', setting: 'road', client: { body: 'van', label: '2018 Honda Odyssey · Tanya Wells driving (Jayden: rear seat)', color: 'navy', hit: 'front' }, other: { body: 'pickup', label: '2016 Chevrolet Silverado · Russell Gant', color: 'black', hit: 'front' },
+            photos: [{ vehicle: 'client', area: 'front', caption: 'The minivan Jayden rode in: front end and windshield' }] },
+        'MC-60': { type: 'head-on', place: 'Hwy 20', setting: 'road', client: { body: 'van', label: '2018 Honda Odyssey · Tanya Wells driving (Lily: booster seat)', color: 'navy', hit: 'front' }, other: { body: 'pickup', label: '2016 Chevrolet Silverado · Russell Gant', color: 'black', hit: 'front' },
+            photos: [{ vehicle: 'other', area: 'front', caption: 'The pickup that crossed the center line: front end' }] }
     };
 
     /* ---------- paint ---------- */

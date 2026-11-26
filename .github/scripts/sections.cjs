@@ -6,7 +6,7 @@
 //     (the new sections are keyed, so old cases can't shift), and a case saved
 //     by the CMS before this change (fixtures/case-before-keyed.json) loads with
 //     every field where it was and the new sections empty;
-//   - Parties Involved, Authorized to Access, Lost Wages (estimate), Demand,
+//   - Parties Involved, Authorized Representative, Lost Wages (estimate), Demand,
 //     Settlement (fee / costs / liens / net), Location of Incident and the
 //     Report Type (Incident Report relabels the tab) save and load back;
 //   - the new options: MRI and PT specialties, Intake documents, the new phases,
@@ -186,7 +186,7 @@ const failures = []; const fail = (m) => failures.push(m);
     const summary = await page.textContent('#parties-summary');
     if (!/Passenger:\s*1/.test(summary) || !/Witness:\s*1/.test(summary)) fail(`the parties summary is wrong (${summary})`);
     await page.click('#tab-profile');
-    await page.click('#pane-profile button:has-text("+ Add Person")');
+    await page.click('#pane-profile button:has-text("+ Add Representative")');
     await page.keyboard.type('Ann Authorized');
     await page.click('#kf-incident-location'); await page.keyboard.type('Main St & 5th Ave, Riverton');
     await page.click('#tab-wages');
@@ -227,7 +227,7 @@ const failures = []; const fail = (m) => failures.push(m);
             tab: document.getElementById('tab-police').textContent };
     }, saved);
     if (!/Paula Passenger/.test(back.parties) || !/Walt Witness/.test(back.parties) || back.roles !== 'Passenger,Witness') fail(`Parties Involved didn't load back (${back.parties} / ${back.roles})`);
-    if (!/Ann Authorized/.test(back.auth)) fail('Authorized to Access didn\'t load back');
+    if (!/Ann Authorized/.test(back.auth)) fail('Authorized Representative didn\'t load back');
     if (back.loc !== 'Main St & 5th Ave, Riverton') fail(`Location of Incident didn't load back (${back.loc})`);
     if (back.pay !== 'Hourly' || !/1,600\.00/.test(back.est)) fail('Lost Wages didn\'t load back');
     if (!/Progressive/.test(back.demand)) fail('Demand didn\'t load back');

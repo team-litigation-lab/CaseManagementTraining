@@ -8,6 +8,13 @@
         --navy-deep:#081226;
         --navy-mid:#132a5c;
         --orange:#f97316;
+        /* the gold of the buttons (was orange): fill, hover, navy text on it, gold words on navy, glow */
+        --gold-btn: linear-gradient(180deg, #fde7b0 0%, #f5c451 50%, #e0a43a 100%);
+        --gold-btn-hover: linear-gradient(180deg, #ffefc4 0%, #f7cf6a 50%, #e8b04a 100%);
+        --gold-ink: #1E2340;
+        --gold-text: #f5c451;
+        --gold-edge: #e0a43a;
+        --gold-glow: rgba(224,164,58,.55);
         --slate:#64748b;
         --paper:#f8fafc;
         --classified-red:#b91c1c;
@@ -57,7 +64,7 @@
     .announcement-ticker.is-alert .announcement-tag { color: #fca5a5; }
     /* 📢 lined up with the case below (#capture-area's p-8: 32px in), and dressed to be seen: an orange
        pill with a pulsing dot, and the message in larger, brighter type */
-    #classification-bar { padding-left: 32px; padding-right: 32px; }
+    #classification-bar { padding-left: 14px; padding-right: 14px; }   /* as #capture-area's sides (the case runs nearly edge to edge) */
     .announcement-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--orange); color: #081226;
         font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 11px; font-weight: 900; letter-spacing: .08em; line-height: 1;
         padding: 6px 12px; border-radius: 999px; box-shadow: 0 0 0 3px rgba(249,115,22,.2), 0 0 14px rgba(249,115,22,.5); }
@@ -88,6 +95,7 @@
     #live-clock { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 11.5px; font-weight: 700; color: #0f2148; letter-spacing: .3px; white-space: nowrap; }
     #classification-bar .clock-widget select { max-width: 150px !important; min-width: 0; background: #f8fafc; color: #c2410c; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 10.5px; font-weight: 700; letter-spacing: 0; padding: 2px 4px; outline: none; }
     /* a narrower window: the time zone picker goes first, then (on a small phone) the clock itself, so the strip never overflows */
+    #classification-bar .clock-widget select { max-width: 96px !important; font-size: 10.5px !important; padding: 1px 4px !important; height: 22px; }   /* the place: a smaller pill */
     @media (max-width: 1100px) { #classification-bar .clock-widget select { display: none; } #classification-bar .clock-widget { padding-right: 9px; } }
     @media (max-width: 480px) { #classification-bar .clock-widget { display: none; } }
 
@@ -100,7 +108,7 @@
         background-size: 24px 24px;
     }
     /* the case sits close under the top strip (half of p-8's 32px); 16px still clears the ✕, which pokes 13px above the card */
-    #capture-area { padding-top: 16px; }
+    #capture-area { padding-top: 22px; }   /* (room for the case's ✕, which sits 16px above the card) */
     #capture-area::before {
         content: "CONFIDENTIAL — LSH INTERNAL RECORD";
         position: fixed;
@@ -193,6 +201,10 @@
         line-height: 1.45;
         color: #0f172a;
     }
+
+    /* every multi-line field (the Case Narrative, notes, the chronology…): what's typed is bigger, upright and bold
+       (cases saved before keep "text-sm italic" on the field, so this goes by the class with !important) */
+    #capture-area .multiline-field { font-size: 15px !important; font-weight: 700 !important; font-style: normal !important; line-height: 1.5 !important; color: #0f172a; }
 
     /* placeholders — single, non-flickering, CSS-driven */
     [contenteditable="true"]:empty:before {
@@ -354,11 +366,11 @@
     .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
     .hub-btn { background: #fffaf0; border: 1px solid #ffedd5; color: #9a3412; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 14px; border-radius: 8px; text-align: center; cursor: pointer; }
-    .hub-btn:hover { background: var(--orange); color: white; border-color: var(--orange); }
+    .hub-btn:hover { background: var(--gold-btn-hover); color: var(--gold-ink); border-color: var(--gold-edge); }
 
     .add-btn {
-        background: var(--orange) !important;
-        color: #000 !important;
+        background: var(--gold-btn) !important;
+        color: var(--gold-ink) !important;
         font-family: 'IBM Plex Mono', 'Courier New', monospace;
         font-weight: 900 !important;
         font-size: 10px !important;
@@ -369,16 +381,16 @@
         border: none !important;
         cursor: pointer;
     }
-    .add-btn:hover { background: #0f172a !important; color: var(--orange) !important; }
+    .add-btn:hover { background: var(--gold-btn-hover) !important; color: var(--gold-ink) !important; }
 
-    .revert-btn { background: var(--orange); color: white; font-size: 12px; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-left: 5px; display: none; font-weight: 900; }
+    .revert-btn { background: var(--gold-btn); color: var(--gold-ink); font-size: 12px; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-left: 5px; display: none; font-weight: 900; }
 
     .repo-card { background: var(--navy) !important; border: 1px solid #1e293b !important; padding: 12px !important; border-radius: 8px !important; margin-bottom: 10px !important; cursor: pointer !important; position: relative !important; color: white; }
     .repo-card:hover { border-color: var(--orange) !important; }
 
     /* ===== SIDEBAR ===== */
     #sidebar {
-        width: 280px;
+        width: 236px;   /* a little narrower, so the case gets the room (was 280px) */
         background: var(--navy-deep);
         color: white;
         display: flex;
@@ -486,7 +498,7 @@
         flex:1; padding:12px; border-radius:6px; font-weight:800; font-size:13px;
         text-transform:uppercase; letter-spacing:0.04em; cursor:pointer; border:none;
     }
-    .btn-primary { background: var(--navy); color: var(--orange); }
+    .btn-primary { background: var(--navy); color: var(--gold-text); }
     .btn-primary:hover { background: var(--navy-deep); }
     .btn-ghost { background: #f1f5f9; color:#64748b; }
     .btn-ghost:hover { background:#e2e8f0; }
@@ -548,6 +560,7 @@
         transition: background 0.25s ease, color 0.25s ease;
     }
     .portal-tab.active { background: var(--auth-accent); color:#0f2148; }
+    #auth-gate:not(.mode-admin) .portal-tab.active { background: var(--gold-btn); color: var(--gold-ink); }   /* the Trainee Portal's keys are gold; the Admin Portal's stay red */
     /* the sign-in views switch with .hidden; don't depend on the Tailwind CDN for it */
     .auth-box .hidden { display:none !important; }
     .auth-field { margin-bottom:12px; }
@@ -583,6 +596,8 @@
         transition: background 0.25s ease;
     }
     .auth-submit:hover { background: var(--auth-accent-hover); }
+    #auth-gate:not(.mode-admin) .auth-submit { background: var(--gold-btn); color: var(--gold-ink); }
+    #auth-gate:not(.mode-admin) .auth-submit:hover { background: var(--gold-btn-hover); }
     .auth-switch { text-align:center; margin-top:16px; font-size:11px; color:#94a3b8; }
     .auth-switch a { color: var(--auth-accent); cursor:pointer; font-weight:700; text-decoration:underline; }
     .auth-guest-lead { font-size:12px; color:#cbd5e1; line-height:1.5; margin:0 0 14px; }
@@ -698,8 +713,8 @@
     .status-suspended { background:#fef9c3; color:#854d0e; }
     /* Sidebar card buttons (New Intake, Download Case Summary), styled like the Training Library and Front Desk cards (.lib-btn, .fdd-btn) */
     .side-card { display:block; width:100%; padding:9px 0; border-radius:8px; border:1px solid; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; cursor:pointer; margin-bottom:8px; transition:background .15s, color .15s; }
-    .side-card-orange { border-color:#f97316; color:#fdba74; background:rgba(249,115,22,.08); }
-    .side-card-orange:hover { background:#f97316; color:#fff; }
+    .side-card-orange { border-color:#f97316; color:var(--gold-text); background:rgba(249,115,22,.08); }
+    .side-card-orange:hover { background:var(--gold-btn-hover); color:var(--gold-ink); }
     .side-card-blue { border-color:#3b82f6; color:#93c5fd; background:rgba(59,130,246,.08); }
     .side-card-blue:hover { background:#3b82f6; color:#fff; }
     /* The sidebar's groups (index.html): program, cases, work, trainer tools */
@@ -707,6 +722,10 @@
     #sb-program:empty { display:none; }
     #sb-program:empty + .sb-group { border-top:0; margin-top:0; padding-top:0; }
     #sb-program .lib-prog { margin-bottom:0; }
+    /* the Training Program picker and its list: bolder */
+    #sb-program select, #sb-program select option { font-weight: 800 !important; }
+    #sb-program select { font-size: 13px !important; }
+    #sb-program label, #sb-program .lib-prog-lbl { font-weight: 900 !important; }
     #sb-cases #repo-list { max-height:min(38vh, 320px); overflow-y:auto; }   /* a long list never pushes the actions out of reach */
     .sb-head { font-size:9px; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px; font-family:'IBM Plex Mono','Courier New',monospace; }
     #sb-trainer .lib-btn, #sb-trainer .fdd-btn, #sb-trainer .if-open-btn { margin-bottom:8px; }
@@ -714,7 +733,10 @@
     /* ✕ at the top right of the case, and the case's actions at the bottom of the screen */
     .header-card { position:relative; }
     .case-close-x { position:absolute; top:-13px; right:-13px; width:28px; height:28px; border-radius:50%; border:2px solid #f97316; background:#fff; color:#0f2148; font-size:13px; font-weight:900; line-height:1; cursor:pointer; box-shadow:0 2px 6px rgba(15,33,72,.25); z-index:2; }
-    .case-close-x:hover { background:#f97316; color:#fff; }
+    .case-close-x:hover { background:var(--gold-btn-hover); color:var(--gold-ink); }
+    /* the case's ✕: the one way to close it, so it stands out: bigger, navy with a gold ring, a glow */
+    .case-close-x { width:40px !important; height:40px !important; top:-16px !important; right:-10px !important; font-size:19px !important; background:linear-gradient(135deg,#1E2340,#1d3f86) !important; color:#fff !important; border:3px solid #c9973f !important; box-shadow:0 0 0 3px rgba(249,115,22,.25), 0 6px 16px -4px rgba(15,33,72,.6); z-index:5; }
+    .case-close-x:hover { background:#dc2626 !important; border-color:#fecaca !important; transform:scale(1.06); }
     #capture-area.mock-ro .pdf-card > .case-close-x { display:block !important; }   /* a view-only library case hides the card's buttons, not this one */
     /* the case workspace: the case scrolls, and its action bar stays at the bottom of the screen
        (the same as main's Tailwind classes, so it holds even when the Tailwind CDN doesn't load) */
@@ -724,7 +746,7 @@
     .cab-btn { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; border-radius:7px; padding:8px 14px; cursor:pointer; border:1px solid #cbd5e1; background:#fff; color:#0f2148; white-space:nowrap; }
     .cab-btn:hover { border-color:#0f2148; }
     .cab-archive { border-color:#fdba74; color:#c2410c; background:#fff7ed; }
-    .cab-archive:hover { background:#f97316; border-color:#f97316; color:#fff; }
+    .cab-archive:hover { background:var(--gold-btn-hover); border-color:var(--gold-edge); color:var(--gold-ink); }
     .cab-discard { border-color:#fecaca; color:#b91c1c; background:#fef2f2; }
     .cab-discard:hover { background:#b91c1c; border-color:#b91c1c; color:#fff; }
     .cab-save { background:#10b981; border-color:#10b981; color:#fff; }
@@ -745,7 +767,7 @@
     .mini-btn.approve { background:#166534; color:white; }
     .mini-btn.reject { background:#b91c1c; color:white; }
     .mini-btn.revoke { background:#64748b; color:white; }
-    .mini-btn.restore { background:#f97316; color:white; }
+    .mini-btn.restore { background:var(--gold-btn); color:var(--gold-ink); }
     .mini-btn.suspend { background:#d97706; color:white; }
     .mini-btn.reinstate { background:#16a34a; color:white; }
     .mini-btn.batch { background:#e0e7ff; color:#1e3a8a; }
@@ -872,6 +894,9 @@
     .kx-row { position: relative; }
     .kx-x { position: absolute; top: 6px; right: 10px; color: #cbd5e1; font-weight: 900; font-size: 16px; background: none; border: 0; cursor: pointer; }
     .kx-x:hover { color: #ef4444; }
+    /* an Authorized Representative's Relationship and Authorized Via: dropdown pills in the blue-to-gold line */
+    .kx-row select.kx-pill { border-radius: 999px !important; border: 2px solid transparent !important; padding: 7px 14px !important; font-weight: 800 !important; color: #1E2340;
+        background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important; }
     .kx-row-title { font-size: 10.5px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: #1d4ed8; margin-bottom: 10px; }
     /* a demand's letter (⬆ Upload Demand) */
     .kx-dl { margin-top: 10px; }
@@ -1252,12 +1277,12 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     outline: none; box-shadow: var(--cwx-ring);
 }
 /* bigger, bolder labels on the controls a trainee uses all day */
-.add-btn { font-size: 11.5px !important; padding: 9px 18px !important; border-radius: 8px !important;
-    background: linear-gradient(180deg, #fb923c 0%, var(--orange) 100%) !important; border-bottom: 2px solid #c2410c !important; }
-.add-btn:hover { background: linear-gradient(180deg, #16306a 0%, #0f172a 100%) !important; border-bottom-color: #000 !important; }
+.add-btn { font-size: 11.5px !important; padding: 9px 18px !important; border-radius: 8px !important; color: #fff !important;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2b4fa8 45%, #a8792f 80%, #c9973f 100%) !important; border-bottom: 2px solid #8a6420 !important; }   /* blue to gold */
+.add-btn:hover { background: var(--gold-btn-hover) !important; border-bottom-color: #b8862b !important; color: var(--gold-ink, #1E2340) !important; }
 .hub-btn { font-size: 11px; font-weight: 900; border: 1.5px solid #fdba74; border-bottom-width: 3px; border-bottom-color: #ea580c;
     background: linear-gradient(180deg, #fffaf3 0%, #ffedd5 100%); color: #9a3412; border-radius: 10px; }
-.hub-btn:hover { background: linear-gradient(180deg, #fb923c 0%, var(--orange) 100%); border-color: #c2410c; color: #fff; }
+.hub-btn:hover { background: var(--gold-btn-hover); border-color: #b8862b; color: var(--gold-ink); }
 .cab-btn { font-size: 12px; font-weight: 900; padding: 10px 16px; border-radius: 9px; border-bottom-width: 3px; }
 .cab-save   { background: linear-gradient(180deg, #22c55e 0%, #059669 100%); border-color: #047857; }
 .cab-update { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); border-color: #1e3a8a; }
@@ -1277,7 +1302,9 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 6px 14px -8px rgba(0,0,0,.7);
     transition: transform .08s ease, box-shadow .15s ease, background-color .15s, color .15s, filter .15s;
 }
-#sidebar .side-card-orange, #sidebar .lib-btn, #sidebar .if-open-btn { background: linear-gradient(180deg, #3a2412 0%, #24170c 100%); color: #fdba74; border-color: #f97316; border-bottom-color: #c2410c; }
+#sidebar .side-card-orange, #sidebar .lib-btn, #sidebar .if-open-btn { background: linear-gradient(180deg, #3a2412 0%, #24170c 100%); color: var(--gold-text); border-color: #f97316; border-bottom-color: #c2410c; }
+/* Case Library and Latest updates (Tailwind's hover:text-orange-500 in index.html): gold words on hover */
+#sidebar #cl-open-btn:hover, #sidebar #cl-updates-btn:hover { color: var(--gold-text); }
 #sidebar .fdd-btn { background: linear-gradient(180deg, #0d3a2b 0%, #082a1f 100%); color: #6ee7b7; border-color: #10b981; border-bottom-color: #047857; }
 #sidebar .side-card-blue { background: linear-gradient(180deg, #13306a 0%, #0c2150 100%); color: #93c5fd; border-color: #3b82f6; border-bottom-color: #1d4ed8; }
 /* Trainer tools: three matching slim keys (navy, gold edge, one line each) instead of two chunky brown ones and a thin outline */
@@ -1289,6 +1316,9 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 #sidebar #sb-trainer button:hover { background: linear-gradient(180deg, #1d3f86 0%, #16306a 100%); border-color: #c9973f; border-left-color: #f97316; color: #fff; transform: none; }
 #sidebar #sb-trainer .sb-lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* one text colour on every sidebar key: New Intake's peach (the keys keep their own frames) */
+#sidebar .side-card, #sidebar .fdd-btn, #sidebar .lib-btn, #sidebar .if-open-btn, #sidebar #sb-trainer button { color: #fdba74 !important; }
+#sidebar .side-card:hover, #sidebar .fdd-btn:hover, #sidebar #sb-trainer button:hover { color: #fff !important; }
 #sidebar #sb-trainer .sb-count { flex-shrink: 0; font-size: 10px; letter-spacing: 0; padding: 1px 7px; border-radius: 999px; background: rgba(219,132,55,.2); color: #fdba74; border: 1px solid rgba(219,132,55,.5); }
 #sidebar .side-card:hover, #sidebar .fdd-btn:hover, #sidebar .lib-btn:hover, #sidebar .if-open-btn:hover { transform: translateY(-1px); filter: brightness(1.18); }
 #sidebar .side-card:active, #sidebar .fdd-btn:active, #sidebar .lib-btn:active, #sidebar .if-open-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,.6) inset; }
@@ -1346,6 +1376,32 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 #capture-area .header-card .hdr-client { gap: 10px 14px; }
 #capture-area .header-card .hdr-id { margin-left: 28px; display: flex; flex-direction: column; gap: 8px; }
+/* ⚠ The Client's ID and, beside it, the Critical note. The ID is not framed (a frame would have to grow round a long
+   note); the note itself is the red pill, wrapping onto more lines as it grows, so it is never cut off. ⚠ Add critical
+   note under the ID is a plain link, not a pill. */
+.hdr-idrow { display: flex; align-items: flex-start; gap: 12px 16px; flex: 0 1 auto; min-width: 220px; margin: 0 auto 0 28px; }
+#capture-area .header-card .hdr-idrow .hdr-id { margin: 0; padding: 0; border: 0; background: none; box-shadow: none; flex: 0 0 220px; min-width: 0; }
+#capture-area .header-card .crit-pill { flex: 1 1 220px; min-width: 220px; max-width: 340px; margin: 22px 0 0; flex-direction: column; gap: 6px;
+    background: linear-gradient(160deg, #fff5f5 0%, #fee2e2 100%); border: 2px solid #dc2626; border-left-width: 2px; border-radius: 18px; padding: 10px 14px 12px;
+    box-shadow: 0 8px 18px -12px rgba(185,28,28,.6); }
+#capture-area .header-card .crit-pill .crit-tag { align-self: flex-start; margin: 0; border-radius: 999px; padding: 3px 10px; }
+#capture-area .header-card .crit-pill .crit-text { font-size: 14px; line-height: 1.4; }
+#capture-area .header-card .crit-pill .crit-count { margin: 0; align-self: flex-end; }
+#capture-area .header-card .crit-add, #capture-area .header-card .crit-add:hover, #capture-area .header-card .crit-add:active {
+    align-self: flex-start; background: none !important; border: 0 !important; box-shadow: none !important; transform: none !important;
+    padding: 2px 0 !important; color: #b91c1c; font-size: 12.5px; font-weight: 800; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+#capture-area .header-card .crit-add:hover { text-decoration-style: solid; }
+/* a laptop (no room beside the ID): the note goes under the ID, as wide as it */
+@media (max-width: 1500px) {
+    .hdr-idrow { flex-direction: column; }
+    #capture-area .header-card .hdr-idrow .hdr-id { flex: none; width: 220px; }
+    #capture-area .header-card .crit-pill { flex: none; width: 220px; min-width: 0; max-width: 220px; margin-top: 0; }
+}
+@media (max-width: 760px) {
+    .hdr-idrow { flex: 1 1 100%; flex-wrap: wrap; margin: 0; }
+    #capture-area .header-card .crit-pill { width: auto; }
+    #capture-area .header-card .crit-pill { flex: 1 1 100%; max-width: none; margin-top: 0; }
+}
 #capture-area .header-card .hdr-f > [contenteditable="true"], #capture-area .header-card .hdr-input {
     background: #fff !important; border: 1.5px solid #d3d9e6 !important; border-radius: 9px !important;
     font-size: 14px !important; font-weight: 800 !important; color: #1E2340 !important; padding: 7px 11px !important; line-height: 20px !important;   /* one line height for every box (Target Settlement's bigger type too), so a row's boxes line up */
@@ -1361,6 +1417,23 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 #capture-area .header-card .hdr-client .target-settlement-display {
     color: #166534 !important; background: #f0fdf4 !important; border-color: #86efac !important; font-size: 17px !important; font-weight: 900 !important;
 }
+/* the client's details, a little wider, with thicker blue-to-gold lines: the panel's frame (3px) and every box's
+   border (2px, a blue-to-gold gradient: the white or green fill on the padding box, the gradient on the border box) */
+#capture-area .header-card .hdr-client { grid-template-columns: repeat(3, minmax(130px, 180px)); border-width: 3px;
+    background: linear-gradient(160deg, #fffaf0 0%, #ffffff 55%, #f6f8fc 100%) padding-box,
+                linear-gradient(135deg, #1e3a8a 0%, #2b4fa8 40%, #c9973f 80%, #DB8437 100%) border-box; }
+#capture-area .header-card .hdr-f > [contenteditable="true"], #capture-area .header-card .hdr-input {
+    border: 2px solid transparent !important;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
+}
+#capture-area .header-card .hdr-name > #client-name-field { border-bottom-width: 3px !important; }
+#capture-area .header-card .hdr-client .target-settlement-display {
+    background: linear-gradient(#f0fdf4, #f0fdf4) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
+}
+#capture-area .header-card .hdr-f > [contenteditable="true"]:focus, #capture-area .header-card .hdr-input:focus {
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #DB8437, #f59e0b) border-box !important;
+}
+@media (max-width: 760px) { #capture-area .header-card .hdr-client { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* the big case status (INTAKE, BI DEMANDED…): navy blue and heavier, beside the navy-to-orange picker */
 #capture-area .header-card #display-phase { color: #1d3f86 !important; font-weight: 900 !important; -webkit-text-stroke: .6px #1d3f86; letter-spacing: .01em; }
 /* the case phase picker (above the big phase name): a navy-to-orange key with white text, easy to spot */
@@ -1398,3 +1471,59 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 /* the Case ID line above the phase: a larger label, and the number (or "Assigned on Save Case") bold and dark enough to read */
 #capture-area .header-card .text-right > :has(> #case-id-field) > label { font-size: 14px !important; }
 #capture-area .header-card #case-id-field { font-size: 14px !important; font-weight: 800 !important; color: #0f2148 !important; padding: 4px 12px !important; background: #eef2f7 !important; border: 1px solid #cbd5e1; border-radius: 7px !important; }
+
+/* ===== the case, nearly edge to edge: a little space on each side (it was 32px), as the announcement strip above ===== */
+@media (min-width: 761px) { #capture-area { padding-left: 14px !important; padding-right: 14px !important; } }
+
+/* ===== the case header's navy band: it runs up behind the client's details, the Client's ID and the case card, and
+   down into the Date of Loss bar, as one panel (the white cards sit on it) ===== */
+#capture-area .header-card > .flex.justify-between {
+    background: linear-gradient(135deg, #1E2340 0%, #16306a 60%, #1d3f86 100%);
+    border: 2px solid #c9973f; border-left: 6px solid #DB8437; border-bottom: 0; border-radius: 14px 14px 0 0;
+    padding: 14px 16px 16px; align-items: stretch;
+}
+#capture-area .header-card #lsh-integrated-bar { margin-top: 0 !important; border-top: 0 !important; border-radius: 0 0 14px 14px !important; }
+#capture-area .header-card .hdr-idrow .hdr-id > label { color: #fdba74 !important; }
+#capture-area .header-card .hdr-idrow .crit-add { color: #fecaca !important; }
+#capture-area .header-card .hdr-idrow .cid-card { background: rgba(255,255,255,.95); }
+
+/* ===== the case card on the right: Case ID, the status, the two searches and the timer in one framed card, lined up ===== */
+#capture-area .header-card > .flex.justify-between > .text-right {
+    display: flex; flex-direction: column; align-items: stretch; gap: 9px; text-align: left;
+    padding: 12px 14px; border-radius: 14px; border: 2px solid transparent;
+    background: linear-gradient(160deg, #fffaf0 0%, #ffffff 55%, #f6f8fc 100%) padding-box,
+                linear-gradient(135deg, #1e3a8a 0%, #2b4fa8 40%, #c9973f 80%, #DB8437 100%) border-box;
+    box-shadow: 0 10px 22px -16px rgba(30,35,64,.55);
+}
+#capture-area .header-card .text-right > * { width: 100%; margin: 0 !important; }
+#capture-area .header-card .text-right > :has(> #case-id-field) { justify-content: space-between !important; gap: 10px; }
+#capture-area .header-card .text-right > :has(> #display-phase) { justify-content: space-between !important; flex-wrap: nowrap; }
+#capture-area .header-card .text-right > :has(> #display-phase) { flex-wrap: wrap !important; }
+#capture-area .header-card #phase-selector { flex: 1 1 150px; }
+#capture-area .header-card #display-phase { min-width: 0 !important; flex: 1 1 auto; text-align: right; font-size: clamp(20px, 1.7vw, 30px) !important; white-space: nowrap; }
+#capture-area .header-card .hdr-client { align-content: start; }   /* (the row's cards are one height; the client's boxes stay together at the top) */
+#capture-area .header-card .text-right #cl-bar, #capture-area .header-card .text-right #tt-widget { justify-content: stretch; }
+#capture-area .header-card .text-right #tt-widget { display: flex; box-sizing: border-box; width: 100% !important; max-width: 100%; min-width: 0; }
+#capture-area .header-card .text-right #tt-widget .tt-w { flex: 1 1 auto; min-width: 0; justify-content: space-between; flex-wrap: wrap; }
+#capture-area .header-card .text-right #tt-widget button { padding: 6px 8px; font-size: 11px; letter-spacing: .02em; }
+#capture-area .header-card .text-right #tt-widget .tt-w { gap: 5px; padding-left: 7px; }
+/* the Case ID, easy to see: a navy key with the number in bold gold */
+#capture-area .header-card .text-right > :has(> #case-id-field) > label { font-size: 15px !important; font-weight: 900 !important; color: #1E2340 !important; letter-spacing: .08em; }
+#capture-area .header-card #case-id-field {
+    flex: 1 1 auto; text-align: center; font-size: 16px !important; font-weight: 900 !important; letter-spacing: .04em;
+    color: #fde68a !important; background: linear-gradient(135deg, #1E2340 0%, #1d3f86 100%) !important;
+    border: 2px solid #c9973f !important; border-radius: 10px !important; padding: 6px 14px !important;
+    box-shadow: 0 4px 12px -6px rgba(30,35,64,.6);
+}
+
+/* ===== the Date of Loss bar: no white cards; bigger, bolder labels and thicker field lines on the navy ===== */
+#capture-area .header-card #lsh-integrated-bar .bar-box { background: none !important; box-shadow: none !important; padding: 0 !important; width: 190px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box.bar-box-location { width: auto !important; flex: 0 1 380px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box label { color: #fdba74 !important; font-size: 13px !important; font-weight: 900 !important; letter-spacing: .08em; margin-bottom: 6px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box > div {
+    height: 38px !important; padding: 7px 12px !important; line-height: 20px !important; font-size: 15px !important; font-weight: 900 !important; color: #0f172a !important;
+    border: 3px solid transparent !important; border-radius: 10px !important;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #c9973f 0%, #f5c451 50%, #2b4fa8 100%) border-box !important;
+}
+#capture-area .header-card #lsh-integrated-bar .bar-box > div:focus { background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #DB8437, #f59e0b) border-box !important; outline: none; }
+#capture-area .header-card #lsh-integrated-bar .bar-data-container { gap: 18px !important; }

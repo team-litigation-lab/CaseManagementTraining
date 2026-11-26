@@ -425,7 +425,16 @@ const mock = require(path.join(ROOT, 'mock-cases.js'));
     // the trainee reads the trainer's scorecard (above the automated one), and can't change it
     const scoredDetails = JSON.parse(savedRow.details); scoredDetails[0].trainer = { title: 'CALENDAR MANAGEMENT MOCK CALL', outOf: 5, rows: K.scorecardOf(depo).metrics.map((x, i) => ({ metric: x.name, weight: 1, score: [5, 4, 4, 5, 4, 5, 4][i], feedback: i === 3 ? 'Offered only real slots.' : '' })), average: 4.4, pct: 89, by: 'Tina Trainer', at: '2026-10-06T15:00:00.000Z' };
     savedRow.details = JSON.stringify(scoredDetails); savedRow.trainer_pct = 89;
-    await page.evaluate(() => fddSavedCall(6)); await page.waitForSelector('.fdd-sc-trainer', { timeout: 5000 }).catch(() => {});
+    // (CI has seen this page reload by itself here too, as the trainer's above: open the saved call again if it does)
+    for (let i = 0; i < 3; i++) {
+        try { await page.evaluate(() => fddSavedCall(6)); await page.waitForSelector('.fdd-sc-trainer', { timeout: 5000 }); break; }
+        catch (e) {
+            if (i === 2 || !/context was destroyed|navigat|Timeout/i.test(e.message)) break;
+            console.log(`the trainee's page reloaded (${page.url()}); opening the saved call again`);
+            await page.waitForLoadState('load').catch(() => {});
+            await page.waitForFunction(() => typeof window.fddSavedCall === 'function', null, { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(800);
+        }
+    }
     const tv = await page.evaluate(() => ({ caps: [...document.querySelectorAll('.fdd-sc-cap')].map(x => x.textContent), edit: !!document.querySelector('.fdd-sc-edit'), txt: (document.querySelector('.fdd-sc-trainer') || {}).innerText || '' }));
     if (tv.edit || tv.caps.length !== 2 || !/Trainer's scorecard · Tina Trainer · 2026-10-06/.test(tv.caps[0]) || !/Automated scorecard/.test(tv.caps[1]) || !/Offered only real slots\./.test(tv.txt) || !/WEIGHTED AVERAGE\s*4\.4\s*out of 5 · 89%/.test(tv.txt)) fail(`the trainee doesn't read the trainer's scorecard with the call: ${JSON.stringify(tv)}`);
     await page.evaluate(() => fddResults()); await page.waitForTimeout(300);
