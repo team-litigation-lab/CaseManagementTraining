@@ -1427,6 +1427,9 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
 }
 #capture-area .header-card .hdr-name > #client-name-field { border-bottom-width: 3px !important; }
+/* the client's details: the labels in gold (a deep gold, readable on the cream panel); Target Settlement keeps its green */
+#capture-area .header-card .hdr-client .hdr-f > label:not(.text-green-600),
+#capture-area .header-card .hdr-client .hdr-name > label { color: #9a6a12 !important; font-weight: 900 !important; letter-spacing: .07em; }
 #capture-area .header-card .hdr-client .target-settlement-display {
     background: linear-gradient(#f0fdf4, #f0fdf4) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
 }

@@ -62,6 +62,7 @@ function rowToListItem(row, session) {
         submittedAt: row.submitted_at,
         medTotal: row.med_total,
         dateOfLoss: row.date_of_loss || '',
+        libraryId: row.library_id ? String(row.library_id) : '',   // a trainee's practice on a Training Library file (list mode)
         updatedAt: row.updated_at,
         createdAt: row.created_at,
         canEdit: isOwnerOrAdmin(session, row.owner_username)
@@ -260,7 +261,8 @@ export async function onRequestGet({ request, env }) {
     // specific case is actually opened.
     const { results } = await db.prepare(
         `SELECT id, case_id, client_name, phase, is_draft, owner_username, owner_batch_id,
-                submitted_by, submitted_by_batch, submitted_at, med_total, date_of_loss, created_at, updated_at
+                submitted_by, submitted_by_batch, submitted_at, med_total, date_of_loss, created_at, updated_at,
+                CASE WHEN json_valid(content) THEN json_extract(content, '$.trainingLibraryId') END AS library_id
          FROM case_repository
          WHERE owner_username = ? OR ? = 'Admin'
          ORDER BY updated_at DESC`
