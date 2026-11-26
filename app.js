@@ -1672,10 +1672,18 @@
             // A trainee's work on a Training Library case file is their own case for that file, never a draft
             // (the server keeps one per trainee per file).
             const mine = !!(window.mockIsMine && window.mockIsMine());
+            // Practising on a Training Library file never makes a case by itself: opening a file and typing used to
+            // save a new case (with its own Case ID) for every file a trainee touched, and the files filled up with
+            // them. Until the trainee presses 💾 Save Case the work is kept in this browser only (it comes back on
+            // the next visit); once their case for the file exists, autosave keeps it up to date as before.
+            if (mine && currentCaseId === null) {
+                persistCurrentEditorState();
+                flashAutoSaveIndicator(reason, 'Kept on this computer · 💾 Save Case to save your work on this file');
+                return false;
+            }
             try {
                 const body = JSON.stringify(currentCaseId !== null
                     ? { id: currentCaseId, content, clientName, phase, medTotal }
-                    : mine ? { content, clientName, phase, medTotal, isDraft: false, finalize: true, typeCode: currentTypeCode() }
                     : { content, clientName, phase, medTotal, isDraft: true });
                 const res = await fetch('/api/case-repository', {
                     method: 'POST',
