@@ -129,7 +129,7 @@
     .hdr-client .target-settlement-display { font-size: 16px !important; padding: 6px 10px; }
     .hdr-input { width: 100%; font-size: 12px; font-weight: 700; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; outline: none; }
     .hdr-input:focus { background: #fff; border-color: var(--orange); box-shadow: 0 0 0 2px rgba(249,115,22,0.12); }
-    .hdr-id { flex: 0 1 240px; min-width: 160px; margin: 0 auto; }
+    .hdr-id { flex: 0 1 240px; min-width: 160px; margin: 0 auto 0 96px; }   /* an inch after the client's demographics (not centred between them and the Case ID) */
     /* when the window is narrower the right side (case number, status, search) gives up room first, then the ID card,
        and the client's boxes least */
     .header-card > .flex.justify-between > .text-right { flex: 0 1.5 auto; min-width: 260px; }
