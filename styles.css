@@ -1221,6 +1221,16 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 #sidebar .side-card-orange, #sidebar .lib-btn, #sidebar .if-open-btn { background: linear-gradient(180deg, #3a2412 0%, #24170c 100%); color: #fdba74; border-color: #f97316; border-bottom-color: #c2410c; }
 #sidebar .fdd-btn { background: linear-gradient(180deg, #0d3a2b 0%, #082a1f 100%); color: #6ee7b7; border-color: #10b981; border-bottom-color: #047857; }
 #sidebar .side-card-blue { background: linear-gradient(180deg, #13306a 0%, #0c2150 100%); color: #93c5fd; border-color: #3b82f6; border-bottom-color: #1d4ed8; }
+/* Trainer tools: three matching slim keys (navy, gold edge, one line each) instead of two chunky brown ones and a thin outline */
+#sidebar #sb-trainer button {
+    display: flex; align-items: center; gap: 5px; width: 100%; margin: 0 0 7px; text-align: left; white-space: nowrap; overflow: hidden;
+    padding: 9px 12px; border-radius: 9px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    background: linear-gradient(180deg, #16244a 0%, #0f1a38 100%); color: #fde7b0;
+    border: 1px solid rgba(201,151,63,.45); border-left: 3px solid #DB8437; box-shadow: 0 4px 10px -8px rgba(0,0,0,.8); filter: none;
+}
+#sidebar #sb-trainer button:hover { background: linear-gradient(180deg, #1d3f86 0%, #16306a 100%); border-color: #c9973f; border-left-color: #f97316; color: #fff; transform: none; }
+#sidebar #sb-trainer .sb-lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#sidebar #sb-trainer .sb-count { flex-shrink: 0; font-size: 10px; letter-spacing: 0; padding: 1px 7px; border-radius: 999px; background: rgba(219,132,55,.2); color: #fdba74; border: 1px solid rgba(219,132,55,.5); }
 #sidebar .side-card:hover, #sidebar .fdd-btn:hover, #sidebar .lib-btn:hover, #sidebar .if-open-btn:hover { transform: translateY(-1px); filter: brightness(1.18); }
 #sidebar .side-card:active, #sidebar .fdd-btn:active, #sidebar .lib-btn:active, #sidebar .if-open-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,.6) inset; }
 #sidebar .side-card:focus-visible, #sidebar .fdd-btn:focus-visible, #sidebar .lib-btn:focus-visible, #sidebar .if-open-btn:focus-visible { outline: none; box-shadow: var(--cwx-ring); }

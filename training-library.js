@@ -376,7 +376,7 @@
         const prog = $id('sb-program'), tools = $id('sb-trainer');
         if (prog && tools && !$id('lib-open-btn')) {
             tools.querySelector('.sb-head').insertAdjacentHTML('afterend',
-                `<button id="lib-open-btn" class="lib-btn" onclick="openTrainingLibrary()">📚 Training Library · ${(window.MOCK_CASES || []).length} mock cases</button>`);
+                `<button id="lib-open-btn" class="lib-btn" onclick="openTrainingLibrary()">📚<span class="sb-lbl">Training Library</span><span class="sb-count" title="mock cases">${(window.MOCK_CASES || []).length}</span></button>`);
             prog.insertAdjacentHTML('beforeend', `
                 <p class="lib-prog-label">Training program</p>
                 <select id="lib-program-select" class="lib-prog" onchange="lshSetProgram(this.value)">
