@@ -682,6 +682,10 @@
     #sb-program:empty { display:none; }
     #sb-program:empty + .sb-group { border-top:0; margin-top:0; padding-top:0; }
     #sb-program .lib-prog { margin-bottom:0; }
+    /* the Training Program picker and its list: bolder */
+    #sb-program select, #sb-program select option { font-weight: 800 !important; }
+    #sb-program select { font-size: 13px !important; }
+    #sb-program label, #sb-program .lib-prog-lbl { font-weight: 900 !important; }
     #sb-cases #repo-list { max-height:min(38vh, 320px); overflow-y:auto; }   /* a long list never pushes the actions out of reach */
     .sb-head { font-size:9px; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px; font-family:'IBM Plex Mono','Courier New',monospace; }
     #sb-trainer .lib-btn, #sb-trainer .fdd-btn, #sb-trainer .if-open-btn { margin-bottom:8px; }
