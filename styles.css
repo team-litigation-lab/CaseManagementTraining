@@ -1316,6 +1316,32 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 #capture-area .header-card .hdr-client { gap: 10px 14px; }
 #capture-area .header-card .hdr-id { margin-left: 28px; display: flex; flex-direction: column; gap: 8px; }
+/* ⚠ The Client's ID and, beside it, the Critical note. The ID is not framed (a frame would have to grow round a long
+   note); the note itself is the red pill, wrapping onto more lines as it grows, so it is never cut off. ⚠ Add critical
+   note under the ID is a plain link, not a pill. */
+.hdr-idrow { display: flex; align-items: flex-start; gap: 12px 16px; flex: 0 1 auto; min-width: 220px; margin: 0 auto 0 28px; }
+#capture-area .header-card .hdr-idrow .hdr-id { margin: 0; padding: 0; border: 0; background: none; box-shadow: none; flex: 0 0 220px; min-width: 0; }
+#capture-area .header-card .crit-pill { flex: 1 1 220px; min-width: 220px; max-width: 340px; margin: 22px 0 0; flex-direction: column; gap: 6px;
+    background: linear-gradient(160deg, #fff5f5 0%, #fee2e2 100%); border: 2px solid #dc2626; border-left-width: 2px; border-radius: 18px; padding: 10px 14px 12px;
+    box-shadow: 0 8px 18px -12px rgba(185,28,28,.6); }
+#capture-area .header-card .crit-pill .crit-tag { align-self: flex-start; margin: 0; border-radius: 999px; padding: 3px 10px; }
+#capture-area .header-card .crit-pill .crit-text { font-size: 14px; line-height: 1.4; }
+#capture-area .header-card .crit-pill .crit-count { margin: 0; align-self: flex-end; }
+#capture-area .header-card .crit-add, #capture-area .header-card .crit-add:hover, #capture-area .header-card .crit-add:active {
+    align-self: flex-start; background: none !important; border: 0 !important; box-shadow: none !important; transform: none !important;
+    padding: 2px 0 !important; color: #b91c1c; font-size: 12.5px; font-weight: 800; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+#capture-area .header-card .crit-add:hover { text-decoration-style: solid; }
+/* a laptop (no room beside the ID): the note goes under the ID, as wide as it */
+@media (max-width: 1500px) {
+    .hdr-idrow { flex-direction: column; }
+    #capture-area .header-card .hdr-idrow .hdr-id { flex: none; width: 220px; }
+    #capture-area .header-card .crit-pill { flex: none; width: 220px; min-width: 0; max-width: 220px; margin-top: 0; }
+}
+@media (max-width: 760px) {
+    .hdr-idrow { flex: 1 1 100%; flex-wrap: wrap; margin: 0; }
+    #capture-area .header-card .crit-pill { width: auto; }
+    #capture-area .header-card .crit-pill { flex: 1 1 100%; max-width: none; margin-top: 0; }
+}
 #capture-area .header-card .hdr-f > [contenteditable="true"], #capture-area .header-card .hdr-input {
     background: #fff !important; border: 1.5px solid #d3d9e6 !important; border-radius: 9px !important;
     font-size: 14px !important; font-weight: 800 !important; color: #1E2340 !important; padding: 7px 11px !important; line-height: 20px !important;   /* one line height for every box (Target Settlement's bigger type too), so a row's boxes line up */
@@ -1331,6 +1357,23 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 #capture-area .header-card .hdr-client .target-settlement-display {
     color: #166534 !important; background: #f0fdf4 !important; border-color: #86efac !important; font-size: 17px !important; font-weight: 900 !important;
 }
+/* the client's details, a little wider, with thicker blue-to-gold lines: the panel's frame (3px) and every box's
+   border (2px, a blue-to-gold gradient: the white or green fill on the padding box, the gradient on the border box) */
+#capture-area .header-card .hdr-client { grid-template-columns: repeat(3, minmax(130px, 180px)); border-width: 3px;
+    background: linear-gradient(160deg, #fffaf0 0%, #ffffff 55%, #f6f8fc 100%) padding-box,
+                linear-gradient(135deg, #1e3a8a 0%, #2b4fa8 40%, #c9973f 80%, #DB8437 100%) border-box; }
+#capture-area .header-card .hdr-f > [contenteditable="true"], #capture-area .header-card .hdr-input {
+    border: 2px solid transparent !important;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
+}
+#capture-area .header-card .hdr-name > #client-name-field { border-bottom-width: 3px !important; }
+#capture-area .header-card .hdr-client .target-settlement-display {
+    background: linear-gradient(#f0fdf4, #f0fdf4) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
+}
+#capture-area .header-card .hdr-f > [contenteditable="true"]:focus, #capture-area .header-card .hdr-input:focus {
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #DB8437, #f59e0b) border-box !important;
+}
+@media (max-width: 760px) { #capture-area .header-card .hdr-client { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* the big case status (INTAKE, BI DEMANDED…): navy blue and heavier, beside the navy-to-orange picker */
 #capture-area .header-card #display-phase { color: #1d3f86 !important; font-weight: 900 !important; -webkit-text-stroke: .6px #1d3f86; letter-spacing: .01em; }
 /* the case phase picker (above the big phase name): a navy-to-orange key with white text, easy to spot */

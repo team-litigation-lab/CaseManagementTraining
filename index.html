@@ -117,12 +117,21 @@
                     </div>
                     <!-- The client's ID (client-id.js): a mock ID for a Training Library client; for any other client, a photo of
                          their ID uploaded here. Saved by id (data-keyed): the hidden field holds the uploaded file's key. -->
-                    <div id="kx-client-id" data-keyed class="hdr-id">
-                        <label>Client's ID</label>
-                        <div contenteditable="true" data-k="file" style="display:none" aria-hidden="true"></div>
-                        <div id="client-id-card" class="cid-card"></div>
-                        <!-- ⚠ Add critical note (case-alerts.js finds it by id and handles its click, so no handler is saved with the case): right under the client's ID -->
-                        <button type="button" id="crit-add" class="crit-add no-print">⚠ Add critical note</button>
+                    <!-- the Client's ID, and beside it the ⚠ Critical note (case-alerts.js; saved by id, data-keyed) as a red pill:
+                         it wraps onto more lines as it grows (500 characters at most), so a long note is never cut off -->
+                    <div class="hdr-idrow">
+                        <div id="kx-client-id" data-keyed class="hdr-id">
+                            <label>Client's ID</label>
+                            <div contenteditable="true" data-k="file" style="display:none" aria-hidden="true"></div>
+                            <div id="client-id-card" class="cid-card"></div>
+                            <!-- ⚠ Add critical note (case-alerts.js finds it by id and handles its click, so no handler is saved with the case): a plain link under the client's ID; the note itself shows beside the ID -->
+                            <button type="button" id="crit-add" class="crit-add no-print">⚠ Add critical note</button>
+                        </div>
+                        <div id="kx-critical" data-keyed class="crit-note crit-pill">
+                            <span class="crit-tag">⚠ Critical</span>
+                            <div contenteditable="true" data-k="note" class="crit-text" data-ph="What everyone must know before talking about this case (e.g. Spanish only · a minor: speak only to her mother · time-limited demand expires 11/01)"></div>
+                            <span class="crit-count no-print" aria-live="polite"></span>
+                        </div>
                     </div>
                     <div class="text-right">
                         <div class="flex items-center gap-3 mb-2 justify-end"><label class="mb-0">Case ID:</label><div id="case-id-field" contenteditable="false" class="text-xs font-bold text-slate-500 min-w-[160px] bg-slate-100 px-2 py-0.5 rounded mono">LSH-----</div></div>
@@ -169,14 +178,9 @@
                     </div>
                 </div>
 
-                <!-- Case alerts (case-alerts.js), seen on every tab: the ⚠ Critical note (saved by id: data-keyed) and the
-                     ⚖ conflict check (worked out from the case files, never saved itself; a decision is logged as a Case Note). -->
+                <!-- Case alerts (case-alerts.js), seen on every tab: the ⚖ conflict check (worked out from the case
+                     files, never saved itself; a decision is logged as a Case Note). The ⚠ Critical note is in the header, beside the Client's ID. -->
                 <div id="case-alerts">
-                    <div id="kx-critical" data-keyed class="crit-note">
-                        <span class="crit-tag">⚠ Critical</span>
-                        <div contenteditable="true" data-k="note" class="crit-text" data-ph="What everyone must know before talking about this case (e.g. Spanish only · a minor: speak only to her mother · time-limited demand expires 11/01)"></div>
-                        <span class="crit-count no-print" aria-live="polite"></span>
-                    </div>
                     <div id="conflict-panel" class="no-print" hidden></div>
                 </div>
 
