@@ -1261,4 +1261,23 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     background: linear-gradient(#dfe6ef, #dfe6ef) padding-box, linear-gradient(90deg, #1E2340 0%, #2c3360 40%, #a8692f 80%, #DB8437 100%) border-box;
 }
 #capture-area .header-card .cid-card { border-color: #c9973f !important; }
+/* the case Type picker at the right of the Date of Loss bar: bigger, easier to read and to hit */
+#capture-area .header-card #lsh-integrated-bar .ml-auto > span { font-size: 13px !important; letter-spacing: .06em; margin-right: 14px !important; }
+#capture-area .header-card #lsh-integrated-bar .ml-auto > div { padding: 6px 4px !important; border-radius: 10px !important; border: 1px solid #c9973f !important; }
+#capture-area .header-card #main-case-type { font-size: 15px !important; padding: 4px 18px !important; min-width: 190px; color: #93c5fd !important; }
+#capture-area .header-card #main-case-type option { font-size: 14px; color: #0f172a; }
+/* the tab keys: each one framed in the same navy-to-gold gradient, and the open tab filled with it */
+#capture-area .header-card .case-tabs .tab-btn {
+    border: 2px solid transparent;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box;
+    color: #1E2340;
+}
+#capture-area .header-card .case-tabs .tab-btn:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #fdf3e1 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box;
+}
+#capture-area .header-card .case-tabs .tab-btn.active-tab {
+    border-color: transparent !important; color: #fff !important;
+    background: linear-gradient(135deg, #1E2340 0%, #2c3360 45%, #a8692f 85%, #DB8437 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #DB8437 100%) border-box;
+    box-shadow: inset 0 -3px 0 #f5c451, 0 2px 0 rgba(8,18,38,.3);
+}
 @media print { #capture-area .pdf-card.header-card { background: #fff; border: 2px solid #1E2340 !important; box-shadow: none; } }
