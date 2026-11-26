@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LSH Case Management System | Restricted Access</title>
+<title>LSH CaseWorX™ | Restricted Access</title>
 <link rel="icon" type="image/png" href="/favicon.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -19,7 +19,7 @@
                 <img src="lsh-logo-dark.png" width="646" height="397" alt="">
             </div>
             <div>
-                <div id="sidebar-system-name" class="mono">Case Management System</div>
+                <div id="sidebar-system-name" class="mono">CaseWorX</div>
             </div>
         </div>
         <div class="p-6 flex-1 overflow-y-auto custom-scrollbar" id="sidebar-actions" style="flex:1;">
@@ -738,7 +738,7 @@
 
             <!-- REGISTER VIEW -->
             <form id="auth-register-view" class="hidden" onsubmit="return false" novalidate>
-                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, open the CMS from the LSH Training Portal.</p>
+                <p class="auth-guest-lead" id="auth-register-intro">New trainee? Register once so your trainer can follow your work. After your trainer approves it, open CaseWorX from the LSH Training Portal.</p>
                 <div id="auth-register-msg" class="auth-msg"></div>
                 <!-- Three fields only (functions/api/register.js): no email, start date or password. Trainees sign in with
                      just their username (the Batch ID stays on the account); an Admin can change a trainee's Batch ID later (Registrations / Users tabs). -->
@@ -846,7 +846,7 @@
                     <div class="admin-tile">
                         <h4>Current Alert</h4>
                         <div class="admin-stat" id="ov-alert-state" style="font-size:16px;">None Active</div>
-                        <div class="admin-stat-label">Alerts are no longer set from the CMS; this stops one that is still running</div>
+                        <div class="admin-stat-label">Alerts are no longer set from CaseWorX; this stops one that is still running</div>
                         <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;font-size:10.5px;margin-top:8px;" onclick="stopAlert()">⏹ Stop Alert</button>
                     </div>
                 </div>
@@ -1079,7 +1079,7 @@
     <script src="drive-backup.js"></script>
     <!-- 🧭 the Blueprint's decks and PDFs. No button in the CMS: the Main Portal's 🧭 Blueprint page
          opens them with ?admin=1#/blueprint.
-         blueprint-content.js is the CMS's slides; lsh-blueprint.js is the same file on every LSH platform. -->
+         blueprint-content.js is CaseWorX's slides; lsh-blueprint.js is the same file on every LSH platform. -->
     <script src="blueprint-content.js"></script>
     <script src="lsh-blueprint.js"></script>
     <script src="guest-access.js"></script>

@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — PROPERTY DAMAGE PHOTOS (Property Damage tab)
+   LSH CaseWorX — PROPERTY DAMAGE PHOTOS (Property Damage tab)
    ---------------------------------------------------------
    - ⬆ Add Photos: photos of the vehicles, the scene and the damage
      (JPG, PNG or WebP; several at once). Each is redrawn at most 1,600 px

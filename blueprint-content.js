@@ -1,23 +1,23 @@
 /* 🧭 The CMS Blueprint's slides (lsh-blueprint.js draws them and makes the PDFs).
    TRAINEE: what a trainee uses. It never names the Training Library or the trainer tools.
    TRAINER: the trainer side (Admins only).
-   ADMIN: running the CMS itself (the Master Account only: canAdmin).
+   ADMIN: running CaseWorX itself (the Master Account only: canAdmin).
    A slide is { icon, title, points: [...], where, tip, shot, shotAlt }. Change the wording here; the page and the
    PDFs are made from it each time, stamped with the deployed version. README → 🧭 Blueprint.
-   shot: a screenshot of the CMS in blueprint/ (node .github/scripts/blueprint-shots.cjs takes them again). */
+   shot: a screenshot of CaseWorX in blueprint/ (node .github/scripts/blueprint-shots.cjs takes them again). */
 (function () {
     'use strict';
     const TRAINEE = {
-        sub: 'How to use the CMS during your training',
+        sub: 'How to use CaseWorX during your training',
         slides: [
-            { icon: '🏛', title: 'What the CMS is', points: [
+            { icon: '🏛', title: 'What CaseWorX is', points: [
                 'A practice case management system: the kind of system a law firm uses to run its personal-injury cases.',
                 'Every case and client here is fictional, so practise freely. Nothing you do reaches a real client.',
                 'You open case files, take intakes, keep notes and tasks, book the calendar and log your time.',
                 'Your trainer sees your saved work and your progress, and can help you as you work.'],
-              where: 'Open it from your training platform, or go to the CMS sign-in page.',
+              where: 'Open it from your training platform, or go to the CaseWorX sign-in page.',
               tip: 'Use the username you registered with, so your trainer can follow your work.',
-              shot: 'blueprint/trainee-case-file.jpg', shotAlt: 'A case file open in the CMS: the client\'s name, contact, ID card, the case bar and the tabs' },
+              shot: 'blueprint/trainee-case-file.jpg', shotAlt: 'A case file open in CaseWorX: the client\'s name, contact, ID card, the case bar and the tabs' },
             { icon: '🔑', title: 'Signing in and finding your way', points: [
                 'Register once with your full name, Batch ID and a username. Your trainer approves you.',
                 'Then sign in with just your username, or straight from your training platform by name.',
@@ -25,7 +25,7 @@
                 'Top right: 📄 Download Case Summary, 🏠 Main Portal (back to the LSH Training Portal), 📊 My Dashboard and 🧭 Blueprint. The date and time are right above the case.'],
               where: 'The sidebar on the left (Log Out at the bottom) · the buttons at the top right.',
               tip: 'Your trainer gives you the Batch ID: B and the day your batch started (MMDDYY), e.g. B100526.',
-              shot: 'blueprint/trainee-sign-in.jpg', shotAlt: 'The CMS sign-in screen: Trainee Portal, username, Log In' },
+              shot: 'blueprint/trainee-sign-in.jpg', shotAlt: 'The CaseWorX sign-in screen: Trainee Portal, username, Log In' },
             { icon: '🔍', title: 'Finding a case', points: [
                 'My cases lists the cases and drafts you saved yourself, each with Open and 🗑 Delete.',
                 'The 🔍 search bar in the case header finds case files by client name, case number, phone, date of birth or date of loss.',
@@ -105,14 +105,14 @@
             { icon: '✅', title: 'Good habits', points: [
                 'Save as you finish each part: Save once, then Update.',
                 'Read the announcements at the top of the screen, and answer your trainer\'s pings.',
-                'A Paused screen means your trainer has paused the CMS. Wait: your work is kept.',
+                'A Paused screen means your trainer has paused CaseWorX. Wait: your work is kept.',
                 'Use only the fictional details in the case files, never real client information.'],
               where: 'Announcements: the ticker at the top · pings pop up on your screen.',
               tip: 'Stuck? Ask your trainer. That\'s what the training is for.' }
         ]
     };
     const TRAINER = {
-        sub: 'Running training in the CMS',
+        sub: 'Running training in CaseWorX',
         slides: [
             { icon: '🔑', title: 'Signing in as a trainer', points: [
                 'Admin Portal tab: your first and last name, and the admin password.',
@@ -120,24 +120,24 @@
                 'With no name you sign in as the Master Account, the one that runs the system (it has the Admin blueprint).',
                 'You land in ⇄ Master Control. The sidebar\'s footer switches between it and the case workspace.'],
               where: 'The sign-in screen → Admin Portal.',
-              tip: 'Ask the Master Account\'s owner for the admin password. It is never written in the CMS itself.',
+              tip: 'Ask the Master Account\'s owner for the admin password. It is never written in CaseWorX itself.',
               shot: 'blueprint/trainer-sign-in.jpg', shotAlt: 'The Admin Portal sign-in: your name and the admin password' },
             { icon: '🗓', title: 'Before a batch starts', points: [
                 'Set the Batch ID: B and the batch\'s start date (MMDDYY), e.g. B100626 for 6 October 2026. Trainees type it when they register.',
-                'Send the class the CMS link with their program on it (next slide).',
+                'Send the class the CaseWorX link with their program on it (next slide).',
                 'Approve the registrations in Master Control → Registrations, and check each Batch ID.',
                 'Once approved, trainees sign in with just their username.',
-                '👁 Trainee view shows the CMS the way they\'ll see it.'],
+                '👁 Trainee view shows CaseWorX the way they\'ll see it.'],
               where: 'Master Control → Registrations · sidebar footer → 👁 Trainee view.',
               tip: 'Approve the class before the first session, so nobody waits at the sign-in screen.',
               shot: 'blueprint/trainer-registrations.jpg', shotAlt: 'Master Control, Registrations: three trainees waiting, with Approve and Reject' },
             { icon: '🔗', title: 'Program links', points: [
-                'A program link is the CMS address with ?program= and a program on the end, e.g. …/?program=intake. The CMS opens in that course\'s role.',
+                'A program link is the CaseWorX address with ?program= and a program on the end, e.g. …/?program=intake. CaseWorX opens in that course\'s role.',
                 'The role decides which tabs of a case file a trainee can edit. It shows in the sidebar\'s Training program box.',
                 'reception: Front Desk, view only plus Notes and Tasks · intake: the header, Profile, Parties, Police, Insurance · cm: all but Litigation and Case Costs.',
                 'md: Treatment, Lost Wages, Demand, Liens · ea: Doc Hub · pd: Parties, Police, Insurance, Property Damage. All but reception also get Doc Hub, Notes and Tasks.',
                 'Straight to a tool: &drill=1 (Call Simulator), &intake=1 (Intake folder), &mock=MC-04 (one file).'],
-              where: 'The end of the CMS address you send the class, e.g. ?program=reception&drill=1.',
+              where: 'The end of the CaseWorX address you send the class, e.g. ?program=reception&drill=1.',
               tip: 'No program on the link: case files are view only until the trainee picks one in the sidebar.',
               shot: 'blueprint/trainer-program-link.jpg', shotAlt: 'A case file opened with the Front Desk link: the banner says it is view only for Receptionist / Front Desk' },
             { icon: '👥', title: 'Registrations and users', points: [
@@ -154,7 +154,7 @@
                 'Click a trainee\'s row for their latest saved case, read only.',
                 '📊 My Dashboard opens the trainer roster: every trainee\'s case reviews and trends.'],
               where: 'Master Control → Monitoring · top right → 📊 My Dashboard.',
-              tip: 'Nothing on their screen shows you\'re watching: tell the class trainers may look in. Ask them to keep the CMS in its own window.',
+              tip: 'Nothing on their screen shows you\'re watching: tell the class trainers may look in. Ask them to keep CaseWorX in its own window.',
               shot: 'blueprint/trainer-monitoring.jpg', shotAlt: 'Master Control, Monitoring: trainees online, each with Watch live' },
             { icon: '📋', title: 'Case Logs', points: [
                 'Every saved case and draft, newest first, with the trainee who saved it.',
@@ -197,7 +197,7 @@
               shot: 'blueprint/trainer-case-header.jpg', shotAlt: 'The case header: Client\'s Name, Contact, SSN, Attorney, Case Manager and the client\'s ID card' },
             { icon: '🎭', title: 'Facilitated mock calls', points: [
                 'Prepare: Training Library → the file → ☎ Caller scenarios → 📜 Reception call script: your opening line and every answer.',
-                'The trainee opens the CMS with the Front Desk link (?program=reception), so the file is view only, as at a real front desk.',
+                'The trainee opens CaseWorX with the Front Desk link (?program=reception), so the file is view only, as at a real front desk.',
                 'Play the caller over Google Meet: answer only what they ask, as the script says, wrong answers included.',
                 'Watch them search, open the file and take notes: Master Control → Monitoring → 👁 Watch live.',
                 'Score with the script\'s sheet (file 30, decision 30, identifiers 10, handling 30) or the RECEPTION MOCK CALL scorecard.'],
@@ -260,7 +260,7 @@
               where: 'Master Control · 📞 Call Simulator · 📊 My Dashboard.',
               tip: 'Keep the run sheet the same each day, so trainees know what\'s coming.' },
             { icon: '🧭', title: 'Trainee view and presenting', points: [
-                '👁 Trainee view shows the CMS exactly as trainees see it. ⇦ Back to trainer view, in the sidebar, returns.',
+                '👁 Trainee view shows CaseWorX exactly as trainees see it. ⇦ Back to trainer view, in the sidebar, returns.',
                 '🧭 Blueprint → Trainee blueprint is the deck to share in Google Meet on day one.',
                 '⬇ Download PDF gives any blueprint as a handout. A slide\'s screenshot opens full size with a click.',
                 'Trainees only ever see the Trainee blueprint.'],
@@ -278,7 +278,7 @@
     };
     // The Master Account only (canAdmin below): running the CMS itself.
     const ADMIN = {
-        sub: 'Running the CMS itself: accounts, health, data and settings',
+        sub: 'Running CaseWorX itself: accounts, health, data and settings',
         slides: [
             { icon: '🏛', title: 'Who does what', points: [
                 'Master Account (you): name left blank + the admin password. The only one that can suspend, revoke or reinstate a trainer.',
@@ -347,7 +347,7 @@
             { icon: '⚠', title: 'Database upkeep', points: [
                 'migrate-d1.yml copies the live database into a new one you name, then points the site at it. It refuses the live database\'s name, since it deletes the one it\'s given first.',
                 'D1 has no VACUUM: deleted rows\' space is reused, but the file only gets smaller when migrate-d1.yml copies it into a fresh one.',
-                'There is no on-demand clearing in the CMS any more: nothing deletes old rows on a button press.',
+                'There is no on-demand clearing in CaseWorX any more: nothing deletes old rows on a button press.',
                 'To undo a mistake, use D1 Time Travel.'],
               where: 'GitHub → CaseManagementTraining → Actions.',
               tip: 'Don\'t run a database workflow without a plan and a fresh Time Travel point.' },
@@ -373,7 +373,7 @@
               where: 'Master Control · 📞 Call Simulator · Cloudflare and Google Cloud billing.',
               tip: 'A few minutes a day during a batch keeps the site ready.' },
             { icon: '🛠', title: 'When something breaks', points: [
-                '"The CMS server isn\'t answering": the site\'s server part is down; check the Cloudflare dashboard for the project.',
+                '"The CaseWorX server isn\'t answering": the site\'s server part is down; check the Cloudflare dashboard for the project.',
                 'Admin sign-in "isn\'t set up yet": set MASTER_ADMIN_PASSWORD.',
                 'The practice caller "isn\'t set up": add GEMINI_API_KEY. "The line is busy": wait a minute, or add keys.',
                 'Intake reviews "not configured": add ANTHROPIC_API_KEY.',
@@ -400,9 +400,9 @@
         return ver;
     }
     window.LSH_BLUEPRINT = {
-        product: 'Case Management System',
-        site: 'LSH Case Management System',
-        file: 'LSH_CMS',
+        product: 'CaseWorX™',
+        site: 'LSH CaseWorX™',
+        file: 'LSH_CaseWorX',
         logo: 'lsh-mark.png',
         brand: 'Legal Support Help',
         trainee: TRAINEE,

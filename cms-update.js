@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — OPEN PAGES LOAD A NEW VERSION BY THEMSELVES
+   LSH CaseWorX — OPEN PAGES LOAD A NEW VERSION BY THEMSELVES
    ---------------------------------------------------------
    When a new version of the site goes live, every open page loads it, so
    nobody keeps working on old files.
@@ -157,8 +157,8 @@
     }
     function paint(now) {
         const n = note();
-        $id('cms-update-text').textContent = now ? '🔄 Loading the new version of the CMS…'
-            : '🔄 A new version of the CMS is ready. It loads by itself when you pause; your case stays open.';
+        $id('cms-update-text').textContent = now ? '🔄 Loading the new version of CaseWorX…'
+            : '🔄 A new version of CaseWorX is ready. It loads by itself when you pause; your case stays open.';
         $id('cms-update-now').style.display = now ? 'none' : '';
         n.classList.add('on');
     }
@@ -189,7 +189,7 @@
                         if (r.mcTab && $id('admin-dash-' + r.mcTab) && typeof showAdminDashTab === 'function') showAdminDashTab(r.mcTab);
                     } else if (r.page === 'dashboard' && typeof openTraineeDashboard === 'function') openTraineeDashboard();
                 } catch (e) { /* the page still works from where it opened */ }
-                if (typeof showToast === 'function') showToast('Updated to the latest version of the CMS.', 'info');
+                if (typeof showToast === 'function') showToast('Updated to the latest version of CaseWorX.', 'info');
             }, 600);
         }, 500);
     }

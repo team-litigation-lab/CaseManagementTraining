@@ -226,7 +226,7 @@ export function buildICS(events, calName, host) {
         }
         const who = [e.calendar].concat(e.invite || []).map(id => (CALENDARS.find(c => c.id === id) || {}).name).filter(Boolean).join(', ');
         const desc = [`${e.type}${who ? ' · ' + who : ''}`, e.caseLabel ? `Case: ${e.caseLabel}${e.caseRef ? ' (' + e.caseRef + ')' : ''}` : '',
-            e.notes || '', e.ownerName ? `Scheduled by ${e.ownerName} in the LSH CMS` : 'From the attorney\'s calendar (LSH CMS training firm)'].filter(Boolean).join('\n');
+            e.notes || '', e.ownerName ? `Scheduled by ${e.ownerName} in LSH CaseWorX` : 'From the attorney\'s calendar (LSH CaseWorX training firm)'].filter(Boolean).join('\n');
         lines.push(fold(`SUMMARY:${icsText(e.title)}`), fold(`DESCRIPTION:${icsText(desc)}`));
         if (e.location) lines.push(fold(`LOCATION:${icsText(e.location)}`));
         if (e.type === 'Out of Office' || e.type === 'Blocked Time') lines.push('TRANSP:OPAQUE');
@@ -309,7 +309,7 @@ export async function undoImports(db) {
 }
 
 /* ---------- the old Training Calendar's events ----------
-   The CMS briefly had a second calendar (the Training Calendar) that kept each
+   CaseWorX briefly had a second calendar (the Training Calendar) that kept each
    trainee's own events in training_calendar_events, as wall times in a zone
    the trainee picked. The first time a trainee opens the Firm Calendar, those
    events are copied onto the Firm / Staff calendar at the same moments in firm

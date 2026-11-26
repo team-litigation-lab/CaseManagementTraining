@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — REALISTIC PHOTOS FOR THE TRAINING LIBRARY
+   LSH CaseWorX — REALISTIC PHOTOS FOR THE TRAINING LIBRARY
    ---------------------------------------------------------
    The photo on each library client's mock ID, and for a vehicle-crash file
    the crash scene and each damaged vehicle, can be a realistic photo made by

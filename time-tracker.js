@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — TIME & BILLING
+   LSH CaseWorX — TIME & BILLING
    ---------------------------------------------------------
    A timer for billable and non-billable time, the way a firm's
    case management system tracks it:

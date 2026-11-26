@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — CASE DATES THAT MOVE TOGETHER
+   LSH CaseWorX — CASE DATES THAT MOVE TOGETHER
    ---------------------------------------------------------
    A case's dates hang off the date of loss (DOL) and the dates of
    service (DOS) in the Medical Chronology. When either is edited, the
@@ -19,7 +19,7 @@
      set from its first to its last date of service ("– present" stays).
    It happens when the trainee leaves the field (only a real edit, never
    when a case is loaded), and a bar says what moved, with ↶ Undo.
-   Dates are MM/DD/YYYY (M/D/YYYY is read too), as the CMS writes them.
+   Dates are MM/DD/YYYY (M/D/YYYY is read too), as CaseWorX writes them.
    ========================================================= */
 (function () {
     'use strict';

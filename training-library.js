@@ -1,7 +1,7 @@
 /* =========================================================
-   LSH CMS — TRAINING LIBRARY + PROGRAM CONTEXT
+   LSH CaseWorX — TRAINING LIBRARY + PROGRAM CONTEXT
    ---------------------------------------------------------
-   1. Program context. Every LSH training program can open the CMS
+   1. Program context. Every LSH training program can open CaseWorX
       with ?program=<id> (reception, intake, cm, md, ea, pd), and a
       trainee can choose theirs in the bar above a case file. It's
       remembered (for the tab and the next visit), shown in the header,
