@@ -465,7 +465,7 @@
         #fc-root .fc-btn{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer}
         #fc-root .fc-btn:hover{border-color:#f97316;color:#c2410c}
         #fc-root .fc-btn.on{background:#0f172a;color:#fff;border-color:#0f172a}
-        #fc-root .fc-btn.primary{background:#f97316;border-color:#f97316;color:#fff}
+        #fc-root .fc-btn.primary{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
         #fc-root .fc-btn.danger{color:#b91c1c;border-color:#fecaca}
         #fc-root .fc-title{font-size:15px;font-weight:800;color:#0f172a;min-width:190px}
         #fc-root .fc-live{font-size:11px;color:#059669;font-weight:700}

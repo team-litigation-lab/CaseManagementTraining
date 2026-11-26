@@ -8,6 +8,13 @@
         --navy-deep:#081226;
         --navy-mid:#132a5c;
         --orange:#f97316;
+        /* the gold of the buttons (was orange): fill, hover, navy text on it, gold words on navy, glow */
+        --gold-btn: linear-gradient(180deg, #fde7b0 0%, #f5c451 50%, #e0a43a 100%);
+        --gold-btn-hover: linear-gradient(180deg, #ffefc4 0%, #f7cf6a 50%, #e8b04a 100%);
+        --gold-ink: #1E2340;
+        --gold-text: #f5c451;
+        --gold-edge: #e0a43a;
+        --gold-glow: rgba(224,164,58,.55);
         --slate:#64748b;
         --paper:#f8fafc;
         --classified-red:#b91c1c;
@@ -354,11 +361,11 @@
     .treat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
     .hub-btn { background: #fffaf0; border: 1px solid #ffedd5; color: #9a3412; font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 14px; border-radius: 8px; text-align: center; cursor: pointer; }
-    .hub-btn:hover { background: var(--orange); color: white; border-color: var(--orange); }
+    .hub-btn:hover { background: var(--gold-btn-hover); color: var(--gold-ink); border-color: var(--gold-edge); }
 
     .add-btn {
-        background: var(--orange) !important;
-        color: #000 !important;
+        background: var(--gold-btn) !important;
+        color: var(--gold-ink) !important;
         font-family: 'IBM Plex Mono', 'Courier New', monospace;
         font-weight: 900 !important;
         font-size: 10px !important;
@@ -369,9 +376,9 @@
         border: none !important;
         cursor: pointer;
     }
-    .add-btn:hover { background: #0f172a !important; color: var(--orange) !important; }
+    .add-btn:hover { background: var(--gold-btn-hover) !important; color: var(--gold-ink) !important; }
 
-    .revert-btn { background: var(--orange); color: white; font-size: 12px; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-left: 5px; display: none; font-weight: 900; }
+    .revert-btn { background: var(--gold-btn); color: var(--gold-ink); font-size: 12px; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-left: 5px; display: none; font-weight: 900; }
 
     .repo-card { background: var(--navy) !important; border: 1px solid #1e293b !important; padding: 12px !important; border-radius: 8px !important; margin-bottom: 10px !important; cursor: pointer !important; position: relative !important; color: white; }
     .repo-card:hover { border-color: var(--orange) !important; }
@@ -486,7 +493,7 @@
         flex:1; padding:12px; border-radius:6px; font-weight:800; font-size:13px;
         text-transform:uppercase; letter-spacing:0.04em; cursor:pointer; border:none;
     }
-    .btn-primary { background: var(--navy); color: var(--orange); }
+    .btn-primary { background: var(--navy); color: var(--gold-text); }
     .btn-primary:hover { background: var(--navy-deep); }
     .btn-ghost { background: #f1f5f9; color:#64748b; }
     .btn-ghost:hover { background:#e2e8f0; }
@@ -548,6 +555,7 @@
         transition: background 0.25s ease, color 0.25s ease;
     }
     .portal-tab.active { background: var(--auth-accent); color:#0f2148; }
+    #auth-gate:not(.mode-admin) .portal-tab.active { background: var(--gold-btn); color: var(--gold-ink); }   /* the Trainee Portal's keys are gold; the Admin Portal's stay red */
     /* the sign-in views switch with .hidden; don't depend on the Tailwind CDN for it */
     .auth-box .hidden { display:none !important; }
     .auth-field { margin-bottom:12px; }
@@ -583,6 +591,8 @@
         transition: background 0.25s ease;
     }
     .auth-submit:hover { background: var(--auth-accent-hover); }
+    #auth-gate:not(.mode-admin) .auth-submit { background: var(--gold-btn); color: var(--gold-ink); }
+    #auth-gate:not(.mode-admin) .auth-submit:hover { background: var(--gold-btn-hover); }
     .auth-switch { text-align:center; margin-top:16px; font-size:11px; color:#94a3b8; }
     .auth-switch a { color: var(--auth-accent); cursor:pointer; font-weight:700; text-decoration:underline; }
     .auth-guest-lead { font-size:12px; color:#cbd5e1; line-height:1.5; margin:0 0 14px; }
@@ -669,8 +679,8 @@
     .status-suspended { background:#fef9c3; color:#854d0e; }
     /* Sidebar card buttons (New Intake, Download Case Summary), styled like the Training Library and Front Desk cards (.lib-btn, .fdd-btn) */
     .side-card { display:block; width:100%; padding:9px 0; border-radius:8px; border:1px solid; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; cursor:pointer; margin-bottom:8px; transition:background .15s, color .15s; }
-    .side-card-orange { border-color:#f97316; color:#fdba74; background:rgba(249,115,22,.08); }
-    .side-card-orange:hover { background:#f97316; color:#fff; }
+    .side-card-orange { border-color:#f97316; color:var(--gold-text); background:rgba(249,115,22,.08); }
+    .side-card-orange:hover { background:var(--gold-btn-hover); color:var(--gold-ink); }
     .side-card-blue { border-color:#3b82f6; color:#93c5fd; background:rgba(59,130,246,.08); }
     .side-card-blue:hover { background:#3b82f6; color:#fff; }
     /* The sidebar's groups (index.html): program, cases, work, trainer tools */
@@ -685,7 +695,7 @@
     /* ✕ at the top right of the case, and the case's actions at the bottom of the screen */
     .header-card { position:relative; }
     .case-close-x { position:absolute; top:-13px; right:-13px; width:28px; height:28px; border-radius:50%; border:2px solid #f97316; background:#fff; color:#0f2148; font-size:13px; font-weight:900; line-height:1; cursor:pointer; box-shadow:0 2px 6px rgba(15,33,72,.25); z-index:2; }
-    .case-close-x:hover { background:#f97316; color:#fff; }
+    .case-close-x:hover { background:var(--gold-btn-hover); color:var(--gold-ink); }
     #capture-area.mock-ro .pdf-card > .case-close-x { display:block !important; }   /* a view-only library case hides the card's buttons, not this one */
     /* the case workspace: the case scrolls, and its action bar stays at the bottom of the screen
        (the same as main's Tailwind classes, so it holds even when the Tailwind CDN doesn't load) */
@@ -695,7 +705,7 @@
     .cab-btn { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; border-radius:7px; padding:8px 14px; cursor:pointer; border:1px solid #cbd5e1; background:#fff; color:#0f2148; white-space:nowrap; }
     .cab-btn:hover { border-color:#0f2148; }
     .cab-archive { border-color:#fdba74; color:#c2410c; background:#fff7ed; }
-    .cab-archive:hover { background:#f97316; border-color:#f97316; color:#fff; }
+    .cab-archive:hover { background:var(--gold-btn-hover); border-color:var(--gold-edge); color:var(--gold-ink); }
     .cab-discard { border-color:#fecaca; color:#b91c1c; background:#fef2f2; }
     .cab-discard:hover { background:#b91c1c; border-color:#b91c1c; color:#fff; }
     .cab-save { background:#10b981; border-color:#10b981; color:#fff; }
@@ -716,7 +726,7 @@
     .mini-btn.approve { background:#166534; color:white; }
     .mini-btn.reject { background:#b91c1c; color:white; }
     .mini-btn.revoke { background:#64748b; color:white; }
-    .mini-btn.restore { background:#f97316; color:white; }
+    .mini-btn.restore { background:var(--gold-btn); color:var(--gold-ink); }
     .mini-btn.suspend { background:#d97706; color:white; }
     .mini-btn.reinstate { background:#16a34a; color:white; }
     .mini-btn.batch { background:#e0e7ff; color:#1e3a8a; }
@@ -1224,11 +1234,11 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 /* bigger, bolder labels on the controls a trainee uses all day */
 .add-btn { font-size: 11.5px !important; padding: 9px 18px !important; border-radius: 8px !important;
-    background: linear-gradient(180deg, #fb923c 0%, var(--orange) 100%) !important; border-bottom: 2px solid #c2410c !important; }
-.add-btn:hover { background: linear-gradient(180deg, #16306a 0%, #0f172a 100%) !important; border-bottom-color: #000 !important; }
+    background: var(--gold-btn) !important; border-bottom: 2px solid #b8862b !important; }
+.add-btn:hover { background: var(--gold-btn-hover) !important; border-bottom-color: #b8862b !important; }
 .hub-btn { font-size: 11px; font-weight: 900; border: 1.5px solid #fdba74; border-bottom-width: 3px; border-bottom-color: #ea580c;
     background: linear-gradient(180deg, #fffaf3 0%, #ffedd5 100%); color: #9a3412; border-radius: 10px; }
-.hub-btn:hover { background: linear-gradient(180deg, #fb923c 0%, var(--orange) 100%); border-color: #c2410c; color: #fff; }
+.hub-btn:hover { background: var(--gold-btn-hover); border-color: #b8862b; color: var(--gold-ink); }
 .cab-btn { font-size: 12px; font-weight: 900; padding: 10px 16px; border-radius: 9px; border-bottom-width: 3px; }
 .cab-save   { background: linear-gradient(180deg, #22c55e 0%, #059669 100%); border-color: #047857; }
 .cab-update { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); border-color: #1e3a8a; }
@@ -1248,7 +1258,9 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 6px 14px -8px rgba(0,0,0,.7);
     transition: transform .08s ease, box-shadow .15s ease, background-color .15s, color .15s, filter .15s;
 }
-#sidebar .side-card-orange, #sidebar .lib-btn, #sidebar .if-open-btn { background: linear-gradient(180deg, #3a2412 0%, #24170c 100%); color: #fdba74; border-color: #f97316; border-bottom-color: #c2410c; }
+#sidebar .side-card-orange, #sidebar .lib-btn, #sidebar .if-open-btn { background: linear-gradient(180deg, #3a2412 0%, #24170c 100%); color: var(--gold-text); border-color: #f97316; border-bottom-color: #c2410c; }
+/* Case Library and Latest updates (Tailwind's hover:text-orange-500 in index.html): gold words on hover */
+#sidebar #cl-open-btn:hover, #sidebar #cl-updates-btn:hover { color: var(--gold-text); }
 #sidebar .fdd-btn { background: linear-gradient(180deg, #0d3a2b 0%, #082a1f 100%); color: #6ee7b7; border-color: #10b981; border-bottom-color: #047857; }
 #sidebar .side-card-blue { background: linear-gradient(180deg, #13306a 0%, #0c2150 100%); color: #93c5fd; border-color: #3b82f6; border-bottom-color: #1d4ed8; }
 /* Trainer tools: three matching slim keys (navy, gold edge, one line each) instead of two chunky brown ones and a thin outline */

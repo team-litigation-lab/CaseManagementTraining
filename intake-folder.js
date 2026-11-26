@@ -62,11 +62,11 @@
     #intake-bar .ib-tag{font-family:'IBM Plex Mono',monospace;font-weight:900;font-size:11px;color:#fff;background:#f97316;border-radius:6px;padding:4px 9px;letter-spacing:.5px}
     #intake-bar .ib-state{flex:1;min-width:180px;font-size:12px;color:#7c2d12;line-height:1.4}
     #intake-bar button{font-size:10.5px;font-weight:800;text-transform:uppercase;border-radius:7px;padding:7px 11px;cursor:pointer;border:1px solid #fdba74;background:#fff;color:#9a3412}
-    #intake-bar button.primary{background:#f97316;border-color:#f97316;color:#fff}
+    #intake-bar button.primary{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
     #intake-bar button:hover{filter:brightness(.96)}
     #intake-bar button[disabled]{opacity:.6;cursor:wait}
-    .if-open-btn{width:100%;border:1px solid #f97316;color:#fdba74;background:rgba(249,115,22,.08);padding:8px 0;border-radius:8px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer;margin:0 0 8px}
-    .if-open-btn:hover{background:#f97316;color:#fff}
+    .if-open-btn{width:100%;border:1px solid #f97316;color:#f5c451;background:rgba(249,115,22,.08);padding:8px 0;border-radius:8px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer;margin:0 0 8px}
+    .if-open-btn:hover{background:linear-gradient(180deg,#ffefc4 0%,#f7cf6a 50%,#e8b04a 100%);color:#1E2340}
     .if-top{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
     .if-top button{font-size:11px;font-weight:800;text-transform:uppercase;border-radius:8px;padding:9px 13px;cursor:pointer;border:1px solid #0f2148;background:#0f2148;color:#fff}
     .if-top button.alt{background:#fff;color:#0f2148}
@@ -77,7 +77,7 @@
     .if-up input{border:1px solid #cbd5e1;border-radius:7px;padding:8px 10px;font-size:13px;width:100%;box-sizing:border-box;font-family:inherit}
     .if-up .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
     .if-up .row button{font-size:11px;font-weight:800;text-transform:uppercase;border-radius:7px;padding:8px 12px;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:#0f2148}
-    .if-up .row button.go{background:#f97316;border-color:#f97316;color:#fff}
+    .if-up .row button.go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
     .if-row{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;background:#fff}
     .if-row.open{border-color:#f97316;box-shadow:0 2px 10px rgba(15,33,72,.08)}
     .if-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer}
@@ -108,7 +108,7 @@
     .if-rv .muted{font-size:12px;color:#64748b;font-style:italic}
     .if-dacts{grid-column:1 / -1;display:flex;gap:8px;flex-wrap:wrap;border-top:1px dashed #e2e8f0;padding-top:10px}
     .if-dacts button,.if-dacts a{font-size:10.5px;font-weight:800;text-transform:uppercase;border-radius:7px;padding:7px 11px;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:#0f2148;text-decoration:none}
-    .if-dacts .go{background:#f97316;border-color:#f97316;color:#fff}
+    .if-dacts .go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
     @media (max-width:720px){.if-detail{grid-template-columns:1fr}.if-head{grid-template-columns:minmax(0,1fr) auto}.if-head .act{grid-column:1 / -1}.if-up .grid{grid-template-columns:1fr}#intake-bar{margin:0 12px}}
     `;
     document.head.appendChild(css);
