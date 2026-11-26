@@ -55,10 +55,23 @@
     @media (max-width: 700px) { .announcement-tag { display: none; } }
     .announcement-tag { flex-shrink: 0; font-weight: 900; font-size: 10px; letter-spacing: 1.5px; color: var(--orange); }
     .announcement-ticker.is-alert .announcement-tag { color: #fca5a5; }
+    /* 📢 lined up with the case below (#capture-area's p-8: 32px in), and dressed to be seen: an orange
+       pill with a pulsing dot, and the message in larger, brighter type */
+    #classification-bar { padding-left: 32px; padding-right: 32px; }
+    .announcement-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--orange); color: #081226;
+        font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 11px; font-weight: 900; letter-spacing: .08em; line-height: 1;
+        padding: 6px 12px; border-radius: 999px; box-shadow: 0 0 0 3px rgba(249,115,22,.2), 0 0 14px rgba(249,115,22,.5); }
+    .announcement-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: ann-pulse 1.6s ease-in-out infinite; }
+    @keyframes ann-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+    .announcement-ticker.is-alert .announcement-tag { background: #dc2626; color: #fff; box-shadow: 0 0 0 3px rgba(220,38,38,.25), 0 0 14px rgba(220,38,38,.55); }
+    @media (prefers-reduced-motion: reduce) { .announcement-tag::before { animation: none; } }
+    @media (max-width: 760px) { #classification-bar { padding-left: 12px; padding-right: 12px; } }   /* as #capture-area there */
     .ticker-viewport { flex: 1 1 auto; min-width: 0; overflow: hidden; height: 100%; display: flex; align-items: center; position: relative; }
     .ticker-track { display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker-scroll 22s linear infinite; font-size: 11px; font-weight: 600; color: #e2e8f0; }
     .ticker-track.paused { animation-play-state: paused; }
     .announcement-ticker.is-alert .ticker-track { color: #fecaca; font-weight: 800; }
+    .ticker-track { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 13.5px; font-weight: 800; color: #fff7d1; letter-spacing: .01em; text-shadow: 0 0 10px rgba(253,230,138,.45); }
+    .announcement-ticker.is-alert .ticker-track { color: #fecaca; }
     @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 
     /* the top right of the strip: Download Case Summary, Main Portal, My Dashboard, the Blueprint */
@@ -1112,6 +1125,19 @@ body:not(.bg-photo-active) #capture-area {
     border-radius: 7px;
     min-height: 36px;
     box-shadow: inset 4px 0 0 var(--orange), 0 2px 6px -3px rgba(8,18,38,.45);
+}
+/* one look for every section header: a navy gradient pill. Several headers carry their own light
+   background and colour inline (index.html, case-sections.js); this wins over those, so they all match. */
+.section-head {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(90deg, #0f2148 0%, #1e3a8a 60%, #2b4fa8 100%) !important;
+    color: #fff !important;
+    border-radius: 999px !important;
+    padding: 8px 18px !important;
+    min-height: 34px;
+    box-shadow: 0 3px 10px -4px rgba(15,33,72,.55) !important;
+    border: 0 !important;
 }
 
 /* ---------- labels and fields: bolder, a step bigger ---------- */
