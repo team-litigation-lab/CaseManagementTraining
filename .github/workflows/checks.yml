@@ -39,7 +39,7 @@ jobs:
 
   smoke:
     name: Smoke test in a browser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # Playwright 1.56 has no Chromium build for ubuntu-latest (26.04) yet
     # The suite takes about 13 minutes on a healthy runner. The cap is the one that
     # stops a hung browser running all day, not a budget the suite should sit against:
     # a slow dependency install used to eat the headroom and cancel the run partway
