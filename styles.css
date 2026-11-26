@@ -1266,6 +1266,17 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     background: linear-gradient(#dfe6ef, #dfe6ef) padding-box, linear-gradient(90deg, #1E2340 0%, #2c3360 40%, #a8692f 80%, #DB8437 100%) border-box;
 }
 #capture-area .header-card .cid-card { border-color: #c9973f !important; }
+/* the case phase picker (above the big phase name): a navy-to-orange key with white text, easy to spot */
+#capture-area .header-card #phase-selector {
+    -webkit-appearance: none; appearance: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center,
+                linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #c2410c 85%, #f97316 100%) !important;
+    color: #fff !important; border: 1px solid #c9973f !important; border-radius: 8px !important;
+    font-size: 12.5px !important; letter-spacing: .06em; padding: 6px 32px 6px 12px !important; min-width: 170px;
+    box-shadow: 0 2px 0 rgba(8,18,38,.25);
+}
+#capture-area .header-card #phase-selector:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+#capture-area .header-card #phase-selector option { color: #0f172a; background: #fff; }
 /* the case Type picker at the right of the Date of Loss bar: bigger, easier to read and to hit */
 #capture-area .header-card #lsh-integrated-bar .ml-auto > span { font-size: 13px !important; letter-spacing: .06em; margin-right: 14px !important; }
 #capture-area .header-card #lsh-integrated-bar .ml-auto > div { padding: 6px 4px !important; border-radius: 10px !important; border: 1px solid #c9973f !important; }
