@@ -137,13 +137,16 @@ const SAVED = [
     const bar = await page.evaluate(() => { const b = document.getElementById('cl-bar'), ph = document.getElementById('display-phase');
         return { inHeader: !!(b && b.closest('.header-card')), below: !!(b && ph) && b.getBoundingClientRect().top >= ph.getBoundingClientRect().bottom - 1, free: !!(b && b.hasAttribute('data-free-edit')) }; });
     if (!bar.inHeader || !bar.below || !bar.free) fail(`the search bar is not in the case header under the case status: ${JSON.stringify(bar)}`);
-    // the Profile tab: Identity and Case Narrative | Employment | Emergency Contact and Authorized (placed by CSS; the page order,
-    // which the positional save relies on, is unchanged)
+    // the Profile tab: Identity | Case Narrative | Primary Injury across the top, Employment Details and Emergency Contact under
+    // Identity and the Case Narrative, with Authorized to Access Case inside the Emergency Contact card (placed by CSS; the page
+    // order, which the positional save relies on, is unchanged: the Authorized list is a keyed list, saved by id)
     await page.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('profile'); }); await page.waitForTimeout(200);
     const prof = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#profile-grid .pdf-card')].map(c => { const r = c.getBoundingClientRect(); return [c.querySelector('.section-head').textContent.trim(), { x: Math.round(r.x), y: Math.round(r.y), b: Math.round(r.bottom) }]; })));
     const P = (k) => prof[Object.keys(prof).find(n => n.startsWith(k))] || {};
-    if (!(P('Identity').x === P('Case Narrative').x && P('Case Narrative').y > P('Identity').y && P('Emergency').x > P('Employment').x && P('Employment').x > P('Identity').x && P('Authorized').x === P('Emergency').x && P('Authorized').y >= P('Emergency').b))
-        fail(`the Profile cards are not laid out as Identity + Case Narrative | Employment | Emergency Contact + Authorized: ${JSON.stringify(prof)}`);
+    const authIn = await page.evaluate(() => { const a = document.getElementById('kx-authorized'), c = a && a.closest('.pdf-card'); return !!(c && /Emergency Contact/.test(c.querySelector('.section-head').textContent)); });
+    if (!(P('Identity').y === P('Case Narrative').y && P('Case Narrative').y === P('Primary Injury').y && P('Identity').x < P('Case Narrative').x && P('Case Narrative').x < P('Primary Injury').x
+        && P('Employment').x === P('Identity').x && P('Employment').y > P('Identity').b && P('Emergency').x === P('Case Narrative').x && P('Emergency').y > P('Case Narrative').b && authIn))
+        fail(`the Profile cards are not laid out as Identity | Case Narrative | Primary Injury over Employment | Emergency Contact + Authorized: ${JSON.stringify({ prof, authIn })}`);
     // (keyed cards, like Primary Injury, save by name, so they aren't part of the page order)
     const heads = await page.evaluate(() => [...document.querySelectorAll('#profile-grid .pdf-card:not([data-keyed]) .section-head')].map(h => h.textContent.trim().split(' ')[0]));
     if (heads.join() !== 'Identity,Emergency,Authorized,Employment,Case') fail(`the Profile cards' page order changed (saved cases load by position): ${heads.join()}`);
