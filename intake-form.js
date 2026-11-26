@@ -643,8 +643,8 @@
     #nm-modal .nm-foot .st{font-size:13px;font-weight:600;color:#475569}
     #nm-modal .nm-btn{font-size:13px;font-weight:800;text-transform:uppercase;border-radius:8px;padding:11px 16px;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:#0f2148}
     #nm-modal .nm-btn:hover{border-color:#0f2148}
-    #nm-modal .nm-btn.go{background:#f97316;border-color:#f97316;color:#fff}
-    #nm-modal .nm-btn.go:hover{background:#ea580c}
+    #nm-modal .nm-btn.go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
+    #nm-modal .nm-btn.go:hover{background:linear-gradient(180deg,#ffefc4 0%,#f7cf6a 50%,#e8b04a 100%)}
     #nm-modal .nm-btn.del{color:#b91c1c;border-color:#fecaca}
     #nm-modal .nm-hint{font-size:13px;font-weight:600;color:#c2410c;margin:-1px 0 5px;line-height:1.4}
     #nm-modal .nm-done{max-width:760px;margin:0 auto;width:100%}
@@ -685,7 +685,7 @@
     #kx-intake .io-tag{font-family:'IBM Plex Mono',monospace;font-weight:900;font-size:10.5px;color:#fff;background:#f97316;border-radius:6px;padding:3px 8px;letter-spacing:.5px}
     #kx-intake .io-txt{flex:1;min-width:200px;font-size:12px;color:#7c2d12}
     #kx-intake button{font-size:10.5px;font-weight:800;text-transform:uppercase;border-radius:7px;padding:6px 10px;cursor:pointer;border:1px solid #fdba74;background:#fff;color:#9a3412}
-    #kx-intake button.go{background:#f97316;border-color:#f97316;color:#fff}
+    #kx-intake button.go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
     `;
     document.head.appendChild(css);
 

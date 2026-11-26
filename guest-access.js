@@ -40,7 +40,7 @@
         const el = card('<h1 style="font-size:22px;margin:0 0 10px">LSH CaseWorX™</h1>'
             + (notice ? '<p style="color:#fca5a5;font-size:14px;margin:0 0 14px">' + esc(notice) + '</p>' : '')
             + '<p style="color:#cbd5e1;font-size:14px;line-height:1.5;margin:0 0 22px">You sign in once, on the LSH Training Portal, and open CaseWorX from there. There is no separate sign-in here.</p>'
-            + '<a href="' + PORTAL_LOGIN + '" style="display:block;background:#f97316;color:#fff;font-weight:700;text-decoration:none;padding:12px;border-radius:10px">Go to the LSH Training Portal</a>'
+            + '<a href="' + PORTAL_LOGIN + '" style="display:block;background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);color:#1E2340;font-weight:700;text-decoration:none;padding:12px;border-radius:10px">Go to the LSH Training Portal</a>'
             + '<p style="margin:22px 0 0;font-size:12px;color:#94a3b8">Trainer or admin? <a href="#" id="portal-admin-link" style="color:#fff;font-weight:700">Sign in with the admin password</a></p>');
         const a = el.querySelector('#portal-admin-link');
         if (a) a.onclick = (e) => { e.preventDefault(); openAdminLogin(); };
