@@ -389,7 +389,7 @@
                             <tr>
                                 <th width="210">Date of Service</th>
                                 <th width="190">Medical Facility</th>
-                                <th width="160">Next Appointment Schedule</th>
+                                <th width="230" style="white-space:nowrap">Next Appointment Schedule</th>
                                 <th>Notes</th>
                                 <th width="30"></th>
                             </tr>
@@ -708,8 +708,9 @@
             <button id="cab-archive" type="button" class="cab-btn cab-archive" onclick="archiveCaseAsDraft()" title="Save as a draft, with no Case ID yet">🗄 Archive</button>
             <button id="cab-discard" type="button" class="cab-btn cab-discard" onclick="discardCase()">🗑 Discard Case</button>
             <span id="autosave-indicator" class="cab-note" aria-live="polite"></span>
-            <button id="cab-save" type="button" class="cab-btn cab-save" onclick="saveCase()">💾 Save Case</button>
-            <button id="cab-update" type="button" class="cab-btn cab-update" onclick="updateCase()" title="Save the changes to the saved case you opened">⟳ Update Case</button>
+            <!-- one key for both: 💾 Save Case for a new case or a draft (it gets its Case ID), ⟳ Update Case once a saved case
+                 is open (app.js saveOrUpdateCase; the label follows the case: paintSaveKey) -->
+            <button id="cab-save" type="button" class="cab-btn cab-save" onclick="saveOrUpdateCase()">💾 Save Case</button>
         </div>
     </main>
     </div>

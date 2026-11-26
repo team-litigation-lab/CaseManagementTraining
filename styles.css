@@ -57,7 +57,7 @@
     .announcement-ticker.is-alert .announcement-tag { color: #fca5a5; }
     /* 📢 lined up with the case below (#capture-area's p-8: 32px in), and dressed to be seen: an orange
        pill with a pulsing dot, and the message in larger, brighter type */
-    #classification-bar { padding-left: 32px; padding-right: 32px; }
+    #classification-bar { padding-left: 14px; padding-right: 14px; }   /* as #capture-area's sides (the case runs nearly edge to edge) */
     .announcement-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--orange); color: #081226;
         font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 11px; font-weight: 900; letter-spacing: .08em; line-height: 1;
         padding: 6px 12px; border-radius: 999px; box-shadow: 0 0 0 3px rgba(249,115,22,.2), 0 0 14px rgba(249,115,22,.5); }
@@ -87,6 +87,7 @@
     #live-clock { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 11.5px; font-weight: 700; color: #0f2148; letter-spacing: .3px; white-space: nowrap; }
     #classification-bar .clock-widget select { max-width: 150px !important; min-width: 0; background: #f8fafc; color: #c2410c; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 10.5px; font-weight: 700; letter-spacing: 0; padding: 2px 4px; outline: none; }
     /* a narrower window: the time zone picker goes first, then (on a small phone) the clock itself, so the strip never overflows */
+    #classification-bar .clock-widget select { max-width: 96px !important; font-size: 10.5px !important; padding: 1px 4px !important; height: 22px; }   /* the place: a smaller pill */
     @media (max-width: 1100px) { #classification-bar .clock-widget select { display: none; } #classification-bar .clock-widget { padding-right: 9px; } }
     @media (max-width: 480px) { #classification-bar .clock-widget { display: none; } }
 
@@ -192,6 +193,10 @@
         line-height: 1.45;
         color: #0f172a;
     }
+
+    /* every multi-line field (the Case Narrative, notes, the chronology…): what's typed is bigger, upright and bold
+       (cases saved before keep "text-sm italic" on the field, so this goes by the class with !important) */
+    #capture-area .multiline-field { font-size: 15px !important; font-weight: 700 !important; font-style: normal !important; line-height: 1.5 !important; color: #0f172a; }
 
     /* placeholders — single, non-flickering, CSS-driven */
     [contenteditable="true"]:empty:before {
@@ -377,7 +382,7 @@
 
     /* ===== SIDEBAR ===== */
     #sidebar {
-        width: 280px;
+        width: 236px;   /* a little narrower, so the case gets the room (was 280px) */
         background: var(--navy-deep);
         color: white;
         display: flex;
@@ -1222,8 +1227,8 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     outline: none; box-shadow: var(--cwx-ring);
 }
 /* bigger, bolder labels on the controls a trainee uses all day */
-.add-btn { font-size: 11.5px !important; padding: 9px 18px !important; border-radius: 8px !important;
-    background: linear-gradient(180deg, #fb923c 0%, var(--orange) 100%) !important; border-bottom: 2px solid #c2410c !important; }
+.add-btn { font-size: 11.5px !important; padding: 9px 18px !important; border-radius: 8px !important; color: #fff !important;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2b4fa8 45%, #a8792f 80%, #c9973f 100%) !important; border-bottom: 2px solid #8a6420 !important; }   /* blue to gold */
 .add-btn:hover { background: linear-gradient(180deg, #16306a 0%, #0f172a 100%) !important; border-bottom-color: #000 !important; }
 .hub-btn { font-size: 11px; font-weight: 900; border: 1.5px solid #fdba74; border-bottom-width: 3px; border-bottom-color: #ea580c;
     background: linear-gradient(180deg, #fffaf3 0%, #ffedd5 100%); color: #9a3412; border-radius: 10px; }
@@ -1259,6 +1264,9 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 #sidebar #sb-trainer button:hover { background: linear-gradient(180deg, #1d3f86 0%, #16306a 100%); border-color: #c9973f; border-left-color: #f97316; color: #fff; transform: none; }
 #sidebar #sb-trainer .sb-lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* one text colour on every sidebar key: New Intake's peach (the keys keep their own frames) */
+#sidebar .side-card, #sidebar .fdd-btn, #sidebar .lib-btn, #sidebar .if-open-btn, #sidebar #sb-trainer button { color: #fdba74 !important; }
+#sidebar .side-card:hover, #sidebar .fdd-btn:hover, #sidebar #sb-trainer button:hover { color: #fff !important; }
 #sidebar #sb-trainer .sb-count { flex-shrink: 0; font-size: 10px; letter-spacing: 0; padding: 1px 7px; border-radius: 999px; background: rgba(219,132,55,.2); color: #fdba74; border: 1px solid rgba(219,132,55,.5); }
 #sidebar .side-card:hover, #sidebar .fdd-btn:hover, #sidebar .lib-btn:hover, #sidebar .if-open-btn:hover { transform: translateY(-1px); filter: brightness(1.18); }
 #sidebar .side-card:active, #sidebar .fdd-btn:active, #sidebar .lib-btn:active, #sidebar .if-open-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,.6) inset; }
@@ -1411,3 +1419,59 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 /* the Case ID line above the phase: a larger label, and the number (or "Assigned on Save Case") bold and dark enough to read */
 #capture-area .header-card .text-right > :has(> #case-id-field) > label { font-size: 14px !important; }
 #capture-area .header-card #case-id-field { font-size: 14px !important; font-weight: 800 !important; color: #0f2148 !important; padding: 4px 12px !important; background: #eef2f7 !important; border: 1px solid #cbd5e1; border-radius: 7px !important; }
+
+/* ===== the case, nearly edge to edge: a little space on each side (it was 32px), as the announcement strip above ===== */
+@media (min-width: 761px) { #capture-area { padding-left: 14px !important; padding-right: 14px !important; } }
+
+/* ===== the case header's navy band: it runs up behind the client's details, the Client's ID and the case card, and
+   down into the Date of Loss bar, as one panel (the white cards sit on it) ===== */
+#capture-area .header-card > .flex.justify-between {
+    background: linear-gradient(135deg, #1E2340 0%, #16306a 60%, #1d3f86 100%);
+    border: 2px solid #c9973f; border-left: 6px solid #DB8437; border-bottom: 0; border-radius: 14px 14px 0 0;
+    padding: 14px 16px 16px; align-items: stretch;
+}
+#capture-area .header-card #lsh-integrated-bar { margin-top: 0 !important; border-top: 0 !important; border-radius: 0 0 14px 14px !important; }
+#capture-area .header-card .hdr-idrow .hdr-id > label { color: #fdba74 !important; }
+#capture-area .header-card .hdr-idrow .crit-add { color: #fecaca !important; }
+#capture-area .header-card .hdr-idrow .cid-card { background: rgba(255,255,255,.95); }
+
+/* ===== the case card on the right: Case ID, the status, the two searches and the timer in one framed card, lined up ===== */
+#capture-area .header-card > .flex.justify-between > .text-right {
+    display: flex; flex-direction: column; align-items: stretch; gap: 9px; text-align: left;
+    padding: 12px 14px; border-radius: 14px; border: 2px solid transparent;
+    background: linear-gradient(160deg, #fffaf0 0%, #ffffff 55%, #f6f8fc 100%) padding-box,
+                linear-gradient(135deg, #1e3a8a 0%, #2b4fa8 40%, #c9973f 80%, #DB8437 100%) border-box;
+    box-shadow: 0 10px 22px -16px rgba(30,35,64,.55);
+}
+#capture-area .header-card .text-right > * { width: 100%; margin: 0 !important; }
+#capture-area .header-card .text-right > :has(> #case-id-field) { justify-content: space-between !important; gap: 10px; }
+#capture-area .header-card .text-right > :has(> #display-phase) { justify-content: space-between !important; flex-wrap: nowrap; }
+#capture-area .header-card .text-right > :has(> #display-phase) { flex-wrap: wrap !important; }
+#capture-area .header-card #phase-selector { flex: 1 1 150px; }
+#capture-area .header-card #display-phase { min-width: 0 !important; flex: 1 1 auto; text-align: right; font-size: clamp(20px, 1.7vw, 30px) !important; white-space: nowrap; }
+#capture-area .header-card .hdr-client { align-content: start; }   /* (the row's cards are one height; the client's boxes stay together at the top) */
+#capture-area .header-card .text-right #cl-bar, #capture-area .header-card .text-right #tt-widget { justify-content: stretch; }
+#capture-area .header-card .text-right #tt-widget { display: flex; box-sizing: border-box; width: 100% !important; max-width: 100%; min-width: 0; }
+#capture-area .header-card .text-right #tt-widget .tt-w { flex: 1 1 auto; min-width: 0; justify-content: space-between; flex-wrap: wrap; }
+#capture-area .header-card .text-right #tt-widget button { padding: 6px 8px; font-size: 11px; letter-spacing: .02em; }
+#capture-area .header-card .text-right #tt-widget .tt-w { gap: 5px; padding-left: 7px; }
+/* the Case ID, easy to see: a navy key with the number in bold gold */
+#capture-area .header-card .text-right > :has(> #case-id-field) > label { font-size: 15px !important; font-weight: 900 !important; color: #1E2340 !important; letter-spacing: .08em; }
+#capture-area .header-card #case-id-field {
+    flex: 1 1 auto; text-align: center; font-size: 16px !important; font-weight: 900 !important; letter-spacing: .04em;
+    color: #fde68a !important; background: linear-gradient(135deg, #1E2340 0%, #1d3f86 100%) !important;
+    border: 2px solid #c9973f !important; border-radius: 10px !important; padding: 6px 14px !important;
+    box-shadow: 0 4px 12px -6px rgba(30,35,64,.6);
+}
+
+/* ===== the Date of Loss bar: no white cards; bigger, bolder labels and thicker field lines on the navy ===== */
+#capture-area .header-card #lsh-integrated-bar .bar-box { background: none !important; box-shadow: none !important; padding: 0 !important; width: 190px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box.bar-box-location { width: auto !important; flex: 0 1 380px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box label { color: #fdba74 !important; font-size: 13px !important; font-weight: 900 !important; letter-spacing: .08em; margin-bottom: 6px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box > div {
+    height: 38px !important; padding: 7px 12px !important; line-height: 20px !important; font-size: 15px !important; font-weight: 900 !important; color: #0f172a !important;
+    border: 3px solid transparent !important; border-radius: 10px !important;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #c9973f 0%, #f5c451 50%, #2b4fa8 100%) border-box !important;
+}
+#capture-area .header-card #lsh-integrated-bar .bar-box > div:focus { background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #DB8437, #f59e0b) border-box !important; outline: none; }
+#capture-area .header-card #lsh-integrated-bar .bar-data-container { gap: 18px !important; }
