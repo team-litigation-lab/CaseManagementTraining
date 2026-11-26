@@ -24,6 +24,7 @@
 (function () {
     'use strict';
     const MIN = 0.7;
+    const PHONE = window.matchMedia('(max-width: 760px)');
     const css = document.createElement('style');
     css.textContent = `
     #capture-area{padding-right:2rem}
@@ -54,6 +55,9 @@
         if (!b || !ca) return;
         if (!more) { b.classList.remove('fdd-nosb', 'case-fit'); b.style.removeProperty('--case-zoom'); }
         if (!ca.offsetParent) return;   // no case on screen (signed out, a full-screen view)
+        // A phone (760 px or less) keeps the case full size: at 70% its small print can't be read. The case
+        // is laid out in one column there instead (styles.css, "PHONES") and anything still wider scrolls sideways.
+        if (PHONE.matches) return;
         if (b.classList.contains('fdd-open') && window.innerWidth >= 1100 && over(ca)) b.classList.add('fdd-nosb');
         if (over(ca)) {
             // the case widens a little with the room it gets, so step down until it fits
