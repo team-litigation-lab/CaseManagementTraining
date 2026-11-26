@@ -59,6 +59,9 @@ const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) f
     const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
     page.on('pageerror', e => failures.push('page error: ' + e.message));
+    // the CMS frame is signed in, as a trainee's is: a CMS with no one signed in blanks the case every 750 ms
+    // (app.js runOverlayIntegrityCheck), which would wipe whatever case a check had just put in the editor
+    await page.addInitScript((port) => { if (location.port === port) sessionStorage.setItem('LSH_SESSION_V1', JSON.stringify({ username: 'ci', fullName: 'CI Trainee', batchId: 'B1', userType: 'Trainee' })); }, String(cms.address().port));
     // the CMS's own server, answered by the test: an upload keeps the name it is given, and a save succeeds
     let uploaded = [];
     await page.route('**/api/upload', async (route) => {
