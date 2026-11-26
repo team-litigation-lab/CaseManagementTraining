@@ -139,14 +139,13 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     };
     // the Master Account: no lock anywhere, and no clear-old-data button either
     const m = await open({ username: 'LSHADMIN123', fullName: 'LSH Admin', batchId: 'B300926', userType: 'Admin' }, true);
-    const ui = await m.evaluate(() => { openAdminDashboard(); showAdminDashTab('access');
-        const access = document.getElementById('admin-dash-access');
+    const ui = await m.evaluate(() => { openAdminDashboard();
         return { overlay: !!document.getElementById('lock-overlay'), confirm: !!document.getElementById('lock-confirm-modal'), fns: typeof openLockConfirm + typeof attemptUnlock + typeof confirmLock,
-            lockText: /\bLock\b/.test(access.textContent), pause: !!document.getElementById('pause-toggle-btn'),
-            cleanup: !!document.getElementById('db-cleanup-btn') || !!document.getElementById('db-maintenance-section') || /Clear old data|Database Maintenance/i.test(access.textContent) || typeof runDbCleanup !== 'undefined',
-            vacuum: /vacuum/i.test(access.textContent), overview: /Access State|Unlocked/.test(document.getElementById('admin-dash-overview') ? document.getElementById('admin-dash-overview').textContent : '') }; });
-    if (ui.overlay || ui.confirm || ui.fns !== 'undefinedundefinedundefined' || ui.lockText || ui.overview) fail(`Lock / Unlock is still on the page: ${JSON.stringify(ui)}`);
-    if (!ui.pause || ui.cleanup || ui.vacuum) fail(`Access Control should have Pause only — no 🧹 Clear old data and no vacuum: ${JSON.stringify(ui)}`);
+            tabs: [...document.querySelectorAll('.mc-tab')].map(t => t.textContent.trim().replace(/\s*\(.*$/, '')).join('|'),
+            cleanup: !!document.getElementById('db-cleanup-btn') || !!document.getElementById('db-maintenance-section') || typeof runDbCleanup !== 'undefined' }; });
+    // Master Control is Registrations and Monitoring only (Overview, Users, Case Logs, Broadcast & Ping and Access Control were removed)
+    if (ui.overlay || ui.confirm || ui.fns !== 'undefinedundefinedundefined') fail(`Lock / Unlock is still on the page: ${JSON.stringify(ui)}`);
+    if (ui.tabs !== 'Registrations|Monitoring' || ui.cleanup) fail(`Master Control should be Registrations and Monitoring only: ${JSON.stringify(ui)}`);
     // Admin: the saved calls list and a call opened
     await m.evaluate(() => { exitMasterControl && exitMasterControl(); openFrontDeskDrill(); fddResults(); }); await m.waitForTimeout(800);   // 📊 Results and saved calls, under the call lines
     const listA = await m.evaluate(() => { const p = document.getElementById('fdd-panel'); return { saved: /Saved calls/.test(p.textContent), name: /Tia Trainee/.test(p.textContent), view: p.querySelectorAll('.fdd-view').length }; });

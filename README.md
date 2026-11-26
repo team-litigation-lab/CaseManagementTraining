@@ -13,7 +13,7 @@ The sidebar no longer lists everyone's cases. Cases trainees save go into the **
 - **Case Library window (Admins):** sidebar → **🔍 Open Case Library** for the same search with filters (Training Library, saved cases, **My cases**) and the ☎ firm directory. Trainees don't get the button. If the search bar is off screen, Ctrl/Cmd+K opens the window for them, with **All files** and **My cases** only. They find the firm directory and front-desk rules in the Front Desk practice panel.
 - **Same name, different file:** when several results share a client name, the Case Library (and the drill's search) says so and asks for the DOL and DOB before you open one.
 - **During a Front Desk Drill call**, a mock case opened from the search bar counts as the call's pick, so receptionists never need the Training Library.
-- A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). Admins browse all cases in Master Control → Case Logs.
+- A trainee's cases, drafts included, are visible only to them and Admins (enforced server-side). Admins browse all cases in the Case Library.
 
 ## Training Library (mock cases)
 

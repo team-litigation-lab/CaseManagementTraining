@@ -803,55 +803,10 @@
             </div>
         </div>
         <div class="mc-tabs">
-            <button class="mc-tab active" onclick="showAdminDashTab('overview')">Overview</button>
             <button class="mc-tab" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></button>
-            <button class="mc-tab" onclick="showAdminDashTab('users')">Users</button>
-            <button class="mc-tab" onclick="showAdminDashTab('monitoring')">Monitoring</button>
-            <button class="mc-tab" onclick="showAdminDashTab('case-logs')">Case Logs</button>
-            <button class="mc-tab" onclick="showAdminDashTab('announce')">Broadcast &amp; Ping</button>
-            <button class="mc-tab" onclick="showAdminDashTab('access')">Access Control</button>
+            <button class="mc-tab active" onclick="showAdminDashTab('monitoring')">Monitoring</button>
         </div>
         <div class="mc-body">
-
-            <!-- OVERVIEW -->
-            <div class="mc-pane active" id="admin-dash-overview">
-                <div class="admin-panel-grid">
-                    <div class="admin-tile">
-                        <h4>Archived Cases</h4>
-                        <div class="admin-stat" id="admin-stat-cases">0</div>
-                        <div class="admin-stat-label">Records in Repository</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Current Case (this device)</h4>
-                        <div class="admin-stat" id="admin-stat-name" style="font-size:14px;">—</div>
-                        <div class="admin-stat-label" id="admin-stat-phase">No active phase</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Trainees Online Now</h4>
-                        <div class="admin-stat" id="admin-stat-online">0</div>
-                        <div class="admin-stat-label">Active in the last 90 seconds</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Pending Registrations</h4>
-                        <div class="admin-stat" id="admin-stat-pending">0</div>
-                        <div class="admin-stat-label">Awaiting review</div>
-                    </div>
-                </div>
-                <div class="mc-section-title">Site-Wide Status</div>
-                <div class="admin-panel-grid">
-                    <div class="admin-tile">
-                        <h4>Activity State</h4>
-                        <div class="admin-stat" id="ov-pause-state" style="font-size:16px;">Active</div>
-                        <div class="admin-stat-label">Pause / Resume from Access Control</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Current Alert</h4>
-                        <div class="admin-stat" id="ov-alert-state" style="font-size:16px;">None Active</div>
-                        <div class="admin-stat-label">Alerts are no longer set from CaseWorX; this stops one that is still running</div>
-                        <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;font-size:10.5px;margin-top:8px;" onclick="stopAlert()">⏹ Stop Alert</button>
-                    </div>
-                </div>
-            </div>
 
             <!-- REGISTRATIONS (pending only) -->
             <div class="mc-pane" id="admin-dash-registrations">
@@ -859,16 +814,18 @@
                 <div id="registrations-list"></div>
             </div>
 
-            <!-- USERS (approved, segregated by type / batch, sorted by sequence) -->
-            <div class="mc-pane" id="admin-dash-users">
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Approved accounts, Admins first. Trainees are grouped by Batch ID (B + the date the batch started), the newest batch first.</p>
-                <div id="users-list"></div>
-            </div>
-
             <!-- MONITORING (live sessions + Server Logs) -->
-            <div class="mc-pane" id="admin-dash-monitoring">
-                <div class="mc-section-title">🟢 Trainees Online</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Live view of who is signed in and working right now. Click a name to view their latest saved (or autosaved) case, read-only.</p>
+            <div class="mc-pane active" id="admin-dash-monitoring">
+                <!-- 🟢 who is on, in the standard look: a header, tiles, filters and a card per person (app.js renderMonitoringOnline) -->
+                <div class="mon-hero">
+                    <div><h3>🟢 Trainees Online</h3>
+                    <p>Live view of who is signed in and working right now. Click a person to view their latest saved (or autosaved) case, read-only; 👁 Watch live follows a trainee's screen.</p></div>
+                </div>
+                <div class="mon-stats" id="monitoring-stats"></div>
+                <div class="mon-chips" id="monitoring-chips" role="group" aria-label="Show">
+                    <button type="button" class="on" data-mon="all">All</button><button type="button" data-mon="online">Online now</button><button type="button" data-mon="Trainee">Trainees</button><button type="button" data-mon="Admin">Admins</button>
+                    <input type="search" id="monitoring-search" placeholder="Search a name or @username" aria-label="Search people">
+                </div>
                 <div id="monitoring-online-list"></div>
 
                 <div class="mc-section-title">🗄 Server Logs</div>
@@ -879,70 +836,8 @@
                 </div>
             </div>
 
-            <!-- CASE LOGS (search, chronological list, versions, full view) -->
-            <div class="mc-pane" id="admin-dash-case-logs">
-                <div class="mc-section-title">🔍 Search Case</div>
-                <input type="text" id="case-logs-search" oninput="renderCaseLogs()" placeholder="Search by client name, Case ID or trainee..." style="width:100%; padding:9px 12px; margin-bottom:16px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
-
-                <div class="mc-section-title">📄 All Cases — Most Recently Modified First</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Every case in the shared repository, including drafts, sorted by most recent modification. <b>Delete</b> removes a case for good (a trainee's practice case, for example); tick several, or search for a trainee and select all, to delete them together.</p>
-                <div id="case-logs-bulk" class="case-logs-bulk"></div>
-                <div id="case-logs-list"></div>
-            </div>
-
-            <!-- ANNOUNCEMENTS & ALERTS -->
-            <div class="mc-pane" id="admin-dash-announce">
-                <div class="mc-section-title">📢 Announcement (shows in the scrolling ticker, top bar only)</div>
-                <div class="admin-tile">
-                    <p id="announce-current-preview" style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">Welcome to the LSH Training Interface.</p>
-                    <textarea id="announce-text-input" placeholder="Type the message to broadcast in the ticker..." style="width:100%;min-height:70px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin-bottom:12px;"></textarea>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAnnouncement()">📢 Broadcast Announcement</button>
-                        <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="clearAnnouncement()">Clear Ticker</button>
-                    </div>
-                </div>
-
-                <div class="mc-section-title">📣 Ping (instant toast notification with a loud, distinct alert tone)</div>
-                <div class="admin-tile">
-                    <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Sends an instant on-screen notification to one user or to everyone currently on the site. It uses its own louder, longer alert tone (not the login-confirmation sound) so it actually gets noticed, and shows who it's from — no full-screen takeover, no ticker change, just a quick attention-getter.</p>
-
-                    <div style="display:flex; gap:8px; margin-bottom:12px;">
-                        <button type="button" class="mini-btn" id="ping-mode-single-btn" style="background:var(--navy);color:white;padding:8px 14px;" onclick="setPingMode('single')">👤 Specific User(s)</button>
-                        <button type="button" class="mini-btn" id="ping-mode-all-btn" style="background:#94a3b8;color:white;padding:8px 14px;" onclick="setPingMode('all')">📢 All Users</button>
-                    </div>
-
-                    <div id="ping-user-row" style="margin-bottom:12px;">
-                        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Recipient(s)</label><br>
-                        <div id="ping-user-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
-                        <div style="position:relative;">
-                            <input type="text" id="ping-user-search" placeholder="Search by name, username, batch ID, or type…" autocomplete="off"
-                                style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;"
-                                oninput="filterPingUserList()" onfocus="openPingUserList()"
-                                onkeydown="if(event.key==='Escape'){closePingUserList();this.blur();}">
-                            <input type="hidden" id="ping-user-select" value="">
-                            <div id="ping-user-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:230px;overflow-y:auto;background:white;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 10px 26px rgba(0,0,0,0.14);z-index:80;margin-top:4px;"></div>
-                        </div>
-                        <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Click a name to toggle it \u00B7 click outside or press Esc to close the list</div>
-                    </div>
-
-                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Message</label>
-                    <textarea id="ping-text-input" placeholder="Type the ping message..." style="width:100%;min-height:56px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin:6px 0 14px;"></textarea>
-
-                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:-4px 0 14px;cursor:pointer;"><input type="checkbox" id="ping-as-task"> Send as a <b>task</b>: the trainee gets an <b>Accept</b> button that adds it to the open case's Tasks list</label>
-                    <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="sendPing()">📣 Send Ping</button>
-                </div>
-            </div>
-
-            <!-- ACCESS CONTROL (Pause) -->
-            <div class="mc-pane" id="admin-dash-access">
-                <div class="mc-section-title">⏸ Pause Activity (site-wide, no logout, resumable)</div>
-                <div class="admin-tile">
-                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Pausing freezes activity across every connected user. Nobody is logged out and no progress is lost — when you Resume, everyone continues exactly where they left off.</p>
-                    <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="pause-state-label" style="color:var(--classified-red);">Active (not paused)</span></div>
-                    <button class="btn-primary" id="pause-toggle-btn" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="togglePause()">⏸ Pause All Activity</button>
-                </div>
-            </div>
-
+            <!-- (Overview, Users, Case Logs, Broadcast & Ping and Access Control were removed: sign-in, users,
+                 announcements and pausing are run from the LSH Training Portal) -->
         </div>
     </div>
 

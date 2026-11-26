@@ -279,14 +279,7 @@ const failures = []; const fail = (m) => failures.push(m);
     if ((await page.locator('#task-body tr').count()) !== before + 1 || !/Call the adjuster about the PIP ledger — assigned by Admin Rae/.test(tasks)) fail(`Accept did not add the task to the case's Tasks (${tasks})`);
     if (await page.locator('#task-inbox .task-card').count()) fail('the accepted task card is still showing');
     if (!(await page.evaluate(() => document.getElementById('tab-tasks').classList.contains('active-tab')))) fail('Accept did not open the Tasks tab');
-    // the Admin side: "Send as a task" marks the ping
-    const sent = await page.evaluate(async () => {
-        let body = null; const f = window.fetch;
-        window.fetch = (u, o) => { if (String(u).includes('/api/ping')) { body = JSON.parse(o.body); return Promise.resolve(new Response('{"success":true}')); } return f(u, o); };
-        setPingMode('all'); document.getElementById('ping-as-task').checked = true; document.getElementById('ping-text-input').value = 'Upload the police report';
-        sendPing(); await new Promise(r => setTimeout(r, 50)); window.fetch = f; return body;
-    });
-    if (!sent || sent.text !== '[TASK] Upload the police report') fail(`"Send as a task" didn't mark the ping (${JSON.stringify(sent)})`);
+    // (the Admin side, Broadcast & Ping's "Send as a task", was removed from Master Control: pings come from the Portal)
 
     // 6b. tasks arrive reliably. firedAt is far off on purpose: only the age the server measured counts.
     ping = null;
