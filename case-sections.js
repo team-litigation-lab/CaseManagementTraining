@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — CASE SECTIONS (the newer parts of the case editor)
+   LSH CaseWorX — CASE SECTIONS (the newer parts of the case editor)
    ---------------------------------------------------------
      - Parties Involved (passengers, at-fault party, witnesses…)
      - Authorized to Access Case (Profile)

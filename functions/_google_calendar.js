@@ -144,7 +144,7 @@ export async function revokeToken(token) {
 }
 
 /* Google Calendar and Google Drive backup (_google_drive.js) use the same Google sign-in (one OAuth client), so one
-   person's Google account gives the CMS one grant covering both, and revoking any token of it revokes the whole grant.
+   person's Google account gives CaseWorX one grant covering both, and revoking any token of it revokes the whole grant.
    Before revoking, each side checks the other isn't connected to the same Google account (otherGoogleLink); a sign-in
    that comes back without a refresh token (the account had already said yes) can use the other side's, whose grant now
    includes the new permission (sharedRefresh). */

@@ -137,7 +137,7 @@ export async function caseFolder(env, db, link, caseKey, name, parent) {
 // Upload one file into a folder (multipart: the name and folder, then the bytes).
 export async function uploadFile(env, db, link, folderId, name, type, bytes) {
     const boundary = 'lsh' + crypto.randomUUID().replace(/-/g, '');
-    const meta = JSON.stringify({ name, parents: [folderId], description: 'Backed up from the LSH Case Management System (training).' });
+    const meta = JSON.stringify({ name, parents: [folderId], description: 'Backed up from LSH CaseWorX (training).' });
     const enc = new TextEncoder();
     const head = enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${type || 'application/octet-stream'}\r\n\r\n`);
     const tail = enc.encode(`\r\n--${boundary}--`);

@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — LIVE VIEW (an Admin watches a trainee's screen as they work)
+   LSH CaseWorX — LIVE VIEW (an Admin watches a trainee's screen as they work)
    ---------------------------------------------------------
    Close to real time, for facilitated mock calls (a trainer plays the
    caller over Google Meet and watches the trainee work the call here):
@@ -158,7 +158,7 @@
             const m = [...document.querySelectorAll('.modal-overlay.open')].filter(e => e.id !== 'live-view-modal').pop();
             if (m) out.panel = txt(m.querySelector('h2, h3')).slice(0, 60) || 'A window';
         }
-        if (document.visibilityState === 'hidden') notes.push('the CMS tab is in the background');
+        if (document.visibilityState === 'hidden') notes.push('the CaseWorX tab is in the background');
         out.detail = notes.filter(Boolean).join(' · ');
         return out;
     }
@@ -428,7 +428,7 @@
                             <div class="lv-msg" id="lv-screen-msg"></div>
                             <div class="lv-badge" id="lv-badge"></div>
                         </div>
-                        <div class="lv-note">This mirrors their CMS tab only, not other tabs, windows or programs on their computer.</div>
+                        <div class="lv-note">This mirrors their CaseWorX tab only, not other tabs, windows or programs on their computer.</div>
                     </div>
                     <div class="lv-grid lv-pane" id="lv-pane-summary">
                         <div class="lv-trail"><h4>Where they've been</h4><ol id="lv-trail"></ol></div>
@@ -620,13 +620,13 @@
         const s = d.screen || null, v = (s && s.view) || null;
         if (v) { W.view = v; fit(); }
         let problem = '', fallback = false;   // fallback: nothing to show for now, so the summary instead
-        if (s && s.oldPage) { problem = 'Their CMS page is an older version that can\'t mirror the screen. It loads the new version by itself between tasks (or ask them to reload the page). Meanwhile, the summary shows where they are.'; fallback = true; }
+        if (s && s.oldPage) { problem = 'Their CaseWorX page is an older version that can\'t mirror the screen. It loads the new version by itself between tasks (or ask them to reload the page). Meanwhile, the summary shows where they are.'; fallback = true; }
         else if (s && s.id) {
             if (s.data && s.id !== W.gotId) render(s);                    // a new screen
             else if (v && s.id === W.shownId && !W.loading) sendView(v);   // the same screen: only the scroll, the pointer, the clocks
             if (W.failId === s.id) { problem = W.failMsg; fallback = true; }
         } else if (s && s.tooBig) { problem = `Their screen is too big to mirror right now (${Math.round(s.tooBig / 1024)} KB; the limit is ${Math.round(SCREEN_MAX / 1024)} KB zipped). The summary shows where they are.`; fallback = true; }
-        else if (v && v.hidden) problem = 'Their CMS tab is in the background (they\'re in another tab or window). Their screen shows here when they come back to it.';
+        else if (v && v.hidden) problem = 'Their CaseWorX tab is in the background (they\'re in another tab or window). Their screen shows here when they come back to it.';
         // the last screen stays up while the next one is on its way
         const busy = !!(W.pending || W.loading), showing = !problem && !!(s && s.id) && (!!W.shownId || busy);
         if (!showing && !busy) {
@@ -636,7 +636,7 @@
         const msg = $id('lv-screen-msg');
         msg.style.display = showing ? 'none' : 'flex';
         msg.textContent = problem || (s && s.id ? 'Loading their screen…' : d.online ? 'Waiting for their screen… it shows in a second or two while they\'re online.' : 'Offline. Their screen shows here while they\'re online.');
-        const note = !showing ? '' : !d.online ? 'Offline: this is their last screen.' : v && v.hidden ? 'In the background: they\'re in another tab or window. This is the last thing on their CMS tab.' : '';
+        const note = !showing ? '' : !d.online ? 'Offline: this is their last screen.' : v && v.hidden ? 'In the background: they\'re in another tab or window. This is the last thing on their CaseWorX tab.' : '';
         const badge = $id('lv-badge'); badge.textContent = note; badge.style.display = note ? 'block' : 'none';
         if (!W.chosen) lvShowPane(fallback ? 'summary' : 'screen');   // unless the Admin picked a tab
     }
@@ -746,10 +746,10 @@
 
     /* 👁 Monitoring from a link: ?watch=<the trainee's full name or username>&watchBatch=<their Batch ID>.
        LSH Ring Channel opens this beside the call on the trainer's console (signed in with the trainer's Portal
-       ticket) as soon as the trainee on a mock call opens the CMS. It opens Master Control → Monitoring, the
+       ticket) as soon as the trainee on a mock call opens CaseWorX. It opens Master Control → Monitoring, the
        Admin's list of who is online with 👁 Watch live on each, and opens Watch live on the trainee straight away
        once it finds them online: by username, by full name, or by every word of the name given (a middle name
-       or initial on the CMS account doesn't stop it), on their batch when there's one to choose from. Until then
+       or initial on the CaseWorX account doesn't stop it), on their batch when there's one to choose from. Until then
        Monitoring stays up (it looks again every few seconds, for 15 minutes), so the trainer can pick them from
        the list. Admins only: /api/heartbeat answers nobody else. The link's watch= is taken off the address, so
        a reload doesn't start it again. */
@@ -776,7 +776,7 @@
         const showMonitoring = () => {
             if (WATCH.shown) return;
             WATCH.shown = true;
-            try { if (typeof openAdminDashboard === 'function') openAdminDashboard(); if (typeof showAdminDashTab === 'function') showAdminDashTab('monitoring'); } catch (e) { /* the CMS as it is */ }
+            try { if (typeof openAdminDashboard === 'function') openAdminDashboard(); if (typeof showAdminDashTab === 'function') showAdminDashTab('monitoring'); } catch (e) { /* CaseWorX as it is */ }
         };
         const look = async () => {
             if (Date.now() > WATCH.until || W) return;   // given up, or a watch is open (this one or one the trainer chose)

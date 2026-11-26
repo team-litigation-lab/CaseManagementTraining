@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — INTAKE FOLDER
+   LSH CaseWorX — INTAKE FOLDER
    ---------------------------------------------------------
    A separate folder in the Case Repository for intake files
    (Case Library → 📥 Intake folder, or the sidebar button, or

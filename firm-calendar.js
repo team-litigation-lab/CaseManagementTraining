@@ -1,7 +1,7 @@
 /* =========================================================
-   LSH CMS — FIRM CALENDAR
+   LSH CaseWorX — FIRM CALENDAR
    ---------------------------------------------------------
-   The attorneys' calendars inside the CMS, the way a firm's case
+   The attorneys' calendars inside CaseWorX, the way a firm's case
    management system keeps them: one calendar per attorney
    (Atty. Reyes, Atty. Brooks, Atty. Okafor) plus the firm/staff
    calendar, each already holding that attorney's working schedule
@@ -277,7 +277,7 @@
     function payload(e) {
         const who = [e.calendar].concat(e.invite || []).map(c => cal(c).name).join(', ');
         const lines = [`${e.type} · ${who}`, e.caseLabel ? `Case: ${e.caseLabel}${e.caseRef ? ' (' + shownRef(e.caseRef) + ')' : ''}` : '', e.notes || '',
-            '— Scheduled in the LSH CMS Firm Calendar (training).'];
+            '— Scheduled in the LSH CaseWorX Firm Calendar (training).'];
         return { key: 'ev:' + e.id, title: e.title, allDay: !!e.allDay, start: e.allDay ? e.date : `${e.date}T${e.start}`, end: e.allDay ? e.date : `${e.date}T${e.end}`,
             tz: FIRM_TZ, location: e.location || '', description: lines.filter(Boolean).join('\n') };
     }
@@ -848,7 +848,7 @@
             : !f.allDay && (mins(f.start) < 8 * 60 || mins(f.end) > 18 * 60) ? '🕘 Outside business hours (8 AM – 6 PM Eastern).' : '';
         const extra = gLine + (hours ? `<div class="fcf-hours" style="margin-top:6px">${hours}</div>` : '');
         if (hits.length) { box.className = 'avail bad'; box.innerHTML = `⚠ <b>${esc(names)}</b> ${booked.length > 1 ? 'are' : 'is'} not free then.${list}${extra}`; }
-        else if (gHits.length) { box.className = 'avail bad'; box.innerHTML = `✓ Free on <b>${esc(names)}</b>'s CMS calendar${busy.length ? ':' + list : '.'}${extra}`; }
+        else if (gHits.length) { box.className = 'avail bad'; box.innerHTML = `✓ Free on <b>${esc(names)}</b>'s CaseWorX calendar${busy.length ? ':' + list : '.'}${extra}`; }
         else { box.className = 'avail ok'; box.innerHTML = `✓ <b>${esc(names)}</b> ${booked.length > 1 ? 'are' : 'is'} free${f.allDay ? ' that day' : ` ${fmtTime(f.start)}–${fmtTime(f.end)}`}.${busy.length ? ' Also on ' + esc(fmtDate(f.date)) + ':' + list : ' Nothing else booked that day.'}${googleReady() && !S.hidden.google ? ` Free on ${esc(gs().calendarName)} (Google) too.` : ''}${extra}`; }
     }
     function subscribeHtml() {
@@ -861,7 +861,7 @@
         const url = `${base}&cal=${every ? 'all' : pick.join(',')}`, webcal = url.replace(/^https?:/, 'webcal:');
         return `<div class="det">
             <div style="display:flex;justify-content:space-between;align-items:center"><h3>🔗 Sync to Google / Outlook</h3><button class="fc-btn" onclick="fcClose()">✕</button></div>
-            <div class="note" style="margin-top:6px">Subscribe in Google Calendar or Outlook and everything on the calendars you pick, including what you schedule here, appears there and keeps updating as you add, move or cancel events in the CMS. Google refreshes subscribed calendars every few hours, and Outlook about hourly. The CMS itself shows changes right away.<br><br>These links show <b>your</b> view: the attorneys' schedule, firm-wide events and the events you scheduled. Keep them private; <b>Reset links</b> turns off the old ones.</div>
+            <div class="note" style="margin-top:6px">Subscribe in Google Calendar or Outlook and everything on the calendars you pick, including what you schedule here, appears there and keeps updating as you add, move or cancel events in CaseWorX. Google refreshes subscribed calendars every few hours, and Outlook about hourly. CaseWorX itself shows changes right away.<br><br>These links show <b>your</b> view: the attorneys' schedule, firm-wide events and the events you scheduled. Keep them private; <b>Reset links</b> turns off the old ones.</div>
             <label class="fl">Calendars to sync</label>
             <div class="pills" data-fc="feed-pick">${cals().map(c => { const on = pick.includes(c.id);
                 return `<button type="button" class="pill ${on ? 'on' : ''}" style="${on ? 'background:' + c.color : ''}" onclick="fcFeedPick('${esc(c.id)}')">${on ? '✓ ' : ''}${esc(c.name.replace('Atty. ', ''))}</button>`; }).join('')}

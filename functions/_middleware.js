@@ -22,7 +22,7 @@ export async function onRequest(context) {
         }
         if (allowed && site === 'cross-site') allowed = false;
         if (!allowed) {
-            return new Response(JSON.stringify({ success: false, error: 'Blocked: this request did not come from the LSH Case Management System.' }), {
+            return new Response(JSON.stringify({ success: false, error: 'Blocked: this request did not come from LSH CaseWorX.' }), {
                 status: 403, headers: { 'Content-Type': 'application/json' }
             });
         }

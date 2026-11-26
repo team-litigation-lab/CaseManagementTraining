@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — LIVE CALL (voice for the Front Desk Drill)
+   LSH CaseWorX — LIVE CALL (voice for the Front Desk Drill)
    ---------------------------------------------------------
    A real-time phone call with a caller played by Gemini Live:
    the trainee talks into the microphone, the caller answers out

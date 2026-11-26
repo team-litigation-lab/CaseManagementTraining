@@ -1,5 +1,5 @@
 /* =========================================================
-           LSH CASE MANAGEMENT SYSTEM — CORE SCRIPT
+           LSH CASEWORX — CORE SCRIPT
            Consolidated, de-duplicated, and cleaned up.
            ========================================================= */
 
@@ -2308,7 +2308,7 @@
             clearSession();
             exitMasterControl();
             applySessionUI();
-            showToast('This browser has been signed in as someone else, so ' + (who || 'you') + ' is signed out of this tab. Open the CMS again from your course to carry on.', 'info');
+            showToast('This browser has been signed in as someone else, so ' + (who || 'you') + ' is signed out of this tab. Open CaseWorX again from your course to carry on.', 'info');
         }
 
         /* =========================================================
@@ -3028,7 +3028,7 @@
                 // Taken over and nobody signed in here since: the browser's cookie isn't this tab's to
                 // use, so the request never leaves. Signing in again (a ticket from their course) does.
                 if (_takenOver && !as && ourApi(url) && !SIGN_IN_API.test(new URL(url, location.href).pathname)) {
-                    return new Response(JSON.stringify({ success: false, code: 'SESSION_CHANGED', error: 'This browser is signed in as someone else now. Open the CMS again from your course to carry on.' }),
+                    return new Response(JSON.stringify({ success: false, code: 'SESSION_CHANGED', error: 'This browser is signed in as someone else now. Open CaseWorX again from your course to carry on.' }),
                         { status: 409, headers: { 'Content-Type': 'application/json' } });
                 }
                 let req = input, opts = init;

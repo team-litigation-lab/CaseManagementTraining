@@ -1,6 +1,6 @@
 # CaseManagementTraining
 
-LSH Case Management System (CMS), the practice CRM used by every LSH training program.
+LSH CaseWorX™ (shown as CASEWORX under the logo; formerly the LSH Case Management System, "CMS"), the practice CRM used by every LSH training program.
 
 ## 🔍 Case Library (search-first)
 

@@ -20,7 +20,7 @@ export async function onRequestPost({ request, env }) {
     let body;
     try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
     if (portalOnly(env)) {
-        return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Registration is on the LSH Training Portal now. Register there, then open the CMS from the Portal.' }, 403);
+        return json({ success: false, code: 'PORTAL_REQUIRED', error: 'Registration is on the LSH Training Portal now. Register there, then open CaseWorX from the Portal.' }, 403);
     }
     const rawName = String(body.fullName || '').trim();
     const rawBatch = String(body.batchId || '').trim();

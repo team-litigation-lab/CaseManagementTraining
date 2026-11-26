@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — THE CASE FITS THE WINDOW
+   LSH CaseWorX — THE CASE FITS THE WINDOW
    ---------------------------------------------------------
    The case editor is laid out for a wide window (the case itself needs
    about 1,030 px). When the browser window is narrower, or the Reception

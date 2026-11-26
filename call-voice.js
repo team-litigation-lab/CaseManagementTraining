@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — CALL VOICE (the standard voice of the Front Desk practice calls)
+   LSH CaseWorX — CALL VOICE (the standard voice of the Front Desk practice calls)
    ---------------------------------------------------------
    Used when a practice call isn't on live voice (live-call.js): live voice
    is off, not set up, busy, or this browser can't do it. Same handling as

@@ -1,24 +1,24 @@
 /* 🔗 The CMS and the course that framed it: which case is open, and filing a document into it.
 
-   A lesson in a training course (Case Management's ⧉ Side by side) frames the CMS beside the step, and the
+   A lesson in a training course (Case Management's ⧉ Side by side) frames CaseWorX beside the step, and the
    step used to ask the trainee to copy the Case ID out of the case header and type it into "Log Your Work".
-   The CMS is integrated with the course, so it says which case is open instead: the course fills the box in.
+   CaseWorX is integrated with the course, so it says which case is open instead: the course fills the box in.
 
-   How it works: the course posts {lsh:"cms-case?"} to this frame; the CMS answers that origin with
+   How it works: the course posts {lsh:"cms-case?"} to this frame; CaseWorX answers that origin with
    {lsh:"cms-case", caseId, client, phase, dol, at}, and tells it again whenever the open case changes (a case
-   saved and given its ID, another file opened, the editor reset). It is the case header the CMS already
+   saved and given its ID, another file opened, the editor reset). It is the case header CaseWorX already
    shows — #case-id-field, #client-name-field and the phase, watched for changes — so every way a case is opened
    (a new save, My cases, the Case Library, a Training Library file) is covered without hooking each one.
 
    Filing a document (the course's document-filing step): the course sends the document it is teaching with
-   the name the trainee wrote for it, and the CMS checks that name against the firm's convention
+   the name the trainee wrote for it, and CaseWorX checks that name against the firm's convention
    (caseFileName in app.js — the one source of truth) before anything is uploaded. A name that doesn't
    follow it is refused, with what is wrong with each part, and nothing is filed; a name that does is
    uploaded into the open case under the Doc Hub category the trainee chose, exactly as an upload in the
-   CMS would be, and the case is saved. The trainee types the name: the CMS never quietly corrects it.
+   CaseWorX would be, and the case is saved. The trainee types the name: CaseWorX never quietly corrects it.
 
-   Who may be on the other side: the course that frames the CMS beside a step, and also a page the CMS
-   itself opened — the Training Portal's Medical Records Requests simulator, launched from the CMS, files
+   Who may be on the other side: the course that frames CaseWorX beside a step, and also a page CaseWorX
+   itself opened — the Training Portal's Medical Records Requests simulator, launched from CaseWorX, files
    the records and the itemized bill it produces straight into the open case the same way. So an answer
    goes back to whoever asked (the asking window), not to window.parent by assumption, and the file works
    framed or not. Nothing else changes: an asker still has to be an allowed origin.
@@ -132,7 +132,7 @@
         if (!name) return ['The file needs a name, in the firm\'s convention: <Case ID>_<Last-First>_<Type>_<YYYY-MM-DD>.<ext>'];
         if (/[^A-Za-z0-9._-]/.test(name)) problems.push('Only letters, digits and - _ . may be used: no spaces, commas or brackets.');
         const expected = dropDupSuffix(typeof caseFileName === 'function' ? caseFileName(category, original) : '');
-        if (!expected) return ['The CMS cannot work out this file\'s name: open the case first.'];
+        if (!expected) return ['CaseWorX cannot work out this file\'s name: open the case first.'];
         const parts = (s) => { const dot = s.lastIndexOf('.'); const stem = dot > 0 ? s.slice(0, dot) : s; return { bits: stem.split('_'), ext: dot > 0 ? s.slice(dot + 1) : '' }; };
         const got = parts(dropDupSuffix(name)), want = parts(expected);
         const LABEL = ['the Case ID', 'the client (last name first)', 'the type (the Doc Hub category)', 'the date it was uploaded (YYYY-MM-DD)'];
@@ -151,9 +151,9 @@
 
     async function fileDocument(req) {
         const open = openCase();
-        if (!open.caseId) return { ok: false, error: 'No case with a Case ID is open in the CMS. Open the case (or save it, so it is given its ID) and file the document again.' };
+        if (!open.caseId) return { ok: false, error: 'No case with a Case ID is open in CaseWorX. Open the case (or save it, so it is given its ID) and file the document again.' };
         if (window.mockIsViewOnly && window.mockIsViewOnly()) return { ok: false, error: 'This is a Training Library file, which is view only. Open your own case and file the document there.' };
-        if (typeof addDocument !== 'function' || typeof handleDocUpload !== 'function') return { ok: false, error: 'The case editor is not open in the CMS.' };
+        if (typeof addDocument !== 'function' || typeof handleDocUpload !== 'function') return { ok: false, error: 'The case editor is not open in CaseWorX.' };
         const cats = categories();
         if (!cats.some(c => c.toLowerCase() === String(req.category || '').trim().toLowerCase()))
             return { ok: false, error: `"${req.category}" is not a Doc Hub category on this case. The categories are: ${cats.join(', ')}.`, categories: cats };

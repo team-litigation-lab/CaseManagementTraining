@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — THE CLIENT'S ID AND SSN IN THE CASE HEADER
+   LSH CaseWorX — THE CLIENT'S ID AND SSN IN THE CASE HEADER
    ---------------------------------------------------------
    Client's ID (#kx-client-id, in the middle of the case header):
      - A Training Library client (mock-cases.js) has a mock ID made from their

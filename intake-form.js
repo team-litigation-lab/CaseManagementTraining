@@ -1,5 +1,5 @@
 /* =========================================================
-   LSH CMS — NEW INTAKE
+   LSH CaseWorX — NEW INTAKE
    ---------------------------------------------------------
    📝 New Intake (the sidebar, and the Intake folder's 📝 New
    intake): the trainee picks the case type, and that type's intake
