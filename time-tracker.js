@@ -273,18 +273,19 @@
         /* the timer in the case header, under the search bars: the timer and the Billable / Non-billable dropdown, nothing else
            (the timesheet is on the Time tab) */
         #tt-widget{width:min(460px,100%);margin:6px 0 0 auto;display:flex;justify-content:flex-end}
-        #tt-widget .tt-w{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;border-radius:8px;padding:3px 4px 3px 8px;background:#f8fafc;color:#334155;font-size:11px;line-height:1.25}
+        #tt-widget .tt-w{display:inline-flex;align-items:center;gap:8px;border:2px solid #c9973f;border-radius:10px;padding:5px 6px 5px 10px;background:#fff;color:#1E2340;font-size:12.5px;line-height:1.25;box-shadow:0 4px 12px -6px rgba(30,35,64,.4)}
         #tt-widget .tt-w.run{border-color:#f97316;background:#fff7ed;box-shadow:0 0 0 1px rgba(249,115,22,.25)}
         #tt-widget .tt-w.paused{border-color:#eab308;background:#fefce8}
-        #tt-widget .tt-lbl{font-size:12px}
-        #tt-widget .tt-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;font-weight:800;color:#0f2148;min-width:66px}
-        #tt-widget button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+        #tt-widget .tt-lbl{font-size:16px}
+        #tt-widget .tt-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;font-weight:800;color:#0f2148;min-width:66px}
+        #tt-widget button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
         #tt-widget button:hover{border-color:#f97316;color:#c2410c}
-        #tt-widget button.go{background:#f97316;border-color:#f97316;color:#fff}
+        #tt-widget button.go{background:linear-gradient(180deg,#fb923c 0%,#ea580c 100%);border-color:#c2410c;color:#fff;box-shadow:0 2px 0 #9a3412}
         #tt-widget button.go:hover{background:#ea580c;color:#fff}
         #tt-widget .tt-dd{position:relative}
-        #tt-widget .tt-bill.yes{background:#ecfdf5;border-color:#10b981;color:#047857}
-        #tt-widget .tt-bill.no{background:#f1f5f9;border-color:#94a3b8;color:#475569}
+        #tt-widget .tt-bill.yes{background:#ecfdf5;border-color:#10b981;color:#047857;box-shadow:0 2px 0 #047857}
+        #tt-widget .tt-bill.no{background:linear-gradient(180deg,#1d3f86 0%,#1E2340 100%);border-color:#1E2340;color:#fff;box-shadow:0 2px 0 #0b1024}
+        #tt-widget .tt-bill.no:hover{color:#fde7b0;border-color:#c9973f}
         #tt-widget .tt-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:2985;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 24px rgba(15,33,72,.18);padding:4px;min-width:150px}
         #tt-widget .tt-menu.open{display:block}
         #tt-widget .tt-menu button{display:block;width:100%;text-align:left;border:none;background:none;text-transform:none;font-size:12px;font-weight:700;padding:7px 9px;border-radius:6px}
