@@ -373,7 +373,16 @@
         position: relative;
     }
     /* "CaseWorX" under the logo: light letters on a gray plate */
-    #sidebar-system-name { display:inline-block; font-size:12.5px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#f1f5f9; background:#4b5563; border:1px solid #6b7280; border-radius:6px; padding:6px 12px; line-height:1.2; white-space:nowrap; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+    /* "LSH CaseWorX™" under the logo, lettered like the tool banners on LSH Academy Index: a navy plate with a
+       thin gold edge, the name in capitals in a white-to-gold gradient (the text is the gradient: background-clip)
+       with a soft gold glow, and a gold ™. */
+    #sidebar-system-name { display:inline-flex; align-items:flex-start; gap:1px; padding:9px 16px 8px; border-radius:12px; line-height:1.15; white-space:nowrap;
+        background:linear-gradient(135deg, #081226 0%, #13285a 60%, #1d3f86 100%); border:1px solid rgba(253,186,116,.35);
+        box-shadow:0 8px 18px -10px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.08); }
+    #sidebar-system-name .ssn-tx { font-family:'IBM Plex Sans', Arial, Helvetica, sans-serif; font-size:17px; font-weight:900; letter-spacing:.09em; text-transform:uppercase;
+        background:linear-gradient(180deg, #ffffff 0%, #fde7b0 45%, #f5c451 75%, #e0a43a 100%); -webkit-background-clip:text; background-clip:text;
+        color:transparent; -webkit-text-fill-color:transparent; filter:drop-shadow(0 0 8px rgba(245,196,81,.30)) drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
+    #sidebar-system-name .tm { font-size:11px; font-weight:900; color:#f5c451; -webkit-text-fill-color:#f5c451; line-height:1; margin-left:2px; position:relative; top:-1px; }
     #sidebar-header {
         padding: 24px 26px 22px;
         border-bottom: 1px solid #0d1c3d;
@@ -868,12 +877,15 @@
 #profile-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }   /* as Tailwind's grid-cols-3 gap-8, without relying on it */
 #profile-grid > div:not(.pdf-card) { display: contents; }
 #profile-grid .pdf-card { margin-top: 0 !important; margin-bottom: 0 !important; }   /* the grid's gap spaces them (not the old columns' space-y) */
-#profile-grid > div:nth-child(1) > .pdf-card:nth-child(1) { grid-column: 1; grid-row: 1; }                     /* Identity */
-#profile-grid > .pdf-card { grid-column: 1; grid-row: 2; align-self: start; }                                 /* Case Narrative */
-#profile-grid > div:nth-child(2) > .pdf-card { grid-column: 2; grid-row: 1; align-self: start; }              /* Employment Details */
-#profile-grid > div:nth-child(1) > .pdf-card:nth-child(2) { grid-column: 3; grid-row: 1; }                     /* Emergency Contact */
-#profile-grid > div:nth-child(1) > .pdf-card:nth-child(3) { grid-column: 3; grid-row: 2; align-self: start; } /* Authorized to Access Case */
-#profile-grid #kx-injury { grid-column: 2; grid-row: 2; align-self: start; }                                    /* Primary Injury, beside the Case Narrative */
+/* The client first: Identity, then the Case Narrative and the Primary Injury beside it; Employment Details and the
+   Emergency Contact (with Authorized to Access Case) under them. Each card is as tall as its own content. */
+#profile-grid .pdf-card { align-self: start; }
+#profile-grid > div:nth-child(1) > .pdf-card:nth-child(1) { grid-column: 1; grid-row: 1; }   /* Identity */
+#profile-grid > .pdf-card { grid-column: 2; grid-row: 1; }                                     /* Case Narrative */
+#profile-grid #kx-injury { grid-column: 3; grid-row: 1; }                                       /* Primary Injury */
+#profile-grid > div:nth-child(2) > .pdf-card:not(#kx-injury) { grid-column: 1; grid-row: 2; }  /* Employment Details */
+#profile-grid > div:nth-child(1) > .pdf-card:nth-child(2) { grid-column: 2; grid-row: 2; }     /* Emergency Contact + Authorized to Access Case */
+#profile-grid .kx-auth-part { margin-top: 18px; padding-top: 16px; border-top: 1px dashed #cbd5e1; }
 
 /* Passenger Records (Profile) are retired: passengers go in Parties Involved. The block shows only for
    an older case that has passenger rows (they load into #passenger-container, which must stay for the
@@ -1222,3 +1234,30 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     .pdf-card, .section-head, .add-btn, .hub-btn, .cab-btn, .mini-btn, .case-tabs .tab-btn { box-shadow: none !important; }
     body:not(.bg-photo-active) #capture-area { background: #fff; }
 }
+
+/* ---------- the case header: blue-and-gold gridlines (the LSH Academy Index track cards' frame) ----------
+   The header card (the client, the ID, the case number, the Date of Loss bar and the tabs) is framed in the
+   same navy-to-gold gradient as the course cards on LSH Academy Index, and the parts inside it are ruled in
+   the same two colours: the Date of Loss bar gets a gold edge, the tab panel a navy-to-gold one, and the
+   Client's ID box a gold dashed line. Labels are bolder navy. Nothing inside it moves. */
+#capture-area .pdf-card.header-card {
+    border: 4px solid transparent !important; border-radius: 18px;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box;
+    box-shadow: 0 16px 30px -16px rgba(30,35,64,.45), 0 4px 10px -6px rgba(30,35,64,.2);
+}
+#capture-area .header-card .hdr-f > label, #capture-area .header-card .hdr-id > label, #capture-area .header-card .text-right label {
+    font-size: 12px !important; font-weight: 800; letter-spacing: .05em; color: #1E2340 !important;
+}
+#capture-area .header-card .hdr-f > label.text-green-600 { color: #15803d !important; }
+#capture-area .header-card #lsh-integrated-bar {
+    background: linear-gradient(135deg, #1E2340 0%, #16306a 60%, #1d3f86 100%) !important;
+    border: 2px solid #c9973f !important; border-left: 6px solid #DB8437 !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 18px -12px rgba(30,35,64,.6);
+}
+#capture-area .header-card #lsh-integrated-bar .bar-box { box-shadow: 0 0 0 1px rgba(201,151,63,.55); }
+#capture-area .header-card .case-tabs {
+    border: 2px solid transparent;
+    background: linear-gradient(#dfe6ef, #dfe6ef) padding-box, linear-gradient(90deg, #1E2340 0%, #2c3360 40%, #a8692f 80%, #DB8437 100%) border-box;
+}
+#capture-area .header-card .cid-card { border-color: #c9973f !important; }
+@media print { #capture-area .pdf-card.header-card { background: #fff; border: 2px solid #1E2340 !important; box-shadow: none; } }
