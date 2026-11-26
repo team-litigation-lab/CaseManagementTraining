@@ -1256,6 +1256,11 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 18px -12px rgba(30,35,64,.6);
 }
 #capture-area .header-card #lsh-integrated-bar .bar-box { box-shadow: 0 0 0 1px rgba(201,151,63,.55); }
+/* a shorter Date of Loss bar: less padding around and inside the boxes, and slimmer fields */
+#capture-area .header-card #lsh-integrated-bar { padding: 8px 18px !important; min-height: 0 !important; margin: 14px 0 !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box { height: auto !important; padding: 5px 12px 6px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box label { margin-bottom: 3px !important; }
+#capture-area .header-card #lsh-integrated-bar .bar-box > div { min-height: 0 !important; height: 28px !important; padding-top: 3px !important; padding-bottom: 3px !important; line-height: 20px !important; }
 #capture-area .header-card .case-tabs {
     border: 2px solid transparent;
     background: linear-gradient(#dfe6ef, #dfe6ef) padding-box, linear-gradient(90deg, #1E2340 0%, #2c3360 40%, #a8692f 80%, #DB8437 100%) border-box;
