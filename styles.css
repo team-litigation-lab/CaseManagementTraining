@@ -1279,6 +1279,34 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     background: linear-gradient(#dfe6ef, #dfe6ef) padding-box, linear-gradient(90deg, #1E2340 0%, #2c3360 40%, #a8692f 80%, #DB8437 100%) border-box;
 }
 #capture-area .header-card .cid-card { border-color: #c9973f !important; }
+/* ★ The client's details are the highlight of every case, so they sit in a framed panel of their own: a cream-to-white
+   card in a navy-to-gold frame, the client's name large and bold, each box a clean white field with a navy word in it.
+   The Client's ID gets the same frame and sits closer to the details (28px after them, not an inch). */
+#capture-area .header-card .hdr-client, #capture-area .header-card .hdr-id {
+    padding: 12px 14px 14px; border-radius: 14px; border: 2px solid transparent;
+    background: linear-gradient(160deg, #fffaf0 0%, #ffffff 55%, #f6f8fc 100%) padding-box,
+                linear-gradient(135deg, #1E2340 0%, #2c3360 35%, #a8692f 80%, #DB8437 100%) border-box;
+    box-shadow: 0 10px 22px -16px rgba(30,35,64,.55);
+}
+#capture-area .header-card .hdr-client { gap: 10px 14px; }
+#capture-area .header-card .hdr-id { margin-left: 28px; display: flex; flex-direction: column; gap: 8px; }
+#capture-area .header-card .hdr-f > [contenteditable="true"], #capture-area .header-card .hdr-input {
+    background: #fff !important; border: 1.5px solid #d3d9e6 !important; border-radius: 9px !important;
+    font-size: 14px !important; font-weight: 800 !important; color: #1E2340 !important; padding: 7px 11px !important; line-height: 20px !important;   /* one line height for every box (Target Settlement's bigger type too), so a row's boxes line up */
+    box-shadow: inset 0 1px 2px rgba(15,23,42,.05); transition: border-color .15s ease, box-shadow .15s ease;
+}
+#capture-area .header-card .hdr-f > [contenteditable="true"]:focus, #capture-area .header-card .hdr-input:focus {
+    outline: none; border-color: #DB8437 !important; box-shadow: 0 0 0 3px rgba(219,132,55,.18) !important;
+}
+#capture-area .header-card .hdr-name > #client-name-field {
+    font-size: 20px !important; font-weight: 900 !important; letter-spacing: .01em; min-height: 44px; line-height: 26px !important;
+    border-color: #c9973f !important; border-bottom-width: 3px !important;
+}
+#capture-area .header-card .hdr-client .target-settlement-display {
+    color: #166534 !important; background: #f0fdf4 !important; border-color: #86efac !important; font-size: 17px !important; font-weight: 900 !important;
+}
+/* the big case status (INTAKE, BI DEMANDED…): navy blue and heavier, beside the navy-to-orange picker */
+#capture-area .header-card #display-phase { color: #1d3f86 !important; font-weight: 900 !important; -webkit-text-stroke: .6px #1d3f86; letter-spacing: .01em; }
 /* the case phase picker (above the big phase name): a navy-to-orange key with white text, easy to spot */
 #capture-area .header-card #phase-selector {
     -webkit-appearance: none; appearance: none;
