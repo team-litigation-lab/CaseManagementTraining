@@ -673,7 +673,7 @@ A card lists the cases the contact is on: the client, the case number and what t
 
 **The strip at the top** (over the case, not the sidebar): the announcements, and at its right **📄 Download Case Summary**, **🏠 Main Portal** (back to the LSH Training Portal's Training Directory), and **📊 My Dashboard** (`#top-actions`; in a narrow window they show just their icons). It no longer says "LEGAL SUPPORT HELP TRAINING INTERFACE - … PORTAL".
 
-**The date and time** (with the time zone picker) are right above the case's Case ID, outside the case (`#case-clock-row`). They stay outside `#capture-area` on purpose: a case's dropdowns are saved by position, counted from the top of the page, so the picker keeps its place in front of the case's.
+**The date and time** (with the time zone picker) are in the strip at the top, right beside the announcement and before Download Case Summary (`#classification-bar .clock-widget`). They stay outside `#capture-area` on purpose: a case's dropdowns are saved by position, counted from the top of the page, so the picker keeps its place in front of the case's. In a narrower window the time zone picker is hidden first (from 1100px), then on a small phone (480px) the clock too, so the strip never overflows.
 
 **The timer** is in the case header, under the search bars: ⏱ **▶ Start timer** and a **Billable / Non-billable** dropdown (the timesheet is on the case's ⏱ Time tab; below).
 

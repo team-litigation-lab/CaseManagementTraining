@@ -404,9 +404,12 @@ const SAVED = [
             top: [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id),
             topInStrip: !!(document.getElementById('top-actions') && document.getElementById('top-actions').closest('#classification-bar')),
             topRight: (() => { const a = document.getElementById('dash-open-btn'); return a ? Math.round(innerWidth - a.getBoundingClientRect().right) : null; })(),
-            clockAbove: (() => { document.getElementById('capture-area').scrollTop = 0;
-                const c = r(document.querySelector('#case-clock-row .clock-widget')), id = r(document.getElementById('case-id-field')), card = r(document.querySelector('.header-card'));
-                return { aboveCard: c.bottom <= card.top + 1, rightEdge: Math.round(card.right - c.right), overId: c.left < id.right && c.right > id.left, inCase: !!document.getElementById('live-clock').closest('#capture-area') }; })(),
+            // the date and time: in the strip, right after the announcement and before the top-right buttons, outside the case
+            clockInStrip: (() => { const w = document.querySelector('#classification-bar .clock-widget'), bar = document.getElementById('classification-bar');
+                if (!w) return { found: false };
+                const c = r(w), b = r(bar), ann = r(document.getElementById('announcement-ticker')), top = r(document.getElementById('top-actions'));
+                return { found: true, inBar: c.top >= b.top - 1 && c.bottom <= b.bottom + 1, afterAnn: c.left >= ann.right - 1, beforeTop: c.right <= top.left + 1,
+                    inCase: !!document.getElementById('live-clock').closest('#capture-area'), tz: !!document.getElementById('tz-select').offsetParent, oldRow: !!document.getElementById('case-clock-row') }; })(),
             ttButtons: tt ? [...tt.querySelectorAll('button')].filter(b => b.offsetParent).map(b => b.dataset.tt || '').join() : '',
             ttText: tt ? tt.innerText.replace(/\s+/g, ' ').trim() : '',
             autosave: (document.getElementById('autosave-indicator') || {}).textContent };
@@ -414,15 +417,15 @@ const SAVED = [
     if (frame.top.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn' || !frame.topInStrip || frame.topRight > 40) fail(`Download Case Summary, Main Portal and My Dashboard should be at the top right (no Blueprint: it lives on the Main Portal): ${JSON.stringify(frame)}`);
     const home = await page.evaluate(() => { const a = document.getElementById('portal-home-btn'); return a && { href: a.getAttribute('href'), text: a.textContent.trim(), cls: a.className, next: a.nextElementSibling && a.nextElementSibling.id, h: Math.round(a.getBoundingClientRect().height), dh: Math.round(document.getElementById('dash-open-btn').getBoundingClientRect().height), top: Math.round(a.getBoundingClientRect().top - document.getElementById('dash-open-btn').getBoundingClientRect().top) }; });
     if (!home || home.href !== 'https://cm-training-activity.pages.dev/programs.html' || home.text !== '🏠 Main Portal' || home.cls !== 'cls-btn' || home.next !== 'dash-open-btn' || Math.abs(home.h - home.dh) > 2 || Math.abs(home.top) > 2) fail(`🏠 Main Portal should be beside My Dashboard, the same size, back to the Portal's Training Directory: ${JSON.stringify(home)}`);
-    if (!frame.clockAbove.aboveCard || Math.abs(frame.clockAbove.rightEdge) > 40 || !frame.clockAbove.overId || frame.clockAbove.inCase) fail(`the date and time should be right above the Case ID, outside the case: ${JSON.stringify(frame.clockAbove)}`);
+    { const k = frame.clockInStrip; if (!k.found || !k.inBar || !k.afterAnn || !k.beforeTop || k.inCase || !k.tz || k.oldRow) fail(`the date and time (with its time zone) should be in the strip beside the announcement, before the top-right buttons, outside the case: ${JSON.stringify(k)}`); }
     if (frame.ttButtons !== 'start,bill' || /timesheet|details/i.test(frame.ttText)) fail(`the header timer should be just Start timer and the Billable dropdown: ${frame.ttButtons} "${frame.ttText}"`);
     if (String(frame.autosave || '').trim()) fail(`the case actions bar still shows a standing note: "${frame.autosave}"`);
-    // in a narrow window the top-right buttons show just their icons and stay in view, and the date and time stay over the case
+    // in a narrow window the top-right buttons show just their icons and stay in view, and the date and time stay in the strip
     await page.setViewportSize({ width: 600, height: 800 }); await page.waitForTimeout(300);
-    const narrow = await page.evaluate(() => { const main = document.querySelector('#app-shell > main').getBoundingClientRect(), clock = document.querySelector('#case-clock-row .clock-widget').getBoundingClientRect();
+    const narrow = await page.evaluate(() => { const main = document.querySelector('#app-shell > main').getBoundingClientRect(), clock = document.querySelector('#classification-bar .clock-widget').getBoundingClientRect(), bar = document.getElementById('classification-bar');
         const btns = ['download-summary-btn', 'portal-home-btn', 'dash-open-btn'].map(id => document.getElementById(id).getBoundingClientRect());
-        return { inView: btns.every(b => b.left >= main.left && b.right <= innerWidth), labels: [...document.querySelectorAll('#top-actions .lbl')].filter(l => l.offsetParent).length, clock: clock.left >= main.left && clock.right <= main.right }; });
-    if (!narrow.inView || narrow.labels || !narrow.clock) fail(`a narrow window: the top-right buttons and the date and time should stay in view: ${JSON.stringify(narrow)}`);
+        return { inView: btns.every(b => b.left >= main.left && b.right <= innerWidth), labels: [...document.querySelectorAll('#top-actions .lbl')].filter(l => l.offsetParent).length, clock: clock.width > 0 && clock.left >= main.left && clock.right <= main.right, fits: bar.scrollWidth <= bar.clientWidth + 1 }; });
+    if (!narrow.inView || narrow.labels || !narrow.clock || !narrow.fits) fail(`a narrow window: the top-right buttons and the date and time should stay in view, in the strip: ${JSON.stringify(narrow)}`);
     await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(300);
     if (frame.sideTop !== 0 || frame.logoTop > 40 || frame.stripLeft < frame.sideRight - 1 || frame.stripTop !== 0 || frame.label || !frame.bannerUnderStrip) fail(`the sidebar and its logo should run to the top, the strip over the main area only with no portal label: ${JSON.stringify(frame)}`);
     if (!frame.ttInHeader || !frame.ttUnderBar || frame.ttInSidebar || !frame.ttStart) fail(`the timer should be in the case header, right under the search bars: ${JSON.stringify(frame)}`);
