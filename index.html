@@ -64,7 +64,7 @@
              🧭 Blueprint: the blueprints live on the Main Portal). It sits over the main area only,
              so the sidebar (and its logo) runs to the top of the page. -->
         <div id="classification-bar" class="no-print">
-            <div class="announcement-ticker" id="announcement-ticker">
+            <div class="announcement-ticker" id="announcement-ticker" hidden style="display:none" aria-hidden="true"><!-- no announcement in the CMS (it is set and shown from the Portal); the elements stay for app.js -->
                 <span class="announcement-tag" id="announcement-tag">ANNOUNCEMENT:</span>
                 <div class="ticker-viewport">
                     <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
@@ -88,7 +88,7 @@
             </div>
             <div id="top-actions" class="cls-actions">
                 <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cls-btn" title="Download Case Summary (PDF)">📄 <span class="lbl">Download Case Summary</span></button>
-                <a id="portal-home-btn" href="https://cm-training-activity.pages.dev/programs.html" class="cls-btn" title="Back to the LSH Training Portal (Training Directory)">🏠 <span class="lbl">Main Portal</span></a>
+                <a id="portal-home-btn" href="https://cm-training-activity.pages.dev/programs.html" class="cls-btn" title="LSH Academy Index: every program and tool">🎓 <span class="lbl">Academy Index</span></a>
                 <button id="dash-open-btn" type="button" onclick="openTraineeDashboard()" class="cls-btn" title="My Dashboard">📊 <span class="lbl">My Dashboard</span></button>
             </div>
         </div>
@@ -1091,6 +1091,7 @@
     <script src="blueprint-content.js"></script>
     <script src="lsh-blueprint.js"></script>
     <script src="guest-access.js"></script>
+    <script src="module-back.js"></script>
     <!-- live view: Admins watch a trainee's screen as they work (Master Control → Monitoring → 👁 Watch live) -->
     <script src="live-view.js"></script>
     <!-- a new version of the site: open pages load it at a quiet moment -->
