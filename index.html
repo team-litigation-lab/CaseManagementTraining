@@ -704,7 +704,7 @@
         <!-- The open case's actions, always at the bottom of the screen (app.js). Outside #capture-area, so it's
              never part of a saved case or a case preview. Buttons only: nothing here is saved by position. -->
         <div id="case-actions-bar" class="no-print" role="toolbar" aria-label="Case actions">
-            <button id="cab-close" type="button" class="cab-btn" onclick="closeCase()">✕ Close</button>
+            <!-- (no ✕ Close key here: the ✕ at the case's top right corner closes it) -->
             <button id="cab-archive" type="button" class="cab-btn cab-archive" onclick="archiveCaseAsDraft()" title="Save as a draft, with no Case ID yet">🗄 Archive</button>
             <button id="cab-discard" type="button" class="cab-btn cab-discard" onclick="discardCase()">🗑 Discard Case</button>
             <span id="autosave-indicator" class="cab-note" aria-live="polite"></span>

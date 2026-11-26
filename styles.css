@@ -101,7 +101,7 @@
         background-size: 24px 24px;
     }
     /* the case sits close under the top strip (half of p-8's 32px); 16px still clears the ✕, which pokes 13px above the card */
-    #capture-area { padding-top: 16px; }
+    #capture-area { padding-top: 22px; }   /* (room for the case's ✕, which sits 16px above the card) */
     #capture-area::before {
         content: "CONFIDENTIAL — LSH INTERNAL RECORD";
         position: fixed;
@@ -691,6 +691,9 @@
     .header-card { position:relative; }
     .case-close-x { position:absolute; top:-13px; right:-13px; width:28px; height:28px; border-radius:50%; border:2px solid #f97316; background:#fff; color:#0f2148; font-size:13px; font-weight:900; line-height:1; cursor:pointer; box-shadow:0 2px 6px rgba(15,33,72,.25); z-index:2; }
     .case-close-x:hover { background:#f97316; color:#fff; }
+    /* the case's ✕: the one way to close it, so it stands out: bigger, navy with a gold ring, a glow */
+    .case-close-x { width:40px !important; height:40px !important; top:-16px !important; right:-10px !important; font-size:19px !important; background:linear-gradient(135deg,#1E2340,#1d3f86) !important; color:#fff !important; border:3px solid #c9973f !important; box-shadow:0 0 0 3px rgba(249,115,22,.25), 0 6px 16px -4px rgba(15,33,72,.6); z-index:5; }
+    .case-close-x:hover { background:#dc2626 !important; border-color:#fecaca !important; transform:scale(1.06); }
     #capture-area.mock-ro .pdf-card > .case-close-x { display:block !important; }   /* a view-only library case hides the card's buttons, not this one */
     /* the case workspace: the case scrolls, and its action bar stays at the bottom of the screen
        (the same as main's Tailwind classes, so it holds even when the Tailwind CDN doesn't load) */
