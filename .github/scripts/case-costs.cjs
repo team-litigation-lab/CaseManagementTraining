@@ -80,7 +80,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR
         const field = (box, k) => document.querySelector(`#${box} [data-s="${k}"]`);
         document.querySelector('.target-settlement-display').innerText = '$ 50,000.00';
         cost('$ 300.00'); cost('$ 200.00'); updateTotals(); await wait();
-        const out = { allOnBi: [field('kx-settlement', 'costs').innerText, field('kx-settlement-um', 'costs').innerText], target: document.getElementById('target-net').innerText };
+        const out = { allOnBi: [field('kx-settlement', 'costs').innerText, field('kx-settlement-um', 'costs').innerText], target: (document.getElementById('target-net') || {}).innerText || '', after: /After case costs/.test(document.querySelector('.header-card').innerText) };
         field('kx-settlement', 'gross').innerText = '$ 30,000.00'; field('kx-settlement-um', 'gross').innerText = '$ 10,000.00'; calcSettlement(); await wait();
         out.shared = [field('kx-settlement', 'costs').innerText, field('kx-settlement-um', 'costs').innerText];
         out.auto = !!field('kx-settlement', 'costs').dataset.auto;
@@ -92,11 +92,24 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR
         return out;
     });
     if (JSON.stringify(costs.allOnBi) !== JSON.stringify(['$ 500.00', '$ 0.00'])) fail(`with no gross yet, the case costs should all sit on BI: ${JSON.stringify(costs.allOnBi)}`);
-    if (!/After case costs \(\$ 500\.00\): \$ 49,500\.00/.test(costs.target)) fail(`the Target Settlement doesn't show what's left after the case costs: "${costs.target}"`);
+    if (costs.target || costs.after) fail(`the Target Settlement still shows an "After case costs" line: "${costs.target}"`);
     if (JSON.stringify(costs.shared) !== JSON.stringify(['$ 375.00', '$ 125.00']) || !costs.auto) fail(`the case costs weren't shared by gross (30,000 / 10,000): ${JSON.stringify(costs)}`);
     if (!/Case costs \(shared\)\s*−\s*\$ 375\.00/i.test(costs.biCalc) || !/BI net to client\s*\$ 19,625\.00/i.test(costs.biCalc)) fail(`BI's net doesn't take its share of the costs: ${costs.biCalc}`);
     if (!/Case costs\s*−\s*\$ 500\.00/i.test(costs.total) || !/taken off once/.test(costs.total)) fail(`the total doesn't take the case costs once: ${costs.total}`);
     if (costs.cents !== 50001) fail(`the shares don't add up to the case costs ($ 500.01): ${costs.cents} cents`);
+    // ✓ settled: the header's Target Settlement becomes "Settled" with the settled gross; back to the target if it's undone
+    const settled = await page.evaluate(async () => {
+        const wait = (ms = 300) => new Promise(r => setTimeout(r, ms));
+        const t = document.querySelector('.header-card .target-settlement-display'), label = () => t.closest('.hdr-f').querySelector('label').textContent.trim();
+        const g = (box) => document.querySelector(`#${box} [data-s="gross"]`), st = document.querySelector('#kx-settlement select[data-k="settlement-status"]');
+        t.innerText = '$ 50,000.00'; g('kx-settlement').innerText = '$ 30,000.00'; g('kx-settlement-um').innerText = '$ 10,000.00';
+        st.value = 'Release signed'; calcSettlement(); await wait();
+        const on = { label: label(), value: t.innerText.trim(), title: t.title };
+        st.value = 'Negotiating'; calcSettlement(); await wait();
+        const off = { label: label(), value: t.innerText.trim() };
+        return { on, off };
+    });
+    if (!/Settled/.test(settled.on.label) || settled.on.value !== '$ 40,000.00' || !/target was \$ 50,000\.00/.test(settled.on.title) || settled.off.label !== 'Target Settlement:' || settled.off.value !== '$ 50,000.00') fail(`a settled case doesn't show Settled with the settled amount (or doesn't go back): ${JSON.stringify(settled)}`);
     await page.evaluate(() => showTab('settlement'));
     await page.click('#kx-settlement [data-s="costs"]'); await page.keyboard.type('999');
     const typed = await page.evaluate(() => document.querySelector('#kx-settlement [data-s="costs"]').innerText);
@@ -105,7 +118,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR
         const wait = (ms = 450) => new Promise(r => setTimeout(r, ms));
         document.getElementById('fin-body').innerHTML = ''; updateTotals(); calcSettlement(); await wait();
         const f = document.querySelector('#kx-settlement [data-s="costs"]');
-        const cleared = { text: f.innerText, auto: !!f.dataset.auto, target: document.getElementById('target-net').innerText };
+        const cleared = { text: f.innerText, auto: !!f.dataset.auto, target: (document.getElementById('target-net') || {}).innerText || '' };
         // a case whose costs were typed (no case costs), opened after one with case costs
         f.innerText = '$ 250.00';
         const content = buildCaseContentPayload();

@@ -1287,6 +1287,37 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 .cab-save   { background: linear-gradient(180deg, #22c55e 0%, #059669 100%); border-color: #047857; }
 .cab-update { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); border-color: #1e3a8a; }
 #case-actions-bar { background: #f8fafc; border-top: 3px solid var(--navy); }
+/* ⬇ one row at the bottom of the screen, so the case gets the top: the case's own keys on the left (📄 Case Summary,
+   🗄 Archive, 🗑 Discard, 💾 Save) and, on the right in its own navy block, the date and time and the way out (🎓 Academy
+   Index, 📊 My Dashboard). The strip stays first in the page (the case's dropdowns are counted from the top, so the
+   clock's time zone keeps its place); only the layout shows it at the bottom. */
+#app-shell > main { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+#app-shell > main > #mock-banner, #app-shell > main > #intake-bar { grid-column: 1 / -1; }
+#app-shell > main > #mock-banner { grid-row: 1; } #app-shell > main > #intake-bar { grid-row: 2; }
+#app-shell > main > #capture-area { grid-column: 1 / -1; grid-row: 3; }
+#app-shell > main > #case-actions-bar { grid-column: 1; grid-row: 4; padding-left: 14px !important; padding-right: 14px !important; min-height: 56px; }
+#app-shell > main > #classification-bar { grid-column: 2; grid-row: 4; height: auto !important; min-height: 56px; align-self: stretch;
+    border-bottom: 0 !important; border-top: 3px solid #c9973f; border-left: 3px solid #c9973f; gap: 12px !important; padding: 8px 14px !important; }
+#app-shell > main > #classification-bar .cls-actions { margin-left: 0 !important; }
+.cab-btn.cab-summary { background: linear-gradient(135deg, #1E2340 0%, #1d3f86 100%); border-color: #c9973f; color: #fde68a; }
+.cab-btn.cab-summary:hover { filter: brightness(1.15); }
+#case-actions-bar .cab-summary { margin-right: 6px; }
+/* the © line the shared footer script puts in the bar: one small line that gives way to the keys */
+#case-actions-bar .cab-copy { flex: 1 1 0; min-width: 0; font-size: 10.5px !important; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; opacity: .75; }
+#case-actions-bar { flex-wrap: nowrap !important; }
+#case-actions-bar .cab-note:empty { display: none; }
+@media (max-width: 760px) {
+    #case-actions-bar { flex-wrap: wrap !important; }
+    #case-actions-bar .cab-copy { order: 10; flex-basis: 100%; }
+    /* a phone: the Client's ID, the ⚠ Critical note and 🔗 Connected cases one under another, the full width */
+    #capture-area .header-card .hdr-idrow { flex-direction: column !important; align-items: stretch; }
+    #capture-area .header-card .hdr-idrow > * { width: 100% !important; max-width: none !important; flex: none !important; margin-left: 0; }
+}
+@media (max-width: 900px) {
+    #app-shell > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
+    #app-shell > main > #case-actions-bar { grid-row: 4; }
+    #app-shell > main > #classification-bar { grid-column: 1; grid-row: 5; border-left: 0; justify-content: space-between; }
+}
 .mini-btn { font-size: 11px; font-weight: 900; padding: 7px 13px; border-radius: 7px; border-bottom: 2px solid rgba(0,0,0,.22); }
 .cls-btn { font-size: 11.5px; padding: 6px 11px; border-radius: 7px; background: linear-gradient(180deg, #1a3366 0%, #13284f 100%); border-bottom: 2px solid #020617; }
 .btn-primary { background: linear-gradient(180deg, #1a3878 0%, var(--navy) 100%); border-bottom: 2px solid var(--navy-deep); }

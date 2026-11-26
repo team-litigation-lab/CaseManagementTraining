@@ -70,7 +70,7 @@
                     <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
                 </div>
             </div>
-            <!-- the date and time, beside the announcement (outside #capture-area on purpose: the time zone picker
+            <!-- the date and time, in the bottom row beside the way out (outside #capture-area on purpose: the time zone picker
                  isn't part of a case; a case's dropdowns are saved by position, counted from the top of the page) -->
             <div class="clock-widget">
                 <span id="live-clock">--:--:--</span>
@@ -87,7 +87,6 @@
                 </select>
             </div>
             <div id="top-actions" class="cls-actions">
-                <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cls-btn" title="Download Case Summary (PDF)">📄 <span class="lbl">Download Case Summary</span></button>
                 <a id="portal-home-btn" href="https://cm-training-activity.pages.dev/programs.html" class="cls-btn" title="LSH Academy Index: every program and tool">🎓 <span class="lbl">Academy Index</span></a>
                 <button id="dash-open-btn" type="button" onclick="openTraineeDashboard()" class="cls-btn" title="My Dashboard">📊 <span class="lbl">My Dashboard</span></button>
             </div>
@@ -112,7 +111,7 @@
                         <div id="attorney-cm-container" class="hdr-people">
                             <div class="hdr-f"><label class="contact-label" for="attorney-field">Attorney:</label><input type="text" id="attorney-field" placeholder="Attorney name" class="hdr-input"></div>
                             <div class="hdr-f"><label class="contact-label" for="case-manager-field">Case Manager:</label><input type="text" id="case-manager-field" placeholder="Case manager name" class="hdr-input"></div>
-                            <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div><div id="target-net" class="target-net no-print" aria-live="polite"></div></div>
+                            <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div></div>
                         </div>
                     </div>
                     <!-- The client's ID (client-id.js): a mock ID for a Training Library client; for any other client, a photo of
@@ -729,6 +728,9 @@
              never part of a saved case or a case preview. Buttons only: nothing here is saved by position. -->
         <div id="case-actions-bar" class="no-print" role="toolbar" aria-label="Case actions">
             <!-- (no ✕ Close key here: the ✕ at the case's top right corner closes it) -->
+            <!-- the case's own keys on the left (its summary, archive, discard, save); the clock and the way out on the right (#classification-bar,
+                 shown in this bottom row by the layout: it stays first in the page, as the case's dropdowns are counted from the top) -->
+            <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cab-btn cab-summary" title="Download Case Summary (PDF)">📄 <span class="lbl">Case Summary</span></button>
             <button id="cab-archive" type="button" class="cab-btn cab-archive" onclick="archiveCaseAsDraft()" title="Save as a draft, with no Case ID yet">🗄 Archive</button>
             <button id="cab-discard" type="button" class="cab-btn cab-discard" onclick="discardCase()">🗑 Discard Case</button>
             <span id="autosave-indicator" class="cab-note" aria-live="polite"></span>

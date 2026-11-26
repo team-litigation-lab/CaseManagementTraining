@@ -308,18 +308,44 @@
         });
         return total;
     }
-    function paintTargetNet(costs) {
-        const out = $id('target-net'), t = document.querySelector('.target-settlement-display'); if (!out) return;
-        const target = money(t);
-        const html = target && costs ? `After case costs (${fmt$(costs)}): <b>${fmt$(target - costs)}</b>` : '';
-        if (out.innerHTML !== html) out.innerHTML = html;
+    /* ✓ The header's Target Settlement becomes "Settled" once the case is: a settlement whose status is Accepted,
+       Release signed, Check received or Disbursed, or a settled case status (BI / UM or UIM / Litigation Settled,
+       Disbursement, Closed). Its box then shows the settled gross (all settlements added up); the target is kept on
+       the box (title, data-target) and comes back if the case is no longer settled. It's part of the case, so the
+       saved file shows Settled when it's closed and opened again. (The "After case costs" line is gone.) */
+    const SETTLED_STATUS = /^(Accepted|Release signed|Check received|Disbursed)$/;
+    const SETTLED_PHASE = /^(BI Settled|UM or UIM Settled|Litigation Settled|Disbursement|Closed)$/i;
+    function paintSettled(list) {
+        const t = document.querySelector('.header-card .target-settlement-display'); if (!t) return;
+        const field = t.closest('.hdr-f'), label = field && field.querySelector('label');
+        const phase = ((document.getElementById('phase-selector') || {}).value || '').trim();
+        const settledBoxes = list.filter(({ box }) => { const st = box.querySelector('select[data-k="settlement-status"]') || [...box.querySelectorAll('select')].find(x => /settled|Accepted|Release|Check|Disbursed/.test([...x.options].map(o => o.text).join('|'))); return st && SETTLED_STATUS.test(st.value); });
+        const settled = settledBoxes.length > 0 || SETTLED_PHASE.test(phase);
+        const gross = list.reduce((sum, { box }) => sum + money(box.querySelector('[data-s="gross"]')), 0);
+        if (settled) {
+            if (!t.dataset.settled) { t.dataset.target = t.innerText.trim(); t.dataset.settled = '1'; }
+            if (gross > 0 && t.innerText.trim() !== fmt$(gross)) t.innerText = fmt$(gross);
+            t.title = 'Settled' + (t.dataset.target ? ' · target was ' + t.dataset.target : '');
+            if (label && !/Settled/.test(label.textContent)) label.textContent = '✓ Settled:';
+            if (field) field.classList.add('is-settled');
+        } else if (t.dataset.settled) {
+            if (t.dataset.target != null) t.innerText = t.dataset.target;
+            delete t.dataset.settled; delete t.dataset.target; t.title = '';
+            if (label) label.textContent = 'Target Settlement:';
+            if (field) field.classList.remove('is-settled');
+        } else if (label && /Settled/.test(label.textContent)) {   // a case saved while settled, opened after it was reopened
+            label.textContent = 'Target Settlement:'; if (field) field.classList.remove('is-settled');
+        }
     }
+    window.paintSettled = () => paintSettled(settlements());
+    document.addEventListener('change', (e) => { if (e.target && e.target.id === 'phase-selector') paintSettled(settlements()); });
+
     window.calcSettlement = function () {
         const sums = { gross: 0, fee: 0, costs: 0, liens: 0, net: 0, n: 0 };
         const unconfirmed = typeof window.lienOpenCount === 'function' ? window.lienOpenCount() : 0;
         const lienWarn = unconfirmed ? `<div class="kx-warn">${unconfirmed} lien${unconfirmed === 1 ? ' on the Liens tab is' : 's on the Liens tab are'} still unconfirmed: the liens figure here may be wrong until the lien letter${unconfirmed === 1 ? '' : 's'} and final amount${unconfirmed === 1 ? '' : 's'} are in.</div>` : '';
         const list = settlements(), costs = shareCosts(list);
-        paintTargetNet(costs);
+        paintSettled(list);
         const extras = [];
         list.forEach(({ box, out, label, extra }) => {
             const x = settlementMath(box);
