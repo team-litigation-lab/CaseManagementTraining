@@ -135,7 +135,7 @@ const failures = []; const fail = (m) => failures.push(m);
         const narr = document.getElementById('case-narrative-field').closest('.pdf-card');
         return { narr: r(narr), inj: r(document.getElementById('kx-injury')), emp: r([...document.querySelectorAll('#pane-profile .pdf-card')].find(c => /Employment Details/.test(c.textContent))) };
     });
-    if (!(box.inj.x > box.narr.x + box.narr.w - 5 && Math.abs(box.inj.y - box.narr.y) < 6 && Math.abs(box.inj.x - box.emp.x) < 3)) fail(`the Primary Injury card isn't beside the Case Narrative, under Employment Details: ${JSON.stringify(box)}`);
+    if (!(box.inj.x > box.narr.x + box.narr.w - 5 && Math.abs(box.inj.y - box.narr.y) < 6 && box.emp.y > box.narr.y)) fail(`the Primary Injury card isn't beside the Case Narrative, with Employment Details under them (Profile: Identity | Case Narrative | Primary Injury across the tops: ${JSON.stringify(box)}`);
     await page.click('#kx-injury [data-k="primary"]'); await page.keyboard.type('Left knee meniscus tear');
     await page.click('#kx-injury [data-k="parts"]'); await page.keyboard.type('Left knee');
     await page.selectOption('#kx-injury [data-k="type"]', 'Joint / ligament / tendon tear');
@@ -245,6 +245,8 @@ const failures = []; const fail = (m) => failures.push(m);
     await page.click('#pane-medical button:has-text("Sort by Date")');
     if ((await order()) !== '01/05/2026,02/20/2026,03/10/2026') fail(`Sort by Date gave ${await order()}`);
     const rows = page.locator('#chrono-container > tr');
+    // (the rows are dragged by mouse position, so all three must be on the screen, not under the case's action bar)
+    await rows.nth(0).evaluate(r => r.scrollIntoView({ block: 'center' })); await page.waitForTimeout(100);
     const b3 = await rows.nth(2).locator('td').first().boundingBox(), b1 = await rows.nth(0).boundingBox();
     await page.mouse.move(b3.x + 8, b3.y + 14); await page.mouse.down();
     await page.mouse.move(b1.x + 8, b1.y + 4, { steps: 8 }); await page.mouse.up();

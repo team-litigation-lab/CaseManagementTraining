@@ -59,6 +59,10 @@
         box.classList.add('editing'); paintCritical();
         t.focus();
     }
+    // ⚠ Add critical note: one click listener on the page, found by the button's id. The button sits in a saved block
+    // (#kx-client-id, data-keyed), and saved case HTML keeps no handler the app didn't write (cleanCaseHtml), so an
+    // onclick on it would be dropped on the next load; a delegated listener survives the block being redrawn.
+    document.addEventListener('click', (e) => { if (e.target && e.target.closest && e.target.closest('#crit-add')) addCritical(); });
     function initCritical() {
         const box = critBox(), t = critText(); if (!box || !t) return;
         t.addEventListener('focus', () => { box.classList.add('editing'); paintCritical(); });

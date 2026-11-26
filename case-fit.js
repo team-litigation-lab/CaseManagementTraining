@@ -29,7 +29,7 @@
     css.textContent = `
     #capture-area{padding-right:2rem}
     body.case-fit #capture-area{zoom:var(--case-zoom,1)}
-    @media (max-width:1100px){#sidebar{width:220px}#sidebar-system-name{letter-spacing:.5px;font-size:11px}}
+    @media (max-width:1100px){#sidebar{width:220px}#sidebar-system-name{padding:8px 12px}#sidebar-system-name .ssn-tx{letter-spacing:.05em;font-size:14.5px}}
     @media (min-width:1100px){body.fdd-open #app-shell > main{margin-right:calc(min(500px,100vw) / var(--main-scale,1))}body.fdd-open.fdd-nosb #sidebar{display:none}}
     `;
     document.head.appendChild(css);
