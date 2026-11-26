@@ -138,7 +138,7 @@ const SAVED = [
         return { inHeader: !!(b && b.closest('.header-card')), below: !!(b && ph) && b.getBoundingClientRect().top >= ph.getBoundingClientRect().bottom - 1, free: !!(b && b.hasAttribute('data-free-edit')) }; });
     if (!bar.inHeader || !bar.below || !bar.free) fail(`the search bar is not in the case header under the case status: ${JSON.stringify(bar)}`);
     // the Profile tab: Identity | Case Narrative | Primary Injury across the top, Employment Details and Emergency Contact under
-    // Identity and the Case Narrative, with Authorized to Access Case inside the Emergency Contact card (placed by CSS; the page
+    // Identity and the Case Narrative, with Authorized Representative inside the Emergency Contact card (placed by CSS; the page
     // order, which the positional save relies on, is unchanged: the Authorized list is a keyed list, saved by id)
     await page.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('profile'); }); await page.waitForTimeout(200);
     const prof = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#profile-grid .pdf-card')].map(c => { const r = c.getBoundingClientRect(); return [c.querySelector('.section-head').textContent.trim(), { x: Math.round(r.x), y: Math.round(r.y), b: Math.round(r.bottom) }]; })));
