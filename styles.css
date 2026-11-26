@@ -85,6 +85,8 @@
         background-image: radial-gradient(circle, rgba(15,33,72,0.06) 1px, transparent 1px);
         background-size: 24px 24px;
     }
+    /* the case sits close under the top strip (half of p-8's 32px); 16px still clears the ✕, which pokes 13px above the card */
+    #capture-area { padding-top: 16px; }
     #capture-area::before {
         content: "CONFIDENTIAL — LSH INTERNAL RECORD";
         position: fixed;
