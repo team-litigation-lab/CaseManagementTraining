@@ -32,6 +32,10 @@
    adjusters (bi, pipum), opposing counsel (counsel), clients, and others (emergency contacts, the parties
    at fault, lien holders, health plans, police agencies, employers).
 
+   `connected` (optional) ties files of one accident with more than one client together: { group, role } (the
+   group's name, and this client's part in it: Driver, Passenger, Vehicle owner, Minor child…). Every other file
+   with the same group shows on the case header's 🔗 Connected cases card (connected-cases.js), both ways.
+
    `critical` (optional) is the ⚠ Critical note under the case header (case-alerts.js): what everyone must
    see before talking about the case (500 characters at most). `adr` (optional) fills the ADR tab: each
    mediation or arbitration's type, setBy, status, attend, neutral, provider, date, time, where, brief, prep,
@@ -2732,6 +2736,262 @@ const MOCK_CASES = [
             { from: 'Riverton Towing', ask: '"The blue Civic from Birch Ave is still on our lot and storage is running. Who is paying?"', handle: 'Urgent: storage runs daily and this is already a task on the file. Do not promise payment. Take the lot location, the daily rate and the running total, and route it to Priya Natarajan (ext 311) now. Log a Note.' },
             { from: '"A neighbour on Birch Ave"', ask: '"I saw the whole thing. Is John suing? How much is he getting?"', handle: 'Not authorized: only the client is on file. Do not confirm the firm represents him. A witness is worth having, though: take the caller\'s name and number as a possible witness and pass it to the case manager. Share nothing.' }
         ]
+    }
+},
+/* ---------- 🔗 CONNECTED CASES: one accident, more than one client of the firm (connected-cases.js) ----------
+   Each file names its group and the client's part in it (`connected: { group, role }`); every other file in the
+   same group shows on the case header's 🔗 Connected cases card, and each opens from there (both ways). */
+// ① Driver and passenger of the same car: the Brooks household (joint representation, conflict waiver signed)
+{
+    id: 'MC-54', caseNumber: 'LSH-2026-MVA-902584', level: 'Intermediate', programs: ['reception', 'intake', 'cm', 'md'],
+    connected: { group: 'Brooks · I-75 tractor-trailer · 04/18/2026', role: 'Driver' },
+    summary: 'Driver of a sedan rear-ended by a tractor-trailer on I-75; his wife was the front passenger and is a client on her own file.',
+    client: { name: 'Darnell Brooks', phone: '(555) 010-5410', email: 'darnell.brooks@example.com', dob: '01/22/1984', ssn: 'XXX-XX-4471',
+        address: '1418 Laurel Ridge Dr, Riverton, GA 30305',
+        emergency: { name: 'Keisha Brooks', phone: '(555) 010-5411', relationship: 'Wife (also a client: MC-55)' },
+        employment: { status: 'Employed', employer: 'Riverton Water Authority', title: 'Field Technician' } },
+    caseType: 'MVA', phase: 'Treating', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
+    dateOfLoss: '04/18/2026', sol: '04/18/2028', target: '$ 120,000.00',
+    critical: 'Joint representation: Darnell (driver) and his wife Keisha (passenger, MC-55) are both clients. Conflict waiver signed by both 04/24/2026. Never discuss one spouse\'s file, medical or offers with the other without that client\'s OK.',
+    narrative: 'Client was driving his 2020 Toyota Camry northbound on I-75 in slow traffic when a Hollis Freight tractor-trailer (driver Wade Kessler) failed to stop and struck the Camry from behind. His wife Keisha was the front-seat passenger. Trooper cited the truck driver for following too closely. Client had neck and low-back pain and a left-shoulder injury from the seat belt.',
+    injury: { primary: 'Cervical and lumbar strain; left-shoulder labral tear', parts: 'Neck, low back, left shoulder', type: 'Joint / ligament / tendon tear', surgery: 'Recommended', details: 'MRI 05/20/2026 showed a SLAP tear of the left shoulder; orthopedic surgeon recommends arthroscopic repair.' },
+    police: { agency: 'Georgia State Patrol', number: 'GSP-26-044172', officer: 'Trooper Alan Price #2290', narrative: 'Unit 2 (tractor-trailer, Hollis Freight) failed to reduce speed and struck Unit 1 (Camry) in the rear. Unit 2 driver cited O.C.G.A. 40-6-49 following too closely. Unit 1 driver and front passenger complained of pain; transported by Riverton EMS.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-55410022', group: 'RWA-1100' },
+    bi: [{ holder: 'Hollis Freight LLC (driver Wade Kessler)', carrier: 'Continental Haulers Mutual', policy: 'CHM-TRK-7720154', claim: 'CHM-26-31877', adjuster: 'Brenda Okafor', contact: '(555) 010-7811 · bokafor@chm.example.com', liability: 'Yes', limits: '$1,000,000' }],
+    pipum: [],
+    liens: [{ type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-26-5410', amount: '$ 4,212.00', status: 'Unconfirmed' }],
+    facilities: [
+        { name: 'Riverton EMS', specialty: 'EMS', phone: '(555) 010-3010', email: 'billing@rivertonems.example.com', dates: '04/18/2026 – 04/18/2026', status: 'Discharged', charges: '$ 1,150.00' },
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '04/18/2026 – 04/18/2026', status: 'Discharged', charges: '$ 6,340.00' },
+        { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3300', email: 'records@rivertonortho.example.com', dates: '05/06/2026 – present', status: 'Treating', charges: '$ 3,880.00' }
+    ],
+    chrono: [
+        { dos: ['04/18/2026'], facility: 'St. Mary\'s Hospital', next: '', notes: 'ER: X-rays negative; neck and shoulder sprain; released.' },
+        { dos: ['05/06/2026', '05/20/2026'], facility: 'Riverton Orthopedic Associates', next: '06/10/2026', notes: 'Shoulder MRI: SLAP tear. Surgery recommended.' }
+    ],
+    treatmentNotes: 'Still treating; surgery consult scheduled.',
+    pd: null, lit: null,
+    finance: [{ date: '05/02/2026', staff: 'Case Manager', desc: 'GSP crash report', amount: '$ 5.00' }],
+    docs: [
+        { cat: 'Police Report', summary: 'GSP-26-044172: truck driver cited for following too closely.' },
+        { cat: 'Case Files', summary: 'Conflict waiver (joint representation of Darnell and Keisha Brooks), signed 04/24/2026.' }
+    ],
+    notes: [{ date: '04/24/2026', staff: 'Lead Attorney', text: 'Explained joint representation to both spouses; waiver signed. Separate files: MC-54 (Darnell), MC-55 (Keisha).' }],
+    tasks: [{ date: '06/01/2026', staff: 'Case Manager', text: 'Request the trucking company\'s ELD and dash-cam (preservation letter sent 04/25).' }],
+    reception: {
+        verify: 'Darnell Brooks · DOB 01/22/1984 · 1418 Laurel Ridge Dr or SSN last 4 (4471).',
+        calls: [
+            { from: 'Keisha Brooks (his wife, also a client)', ask: '"Did Darnell\'s surgery get approved? What did they offer him?"', handle: 'Verify Keisha on HER file (MC-55). Darnell\'s medical and offers are his: don\'t share them without his OK, even with his wife. Offer a message to Tom Alvarez (ext 312).' },
+            { from: 'Brenda Okafor, Continental Haulers Mutual', ask: '"Can I get a recorded statement from Mr. Brooks?"', handle: 'No statements through the front desk. Take her claim number (CHM-26-31877) and number for the case manager.' }
+        ]
+    }
+},
+{
+    id: 'MC-55', caseNumber: 'LSH-2026-MVA-902595', level: 'Intermediate', programs: ['reception', 'intake', 'cm', 'md'],
+    connected: { group: 'Brooks · I-75 tractor-trailer · 04/18/2026', role: 'Passenger' },
+    summary: 'Front-seat passenger in her husband\'s car when a tractor-trailer rear-ended it on I-75; her husband (the driver) is a client too.',
+    client: { name: 'Keisha Brooks', phone: '(555) 010-5411', email: 'keisha.brooks@example.com', dob: '09/03/1986', ssn: 'XXX-XX-8820',
+        address: '1418 Laurel Ridge Dr, Riverton, GA 30305',
+        emergency: { name: 'Darnell Brooks', phone: '(555) 010-5410', relationship: 'Husband (also a client: MC-54)' },
+        employment: { status: 'Employed', employer: 'Riverton Elementary', title: 'Teacher' } },
+    caseType: 'MVA', phase: 'Treating', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
+    dateOfLoss: '04/18/2026', sol: '04/18/2028', target: '$ 75,000.00',
+    critical: 'Joint representation with her husband Darnell (the driver, MC-54). Conflict waiver signed 04/24/2026. As a passenger she could also claim on Darnell\'s own auto policy: the attorney decides, not staff.',
+    narrative: 'Client was the front-seat passenger in the 2020 Camry driven by her husband Darnell when a Hollis Freight tractor-trailer struck it from behind on I-75. She hit her head on the window and has had headaches and dizziness since.',
+    injury: { primary: 'Concussion with post-concussive headaches', parts: 'Head, neck', type: 'Head injury / concussion', surgery: 'No', details: 'Diagnosed with a concussion in the ER; neurology follow-up for headaches and dizziness.' },
+    police: { agency: 'Georgia State Patrol', number: 'GSP-26-044172', officer: 'Trooper Alan Price #2290', narrative: 'Same report as MC-54. Passenger (Keisha Brooks) transported by Riverton EMS with a head injury.' },
+    health: { carrier: 'Teachers\' Benefit Plan of Georgia', memberId: 'TBP-90217733', group: 'RES-4410' },
+    bi: [{ holder: 'Hollis Freight LLC (driver Wade Kessler)', carrier: 'Continental Haulers Mutual', policy: 'CHM-TRK-7720154', claim: 'CHM-26-31878', adjuster: 'Brenda Okafor', contact: '(555) 010-7811 · bokafor@chm.example.com', liability: 'Yes', limits: '$1,000,000' }],
+    pipum: [],
+    liens: [{ type: 'ERISA Plan', entity: 'Teachers\' Benefit Plan of Georgia', file: 'TBP-26-0441', amount: '$ 2,960.00', status: 'Unconfirmed' }],
+    facilities: [
+        { name: 'St. Mary\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3100', email: 'him@stmarys.example.com', dates: '04/18/2026 – 04/18/2026', status: 'Discharged', charges: '$ 5,120.00' },
+        { name: 'Riverton Neurology Group', specialty: 'Other', specialtyOther: 'Neurology', phone: '(555) 010-3410', email: 'records@rivneuro.example.com', dates: '05/01/2026 – present', status: 'Treating', charges: '$ 1,940.00' }
+    ],
+    chrono: [
+        { dos: ['04/18/2026'], facility: 'St. Mary\'s Hospital', next: '', notes: 'ER: CT head negative; concussion; released with precautions.' },
+        { dos: ['05/01/2026', '06/05/2026'], facility: 'Riverton Neurology Group', next: '07/08/2026', notes: 'Post-concussive headaches; vestibular therapy referral.' }
+    ],
+    treatmentNotes: 'Treating with neurology.',
+    pd: null, lit: null,
+    finance: [],
+    docs: [{ cat: 'Case Files', summary: 'Conflict waiver (joint representation with Darnell Brooks), signed 04/24/2026.' }],
+    notes: [{ date: '04/24/2026', staff: 'Lead Attorney', text: 'Joint representation with husband (MC-54); waiver signed.' }],
+    tasks: [{ date: '07/10/2026', staff: 'Case Manager', text: 'Ask the attorney whether to open a claim on Darnell\'s own auto policy for Keisha.' }],
+    reception: {
+        verify: 'Keisha Brooks · DOB 09/03/1986 · 1418 Laurel Ridge Dr or SSN last 4 (8820).',
+        calls: [{ from: 'Keisha Brooks (client)', ask: '"Is my case together with my husband\'s? Will we get one check?"', handle: 'Verify. Two clients, two files, two separate settlements. Offer a callback from Tom Alvarez (ext 312) for details.' }]
+    }
+},
+// ② The vehicle owner and the permissive driver: the Salazars (the owner rode as a passenger in his own truck)
+{
+    id: 'MC-56', caseNumber: 'LSH-2026-MVA-902606', level: 'Advanced', programs: ['reception', 'cm', 'pd', 'md'],
+    connected: { group: 'Salazar · Elm St & 5th Ave · 06/09/2026', role: 'Vehicle owner (passenger)' },
+    summary: 'Owner of a pickup that his nephew was driving with permission; T-boned by a red-light runner. The nephew is a client on his own file.',
+    client: { name: 'Victor Salazar', phone: '(555) 010-5620', email: 'victor.salazar@example.com', dob: '06/30/1971', ssn: 'XXX-XX-3092',
+        address: '88 Cedar Bend Rd, Riverton, GA 30307',
+        emergency: { name: 'Rosa Salazar', phone: '(555) 010-5622', relationship: 'Wife' },
+        employment: { status: 'Self-Employed', employer: 'Salazar Landscaping', title: 'Owner' } },
+    caseType: 'MVA', phase: 'Treating', attorney: 'Atty. Elena Brooks', caseManager: 'Priya Shah',
+    dateOfLoss: '06/09/2026', sol: '06/09/2028', target: '$ 60,000.00',
+    critical: 'Vehicle owner on this file; his nephew Mateo (MC-57) was driving the truck with permission. The property damage claim (the truck) is Victor\'s, not Mateo\'s. Both are clients: conflict waiver signed 06/15/2026.',
+    narrative: 'Client owns a 2019 Ford F-150 that his nephew Mateo Salazar was driving with his permission; client rode in the front passenger seat. At Elm St & 5th Ave a sedan driven by Courtney Hale ran the red light and struck the passenger side. Client had rib fractures and a shoulder injury; the truck was towed.',
+    injury: { primary: 'Two fractured ribs (right side), right-shoulder sprain', parts: 'Ribs, right shoulder', type: 'Fracture', surgery: 'No', details: 'Rib fractures 7–8 right, treated conservatively; physical therapy for the shoulder.' },
+    police: { agency: 'Riverton Police Department', number: 'RPD-26-021955', officer: 'Officer Dana Cole #514', narrative: 'Unit 2 (Hale) entered the intersection against a red signal and struck Unit 1 (Salazar F-150) on the passenger side. Two witnesses confirm. Unit 2 cited for failure to obey a traffic signal.' },
+    health: { carrier: 'Ambetter Peach Plan', memberId: 'APP-5620044', group: 'IND' },
+    bi: [{ holder: 'Courtney Hale', carrier: 'Liberty Shield Insurance', policy: 'LSI-AU-4410928', claim: 'LSI-26-77310', adjuster: 'Gregory Nunn', contact: '(555) 010-7920 · gnunn@lsi.example.com', liability: 'Yes', limits: '$100,000' }],
+    pipum: [],
+    liens: [{ type: 'HI Subro', entity: 'Ambetter Peach Plan', file: 'APP-SUB-26-1199', amount: '$ 3,310.00', status: 'Unconfirmed' }],
+    facilities: [
+        { name: 'Riverton General Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3120', email: 'records@rivgen.example.com', dates: '06/09/2026 – 06/09/2026', status: 'Discharged', charges: '$ 7,450.00' },
+        { name: 'Peak Physical Therapy', specialty: 'Physical Therapy (PT)', phone: '(555) 010-3520', email: 'billing@peakpt.example.com', dates: '06/22/2026 – present', status: 'Treating', charges: '$ 2,100.00' }
+    ],
+    chrono: [
+        { dos: ['06/09/2026'], facility: 'Riverton General Hospital', next: '', notes: 'ER: CT chest, rib fractures 7–8 right; pain control.' },
+        { dos: ['06/22/2026', '07/30/2026'], facility: 'Peak Physical Therapy', next: '08/06/2026', notes: 'Shoulder range of motion improving.' }
+    ],
+    treatmentNotes: 'In physical therapy.',
+    pd: null, lit: null,
+    finance: [{ date: '06/12/2026', staff: 'Case Manager', desc: 'Police report RPD-26-021955', amount: '$ 10.00' }],
+    docs: [{ cat: 'Police Report', summary: 'RPD-26-021955: Hale cited for running the red light; two witnesses.' }, { cat: 'Case Files', summary: 'Title and registration of the F-150 (Victor Salazar, owner).' }],
+    notes: [{ date: '06/15/2026', staff: 'Lead Attorney', text: 'Owner (Victor, MC-56) and permissive driver (Mateo, MC-57) both retained us; waiver signed. Truck PD claim belongs to Victor.' }],
+    tasks: [{ date: '06/20/2026', staff: 'Case Manager', text: 'Open the PD claim for the F-150 with Liberty Shield in Victor\'s name; rental for his landscaping business.' }],
+    reception: {
+        verify: 'Victor Salazar · DOB 06/30/1971 · 88 Cedar Bend Rd or SSN last 4 (3092).',
+        calls: [{ from: 'Mateo Salazar (the driver, also a client)', ask: '"Has the body shop finished my uncle\'s truck? Can I pick it up?"', handle: 'Verify Mateo on HIS file (MC-57). The truck and its PD claim are Victor\'s: give its status only with Victor\'s OK. Take a message for Priya Shah.' }]
+    }
+},
+{
+    id: 'MC-57', caseNumber: 'LSH-2026-MVA-902617', level: 'Advanced', programs: ['reception', 'cm', 'md'],
+    connected: { group: 'Salazar · Elm St & 5th Ave · 06/09/2026', role: 'Permissive driver' },
+    summary: 'Drove his uncle\'s pickup with permission when a red-light runner T-boned it; the uncle (the owner) is a client on his own file.',
+    client: { name: 'Mateo Salazar', phone: '(555) 010-5630', email: 'mateo.salazar@example.com', dob: '02/14/2001', ssn: 'XXX-XX-5517',
+        address: '412 Willow Park Apt 3B, Riverton, GA 30307',
+        emergency: { name: 'Victor Salazar', phone: '(555) 010-5620', relationship: 'Uncle (also a client: MC-56)' },
+        employment: { status: 'Employed', employer: 'Salazar Landscaping', title: 'Crew Lead' } },
+    caseType: 'MVA', phase: 'Treating', attorney: 'Atty. Elena Brooks', caseManager: 'Priya Shah',
+    dateOfLoss: '06/09/2026', sol: '06/09/2028', target: '$ 35,000.00',
+    narrative: 'Client was driving his uncle Victor\'s 2019 Ford F-150 with permission; Victor rode as the passenger. A sedan driven by Courtney Hale ran the red light at Elm St & 5th Ave and struck the truck\'s passenger side. Client had neck and back pain. He has no car or auto policy of his own.',
+    injury: { primary: 'Cervical and thoracic strain', parts: 'Neck, mid back', type: 'Soft tissue (sprain / strain)', surgery: 'No', details: 'Chiropractic care.' },
+    police: { agency: 'Riverton Police Department', number: 'RPD-26-021955', officer: 'Officer Dana Cole #514', narrative: 'Same report as MC-56. Unit 1 driver (Mateo Salazar) not at fault.' },
+    health: { carrier: 'None', memberId: '', group: '' },
+    bi: [{ holder: 'Courtney Hale', carrier: 'Liberty Shield Insurance', policy: 'LSI-AU-4410928', claim: 'LSI-26-77311', adjuster: 'Gregory Nunn', contact: '(555) 010-7920 · gnunn@lsi.example.com', liability: 'Yes', limits: '$100,000' }],
+    pipum: [],
+    liens: [{ type: 'Medical Lien', entity: 'Riverton Spine & Rehab', file: 'RSR-L-5630', amount: '$ 2,800.00', status: 'Confirmed (lien letter received)' }],
+    facilities: [{ name: 'Riverton Spine & Rehab', specialty: 'Chiro', phone: '(555) 010-3600', email: 'billing@rivspine.example.com', dates: '06/11/2026 – present', status: 'Treating', charges: '$ 2,800.00' }],
+    chrono: [{ dos: ['06/11/2026', '07/28/2026'], facility: 'Riverton Spine & Rehab', next: '08/04/2026', notes: 'Treating on a medical lien (no health insurance).' }],
+    treatmentNotes: 'Chiropractic on a lien.',
+    pd: null, lit: null,
+    finance: [],
+    docs: [{ cat: 'Police Report', summary: 'RPD-26-021955 (same crash as MC-56).' }],
+    notes: [{ date: '06/15/2026', staff: 'Lead Attorney', text: 'Permissive driver of Victor\'s truck (MC-56). Uncle\'s auto policy may give him UM/MedPay as a permissive user: attorney to review.' }],
+    tasks: [{ date: '06/20/2026', staff: 'Case Manager', text: 'Get Victor\'s auto declarations page: check MedPay for a permissive driver.' }],
+    reception: {
+        verify: 'Mateo Salazar · DOB 02/14/2001 · 412 Willow Park Apt 3B or SSN last 4 (5517).',
+        calls: [{ from: 'Gregory Nunn, Liberty Shield', ask: '"Whose truck was it? I need the owner\'s and the driver\'s claim set up."', handle: 'Don\'t confirm details. Take his claim numbers and number for Priya Shah (CM).' }]
+    }
+},
+// ③ A parent and her minor children in one car: the Wells family (a parent speaks for the minors)
+{
+    id: 'MC-58', caseNumber: 'LSH-2026-MVA-902628', level: 'Advanced', programs: ['reception', 'intake', 'cm', 'md'],
+    connected: { group: 'Wells family · Hwy 20 · 08/22/2026', role: 'Parent (driver)' },
+    summary: 'Mother driving her two children when a pickup crossed the center line on Hwy 20; both children are clients on their own files.',
+    client: { name: 'Tanya Wells', phone: '(555) 010-5840', email: 'tanya.wells@example.com', dob: '12/08/1989', ssn: 'XXX-XX-2264',
+        address: '27 Sycamore Lane, Riverton, GA 30306',
+        emergency: { name: 'Gloria Wells', phone: '(555) 010-5842', relationship: 'Mother' },
+        employment: { status: 'Employed', employer: 'Riverton Medical Billing', title: 'Billing Specialist' } },
+    caseType: 'MVA', phase: 'Treating', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
+    dateOfLoss: '08/22/2026', sol: '08/22/2028', target: '$ 90,000.00',
+    critical: 'Mother of two minor clients on this crash: Jayden (9, MC-59) and Lily (6, MC-60). Tanya is their parent and natural guardian: she speaks for them. Any settlement for a child needs court approval.',
+    narrative: 'Client was driving her 2018 Honda Odyssey west on Hwy 20 with her children Jayden (9) and Lily (6) in the back seats when an eastbound pickup driven by Russell Gant crossed the center line and struck the van head-on at an angle. Client had a broken wrist; both children were taken to the children\'s hospital.',
+    injury: { primary: 'Fractured left wrist (distal radius)', parts: 'Left wrist, neck', type: 'Fracture', surgery: 'Completed', details: 'ORIF of the left distal radius 08/25/2026.' },
+    police: { agency: 'Riverton County Sheriff', number: 'RCS-26-009812', officer: 'Deputy Mark Ellis #77', narrative: 'Unit 2 (Gant, pickup) crossed the center line and struck Unit 1 (Wells, minivan). Unit 2 driver cited for failure to maintain lane; suspected distracted driving (phone).' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-58400319', group: 'RMB-2200' },
+    bi: [{ holder: 'Russell Gant', carrier: 'Southern Mutual Auto', policy: 'SMA-AU-2209871', claim: 'SMA-26-55102', adjuster: 'Lorraine Pike', contact: '(555) 010-7980 · lpike@sma.example.com', liability: 'Yes', limits: '$50,000 per person / $100,000 per accident' }],
+    pipum: [],
+    liens: [{ type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-26-5840', amount: '$ 11,620.00', status: 'Unconfirmed' }],
+    facilities: [
+        { name: 'Riverton General Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3120', email: 'records@rivgen.example.com', dates: '08/22/2026 – 08/22/2026', status: 'Discharged', charges: '$ 6,980.00' },
+        { name: 'Riverton Orthopedic Associates', specialty: 'Ortho', phone: '(555) 010-3300', email: 'records@rivertonortho.example.com', dates: '08/25/2026 – present', status: 'Treating', charges: '$ 14,200.00' }
+    ],
+    chrono: [
+        { dos: ['08/22/2026'], facility: 'Riverton General Hospital', next: '', notes: 'ER: displaced distal radius fracture; splinted.' },
+        { dos: ['08/25/2026', '09/22/2026'], facility: 'Riverton Orthopedic Associates', next: '10/20/2026', notes: 'ORIF 08/25; healing; hand therapy.' }
+    ],
+    treatmentNotes: 'Post-op; hand therapy.',
+    pd: null, lit: null,
+    finance: [],
+    docs: [{ cat: 'Police Report', summary: 'RCS-26-009812: Gant cited, failure to maintain lane.' }],
+    notes: [{ date: '08/26/2026', staff: 'Lead Attorney', text: 'Three clients, one $100,000 per-accident limit: the policy may not cover everyone. Look for UM on Tanya\'s policy.' }],
+    tasks: [{ date: '09/01/2026', staff: 'Case Manager', text: 'Get Tanya\'s auto declarations page (UM limits) and the at-fault policy limits in writing.' }],
+    reception: {
+        verify: 'Tanya Wells · DOB 12/08/1989 · 27 Sycamore Lane or SSN last 4 (2264).',
+        calls: [{ from: 'Tanya Wells (client, and the children\'s mother)', ask: '"How are Jayden\'s and Lily\'s cases going? And mine?"', handle: 'Verify Tanya. She is the parent and natural guardian of both minors, so she may hear their status too (MC-59, MC-60). No values; offer a callback from Tom Alvarez (ext 312).' }]
+    }
+},
+{
+    id: 'MC-59', caseNumber: 'LSH-2026-MVA-902639', level: 'Advanced', programs: ['reception', 'intake', 'cm', 'md'],
+    connected: { group: 'Wells family · Hwy 20 · 08/22/2026', role: 'Minor child (9)' },
+    summary: 'Nine-year-old rear passenger in his mother\'s minivan, hit head-on on Hwy 20; his mother and sister are clients on their own files.',
+    client: { name: 'Jayden Wells', phone: '(555) 010-5840', email: 'tanya.wells@example.com', dob: '03/05/2017', ssn: 'XXX-XX-7105',
+        address: '27 Sycamore Lane, Riverton, GA 30306',
+        emergency: { name: 'Tanya Wells', phone: '(555) 010-5840', relationship: 'Mother and natural guardian (also a client: MC-58)' },
+        employment: { status: 'Student', employer: 'Riverton Elementary', title: '4th grade' } },
+    caseType: 'MVA', phase: 'Treating', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
+    dateOfLoss: '08/22/2026', sol: '03/05/2037', target: '$ 40,000.00',
+    critical: 'MINOR (9). Speak only with his mother Tanya Wells (MC-58), his natural guardian; never with Jayden alone. Settlement needs court approval. SOL tolled until 18 (03/05/2035, then 2 years).',
+    narrative: 'Client, age 9, was a belted rear passenger in his mother\'s minivan when a pickup crossed the center line on Hwy 20. Seat-belt bruising and a fractured collarbone.',
+    injury: { primary: 'Fractured left clavicle; seat-belt abrasions', parts: 'Left collarbone, abdomen', type: 'Fracture', surgery: 'No', details: 'Treated in a sling; pediatric orthopedics follow-up.' },
+    police: { agency: 'Riverton County Sheriff', number: 'RCS-26-009812', officer: 'Deputy Mark Ellis #77', narrative: 'Same report as MC-58. Rear passenger (minor) transported to the children\'s hospital.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-58400319-02', group: 'RMB-2200' },
+    bi: [{ holder: 'Russell Gant', carrier: 'Southern Mutual Auto', policy: 'SMA-AU-2209871', claim: 'SMA-26-55103', adjuster: 'Lorraine Pike', contact: '(555) 010-7980 · lpike@sma.example.com', liability: 'Yes', limits: '$50,000 per person / $100,000 per accident' }],
+    pipum: [],
+    liens: [{ type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-26-5841', amount: '$ 4,480.00', status: 'Unconfirmed' }],
+    facilities: [{ name: 'Riverton Children\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3140', email: 'him@rivkids.example.com', dates: '08/22/2026 – 08/22/2026', status: 'Discharged', charges: '$ 4,480.00' }],
+    chrono: [{ dos: ['08/22/2026'], facility: 'Riverton Children\'s Hospital', next: '09/12/2026', notes: 'Clavicle fracture, sling; pediatric ortho in 3 weeks.' }],
+    treatmentNotes: 'Healing; pediatric ortho follow-up.',
+    pd: null, lit: null,
+    finance: [],
+    docs: [{ cat: 'Case Files', summary: 'Retainer signed by Tanya Wells as parent and natural guardian.' }],
+    notes: [{ date: '08/26/2026', staff: 'Lead Attorney', text: 'Minor: all contact through his mother Tanya (MC-58). Court approval of any settlement (minor settlement petition).' }],
+    tasks: [{ date: '09/12/2026', staff: 'Case Manager', text: 'Records from Riverton Children\'s Hospital (request signed by Tanya as guardian).' }],
+    reception: {
+        verify: 'Jayden Wells (minor) · DOB 03/05/2017 · verify the caller as his mother Tanya Wells (DOB 12/08/1989) · 27 Sycamore Lane.',
+        calls: [{ from: '"Jayden\'s grandmother, Gloria Wells"', ask: '"I\'m picking Jayden up from school; how is his case going?"', handle: 'She isn\'t his guardian and isn\'t authorized: share nothing. Take a message for Tanya Wells\'s case manager, Tom Alvarez.' }]
+    }
+},
+{
+    id: 'MC-60', caseNumber: 'LSH-2026-MVA-902650', level: 'Advanced', programs: ['reception', 'intake', 'cm', 'md'],
+    connected: { group: 'Wells family · Hwy 20 · 08/22/2026', role: 'Minor child (6)' },
+    summary: 'Six-year-old in a booster seat in her mother\'s minivan, hit head-on on Hwy 20; her mother and brother are clients on their own files.',
+    client: { name: 'Lily Wells', phone: '(555) 010-5840', email: 'tanya.wells@example.com', dob: '11/12/2019', ssn: 'XXX-XX-9036',
+        address: '27 Sycamore Lane, Riverton, GA 30306',
+        emergency: { name: 'Tanya Wells', phone: '(555) 010-5840', relationship: 'Mother and natural guardian (also a client: MC-58)' },
+        employment: { status: 'Student', employer: 'Riverton Elementary', title: '1st grade' } },
+    caseType: 'MVA', phase: 'Treating', attorney: 'Atty. Marcus Reyes', caseManager: 'Tom Alvarez',
+    dateOfLoss: '08/22/2026', sol: '11/12/2039', target: '$ 20,000.00',
+    critical: 'MINOR (6). Speak only with her mother Tanya Wells (MC-58), her natural guardian. Settlement needs court approval. SOL tolled until 18 (11/12/2037, then 2 years).',
+    narrative: 'Client, age 6, was in a booster seat behind the driver when a pickup crossed the center line on Hwy 20. Facial cut from broken glass; nightmares since.',
+    injury: { primary: 'Facial laceration (left cheek); anxiety after the crash', parts: 'Face', type: 'Laceration / bite / scarring', surgery: 'No', details: '6 sutures; child counseling for sleep problems.' },
+    police: { agency: 'Riverton County Sheriff', number: 'RCS-26-009812', officer: 'Deputy Mark Ellis #77', narrative: 'Same report as MC-58. Rear passenger (minor, booster seat) transported to the children\'s hospital.' },
+    health: { carrier: 'Peach State Health Plan', memberId: 'PSH-58400319-03', group: 'RMB-2200' },
+    bi: [{ holder: 'Russell Gant', carrier: 'Southern Mutual Auto', policy: 'SMA-AU-2209871', claim: 'SMA-26-55104', adjuster: 'Lorraine Pike', contact: '(555) 010-7980 · lpike@sma.example.com', liability: 'Yes', limits: '$50,000 per person / $100,000 per accident' }],
+    pipum: [],
+    liens: [{ type: 'HI Subro', entity: 'Peach State Health Plan', file: 'PSH-SUB-26-5842', amount: '$ 1,890.00', status: 'Unconfirmed' }],
+    facilities: [
+        { name: 'Riverton Children\'s Hospital', specialty: 'Emergency Hospital', phone: '(555) 010-3140', email: 'him@rivkids.example.com', dates: '08/22/2026 – 08/22/2026', status: 'Discharged', charges: '$ 1,890.00' },
+        { name: 'Harmony Counseling', specialty: 'Other', specialtyOther: 'Counseling', phone: '(555) 010-3250', email: 'intake@harmony.example.com', dates: '09/08/2026 – present', status: 'Treating', charges: '$ 720.00' }
+    ],
+    chrono: [{ dos: ['08/22/2026'], facility: 'Riverton Children\'s Hospital', next: '', notes: '6 sutures left cheek.' }, { dos: ['09/08/2026', '10/06/2026'], facility: 'Harmony Counseling', next: '10/20/2026', notes: 'Play therapy for sleep problems after the crash.' }],
+    treatmentNotes: 'In child counseling.',
+    pd: null, lit: null,
+    finance: [],
+    docs: [{ cat: 'Case Files', summary: 'Retainer signed by Tanya Wells as parent and natural guardian.' }],
+    notes: [{ date: '08/26/2026', staff: 'Lead Attorney', text: 'Minor: all contact through her mother Tanya (MC-58). Scar evaluation once healed.' }],
+    tasks: [{ date: '11/01/2026', staff: 'Case Manager', text: 'Ask Tanya for photos of the scar as it heals (monthly).' }],
+    reception: {
+        verify: 'Lily Wells (minor) · DOB 11/12/2019 · verify the caller as her mother Tanya Wells (DOB 12/08/1989) · 27 Sycamore Lane.',
+        calls: [{ from: 'Lorraine Pike, Southern Mutual Auto', ask: '"I\'d like to talk to the parents about the little girl\'s claim directly."', handle: 'The family is represented: the adjuster speaks with the firm, not the client. Take her claim number (SMA-26-55104) and number for Tom Alvarez.' }]
     }
 }
 ];
