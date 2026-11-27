@@ -1619,7 +1619,8 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
         box-shadow: 0 10px 20px -14px rgba(15,33,72,.7); }
     #capture-area .header-card .hdr-idrow > .hdr-id { display: flex; flex-direction: column; gap: 8px; }
     #capture-area .header-card .hdr-idrow > .hdr-id > label { color: #fdba74 !important; }
-    #capture-area .header-card .hdr-idrow > .hdr-id .cid-card { flex: 1 1 auto; }
+    #capture-area .header-card .hdr-idrow > .hdr-id .cid-card { flex: none; }
+    #capture-area .header-card .hdr-idrow > .hdr-id { align-self: start; }   /* the tile as tall as the ID, no blank space under it */
     #capture-area .header-card #lsh-integrated-bar > .ml-auto { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; }
     #capture-area .header-card #lsh-integrated-bar > .ml-auto > span { margin: 0 !important; }
     #capture-area .header-card #lsh-integrated-bar > .ml-auto > div { flex: 1 1 auto; min-width: 0; }
