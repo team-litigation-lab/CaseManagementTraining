@@ -1314,7 +1314,7 @@
     };
 
     /* ---------- ⚖ practice brief side panel (everyone, on a file that has one) ---------- */
-    // mock-cases.js `practice`: what this file is built to practise, in the order the work is done. It is the
+    // mock-cases.js `practice`: what this file is built to practice, in the order the work is done. It is the
     // brief, not the trainer's key: the caller scenarios and the call scripts stay with Admins.
     window.openPracticePanel = function () {
         const c = mockId && findCase(mockId); const p = $id('mock-calls-panel'); if (!c || !p || !c.practice) return;
