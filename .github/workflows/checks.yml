@@ -88,6 +88,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/attorney-calendar.cjs
+      - name: Firm Calendar's Docketing check (the case's deadlines graded against the calendar, the real calendar API on SQLite, in a browser)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/docket-grader.cjs
       - name: Time & Billing (the real time API on SQLite, in a browser)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
