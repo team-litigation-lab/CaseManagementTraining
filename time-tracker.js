@@ -272,7 +272,15 @@
         css.textContent = `
         /* the timer in the case header, under the search bars: the timer and the Billable / Non-billable dropdown, nothing else
            (the timesheet is on the Time tab) */
-        #tt-widget{width:min(460px,100%);margin:6px 0 0 auto;display:flex;justify-content:flex-end}
+        #tt-widget{width:100%;margin:0 0 10px;display:flex}
+        /* in the sidebar: a white card the sidebar's width, its keys wrapping to a second line when they don't fit */
+        #tt-widget.sb-timer .tt-w{display:flex;flex-wrap:wrap;width:100%;box-sizing:border-box;justify-content:flex-start;gap:6px;padding:7px 8px}
+        #tt-widget.sb-timer button{padding:7px 8px;font-size:11px;white-space:nowrap}
+        #tt-widget.sb-timer .tt-w > button{flex:1 1 0;min-width:0}
+        #tt-widget.sb-timer .tt-w > .tt-dd{flex:1 1 100%}
+        #tt-widget.sb-timer .tt-dd > button{width:100%}
+        #tt-widget.sb-timer .tt-lbl{font-size:14px}
+        #tt-widget.sb-timer .tt-menu{left:0;right:auto}
         #tt-widget .tt-w{display:inline-flex;align-items:center;gap:8px;border:2px solid #c9973f;border-radius:10px;padding:5px 6px 5px 10px;background:#fff;color:#1E2340;font-size:12.5px;line-height:1.25;box-shadow:0 4px 12px -6px rgba(30,35,64,.4)}
         #tt-widget .tt-w.run{border-color:#f97316;background:#fff7ed;box-shadow:0 0 0 1px rgba(249,115,22,.25)}
         #tt-widget .tt-w.paused{border-color:#eab308;background:#fefce8}
@@ -336,14 +344,14 @@
     }
 
     /* ---------- sidebar timer ---------- */
-    // The timer sits in the case header, under the search bars (case-library.js's #cl-bar, with the contacts bar in it).
+    // The timer sits in the sidebar, at the top of its work buttons (#sb-work, above New Intake), out of the case header.
     // data-free-edit: the clock ticking there isn't an edit to the case, and its buttons work on a view-only case.
     function widgetBox() {
         let w = $id('tt-widget');
         if (w) return w;
-        const bar = $id('cl-bar');
-        if (!bar) return null;
-        bar.insertAdjacentHTML('afterend', '<div id="tt-widget" class="no-print" data-free-edit></div>');
+        const work = $id('sb-work');
+        if (!work) return null;
+        work.insertAdjacentHTML('afterbegin', '<div id="tt-widget" class="no-print sb-timer" data-free-edit></div>');
         return $id('tt-widget');
     }
     // The next timer's Billable / Non-billable: the same draft the Time tab shows and changes, so the header and the tab
