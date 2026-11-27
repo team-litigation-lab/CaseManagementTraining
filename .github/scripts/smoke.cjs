@@ -400,13 +400,13 @@ let smokePage = null;   // (for the failure report at the end)
         oldButtons: [...document.querySelectorAll('#sidebar-actions button')].filter(b => /save case|archive|update saved|close case/i.test(b.textContent)).length,
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
-    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || side.hidden.length || side.oldButtons
+    if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'tt-widget,nm-open-btn,fdd-open-btn,ac-open-btn' || side.hidden.length || side.oldButtons
         // (a library case is open here: no 🗄 Archive, it's never saved as a draft; one key saves and updates: 💾 Save Case until it's saved)
         || side.bar.join('|') !== '📄 Case Summary|🗑 Discard Case|💾 Save Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
     // The page's frame: the sidebar (and its logo) runs to the top, the announcements strip is over the main area only and has no
     // "LEGAL SUPPORT HELP TRAINING INTERFACE - TRAINEE PORTAL" label; Download Case Summary and My Dashboard are at
-    // its right; the date and time are right above the case's Case ID, outside the case; the timer is in the case header under the
-    // search bars, just the timer and a Billable / Non-billable dropdown (the timesheet is on the Time tab); no standing
+    // its right; the date and time are right above the case's Case ID, outside the case; the timer is in the sidebar, at the top of its work
+    // buttons, just the timer and a Billable / Non-billable dropdown (the timesheet is on the Time tab); no standing
     // "Autosave active" note; the Profile tab has no SSN or DOB box (the header has them).
     const frame = await page.evaluate(() => {
         const r = (el) => el ? el.getBoundingClientRect() : null;
@@ -450,7 +450,7 @@ let smokePage = null;   // (for the failure report at the end)
     if (!narrow.inView || narrow.labels || !narrow.clock || !narrow.fits) fail(`a narrow window: the top-right buttons and the date and time should stay in view, in the strip: ${JSON.stringify(narrow)}`);
     await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(300);
     if (frame.sideTop !== 0 || frame.logoTop > 40 || frame.stripLeft < frame.sideRight - 1 || frame.stripBottom > 1 || frame.label || !frame.bannerOnTop) fail(`the sidebar and its logo should run to the top, the strip at the bottom of the main area (the case moves up) with no portal label: ${JSON.stringify(frame)}`);
-    if (!frame.ttInHeader || !frame.ttUnderBar || frame.ttInSidebar || !frame.ttStart) fail(`the timer should be in the case header, right under the search bars: ${JSON.stringify(frame)}`);
+    if (frame.ttInHeader || !frame.ttInSidebar || !frame.ttStart) fail(`the timer should be in the sidebar (the top of its work buttons), not the case header: ${JSON.stringify(frame)}`);
     if (frame.profileSsn || frame.profileDob || !frame.headSsn) fail(`the Profile tab shouldn't show the SSN or DOB (the header does): ${JSON.stringify(frame)}`);
 
     // Intake folder: a typed intake from Intake mode, reviewed, then moved to the case files
@@ -521,7 +521,7 @@ let smokePage = null;   // (for the failure report at the end)
         tools: [...document.querySelectorAll('#sb-trainer > button')].filter(b => b.offsetParent).map(b => b.id) }));
     const work = await admin.evaluate(() => [...document.querySelectorAll('#sb-work > *')].filter(e => e.offsetParent).map(e => e.id));
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
-    if (work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Call Simulator') fail(`an Admin's sidebar should have New Intake, 📞 Call Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
+    if (work.join() !== 'tt-widget,nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Call Simulator') fail(`an Admin's sidebar should have the ⏱ timer, New Intake, 📞 Call Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
     const adminTop = await admin.evaluate(() => [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id));
     if (adminTop.join() !== 'portal-home-btn,dash-open-btn') fail(`an Admin's bottom right should be Academy Index and My Dashboard (no Blueprint): ${adminTop.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
