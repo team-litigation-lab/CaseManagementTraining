@@ -1313,3 +1313,10 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 /* every dropdown in CaseWorX, its list too: bold, dark type that reads at a glance */
 select, select option, select optgroup { font-weight: 700 !important; color: #0f172a; }
 select option:checked { font-weight: 800 !important; }
+
+/* the case page, every word bold and thick: labels, what is typed, placeholders, dropdowns, tables; headings heavier still */
+#capture-area, #capture-area *:not(svg):not(path) { font-weight: 700 !important; }
+#capture-area input, #capture-area textarea, #capture-area select, #capture-area [contenteditable="true"] { font-weight: 700 !important; color: #0f172a; }
+#capture-area ::placeholder { font-weight: 700 !important; }
+#capture-area [contenteditable="true"]:empty:before { font-weight: 700 !important; }
+#capture-area h1, #capture-area h2, #capture-area h3, #capture-area h4, #capture-area label, #capture-area th, #capture-area b, #capture-area strong { font-weight: 800 !important; }
