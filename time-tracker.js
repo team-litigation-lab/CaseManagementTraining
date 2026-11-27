@@ -280,8 +280,8 @@
         #tt-widget .tt-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;font-weight:800;color:#0f2148;min-width:66px}
         #tt-widget button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
         #tt-widget button:hover{border-color:#f97316;color:#c2410c}
-        #tt-widget button.go{background:linear-gradient(180deg,#fb923c 0%,#ea580c 100%);border-color:#c2410c;color:#fff;box-shadow:0 2px 0 #9a3412}
-        #tt-widget button.go:hover{background:#ea580c;color:#fff}
+        #tt-widget button.go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340;box-shadow:0 2px 0 rgba(224,164,58,.55)}
+        #tt-widget button.go:hover{background:linear-gradient(180deg,#ffefc4 0%,#f7cf6a 50%,#e8b04a 100%);color:#1E2340}
         #tt-widget .tt-dd{position:relative}
         #tt-widget .tt-bill.yes{background:#ecfdf5;border-color:#10b981;color:#047857;box-shadow:0 2px 0 #047857}
         #tt-widget .tt-bill.no{background:linear-gradient(180deg,#1d3f86 0%,#1E2340 100%);border-color:#1E2340;color:#fff;box-shadow:0 2px 0 #0b1024}
@@ -298,7 +298,7 @@
         #tt-root .tt-btn{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer}
         #tt-root .tt-btn:hover{border-color:#f97316;color:#c2410c}
         #tt-root .tt-btn.on{background:#0f172a;color:#fff;border-color:#0f172a}
-        #tt-root .tt-btn.go{background:#f97316;border-color:#f97316;color:#fff}
+        #tt-root .tt-btn.go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
         #tt-root .tt-btn.danger{color:#b91c1c;border-color:#fecaca}
         #tt-root .fl{display:block;font-size:10.5px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 5px}
         #tt-root .fi{width:100%;border:1px solid #cbd5e1;border-radius:7px;padding:7px 9px;font-size:13px;color:#0f172a;background:#fff;box-sizing:border-box}

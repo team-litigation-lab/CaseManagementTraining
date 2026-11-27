@@ -591,62 +591,62 @@
     #nm-modal.open{display:flex}
     #nm-modal .nm-box{background:#f8fafc;width:min(1120px,100%);height:min(94vh,980px);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(2,6,23,.45)}
     #nm-modal .nm-head{background:#0f2148;color:#fff;padding:14px 18px;display:flex;gap:12px;align-items:flex-start;border-bottom:3px solid #f97316}
-    #nm-modal .nm-kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:800;letter-spacing:1px;color:#fdba74}
-    #nm-modal h3{margin:3px 0 0;font-size:19px;font-weight:900;letter-spacing:-.01em}
-    #nm-modal .nm-sub{font-size:12px;color:#cbd5e1;margin-top:2px}
+    #nm-modal .nm-kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:800;letter-spacing:1px;color:#fdba74}
+    #nm-modal h3{margin:3px 0 0;font-size:22px;font-weight:900;letter-spacing:-.01em}
+    #nm-modal .nm-sub{font-size:14px;font-weight:600;color:#e2e8f0;margin-top:2px}
     #nm-modal .nm-x{margin-left:auto;background:transparent;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:800}
     #nm-modal .nm-x:hover{border-color:#f97316;color:#fff}
     #nm-modal .nm-main{flex:1;min-height:0;display:flex}
-    #nm-modal .nm-nav{width:220px;flex-shrink:0;border-right:1px solid #e2e8f0;background:#fff;overflow-y:auto;padding:10px 8px}
-    #nm-modal .nm-nav button{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:none;border:none;border-radius:7px;padding:7px 9px;font-size:12px;font-weight:700;color:#334155;cursor:pointer}
+    #nm-modal .nm-nav{width:255px;flex-shrink:0;border-right:1px solid #e2e8f0;background:#fff;overflow-y:auto;padding:10px 8px}
+    #nm-modal .nm-nav button{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:none;border:none;border-radius:7px;padding:9px 10px;font-size:14px;font-weight:800;color:#1e293b;cursor:pointer}
     #nm-modal .nm-nav button:hover{background:#fff7ed}
     #nm-modal .nm-nav button.err{color:#b91c1c}
-    #nm-modal .nm-nav .c{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#94a3b8;font-weight:700}
+    #nm-modal .nm-nav .c{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#64748b;font-weight:700}
     #nm-modal .nm-nav .c.done{color:#16a34a}
     #nm-modal .nm-body{flex:1;overflow-y:auto;padding:16px 20px 24px}
     #nm-modal .nm-sec{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px 16px;margin-bottom:14px;scroll-margin-top:8px}
-    #nm-modal .nm-sec h4{margin:0 0 10px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#0f2148;border-left:4px solid #f97316;padding-left:8px}
-    #nm-modal .nm-intro{font-size:12px;color:#64748b;margin:-4px 0 10px;line-height:1.45}
+    #nm-modal .nm-sec h4{margin:0 0 12px;font-size:14.5px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#0f2148;border-left:4px solid #f97316;padding-left:8px}
+    #nm-modal .nm-intro{font-size:14px;font-weight:600;color:#475569;margin:-4px 0 10px;line-height:1.45}
     #nm-modal .nm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px}
     #nm-modal .w1{grid-column:span 1}#nm-modal .w2{grid-column:span 2}#nm-modal .w3{grid-column:span 3}#nm-modal .w4{grid-column:1 / -1}
-    #nm-modal .nm-f label.l{display:block;font-size:10.5px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.03em;margin:0 0 4px;line-height:1.3}
+    #nm-modal .nm-f label.l{display:block;font-size:12.5px;font-weight:800;color:#1e293b;text-transform:uppercase;letter-spacing:.03em;margin:0 0 4px;line-height:1.3}
     #nm-modal .nm-f label.l i{color:#f97316;font-style:normal}
     #nm-modal .nm-f label.l .add{color:#2563eb;text-transform:none;font-weight:700;letter-spacing:0}
-    #nm-modal input[type=text],#nm-modal textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:7px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:#0f172a}
+    #nm-modal input[type=text],#nm-modal textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:7px;padding:10px 12px;font-size:15px;font-weight:600;font-family:inherit;background:#fff;color:#0f172a}
     #nm-modal textarea{resize:vertical;line-height:1.45}
     #nm-modal input[type=text]:focus,#nm-modal textarea:focus{outline:none;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.15)}
     #nm-modal input[readonly],#nm-modal textarea[readonly]{background:#f8fafc;color:#334155}
     #nm-modal .nm-err input[type=text],#nm-modal .nm-err textarea{border-color:#dc2626;background:#fef2f2}
     #nm-modal .nm-err .nm-q,#nm-modal .nm-err label.l{color:#b91c1c}
-    #nm-modal .nm-h{grid-column:1 / -1;font-size:11px;font-weight:900;color:#c2410c;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px dashed #fed7aa;padding:6px 0 3px;margin-top:4px}
+    #nm-modal .nm-h{grid-column:1 / -1;font-size:13px;font-weight:900;color:#c2410c;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px dashed #fed7aa;padding:6px 0 3px;margin-top:4px}
     #nm-modal .nm-yn{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #f1f5f9;padding:3px 0}
-    #nm-modal .nm-q{font-size:13px;color:#1e293b;line-height:1.4}
+    #nm-modal .nm-q{font-size:15px;font-weight:600;color:#0f172a;line-height:1.4}
     #nm-modal .nm-seg{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
-    #nm-modal .nm-seg label{position:relative;display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd5e1;border-radius:99px;padding:5px 12px;font-size:12px;font-weight:700;color:#334155;cursor:pointer;background:#fff;user-select:none}
+    #nm-modal .nm-seg label{position:relative;display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd5e1;border-radius:99px;padding:6px 14px;font-size:13.5px;font-weight:800;color:#1e293b;cursor:pointer;background:#fff;user-select:none}
     #nm-modal .nm-seg label.on{background:#0f2148;border-color:#0f2148;color:#fff}
     #nm-modal .nm-seg input{position:absolute;left:0;top:0;opacity:0;width:1px;height:1px;margin:0}
     #nm-modal .nm-seg label:focus-within{box-shadow:0 0 0 3px rgba(249,115,22,.3)}
     #nm-modal .nm-choice .nm-seg{margin-top:2px}
-    #nm-modal .nm-check{display:flex;gap:10px;align-items:flex-start;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#7c2d12;line-height:1.5;cursor:pointer}
+    #nm-modal .nm-check{display:flex;gap:10px;align-items:flex-start;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:12px 14px;font-size:14px;font-weight:600;color:#7c2d12;line-height:1.5;cursor:pointer}
     #nm-modal .nm-check input{margin-top:3px;accent-color:#f97316;width:16px;height:16px;flex-shrink:0}
     #nm-modal .nm-part{display:grid;grid-template-columns:180px auto minmax(0,1fr);gap:10px;align-items:center;border-bottom:1px solid #f1f5f9;padding:3px 0}
     #nm-modal .nm-part .nm-q{font-weight:700}
     #nm-modal .nm-g{border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#f8fafc}
-    #nm-modal .nm-glabel{font-size:12px;font-weight:800;color:#334155;margin-bottom:8px;line-height:1.4}
+    #nm-modal .nm-glabel{font-size:14px;font-weight:800;color:#334155;margin-bottom:8px;line-height:1.4}
     #nm-modal .nm-row{position:relative;background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 34px 10px 36px;margin-bottom:8px}
     #nm-modal .nm-rn{position:absolute;left:10px;top:10px;width:18px;height:18px;border-radius:99px;background:#0f2148;color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center}
     #nm-modal .nm-del{position:absolute;right:8px;top:6px;background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1}
     #nm-modal .nm-del:hover{color:#dc2626}
-    #nm-modal .nm-add{background:#fff;border:1px dashed #f97316;color:#c2410c;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:800;text-transform:uppercase;cursor:pointer}
+    #nm-modal .nm-add{background:#fff;border:1px dashed #f97316;color:#c2410c;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;text-transform:uppercase;cursor:pointer}
     #nm-modal .nm-foot{background:#fff;border-top:1px solid #e2e8f0;padding:10px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     #nm-modal .nm-foot .sp{flex:1}
-    #nm-modal .nm-foot .st{font-size:11.5px;color:#64748b}
-    #nm-modal .nm-btn{font-size:11px;font-weight:800;text-transform:uppercase;border-radius:8px;padding:9px 13px;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:#0f2148}
+    #nm-modal .nm-foot .st{font-size:13px;font-weight:600;color:#475569}
+    #nm-modal .nm-btn{font-size:13px;font-weight:800;text-transform:uppercase;border-radius:8px;padding:11px 16px;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:#0f2148}
     #nm-modal .nm-btn:hover{border-color:#0f2148}
-    #nm-modal .nm-btn.go{background:#f97316;border-color:#f97316;color:#fff}
-    #nm-modal .nm-btn.go:hover{background:#ea580c}
+    #nm-modal .nm-btn.go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
+    #nm-modal .nm-btn.go:hover{background:linear-gradient(180deg,#ffefc4 0%,#f7cf6a 50%,#e8b04a 100%)}
     #nm-modal .nm-btn.del{color:#b91c1c;border-color:#fecaca}
-    #nm-modal .nm-hint{font-size:11.5px;color:#c2410c;margin:-1px 0 5px;line-height:1.4}
+    #nm-modal .nm-hint{font-size:13px;font-weight:600;color:#c2410c;margin:-1px 0 5px;line-height:1.4}
     #nm-modal .nm-done{max-width:760px;margin:0 auto;width:100%}
     #nm-modal .nm-created{background:#ecfdf5;border:1px solid #6ee7b7;border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;flex-direction:column;gap:4px}
     #nm-modal .nm-created b{font-size:17px;color:#065f46}
@@ -685,7 +685,7 @@
     #kx-intake .io-tag{font-family:'IBM Plex Mono',monospace;font-weight:900;font-size:10.5px;color:#fff;background:#f97316;border-radius:6px;padding:3px 8px;letter-spacing:.5px}
     #kx-intake .io-txt{flex:1;min-width:200px;font-size:12px;color:#7c2d12}
     #kx-intake button{font-size:10.5px;font-weight:800;text-transform:uppercase;border-radius:7px;padding:6px 10px;cursor:pointer;border:1px solid #fdba74;background:#fff;color:#9a3412}
-    #kx-intake button.go{background:#f97316;border-color:#f97316;color:#fff}
+    #kx-intake button.go{background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);border-color:#e0a43a;color:#1E2340}
     `;
     document.head.appendChild(css);
 

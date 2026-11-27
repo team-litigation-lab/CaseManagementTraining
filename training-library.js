@@ -317,8 +317,8 @@
     .mock-upd-bar .mub-state[data-state="error"]{color:#b91c1c;white-space:normal}
     .mock-upd-bar button{font-size:10.5px;font-weight:800;text-transform:uppercase;background:#fff;border:1px solid #f97316;color:#c2410c;border-radius:6px;padding:6px 10px;cursor:pointer}
     #capture-area:not(.mock-upd-ready) .mock-upd-bar button{display:none}
-    .lib-btn{width:100%;border:1px solid #f97316;color:#fdba74;background:rgba(249,115,22,.08);padding:9px 0;border-radius:8px;font-size:10.5px;font-weight:800;text-transform:uppercase;cursor:pointer;margin-bottom:8px}
-    .lib-btn:hover{background:#f97316;color:#fff}
+    .lib-btn{width:100%;border:1px solid #f97316;color:#f5c451;background:rgba(249,115,22,.08);padding:9px 0;border-radius:8px;font-size:10.5px;font-weight:800;text-transform:uppercase;cursor:pointer;margin-bottom:8px}
+    .lib-btn:hover{background:linear-gradient(180deg,#ffefc4 0%,#f7cf6a 50%,#e8b04a 100%);color:#1E2340}
     .lib-prog{width:100%;padding:7px 8px;border-radius:6px;border:1px solid #1e2c4d;background:#0d1c3d;color:#cbd5e1;font-size:10.5px;margin-bottom:22px}
     .lib-prog-label{font-size:9px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px}
     #library-modal .lib-box{max-width:980px;width:94vw;max-height:88vh;display:flex;flex-direction:column}

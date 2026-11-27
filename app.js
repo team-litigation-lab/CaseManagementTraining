@@ -350,6 +350,7 @@
         function generateCaseId() {
             const field = document.getElementById('case-id-field');
             field.dataset.series = '';
+            paintSaveKey();
             if (currentCaseId !== null && !currentCaseIsDraft) {
                 return; // finalized case — its ID is fixed, never regenerated here
             }
@@ -1597,6 +1598,19 @@
                 showToast('Network error while archiving. Check your connection and try again.', 'error', 6000);
             }
         }
+        // 💾 Save Case / ⟳ Update Case, one key: a saved (final) case that's open is updated as it is; anything else
+        // (a new case, a draft) is saved and gets its Case ID.
+        function saveOrUpdateCase() {
+            return (currentCaseId !== null && !currentCaseIsDraft) ? updateCase() : saveCase();
+        }
+        function paintSaveKey() {
+            const b = document.getElementById('cab-save'); if (!b) return;
+            const update = currentCaseId !== null && !currentCaseIsDraft;
+            b.textContent = update ? '\u27F3 Update Case' : '\uD83D\uDCBE Save Case';
+            b.title = update ? 'Save the changes to the saved case you opened' : 'Save this case: it gets its Case ID';
+            b.classList.toggle('cab-update', update);
+        }
+        window.saveOrUpdateCase = saveOrUpdateCase; window.paintSaveKey = paintSaveKey;
         async function updateCase() {
             if (window.mockBlocksSave && window.mockBlocksSave()) return; // view-only Training Library case
             if (currentCaseId === null && window.mockIsMine && window.mockIsMine()) return saveCase(); // the first save of a trainee's work on a case file
@@ -1658,10 +1672,18 @@
             // A trainee's work on a Training Library case file is their own case for that file, never a draft
             // (the server keeps one per trainee per file).
             const mine = !!(window.mockIsMine && window.mockIsMine());
+            // Practising on a Training Library file never makes a case by itself: opening a file and typing used to
+            // save a new case (with its own Case ID) for every file a trainee touched, and the files filled up with
+            // them. Until the trainee presses 💾 Save Case the work is kept in this browser only (it comes back on
+            // the next visit); once their case for the file exists, autosave keeps it up to date as before.
+            if (mine && currentCaseId === null) {
+                persistCurrentEditorState();
+                flashAutoSaveIndicator(reason, 'Kept on this computer · 💾 Save Case to save your work on this file');
+                return false;
+            }
             try {
                 const body = JSON.stringify(currentCaseId !== null
                     ? { id: currentCaseId, content, clientName, phase, medTotal }
-                    : mine ? { content, clientName, phase, medTotal, isDraft: false, finalize: true, typeCode: currentTypeCode() }
                     : { content, clientName, phase, medTotal, isDraft: true });
                 const res = await fetch('/api/case-repository', {
                     method: 'POST',
@@ -2318,12 +2340,10 @@
             const session = getSession();
             if (!session || session.userType !== 'Admin') return;
             document.getElementById('admin-dash-session').innerText = session.fullName + ' \u00B7 Batch ' + session.batchId;
-            document.getElementById('admin-stat-cases').innerText = _repoCache.length;
-            document.getElementById('admin-stat-name').innerText = (document.getElementById('client-name-field').innerText.trim() || '\u2014');
-            document.getElementById('admin-stat-phase').innerText = 'Phase: ' + document.getElementById('display-phase').innerText;
+            // (the Overview tab, with its tiles, was removed)
             document.getElementById('master-control-page').classList.add('open');
             document.body.classList.add('mc-active');
-            showAdminDashTab('overview');
+            showAdminDashTab('monitoring');
             refreshUsersAndRegistrations();
             refreshMonitoring();
             refreshSiteState();
@@ -2333,7 +2353,9 @@
             document.body.classList.remove('mc-active');
         }
 
-        const MC_TABS = ['overview', 'registrations', 'users', 'monitoring', 'case-logs', 'announce', 'access'];
+        // Master Control: Registrations and Monitoring. (Overview, Users, Case Logs, Broadcast & Ping and Access Control were
+        // removed: sign-in comes from the Portal, which also runs users, announcements and pausing.)
+        const MC_TABS = ['registrations', 'monitoring'];
         function showAdminDashTab(tab) {
             document.querySelectorAll('.mc-tab').forEach((t, i) => t.classList.toggle('active', MC_TABS[i] === tab));
             document.querySelectorAll('.mc-pane').forEach(p => p.classList.remove('active'));
@@ -2395,7 +2417,7 @@
                     // Permanent Revocation choice, not disappear from the UI.
                     const active = users.filter(u => u.status === 'Approved' || u.status === 'Suspended');
 
-                    document.getElementById('admin-stat-pending').innerText = pending.length;
+                    const pendingTile = document.getElementById('admin-stat-pending'); if (pendingTile) pendingTile.innerText = pending.length;
                     const badge = document.getElementById('reg-pending-badge');
                     if (badge) { badge.innerText = pending.length > 0 ? ('(' + pending.length + ')') : ''; badge.style.color = pending.length > 0 ? 'var(--classified-red)' : 'inherit'; }
 
@@ -2691,9 +2713,38 @@
             if (!container) return;
             if (!list.length) { container.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No sessions recorded yet.</p>'; return; }
 
+            // 📊 the tiles, and the filter (All / Online now / Trainees / Admins, and a search) over the cards
+            const statsBox = document.getElementById('monitoring-stats');
+            if (statsBox) {
+                const trainees = list.filter(u => (u.user_type || 'Trainee') !== 'Admin');
+                const today = list.filter(u => { const t = seenAt(u.last_seen); return t && new Date(t).toDateString() === new Date().toDateString(); }).length;
+                const tile = (icon, n, label, cls) => '<div class="mon-stat ' + (cls || '') + '"><span>' + icon + '</span><div><b>' + n + '</b><small>' + label + '</small></div></div>';
+                statsBox.innerHTML = tile('\u{1F7E2}', onlineCount, 'Online now', 'live') + tile('\u{1F393}', trainees.filter(u => u._online).length, 'Trainees online') +
+                    tile('\u{1F4C5}', today, 'Seen today') + tile('\u{1F465}', list.length, 'People on record');
+            }
+            const chips = document.getElementById('monitoring-chips');
+            if (chips && !chips.dataset.wired) {
+                chips.dataset.wired = '1';
+                const apply = () => {
+                    const on = chips.querySelector('button.on'), f = on ? on.dataset.mon : 'all';
+                    const q = ((document.getElementById('monitoring-search') || {}).value || '').trim().toLowerCase();
+                    document.querySelectorAll('#monitoring-online-list .reg-row').forEach(r => {
+                        const ok = (f === 'all' || (f === 'online' ? r.dataset.online === '1' : r.dataset.type === f)) && (!q || r.dataset.find.includes(q));
+                        r.hidden = !ok;
+                    });
+                };
+                chips.addEventListener('click', (e) => { const b = e.target.closest('button[data-mon]'); if (!b) return; chips.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); apply(); });
+                chips.addEventListener('input', apply);
+                window._monitoringFilter = apply;
+            }
+
             function rowHtml(u) {
                 // (the username goes in a data attribute: JSON.stringify's double quotes inside onclick="…" cut the handler short, so the click did nothing)
-                return '<div class="reg-row" style="cursor:pointer;" data-username="' + escapeHtmlAttr(u.username) + '" onclick="openMonitorCase(this.dataset.username)"><div class="reg-info">' +
+                const who = String(u.full_name || u.username || '?'), type = (u.user_type || 'Trainee') === 'Admin' ? 'Admin' : 'Trainee';
+                const initials = who.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                return '<div class="reg-row mon-card' + (u._online ? ' is-online' : '') + '" style="cursor:pointer;" data-username="' + escapeHtmlAttr(u.username) + '" data-online="' + (u._online ? 1 : 0) + '" data-type="' + type +
+                    '" data-find="' + escapeHtmlAttr((who + ' @' + u.username).toLowerCase()) + '" onclick="openMonitorCase(this.dataset.username)">' +
+                    '<span class="mon-av mon-' + type.toLowerCase() + '" aria-hidden="true">' + escapeHtmlAttr(initials) + '</span><div class="reg-info">' +
                     '<b><span class="online-dot ' + (u._online ? 'live' : '') + '"></span>' + escapeHtmlAttr(u.full_name || u.username) + '</b>' +
                     '<div class="reg-meta">' + escapeHtmlAttr(u.user_type || '') + ' \u00B7 @' + escapeHtmlAttr(u.username) + ' \u00B7 ' + (u._online ? 'Online now' : 'Last seen ' + (seenAt(u.last_seen) ? new Date(seenAt(u.last_seen)).toLocaleString() : '\u2014')) + (u.current_case ? (' \u00B7 Working on: ' + escapeHtmlAttr(u.current_case)) : '') + '</div>' +
                     '</div><div style="display:flex;align-items:center;gap:10px;">' +
@@ -2703,6 +2754,7 @@
 
             const sorted = list.slice().sort((a, b) => (b._online - a._online) || (seenAt(b.last_seen) - seenAt(a.last_seen)));
             container.innerHTML = sorted.map(rowHtml).join('');
+            if (window._monitoringFilter) window._monitoringFilter();
         }
 
         /* =========================================================

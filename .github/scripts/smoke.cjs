@@ -42,6 +42,14 @@ const SAVED = [
     const failures = [];
     const fail = (msg) => failures.push(msg);
     page.on('pageerror', e => fail(`page error: ${e.message}`));
+    // (CI saw this page navigate right after a Save Case: log every navigation of the page and its console errors, so a
+    // failure says where it went and why)
+    page.on('framenavigated', f => { if (f === page.mainFrame()) console.log(`[nav] ${new Date().toISOString()} ${f.url()}`); });
+    page.on('request', r => { if (r.isNavigationRequest() && r.frame() === page.mainFrame()) console.log(`[nav-start] ${new Date().toISOString()} ${r.method()} ${r.url()}${r.redirectedFrom() ? ' (redirected)' : ''}`); });
+    page.on('download', d => console.log(`[download] ${d.suggestedFilename()}`));
+    page.on('crash', () => console.log('[crash] the page crashed'));
+    page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[console ${m.type()}] ${m.text().slice(0, 300)}`); });
+    page.on('requestfailed', r => { if (!/tailwind|html2pdf|fonts\.g/.test(r.url())) console.log(`[requestfailed] ${r.url()} ${(r.failure() || {}).errorText || ''}`); });
     page.on('dialog', d => d.accept());
     const saved = [], drills = [], updates = {}, aiCalls = [], intakePosts = [], intakeRows = [];
     const intake = await import(require('url').pathToFileURL(path.join(ROOT, 'functions/_intake.js')).href);
@@ -138,7 +146,7 @@ const SAVED = [
         return { inHeader: !!(b && b.closest('.header-card')), below: !!(b && ph) && b.getBoundingClientRect().top >= ph.getBoundingClientRect().bottom - 1, free: !!(b && b.hasAttribute('data-free-edit')) }; });
     if (!bar.inHeader || !bar.below || !bar.free) fail(`the search bar is not in the case header under the case status: ${JSON.stringify(bar)}`);
     // the Profile tab: Identity | Case Narrative | Primary Injury across the top, Employment Details and Emergency Contact under
-    // Identity and the Case Narrative, with Authorized to Access Case inside the Emergency Contact card (placed by CSS; the page
+    // Identity and the Case Narrative, with Authorized Representative inside the Emergency Contact card (placed by CSS; the page
     // order, which the positional save relies on, is unchanged: the Authorized list is a keyed list, saved by id)
     await page.evaluate(() => { openMockCase('MC-01', { silent: true }); showTab('profile'); }); await page.waitForTimeout(200);
     const prof = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#profile-grid .pdf-card')].map(c => { const r = c.getBoundingClientRect(); return [c.querySelector('.section-head').textContent.trim(), { x: Math.round(r.x), y: Math.round(r.y), b: Math.round(r.bottom) }]; })));
@@ -385,8 +393,8 @@ const SAVED = [
         bar: [...document.querySelectorAll('#case-actions-bar button')].filter(b => b.offsetParent).map(b => b.textContent.trim()),
         x: !!(document.getElementById('case-close-x') || {}).offsetParent }));
     if (side.groups.join() !== 'sb-program,sb-cases,sb-work' || side.work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || side.hidden.length || side.oldButtons
-        // (a library case is open here: no 🗄 Archive, it's never saved as a draft)
-        || side.bar.join('|') !== '✕ Close|🗑 Discard Case|💾 Save Case|⟳ Update Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
+        // (a library case is open here: no 🗄 Archive, it's never saved as a draft; one key saves and updates: 💾 Save Case until it's saved)
+        || side.bar.join('|') !== '📄 Case Summary|🗑 Discard Case|💾 Save Case' || !side.x) fail(`a trainee's sidebar or case actions are wrong: ${JSON.stringify(side)}`);
     // The page's frame: the sidebar (and its logo) runs to the top, the announcements strip is over the main area only and has no
     // "LEGAL SUPPORT HELP TRAINING INTERFACE - TRAINEE PORTAL" label; Download Case Summary and My Dashboard are at
     // its right; the date and time are right above the case's Case ID, outside the case; the timer is in the case header under the
@@ -396,9 +404,10 @@ const SAVED = [
         const r = (el) => el ? el.getBoundingClientRect() : null;
         const side = r(document.getElementById('sidebar')), logo = r(document.getElementById('sidebar-logo')), strip = r(document.getElementById('classification-bar'));
         const tt = document.getElementById('tt-widget'), bar = document.getElementById('cl-bar'), banner = document.getElementById('mock-banner');
-        return { sideTop: side.top, logoTop: logo.top, stripLeft: strip.left, sideRight: side.right, stripTop: strip.top,
+        return { sideTop: side.top, logoTop: logo.top, stripLeft: strip.left, sideRight: side.right, stripTop: strip.top, stripBottom: Math.round(innerHeight - strip.bottom),
+            summaryInBar: !!(document.getElementById('download-summary-btn') || {}).closest && !!document.getElementById('download-summary-btn').closest('#case-actions-bar'),
             label: !!document.getElementById('portal-title') || /TRAINING INTERFACE|PORTAL/.test(document.getElementById('classification-bar').textContent),
-            bannerUnderStrip: !banner || !banner.offsetParent || r(banner).top >= strip.bottom - 1,
+            bannerOnTop: !banner || !banner.offsetParent || r(banner).top <= 1,
             ttInHeader: !!(tt && tt.closest('.header-card') && tt.offsetParent), ttUnderBar: !!(tt && bar && r(tt).top >= r(bar).bottom - 1 && r(tt).top - r(bar).bottom < 20),
             ttInSidebar: !!(tt && tt.closest('#sidebar')), ttStart: !!(tt && tt.querySelector('[data-tt="start"]')),
             profileSsn: !!document.getElementById('client-ssn-field').offsetParent, profileDob: !!document.getElementById('client-dob-field').offsetParent,
@@ -417,20 +426,22 @@ const SAVED = [
             ttText: tt ? tt.innerText.replace(/\s+/g, ' ').trim() : '',
             autosave: (document.getElementById('autosave-indicator') || {}).textContent };
     });
-    if (frame.top.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn' || !frame.topInStrip || frame.topRight > 40) fail(`Download Case Summary, Main Portal and My Dashboard should be at the top right (no Blueprint: it lives on the Main Portal): ${JSON.stringify(frame)}`);
+    // the strip is the bottom row's right-hand block: the date and time, 🎓 Academy Index and 📊 My Dashboard (no Blueprint: it
+    // lives on the Main Portal); 📄 Case Summary is with the case's own keys on the left of that row
+    if (frame.top.join() !== 'portal-home-btn,dash-open-btn' || !frame.topInStrip || frame.topRight > 40 || !frame.summaryInBar) fail(`Academy Index and My Dashboard should be at the bottom right, Case Summary with the case's keys (no Blueprint: it lives on the Main Portal): ${JSON.stringify(frame)}`);
     const home = await page.evaluate(() => { const a = document.getElementById('portal-home-btn'); return a && { href: a.getAttribute('href'), text: a.textContent.trim(), cls: a.className, next: a.nextElementSibling && a.nextElementSibling.id, h: Math.round(a.getBoundingClientRect().height), dh: Math.round(document.getElementById('dash-open-btn').getBoundingClientRect().height), top: Math.round(a.getBoundingClientRect().top - document.getElementById('dash-open-btn').getBoundingClientRect().top) }; });
-    if (!home || home.href !== 'https://cm-training-activity.pages.dev/programs.html' || home.text !== '🏠 Main Portal' || home.cls !== 'cls-btn' || home.next !== 'dash-open-btn' || Math.abs(home.h - home.dh) > 2 || Math.abs(home.top) > 2) fail(`🏠 Main Portal should be beside My Dashboard, the same size, back to the Portal's Training Directory: ${JSON.stringify(home)}`);
+    if (!home || home.href !== 'https://cm-training-activity.pages.dev/programs.html' || home.text !== '🎓 Academy Index' || home.cls !== 'cls-btn' || home.next !== 'dash-open-btn' || Math.abs(home.h - home.dh) > 2 || Math.abs(home.top) > 2) fail(`🎓 Academy Index should be beside My Dashboard, the same size, back to LSH Academy Index: ${JSON.stringify(home)}`);
     { const k = frame.clockInStrip; if (!k.found || !k.inBar || !k.afterAnn || !k.beforeTop || k.inCase || !k.tz || k.oldRow) fail(`the date and time (with its time zone) should be in the strip beside the announcement, before the top-right buttons, outside the case: ${JSON.stringify(k)}`); }
     if (frame.ttButtons !== 'start,bill' || /timesheet|details/i.test(frame.ttText)) fail(`the header timer should be just Start timer and the Billable dropdown: ${frame.ttButtons} "${frame.ttText}"`);
     if (String(frame.autosave || '').trim()) fail(`the case actions bar still shows a standing note: "${frame.autosave}"`);
     // in a narrow window the top-right buttons show just their icons and stay in view, and the date and time stay in the strip
     await page.setViewportSize({ width: 600, height: 800 }); await page.waitForTimeout(300);
     const narrow = await page.evaluate(() => { const main = document.querySelector('#app-shell > main').getBoundingClientRect(), clock = document.querySelector('#classification-bar .clock-widget').getBoundingClientRect(), bar = document.getElementById('classification-bar');
-        const btns = ['download-summary-btn', 'portal-home-btn', 'dash-open-btn'].map(id => document.getElementById(id).getBoundingClientRect());
+        const btns = ['download-summary-btn', 'portal-home-btn', 'dash-open-btn'].map(id => document.getElementById(id).getBoundingClientRect());   // (Case Summary: in the case's keys)
         return { inView: btns.every(b => b.left >= main.left && b.right <= innerWidth), labels: [...document.querySelectorAll('#top-actions .lbl')].filter(l => l.offsetParent).length, clock: clock.width > 0 && clock.left >= main.left && clock.right <= main.right, fits: bar.scrollWidth <= bar.clientWidth + 1 }; });
     if (!narrow.inView || narrow.labels || !narrow.clock || !narrow.fits) fail(`a narrow window: the top-right buttons and the date and time should stay in view, in the strip: ${JSON.stringify(narrow)}`);
     await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForTimeout(300);
-    if (frame.sideTop !== 0 || frame.logoTop > 40 || frame.stripLeft < frame.sideRight - 1 || frame.stripTop !== 0 || frame.label || !frame.bannerUnderStrip) fail(`the sidebar and its logo should run to the top, the strip over the main area only with no portal label: ${JSON.stringify(frame)}`);
+    if (frame.sideTop !== 0 || frame.logoTop > 40 || frame.stripLeft < frame.sideRight - 1 || frame.stripBottom > 1 || frame.label || !frame.bannerOnTop) fail(`the sidebar and its logo should run to the top, the strip at the bottom of the main area (the case moves up) with no portal label: ${JSON.stringify(frame)}`);
     if (!frame.ttInHeader || !frame.ttUnderBar || frame.ttInSidebar || !frame.ttStart) fail(`the timer should be in the case header, right under the search bars: ${JSON.stringify(frame)}`);
     if (frame.profileSsn || frame.profileDob || !frame.headSsn) fail(`the Profile tab shouldn't show the SSN or DOB (the header does): ${JSON.stringify(frame)}`);
 
@@ -504,7 +515,7 @@ const SAVED = [
     if (!tools.updates || tools.tools.join() !== 'lib-open-btn,intake-open-btn,fc-open-btn') fail(`an Admin's sidebar is missing Latest Updates or Trainer tools: ${JSON.stringify(tools)}`);
     if (work.join() !== 'nm-open-btn,fdd-open-btn,ac-open-btn' || (await admin.textContent('#fdd-open-btn')).trim() !== '📞 Call Simulator') fail(`an Admin's sidebar should have New Intake, 📞 Call Simulator, then 🗓 Attorney's Calendar: ${work.join()}`);
     const adminTop = await admin.evaluate(() => [...document.querySelectorAll('#top-actions > *')].filter(e => e.offsetParent).map(e => e.id));
-    if (adminTop.join() !== 'download-summary-btn,portal-home-btn,dash-open-btn') fail(`an Admin's top right should be Download Case Summary, Main Portal, My Dashboard (no Blueprint): ${adminTop.join()}`);
+    if (adminTop.join() !== 'portal-home-btn,dash-open-btn') fail(`an Admin's bottom right should be Academy Index and My Dashboard (no Blueprint): ${adminTop.join()}`);
     await admin.evaluate(() => openMockCase('MC-01', { silent: true }));
     await admin.click('#mock-banner button:has-text("Caller scenarios")');
     if (!(await admin.isVisible('#mock-calls-panel.open .mcp-call'))) fail('the Caller scenarios button did not open the panel for an Admin');

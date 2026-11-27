@@ -6,7 +6,7 @@
 //     (the new sections are keyed, so old cases can't shift), and a case saved
 //     by the CMS before this change (fixtures/case-before-keyed.json) loads with
 //     every field where it was and the new sections empty;
-//   - Parties Involved, Authorized to Access, Lost Wages (estimate), Demand,
+//   - Parties Involved, Authorized Representative, Lost Wages (estimate), Demand,
 //     Settlement (fee / costs / liens / net), Location of Incident and the
 //     Report Type (Incident Report relabels the tab) save and load back;
 //   - the new options: MRI and PT specialties, Intake documents, the new phases,
@@ -72,7 +72,7 @@ const failures = []; const fail = (m) => failures.push(m);
         applyCaseContentToDOM(content);
         const polBody = document.getElementById('police-body').querySelectorAll('[contenteditable="true"]');
         const prof = document.getElementById('pane-profile');
-        const narr = [...prof.querySelectorAll('.pdf-card')].find(c => /Case Narrative/.test(c.textContent)).querySelector('[contenteditable]');
+        const narr = document.getElementById('case-narrative-field');   // (the Case Narrative card also holds Location of Incident now)
         const tn = [...document.querySelectorAll('#pane-medical .pdf-card')].find(c => /Treatment Notes/.test((c.querySelector('.section-head') || {}).textContent || '')).querySelector('[contenteditable]');
         return {
             name: document.getElementById('client-name-field').textContent, dol: document.getElementById('date-of-loss-field').innerText,
@@ -186,7 +186,7 @@ const failures = []; const fail = (m) => failures.push(m);
     const summary = await page.textContent('#parties-summary');
     if (!/Passenger:\s*1/.test(summary) || !/Witness:\s*1/.test(summary)) fail(`the parties summary is wrong (${summary})`);
     await page.click('#tab-profile');
-    await page.click('#pane-profile button:has-text("+ Add Person")');
+    await page.click('#pane-profile button:has-text("+ Add Representative")');
     await page.keyboard.type('Ann Authorized');
     await page.click('#kf-incident-location'); await page.keyboard.type('Main St & 5th Ave, Riverton');
     await page.click('#tab-wages');
@@ -227,7 +227,7 @@ const failures = []; const fail = (m) => failures.push(m);
             tab: document.getElementById('tab-police').textContent };
     }, saved);
     if (!/Paula Passenger/.test(back.parties) || !/Walt Witness/.test(back.parties) || back.roles !== 'Passenger,Witness') fail(`Parties Involved didn't load back (${back.parties} / ${back.roles})`);
-    if (!/Ann Authorized/.test(back.auth)) fail('Authorized to Access didn\'t load back');
+    if (!/Ann Authorized/.test(back.auth)) fail('Authorized Representative didn\'t load back');
     if (back.loc !== 'Main St & 5th Ave, Riverton') fail(`Location of Incident didn't load back (${back.loc})`);
     if (back.pay !== 'Hourly' || !/1,600\.00/.test(back.est)) fail('Lost Wages didn\'t load back');
     if (!/Progressive/.test(back.demand)) fail('Demand didn\'t load back');
@@ -279,14 +279,7 @@ const failures = []; const fail = (m) => failures.push(m);
     if ((await page.locator('#task-body tr').count()) !== before + 1 || !/Call the adjuster about the PIP ledger — assigned by Admin Rae/.test(tasks)) fail(`Accept did not add the task to the case's Tasks (${tasks})`);
     if (await page.locator('#task-inbox .task-card').count()) fail('the accepted task card is still showing');
     if (!(await page.evaluate(() => document.getElementById('tab-tasks').classList.contains('active-tab')))) fail('Accept did not open the Tasks tab');
-    // the Admin side: "Send as a task" marks the ping
-    const sent = await page.evaluate(async () => {
-        let body = null; const f = window.fetch;
-        window.fetch = (u, o) => { if (String(u).includes('/api/ping')) { body = JSON.parse(o.body); return Promise.resolve(new Response('{"success":true}')); } return f(u, o); };
-        setPingMode('all'); document.getElementById('ping-as-task').checked = true; document.getElementById('ping-text-input').value = 'Upload the police report';
-        sendPing(); await new Promise(r => setTimeout(r, 50)); window.fetch = f; return body;
-    });
-    if (!sent || sent.text !== '[TASK] Upload the police report') fail(`"Send as a task" didn't mark the ping (${JSON.stringify(sent)})`);
+    // (the Admin side, Broadcast & Ping's "Send as a task", was removed from Master Control: pings come from the Portal)
 
     // 6b. tasks arrive reliably. firedAt is far off on purpose: only the age the server measured counts.
     ping = null;

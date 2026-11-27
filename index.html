@@ -64,13 +64,13 @@
              🧭 Blueprint: the blueprints live on the Main Portal). It sits over the main area only,
              so the sidebar (and its logo) runs to the top of the page. -->
         <div id="classification-bar" class="no-print">
-            <div class="announcement-ticker" id="announcement-ticker">
+            <div class="announcement-ticker" id="announcement-ticker" hidden style="display:none" aria-hidden="true"><!-- no announcement in the CMS (it is set and shown from the Portal); the elements stay for app.js -->
                 <span class="announcement-tag" id="announcement-tag">ANNOUNCEMENT:</span>
                 <div class="ticker-viewport">
                     <div class="ticker-track" id="ticker-track"><span id="ticker-text">Welcome to the LSH Training Interface.</span></div>
                 </div>
             </div>
-            <!-- the date and time, beside the announcement (outside #capture-area on purpose: the time zone picker
+            <!-- the date and time, in the bottom row beside the way out (outside #capture-area on purpose: the time zone picker
                  isn't part of a case; a case's dropdowns are saved by position, counted from the top of the page) -->
             <div class="clock-widget">
                 <span id="live-clock">--:--:--</span>
@@ -87,8 +87,7 @@
                 </select>
             </div>
             <div id="top-actions" class="cls-actions">
-                <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cls-btn" title="Download Case Summary (PDF)">📄 <span class="lbl">Download Case Summary</span></button>
-                <a id="portal-home-btn" href="https://cm-training-activity.pages.dev/programs.html" class="cls-btn" title="Back to the LSH Training Portal (Training Directory)">🏠 <span class="lbl">Main Portal</span></a>
+                <a id="portal-home-btn" href="https://cm-training-activity.pages.dev/programs.html" class="cls-btn" title="LSH Academy Index: every program and tool">🎓 <span class="lbl">Academy Index</span></a>
                 <button id="dash-open-btn" type="button" onclick="openTraineeDashboard()" class="cls-btn" title="My Dashboard">📊 <span class="lbl">My Dashboard</span></button>
             </div>
         </div>
@@ -112,17 +111,26 @@
                         <div id="attorney-cm-container" class="hdr-people">
                             <div class="hdr-f"><label class="contact-label" for="attorney-field">Attorney:</label><input type="text" id="attorney-field" placeholder="Attorney name" class="hdr-input"></div>
                             <div class="hdr-f"><label class="contact-label" for="case-manager-field">Case Manager:</label><input type="text" id="case-manager-field" placeholder="Case manager name" class="hdr-input"></div>
-                            <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div><div id="target-net" class="target-net no-print" aria-live="polite"></div></div>
+                            <div class="hdr-f"><label class="text-green-600">Target Settlement:</label><div contenteditable="true" data-ph="$ 0.00" data-fmt="currency" class="target-settlement-display"></div></div>
                         </div>
                     </div>
                     <!-- The client's ID (client-id.js): a mock ID for a Training Library client; for any other client, a photo of
                          their ID uploaded here. Saved by id (data-keyed): the hidden field holds the uploaded file's key. -->
-                    <div id="kx-client-id" data-keyed class="hdr-id">
-                        <label>Client's ID</label>
-                        <div contenteditable="true" data-k="file" style="display:none" aria-hidden="true"></div>
-                        <div id="client-id-card" class="cid-card"></div>
-                        <!-- ⚠ Add critical note (case-alerts.js finds it by id and handles its click, so no handler is saved with the case): right under the client's ID -->
-                        <button type="button" id="crit-add" class="crit-add no-print">⚠ Add critical note</button>
+                    <!-- the Client's ID, and beside it the ⚠ Critical note (case-alerts.js; saved by id, data-keyed) as a red pill:
+                         it wraps onto more lines as it grows (500 characters at most), so a long note is never cut off -->
+                    <div class="hdr-idrow">
+                        <div id="kx-client-id" data-keyed class="hdr-id">
+                            <label>Client's ID</label>
+                            <div contenteditable="true" data-k="file" style="display:none" aria-hidden="true"></div>
+                            <div id="client-id-card" class="cid-card"></div>
+                            <!-- ⚠ Add critical note (case-alerts.js finds it by id and handles its click, so no handler is saved with the case): a plain link under the client's ID; the note itself shows beside the ID -->
+                            <button type="button" id="crit-add" class="crit-add no-print">⚠ Add critical note</button>
+                        </div>
+                        <div id="kx-critical" data-keyed class="crit-note crit-pill">
+                            <span class="crit-tag">⚠ Critical</span>
+                            <div contenteditable="true" data-k="note" class="crit-text" data-ph="What everyone must know before talking about this case (e.g. Spanish only · a minor: speak only to her mother · time-limited demand expires 11/01)"></div>
+                            <span class="crit-count no-print" aria-live="polite"></span>
+                        </div>
                     </div>
                     <div class="text-right">
                         <div class="flex items-center gap-3 mb-2 justify-end"><label class="mb-0">Case ID:</label><div id="case-id-field" contenteditable="false" class="text-xs font-bold text-slate-500 min-w-[160px] bg-slate-100 px-2 py-0.5 rounded mono">LSH-----</div></div>
@@ -147,10 +155,6 @@
                             <div id="sol-bar-field" contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div>
                         </div>
                         <!-- data-keyed: saved by id, not by position (see keyed sections in app.js) -->
-                        <div class="bar-box bar-box-location">
-                            <label>LOCATION OF INCIDENT</label>
-                            <div id="kf-incident-location" data-keyed data-k="location" contenteditable="true" data-ph="Street / intersection, city, state"></div>
-                        </div>
                     </div>
 
                     <div class="ml-auto flex items-center">
@@ -169,14 +173,9 @@
                     </div>
                 </div>
 
-                <!-- Case alerts (case-alerts.js), seen on every tab: the ⚠ Critical note (saved by id: data-keyed) and the
-                     ⚖ conflict check (worked out from the case files, never saved itself; a decision is logged as a Case Note). -->
+                <!-- Case alerts (case-alerts.js), seen on every tab: the ⚖ conflict check (worked out from the case
+                     files, never saved itself; a decision is logged as a Case Note). The ⚠ Critical note is in the header, beside the Client's ID. -->
                 <div id="case-alerts">
-                    <div id="kx-critical" data-keyed class="crit-note">
-                        <span class="crit-tag">⚠ Critical</span>
-                        <div contenteditable="true" data-k="note" class="crit-text" data-ph="What everyone must know before talking about this case (e.g. Spanish only · a minor: speak only to her mother · time-limited demand expires 11/01)"></div>
-                        <span class="crit-count no-print" aria-live="polite"></span>
-                    </div>
                     <div id="conflict-panel" class="no-print" hidden></div>
                 </div>
 
@@ -188,7 +187,7 @@
                     <div onclick="showTab('police')" id="tab-police" class="tab-btn">Police Report</div>
                     <div onclick="showTab('matrix')" id="tab-matrix" class="tab-btn">Insurance</div>
                     <div onclick="showTab('medical')" id="tab-medical" class="tab-btn">Treatment</div>
-                    <div onclick="showTab('wages')" id="tab-wages" class="tab-btn">Lost Wages</div>
+                    <div onclick="showTab('wages')" id="tab-wages" class="tab-btn">Lost Wages / WC</div>
                     <div onclick="showTab('finance')" id="tab-finance" class="tab-btn">Case Costs</div>
                     <div onclick="showTab('demand')" id="tab-demand" class="tab-btn">Demand</div>
                     <div onclick="showTab('settlement')" id="tab-settlement" class="tab-btn">Settlement (BI/UM)</div>
@@ -223,9 +222,9 @@
                         <div class="pdf-card border-l-4 border-orange-400 shadow-sm"><div class="section-head" style="background:#fff7ed;color:#c2410c;">Emergency Contact</div>
                             <div class="mb-4"><label>Full Name</label><div id="emergency-name-field" contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
                             <div class="grid grid-cols-2 gap-4"><div><label>Phone</label><div id="emergency-phone-field" contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div><div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse"></div></div></div>
-                            <!-- Authorized to Access Case: part of the Emergency Contact card (its own card stretched beside Employment
+                            <!-- Authorized Representative (was "Authorized to Access Case"): part of the Emergency Contact card (its own card stretched beside Employment
                                  Details and left a gap). A keyed list (saved by id), so moving it changes nothing that is saved. -->
-                            <div class="kx-auth-part"><div class="flex justify-between items-center mb-2"><div class="section-head" style="margin-bottom:0;background:#ecfdf5;color:#047857;">Authorized to Access Case</div><button onclick="addAuthorized()" class="add-btn no-print">+ Add Person</button></div>
+                            <div class="kx-auth-part"><div class="flex justify-between items-center mb-2"><div class="section-head" style="margin-bottom:0;background:#ecfdf5;color:#047857;">Authorized Representative</div><button onclick="addAuthorized()" class="add-btn no-print">+ Add Representative</button></div>
                             <div id="kx-authorized" data-keyed="rows" class="space-y-3"></div>
                         </div>
                     </div>
@@ -259,7 +258,10 @@
                         </div>
                     </div>
                     <div class="space-y-6">
-                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div>
+                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div>
+                        <!-- Location of Incident (saved by id: data-keyed), here with the facts of loss (it was in the Date of Loss bar) -->
+                        <div class="kx-location"><label for="kf-incident-location">Location of Incident</label><div id="kf-incident-location" data-keyed data-k="location" contenteditable="true" data-ph="Street / intersection, city, state"></div></div>
+                        <div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div>
                         <!-- Did the client call their insurance? Saved by id (data-keyed). -->
                         <div id="kx-ins-call" data-keyed style="margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0;">
                             <div class="mb-3"><label>Did the client call their insurance?</label><select class="prof-input" data-k="called"><option value="">—</option><option>Yes</option><option>No</option><option>Not yet asked</option></select></div>
@@ -385,7 +387,7 @@
                             <tr>
                                 <th width="210">Date of Service</th>
                                 <th width="190">Medical Facility</th>
-                                <th width="160">Next Appointment Schedule</th>
+                                <th width="230" style="white-space:nowrap">Next Appointment Schedule</th>
                                 <th>Notes</th>
                                 <th width="30"></th>
                             </tr>
@@ -638,6 +640,30 @@
                     </div>
                     <div id="wages-estimate" class="kx-calc no-print"></div>
                 </div>
+                <!-- 🦺 Workers' Compensation: when the client was hurt on the job (or driving for work), WC pays medical and part of the
+                     wages, and the WC carrier holds a lien on the injury settlement. Saved by id (data-keyed), so it moves nothing. -->
+                <div class="pdf-card border-l-8 border-amber-500 kx-wc-card">
+                    <div class="section-head">Workers' Compensation</div>
+                    <div id="kx-wc" data-keyed>
+                        <div class="grid grid-cols-3 gap-6 mb-6">
+                            <div><label>Work-Related Injury?</label><select class="prof-input" data-k="wc-work-related"><option>Unknown — ask the client</option><option>No</option><option>Yes — on the job</option><option>Yes — driving for work</option></select></div>
+                            <div><label>WC Claim Status</label><select class="prof-input" data-k="wc-status"><option>No claim</option><option>Reported to employer</option><option>Claim filed</option><option>Accepted</option><option>Denied</option><option>Disputed / hearing set</option><option>Settled</option><option>Closed</option></select></div>
+                            <div><label>Reported to Employer On</label><div contenteditable="true" data-k="wc-reported-on" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>WC Carrier</label><div contenteditable="true" data-k="wc-carrier" data-ph="Carrier or third-party administrator"></div></div>
+                            <div><label>WC Claim #</label><div contenteditable="true" data-k="wc-claim-no" data-ph="Claim number"></div></div>
+                            <div><label>WC Adjuster</label><div contenteditable="true" data-k="wc-adjuster" data-ph="Name, phone, email"></div></div>
+                            <div><label>Weekly Benefit (TTD / TPD)</label><div contenteditable="true" data-k="wc-weekly-benefit" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Indemnity Paid to Date</label><div contenteditable="true" data-k="wc-indemnity-paid" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>Medical Paid by WC</label><div contenteditable="true" data-k="wc-medical-paid" data-ph="$ 0.00" data-fmt="currency"></div></div>
+                            <div><label>WC Lien Amount</label><div contenteditable="true" data-k="wc-lien-amount" data-ph="$ 0.00" data-fmt="currency" class="font-black text-amber-700"></div></div>
+                            <div><label>MMI Date</label><div contenteditable="true" data-k="wc-mmi-date" data-ph="MM/DD/YYYY" data-fmt="date"></div></div>
+                            <div><label>Impairment Rating</label><div contenteditable="true" data-k="wc-impairment" data-ph="e.g. 8% whole person"></div></div>
+                            <div><label>WC Attorney</label><select class="prof-input" data-k="wc-attorney"><option>Not known</option><option>Our firm</option><option>Outside WC counsel</option><option>None (client unrepresented)</option></select></div>
+                            <div><label>Lien Notice Sent to WC Carrier</label><select class="prof-input" data-k="wc-lien-notice"><option>Not sent</option><option>Sent</option><option>Lien amount confirmed</option><option>Waived / reduced</option></select></div>
+                        </div>
+                        <label>Notes</label><div contenteditable="true" data-k="wc-notes" data-ph="Who is handling the WC claim, light duty offered, the carrier's lien letter, where the documents are saved…" class="multiline-field min-h-[100px]"></div>
+                    </div>
+                </div>
             </div>
             <div id="pane-demand" class="tab-pane">
                 <div class="pdf-card border-l-8 border-blue-600">
@@ -700,12 +726,16 @@
         <!-- The open case's actions, always at the bottom of the screen (app.js). Outside #capture-area, so it's
              never part of a saved case or a case preview. Buttons only: nothing here is saved by position. -->
         <div id="case-actions-bar" class="no-print" role="toolbar" aria-label="Case actions">
-            <button id="cab-close" type="button" class="cab-btn" onclick="closeCase()">✕ Close</button>
+            <!-- (no ✕ Close key here: the ✕ at the case's top right corner closes it) -->
+            <!-- the case's own keys on the left (its summary, archive, discard, save); the clock and the way out on the right (#classification-bar,
+                 shown in this bottom row by the layout: it stays first in the page, as the case's dropdowns are counted from the top) -->
+            <button id="download-summary-btn" type="button" onclick="requestDownload()" class="cab-btn cab-summary" title="Download Case Summary (PDF)">📄 <span class="lbl">Case Summary</span></button>
             <button id="cab-archive" type="button" class="cab-btn cab-archive" onclick="archiveCaseAsDraft()" title="Save as a draft, with no Case ID yet">🗄 Archive</button>
             <button id="cab-discard" type="button" class="cab-btn cab-discard" onclick="discardCase()">🗑 Discard Case</button>
             <span id="autosave-indicator" class="cab-note" aria-live="polite"></span>
-            <button id="cab-save" type="button" class="cab-btn cab-save" onclick="saveCase()">💾 Save Case</button>
-            <button id="cab-update" type="button" class="cab-btn cab-update" onclick="updateCase()" title="Save the changes to the saved case you opened">⟳ Update Case</button>
+            <!-- one key for both: 💾 Save Case for a new case or a draft (it gets its Case ID), ⟳ Update Case once a saved case
+                 is open (app.js saveOrUpdateCase; the label follows the case: paintSaveKey) -->
+            <button id="cab-save" type="button" class="cab-btn cab-save" onclick="saveOrUpdateCase()">💾 Save Case</button>
         </div>
     </main>
     </div>
@@ -803,55 +833,10 @@
             </div>
         </div>
         <div class="mc-tabs">
-            <button class="mc-tab active" onclick="showAdminDashTab('overview')">Overview</button>
             <button class="mc-tab" onclick="showAdminDashTab('registrations')">Registrations <span id="reg-pending-badge"></span></button>
-            <button class="mc-tab" onclick="showAdminDashTab('users')">Users</button>
-            <button class="mc-tab" onclick="showAdminDashTab('monitoring')">Monitoring</button>
-            <button class="mc-tab" onclick="showAdminDashTab('case-logs')">Case Logs</button>
-            <button class="mc-tab" onclick="showAdminDashTab('announce')">Broadcast &amp; Ping</button>
-            <button class="mc-tab" onclick="showAdminDashTab('access')">Access Control</button>
+            <button class="mc-tab active" onclick="showAdminDashTab('monitoring')">Monitoring</button>
         </div>
         <div class="mc-body">
-
-            <!-- OVERVIEW -->
-            <div class="mc-pane active" id="admin-dash-overview">
-                <div class="admin-panel-grid">
-                    <div class="admin-tile">
-                        <h4>Archived Cases</h4>
-                        <div class="admin-stat" id="admin-stat-cases">0</div>
-                        <div class="admin-stat-label">Records in Repository</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Current Case (this device)</h4>
-                        <div class="admin-stat" id="admin-stat-name" style="font-size:14px;">—</div>
-                        <div class="admin-stat-label" id="admin-stat-phase">No active phase</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Trainees Online Now</h4>
-                        <div class="admin-stat" id="admin-stat-online">0</div>
-                        <div class="admin-stat-label">Active in the last 90 seconds</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Pending Registrations</h4>
-                        <div class="admin-stat" id="admin-stat-pending">0</div>
-                        <div class="admin-stat-label">Awaiting review</div>
-                    </div>
-                </div>
-                <div class="mc-section-title">Site-Wide Status</div>
-                <div class="admin-panel-grid">
-                    <div class="admin-tile">
-                        <h4>Activity State</h4>
-                        <div class="admin-stat" id="ov-pause-state" style="font-size:16px;">Active</div>
-                        <div class="admin-stat-label">Pause / Resume from Access Control</div>
-                    </div>
-                    <div class="admin-tile">
-                        <h4>Current Alert</h4>
-                        <div class="admin-stat" id="ov-alert-state" style="font-size:16px;">None Active</div>
-                        <div class="admin-stat-label">Alerts are no longer set from CaseWorX; this stops one that is still running</div>
-                        <button class="btn-ghost" style="border-radius:6px;padding:8px 14px;font-size:10.5px;margin-top:8px;" onclick="stopAlert()">⏹ Stop Alert</button>
-                    </div>
-                </div>
-            </div>
 
             <!-- REGISTRATIONS (pending only) -->
             <div class="mc-pane" id="admin-dash-registrations">
@@ -859,16 +844,18 @@
                 <div id="registrations-list"></div>
             </div>
 
-            <!-- USERS (approved, segregated by type / batch, sorted by sequence) -->
-            <div class="mc-pane" id="admin-dash-users">
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Approved accounts, Admins first. Trainees are grouped by Batch ID (B + the date the batch started), the newest batch first.</p>
-                <div id="users-list"></div>
-            </div>
-
             <!-- MONITORING (live sessions + Server Logs) -->
-            <div class="mc-pane" id="admin-dash-monitoring">
-                <div class="mc-section-title">🟢 Trainees Online</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Live view of who is signed in and working right now. Click a name to view their latest saved (or autosaved) case, read-only.</p>
+            <div class="mc-pane active" id="admin-dash-monitoring">
+                <!-- 🟢 who is on, in the standard look: a header, tiles, filters and a card per person (app.js renderMonitoringOnline) -->
+                <div class="mon-hero">
+                    <div><h3>🟢 Trainees Online</h3>
+                    <p>Live view of who is signed in and working right now. Click a person to view their latest saved (or autosaved) case, read-only; 👁 Watch live follows a trainee's screen.</p></div>
+                </div>
+                <div class="mon-stats" id="monitoring-stats"></div>
+                <div class="mon-chips" id="monitoring-chips" role="group" aria-label="Show">
+                    <button type="button" class="on" data-mon="all">All</button><button type="button" data-mon="online">Online now</button><button type="button" data-mon="Trainee">Trainees</button><button type="button" data-mon="Admin">Admins</button>
+                    <input type="search" id="monitoring-search" placeholder="Search a name or @username" aria-label="Search people">
+                </div>
                 <div id="monitoring-online-list"></div>
 
                 <div class="mc-section-title">🗄 Server Logs</div>
@@ -879,70 +866,8 @@
                 </div>
             </div>
 
-            <!-- CASE LOGS (search, chronological list, versions, full view) -->
-            <div class="mc-pane" id="admin-dash-case-logs">
-                <div class="mc-section-title">🔍 Search Case</div>
-                <input type="text" id="case-logs-search" oninput="renderCaseLogs()" placeholder="Search by client name, Case ID or trainee..." style="width:100%; padding:9px 12px; margin-bottom:16px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; outline:none;">
-
-                <div class="mc-section-title">📄 All Cases — Most Recently Modified First</div>
-                <p style="font-size:11px;color:#64748b;margin-bottom:14px;">Every case in the shared repository, including drafts, sorted by most recent modification. <b>Delete</b> removes a case for good (a trainee's practice case, for example); tick several, or search for a trainee and select all, to delete them together.</p>
-                <div id="case-logs-bulk" class="case-logs-bulk"></div>
-                <div id="case-logs-list"></div>
-            </div>
-
-            <!-- ANNOUNCEMENTS & ALERTS -->
-            <div class="mc-pane" id="admin-dash-announce">
-                <div class="mc-section-title">📢 Announcement (shows in the scrolling ticker, top bar only)</div>
-                <div class="admin-tile">
-                    <p id="announce-current-preview" style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">Welcome to the LSH Training Interface.</p>
-                    <textarea id="announce-text-input" placeholder="Type the message to broadcast in the ticker..." style="width:100%;min-height:70px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin-bottom:12px;"></textarea>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="makeAnnouncement()">📢 Broadcast Announcement</button>
-                        <button class="btn-ghost" style="border-radius:6px;padding:10px 16px;" onclick="clearAnnouncement()">Clear Ticker</button>
-                    </div>
-                </div>
-
-                <div class="mc-section-title">📣 Ping (instant toast notification with a loud, distinct alert tone)</div>
-                <div class="admin-tile">
-                    <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Sends an instant on-screen notification to one user or to everyone currently on the site. It uses its own louder, longer alert tone (not the login-confirmation sound) so it actually gets noticed, and shows who it's from — no full-screen takeover, no ticker change, just a quick attention-getter.</p>
-
-                    <div style="display:flex; gap:8px; margin-bottom:12px;">
-                        <button type="button" class="mini-btn" id="ping-mode-single-btn" style="background:var(--navy);color:white;padding:8px 14px;" onclick="setPingMode('single')">👤 Specific User(s)</button>
-                        <button type="button" class="mini-btn" id="ping-mode-all-btn" style="background:#94a3b8;color:white;padding:8px 14px;" onclick="setPingMode('all')">📢 All Users</button>
-                    </div>
-
-                    <div id="ping-user-row" style="margin-bottom:12px;">
-                        <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Recipient(s)</label><br>
-                        <div id="ping-user-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
-                        <div style="position:relative;">
-                            <input type="text" id="ping-user-search" placeholder="Search by name, username, batch ID, or type…" autocomplete="off"
-                                style="width:100%;padding:9px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-top:6px;"
-                                oninput="filterPingUserList()" onfocus="openPingUserList()"
-                                onkeydown="if(event.key==='Escape'){closePingUserList();this.blur();}">
-                            <input type="hidden" id="ping-user-select" value="">
-                            <div id="ping-user-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:230px;overflow-y:auto;background:white;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 10px 26px rgba(0,0,0,0.14);z-index:80;margin-top:4px;"></div>
-                        </div>
-                        <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Click a name to toggle it \u00B7 click outside or press Esc to close the list</div>
-                    </div>
-
-                    <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;">Message</label>
-                    <textarea id="ping-text-input" placeholder="Type the ping message..." style="width:100%;min-height:56px;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-family:'IBM Plex Sans',Arial,sans-serif;font-size:13px;margin:6px 0 14px;"></textarea>
-
-                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:-4px 0 14px;cursor:pointer;"><input type="checkbox" id="ping-as-task"> Send as a <b>task</b>: the trainee gets an <b>Accept</b> button that adds it to the open case's Tasks list</label>
-                    <button class="btn-primary" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="sendPing()">📣 Send Ping</button>
-                </div>
-            </div>
-
-            <!-- ACCESS CONTROL (Pause) -->
-            <div class="mc-pane" id="admin-dash-access">
-                <div class="mc-section-title">⏸ Pause Activity (site-wide, no logout, resumable)</div>
-                <div class="admin-tile">
-                    <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Pausing freezes activity across every connected user. Nobody is logged out and no progress is lost — when you Resume, everyone continues exactly where they left off.</p>
-                    <div style="font-size:12px;font-weight:800;margin-bottom:10px;">Current state: <span id="pause-state-label" style="color:var(--classified-red);">Active (not paused)</span></div>
-                    <button class="btn-primary" id="pause-toggle-btn" style="border-radius:6px;padding:10px 16px;font-size:11px;" onclick="togglePause()">⏸ Pause All Activity</button>
-                </div>
-            </div>
-
+            <!-- (Overview, Users, Case Logs, Broadcast & Ping and Access Control were removed: sign-in, users,
+                 announcements and pausing are run from the LSH Training Portal) -->
         </div>
     </div>
 
@@ -1070,11 +995,13 @@
     <script src="intake-folder.js"></script>
     <!-- 📇 Contacts: the small Search contacts bar under the case header's Search cases pops up a contact's card
          (medical providers, adjusters, opposing counsel, clients, others in the case files) -->
+    <script src="connected-cases.js"></script>
     <script src="contacts.js"></script>
     <script src="case-sections.js"></script>
     <script src="case-alerts.js"></script>
     <script src="case-dates.js"></script>
     <script src="pd-photos.js"></script>
+    <script src="practice-cleanup.js"></script>
     <script src="intake-form.js"></script>
     <script src="firm-calendar.js"></script>
     <script src="time-tracker.js"></script>
@@ -1086,6 +1013,7 @@
     <script src="blueprint-content.js"></script>
     <script src="lsh-blueprint.js"></script>
     <script src="guest-access.js"></script>
+    <script src="module-back.js"></script>
     <!-- live view: Admins watch a trainee's screen as they work (Master Control → Monitoring → 👁 Watch live) -->
     <script src="live-view.js"></script>
     <!-- a new version of the site: open pages load it at a quiet moment -->

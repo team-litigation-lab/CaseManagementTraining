@@ -9,7 +9,8 @@
 //  - no program: the file is view only (Notes and Tasks aside) with a "Choose your program" picker, and
 //    Save Case saves nothing; the Front Desk: the same;
 //  - Intake: the header and Profile, Parties… are editable (✎ on their tabs), Treatment is locked (typing
-//    blocked, its buttons hidden); Save Case saves their own case (a Case ID, trainingLibraryId, program);
+//    blocked, its buttons hidden); Save Case saves their own case (a Case ID, trainingLibraryId, program); autosave
+//    never makes one by itself (practice that isn't saved stays in the browser);
 //    🗄 Archive is hidden, and archiving saves the same case (no draft); reopening shows their work;
 //    leaving with unsaved changes saves them; ↺ Start over brings the file back with their case kept;
 //  - Medical Summary & Demand: Treatment editable, the header locked;
@@ -208,16 +209,18 @@ const failures = []; const fail = (m) => failures.push(m);
     st = await state();
     if (!st.viewOnly || st.mine || st.picker) fail(`a drill's case file: ${JSON.stringify(st)}`);
 
-    // the page closing with unsaved work on a file they haven't saved yet: sent as their case, not a draft
+    // the page closing with unsaved work on a file they haven't saved yet: nothing is sent (practice never makes a
+    // case by itself; Save Case does), and the work is kept in this browser for the next visit
     await page.evaluate(() => mockChooseProgram('intake')); await settle();
     await page.evaluate(() => openMockCase('MC-07', { silent: true })); await settle();
     await typeIn('#case-narrative-field', ' Typed then closed.');
     await page.waitForTimeout(700);
     n0 = posts.length;
-    await page.evaluate(() => window.dispatchEvent(new Event('pagehide'))); await page.waitForTimeout(800);
+    await page.evaluate(() => { autoSaveProgress('away'); window.dispatchEvent(new Event('pagehide')); }); await page.waitForTimeout(800);
     const closed = posts.slice(n0).find(b => b.content && b.content.trainingLibraryId === 'MC-07');
     const sevens = rows('tia').filter(x => x.content.trainingLibraryId === 'MC-07');
-    if (!closed || closed.isDraft !== false || sevens.length !== 1 || sevens[0].is_draft !== 0 || !/Typed then closed/.test(JSON.stringify(sevens[0].content))) fail(`closing the page with unsaved work on a case file: ${JSON.stringify({ sent: closed && { draft: closed.isDraft }, rows: sevens.map(x => ({ draft: x.is_draft })) })}`);
+    const kept = await page.evaluate(() => { try { return Object.keys(localStorage).some(k => /Typed then closed/.test(localStorage.getItem(k) || '')) || Object.keys(sessionStorage).some(k => /Typed then closed/.test(sessionStorage.getItem(k) || '')); } catch (e) { return false; } });
+    if (closed || sevens.length || !kept) fail(`practice on a case file not yet saved made a case by itself, or wasn't kept on this computer: ${JSON.stringify({ sent: !!closed, cases: sevens.length, kept })}`);
     if (rows('tia').some(x => x.is_draft && x.content.trainingLibraryId && !['MC-05'].includes(x.content.trainingLibraryId))) fail('a draft of a case file was made');
 
     // an Admin edits the library case itself

@@ -2,7 +2,7 @@
    LSH CaseWorX — CASE SECTIONS (the newer parts of the case editor)
    ---------------------------------------------------------
      - Parties Involved (passengers, at-fault party, witnesses…)
-     - Authorized to Access Case (Profile)
+     - Authorized Representative (Profile; was "Authorized to Access Case")
      - Lost Wages, Demand and Settlement tabs, with their math; each
        demand can carry its demand letter (⬆ Upload Demand)
      - Opposing Counsel (Litigation): the defense attorneys
@@ -92,20 +92,33 @@
         out.innerHTML = keys.length ? keys.map(k => `<span class="kx-chip">${esc(k)}: <b>${counts[k]}</b></span>`).join('') : '<span class="kx-hint" style="margin:0;">No parties added yet.</span>';
     }
 
-    /* ---------- Authorized to Access Case ---------- */
+    /* ---------- Authorized Representative (was "Authorized to Access Case") ----------
+       Who may speak for the client, how they were authorized, and where the proof is saved. Rows are saved as
+       their own HTML (data-keyed="rows"), so rows saved before keep their old fields and load as they were. */
+    const REL = ['Spouse', 'Parent', 'Guardian', 'Child', 'Sibling', 'Grandparent', 'Partner', 'Friend', 'Interpreter', 'Other'];
+    // How the representative was authorized. The last three are the ones the law or a court gives, not the client.
+    const VIA = ['Email from the client', 'Call with the client (recorded in a Case Note)', 'Text from the client',
+        'Signed authorization (HIPAA / client consent form)', 'Power of attorney (SPA / durable POA)',
+        'Statutory heir / next of kin (client deceased)', 'Court-appointed guardian or conservator (incl. guardian ad litem)',
+        'Personal representative of the estate (letters testamentary / of administration)',
+        'Government agency (e.g. state custody caseworker, SSA representative payee)'];
+    const repOpts = (list, first) => `<option value="">${first}</option>` + list.map(o => `<option>${o}</option>`).join('');
     window.addAuthorized = function () {
         const box = $id('kx-authorized'); if (!box) return;
         const div = document.createElement('div');
-        div.className = 'kx-row relative bg-slate-50 rounded-lg p-4';
+        div.className = 'kx-row kx-rep relative bg-slate-50 rounded-lg p-4';
         div.innerHTML = `${removeBtn}
             <div class="grid grid-cols-2 gap-4">
                 <div><label>Full Name</label><div contenteditable="true" data-ph="Enter full name" data-fmt="name"></div></div>
-                <div><label>Relationship</label><div contenteditable="true" data-ph="e.g. Spouse, Parent, Guardian"></div></div>
                 <div><label>Phone</label><div contenteditable="true" data-ph="(000) 000-0000" data-fmt="phone"></div></div>
+                <div><label>Relationship</label><select class="prof-input kx-pill">${repOpts(REL, 'Relationship…')}</select></div>
+                <div><label>Authorized Via</label><select class="prof-input kx-pill">${repOpts(VIA, 'How were they authorized?')}</select></div>
                 <div><label>Authorization on File</label><select class="prof-input"><option>Pending</option><option>Signed (HIPAA / authorization)</option><option>Verbal only (not enough)</option><option>Revoked</option></select></div>
             </div>
             <label style="margin-top:8px;">May Discuss</label>
-            <div contenteditable="true" data-ph="e.g. Scheduling and case status only; no settlement figures"></div>`;
+            <div contenteditable="true" data-ph="e.g. Scheduling and case status only; no settlement figures"></div>
+            <label style="margin-top:8px;">Notes</label>
+            <div contenteditable="true" class="multiline-field" data-ph="Where the documentation is saved (e.g. Doc Hub → Authorizations → POA signed 11/02), who confirmed it, any limits"></div>`;
         box.appendChild(div);
         placeholders(div);
         div.querySelector('[contenteditable="true"]').focus();
@@ -295,18 +308,44 @@
         });
         return total;
     }
-    function paintTargetNet(costs) {
-        const out = $id('target-net'), t = document.querySelector('.target-settlement-display'); if (!out) return;
-        const target = money(t);
-        const html = target && costs ? `After case costs (${fmt$(costs)}): <b>${fmt$(target - costs)}</b>` : '';
-        if (out.innerHTML !== html) out.innerHTML = html;
+    /* ✓ The header's Target Settlement becomes "Settled" once the case is: a settlement whose status is Accepted,
+       Release signed, Check received or Disbursed, or a settled case status (BI / UM or UIM / Litigation Settled,
+       Disbursement, Closed). Its box then shows the settled gross (all settlements added up); the target is kept on
+       the box (title, data-target) and comes back if the case is no longer settled. It's part of the case, so the
+       saved file shows Settled when it's closed and opened again. (The "After case costs" line is gone.) */
+    const SETTLED_STATUS = /^(Accepted|Release signed|Check received|Disbursed)$/;
+    const SETTLED_PHASE = /^(BI Settled|UM or UIM Settled|Litigation Settled|Disbursement|Closed)$/i;
+    function paintSettled(list) {
+        const t = document.querySelector('.header-card .target-settlement-display'); if (!t) return;
+        const field = t.closest('.hdr-f'), label = field && field.querySelector('label');
+        const phase = ((document.getElementById('phase-selector') || {}).value || '').trim();
+        const settledBoxes = list.filter(({ box }) => { const st = box.querySelector('select[data-k="settlement-status"]') || [...box.querySelectorAll('select')].find(x => /settled|Accepted|Release|Check|Disbursed/.test([...x.options].map(o => o.text).join('|'))); return st && SETTLED_STATUS.test(st.value); });
+        const settled = settledBoxes.length > 0 || SETTLED_PHASE.test(phase);
+        const gross = list.reduce((sum, { box }) => sum + money(box.querySelector('[data-s="gross"]')), 0);
+        if (settled) {
+            if (!t.dataset.settled) { t.dataset.target = t.innerText.trim(); t.dataset.settled = '1'; }
+            if (gross > 0 && t.innerText.trim() !== fmt$(gross)) t.innerText = fmt$(gross);
+            t.title = 'Settled' + (t.dataset.target ? ' · target was ' + t.dataset.target : '');
+            if (label && !/Settled/.test(label.textContent)) label.textContent = '✓ Settled:';
+            if (field) field.classList.add('is-settled');
+        } else if (t.dataset.settled) {
+            if (t.dataset.target != null) t.innerText = t.dataset.target;
+            delete t.dataset.settled; delete t.dataset.target; t.title = '';
+            if (label) label.textContent = 'Target Settlement:';
+            if (field) field.classList.remove('is-settled');
+        } else if (label && /Settled/.test(label.textContent)) {   // a case saved while settled, opened after it was reopened
+            label.textContent = 'Target Settlement:'; if (field) field.classList.remove('is-settled');
+        }
     }
+    window.paintSettled = () => paintSettled(settlements());
+    document.addEventListener('change', (e) => { if (e.target && e.target.id === 'phase-selector') paintSettled(settlements()); });
+
     window.calcSettlement = function () {
         const sums = { gross: 0, fee: 0, costs: 0, liens: 0, net: 0, n: 0 };
         const unconfirmed = typeof window.lienOpenCount === 'function' ? window.lienOpenCount() : 0;
         const lienWarn = unconfirmed ? `<div class="kx-warn">${unconfirmed} lien${unconfirmed === 1 ? ' on the Liens tab is' : 's on the Liens tab are'} still unconfirmed: the liens figure here may be wrong until the lien letter${unconfirmed === 1 ? '' : 's'} and final amount${unconfirmed === 1 ? '' : 's'} are in.</div>` : '';
         const list = settlements(), costs = shareCosts(list);
-        paintTargetNet(costs);
+        paintSettled(list);
         const extras = [];
         list.forEach(({ box, out, label, extra }) => {
             const x = settlementMath(box);
