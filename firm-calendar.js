@@ -967,6 +967,7 @@
     window.fcNew = function (opts) {
         const over = caseDefaults();
         if (!over.caseLabel && opts && opts.fromCase) toast('Open a case first to link the event to it.', 'info');
+        if (opts && opts.prefill) Object.assign(over, opts.prefill);   // (📋 Docketing check: a deadline, ready to docket)
         S.panel = { kind: 'form', form: blankForm(over) }; render();
         setTimeout(() => { const t = $id('fcf-title'); if (t) t.focus(); }, 30);
     };
