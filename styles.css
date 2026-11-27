@@ -1568,6 +1568,8 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 #capture-area .header-card #lsh-integrated-bar .bar-box > div:focus { background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #DB8437, #f59e0b) border-box !important; outline: none; }
 #capture-area .header-card #lsh-integrated-bar .bar-data-container { gap: 18px !important; }
+/* Date of Loss and Statute (SOL): the dates in red */
+#capture-area .header-card #lsh-integrated-bar .bar-box > #date-of-loss-field, #capture-area .header-card #lsh-integrated-bar .bar-box > #sol-bar-field { color: #c81e1e !important; }
 
 /* ===== the case header as four columns (a wide screen, 1500px and up; a laptop keeps the row above), each piece a tile of its own:
      ① the client's details (full height) · ② Date of Loss and Statute (SOL), with the ⚠ Critical note (and 🔗 Connected
@@ -1590,7 +1592,9 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     #capture-area .header-card #lsh-integrated-bar .bar-data-container { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
     #capture-area .header-card #lsh-integrated-bar .bar-box > div { height: 30px !important; padding: 4px 10px !important; font-size: 13px !important; line-height: 18px !important; border-width: 2px !important; border-radius: 9px !important; }
     #capture-area .header-card #lsh-integrated-bar .bar-box label { align-self: flex-start; display: inline-flex; width: fit-content; padding: 3px 11px !important; margin-bottom: 5px !important; border-radius: 999px;
-        background: linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #a8792f 82%, #c9973f 100%); color: #fff !important; font-size: 11px !important; letter-spacing: .07em; }
+        background: #1E2340; color: #fff !important; font-size: 11px !important; letter-spacing: .07em; }
+    /* the client's card reaches the bottom of its tile, so Date of Loss and SOL sit inside it, clear of its edge */
+    #capture-area .header-card .hdr-client { align-self: stretch !important; padding-bottom: 78px !important; }
     /* ② the ⚠ Critical note, and 🔗 Connected cases under it */
     #capture-area .header-card .hdr-idrow > .cx-col { grid-column: 2; grid-row: 1 / 6; display: flex !important; flex-direction: column; gap: 12px;
         width: auto !important; max-width: none !important; min-width: 0; margin: 0 !important; flex: none !important; align-self: stretch; }
