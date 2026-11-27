@@ -155,10 +155,6 @@
                             <div id="sol-bar-field" contenteditable="true" class="sol-font-fix" data-ph="MM/DD/YYYY" data-fmt="date"></div>
                         </div>
                         <!-- data-keyed: saved by id, not by position (see keyed sections in app.js) -->
-                        <div class="bar-box bar-box-location">
-                            <label>LOCATION OF INCIDENT</label>
-                            <div id="kf-incident-location" data-keyed data-k="location" contenteditable="true" data-ph="Street / intersection, city, state"></div>
-                        </div>
                     </div>
 
                     <div class="ml-auto flex items-center">
@@ -262,7 +258,10 @@
                         </div>
                     </div>
                     <div class="space-y-6">
-                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div><div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div>
+                    <div class="pdf-card shadow-sm"><div class="section-head">Case Narrative</div>
+                        <!-- Location of Incident (saved by id: data-keyed), here with the facts of loss (it was in the Date of Loss bar) -->
+                        <div class="kx-location"><label for="kf-incident-location">Location of Incident</label><div id="kf-incident-location" data-keyed data-k="location" contenteditable="true" data-ph="Street / intersection, city, state"></div></div>
+                        <div id="case-narrative-field" contenteditable="true" data-ph="Enter facts of loss..." class="multiline-field min-h-[420px] text-sm italic leading-relaxed text-slate-600"></div>
                         <!-- Did the client call their insurance? Saved by id (data-keyed). -->
                         <div id="kx-ins-call" data-keyed style="margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0;">
                             <div class="mb-3"><label>Did the client call their insurance?</label><select class="prof-input" data-k="called"><option value="">—</option><option>Yes</option><option>No</option><option>Not yet asked</option></select></div>

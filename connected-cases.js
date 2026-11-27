@@ -66,7 +66,8 @@
         if (id === shownFor) return;
         shownFor = id;
         const others = id ? linked(id) : [];
-        if (!others.length) { card.hidden = true; card.innerHTML = ''; return; }
+        // none: the card stays as an empty placeholder (it shows where the header has room for it; CSS keeps it hidden elsewhere)
+        if (!others.length) { card.hidden = true; card.innerHTML = '<div class="cx-h">🔗 Connected cases <b>0</b></div><div class="cx-g">No other client of the firm on this accident.</div>'; return; }
         const me = byId(id).connected;
         card.innerHTML = `<div class="cx-h">🔗 Connected cases <b>${others.length}</b></div>
             <div class="cx-g">${esc(me.group)}</div>
