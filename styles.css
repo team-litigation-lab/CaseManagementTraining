@@ -1576,16 +1576,19 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
    stays as it was, so the fields cases are saved by position keep their places. Location of Incident isn't shown here
    (it moved to the Case Narrative card on Profile; saved by its id, so cases keep it). ===== */
 @media (min-width: 1500px) {
-    #capture-area .header-card { display: grid !important; grid-template-columns: minmax(380px, 1.5fr) minmax(250px, 1fr) minmax(190px, 220px) minmax(270px, 1.1fr);
+    #capture-area .header-card { display: grid !important; grid-template-columns: minmax(380px, 1.45fr) minmax(240px, 1fr) minmax(250px, 300px) minmax(270px, 1.1fr);
         grid-template-rows: auto auto auto auto 1fr auto auto; gap: 12px 16px; align-items: stretch;
         /* the navy band behind the tiles (it was on the header's row, which the grid no longer draws) */
         background: linear-gradient(135deg, #1E2340 0%, #16306a 60%, #1d3f86 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box !important; }
     #capture-area .header-card > .flex.justify-between, #capture-area .header-card > #lsh-integrated-bar, #capture-area .header-card .hdr-idrow { display: contents !important; }
     /* ① the client's details, with Date of Loss and Statute (SOL) in the card under them */
-    #capture-area .header-card .hdr-client { grid-column: 1; grid-row: 1 / 6; margin: 0 !important; align-self: stretch; padding-bottom: 96px !important; }
+    #capture-area .header-card .hdr-client { grid-column: 1; grid-row: 1 / 6; margin: 0 !important; align-self: start; padding-bottom: 86px !important; }
     #capture-area .header-card #lsh-integrated-bar .bar-data-container { grid-column: 1; grid-row: 1 / 6; align-self: end; z-index: 1; margin: 0 16px 16px !important;
         display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px 14px !important; background: none; border: 0; padding: 0 !important; box-shadow: none; }
     #capture-area .header-card #lsh-integrated-bar .bar-box { width: auto !important; min-width: 0; }
+    /* Date of Loss and SOL: the same size as the client's other boxes */
+    #capture-area .header-card #lsh-integrated-bar .bar-data-container { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    #capture-area .header-card #lsh-integrated-bar .bar-box > div { height: 36px !important; padding: 7px 11px !important; font-size: 14px !important; border-width: 2px !important; border-radius: 9px !important; }
     #capture-area .header-card #lsh-integrated-bar .bar-box label { align-self: flex-start; display: inline-flex; width: fit-content; padding: 3px 11px !important; margin-bottom: 5px !important; border-radius: 999px;
         background: linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #a8792f 82%, #c9973f 100%); color: #fff !important; font-size: 11px !important; letter-spacing: .07em; }
     /* ② the ⚠ Critical note, and 🔗 Connected cases under it */
