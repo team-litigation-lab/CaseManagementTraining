@@ -75,3 +75,36 @@ export async function onRequestPost({ request, env }) {
     // screenId (while watched): the screen the server has, so the page sends it again only if it didn't arrive
     return json(Object.assign({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS, watched: !!live.watched }, live.watched ? { screenId: live.screenId || null } : {}));
 }
+
+// 🧹 DELETE /api/heartbeat (admins only): takes people off Master Control's Trainees Online list. Only the "last seen" rows go
+// (the heartbeats table); accounts, saved cases and logs are untouched, and anyone who signs in again is back on the list.
+//   { usernames: [...] }       those people's rows
+//   { olderThanDays: N }       everyone not seen for N days or more (never anyone online now)
+//   { ..., preview: true }     only counts, removes nothing
+export async function onRequestDelete({ request, env }) {
+    const auth = await requireSession(request, env, { adminOnly: true });
+    if (!auth.ok) return auth.response;
+    let body;
+    try { body = await request.json(); } catch (e) { return json({ success: false, error: 'Invalid request body.' }, 400); }
+    const db = env.DB, preview = !!body.preview;
+    if (Array.isArray(body.usernames) && body.usernames.length) {
+        const names = body.usernames.map(u => String(u || '').trim()).filter(Boolean).slice(0, 500);
+        if (!names.length) return json({ success: false, error: 'Pick someone to remove.' }, 400);
+        const marks = names.map(() => '?').join(',');
+        if (preview) {
+            const row = await db.prepare(`SELECT COUNT(*) AS n FROM heartbeats WHERE username IN (${marks})`).bind(...names).first();
+            return json({ success: true, count: (row && row.n) || 0 });
+        }
+        const r = await db.prepare(`DELETE FROM heartbeats WHERE username IN (${marks})`).bind(...names).run();
+        return json({ success: true, removed: (r && r.meta && r.meta.changes) || 0 });
+    }
+    const days = Math.floor(Number(body.olderThanDays));
+    if (!(days >= 1 && days <= 3650)) return json({ success: false, error: 'Say how many days (1 or more).' }, 400);
+    const cut = `datetime('now', '-${days} days')`;
+    if (preview) {
+        const row = await db.prepare(`SELECT COUNT(*) AS n FROM heartbeats WHERE last_seen < ${cut}`).first();
+        return json({ success: true, count: (row && row.n) || 0 });
+    }
+    const r = await db.prepare(`DELETE FROM heartbeats WHERE last_seen < ${cut}`).run();
+    return json({ success: true, removed: (r && r.meta && r.meta.changes) || 0 });
+}

@@ -73,11 +73,26 @@
         done();
     }
 
+    // ⏱ The sign-in never waits forever: a slow moment on the server (a cold start, a busy database) left trainees on
+    // "Signing you in…" with nothing to do. After 6 s the card says it is still working; after 20 s the request is given
+    // up and the card offers ↻ Try again (the same ticket: a trainee's is good for 5 minutes) and the way back to the Portal.
+    const SLOW_MS = 6000, GIVE_UP_MS = 20000;
+    function timedOut() {
+        const el = card('<h1 style="font-size:20px;margin:0 0 8px">CaseWorX is taking too long</h1>'
+            + '<p style="color:#cbd5e1;font-size:14px;line-height:1.5;margin:0 0 18px">The sign-in didn\'t finish. Try again, or open CaseWorX from the LSH Training Portal once more.</p>'
+            + '<button type="button" id="sso-retry" style="display:block;width:100%;border:0;cursor:pointer;font:inherit;background:linear-gradient(180deg,#fde7b0 0%,#f5c451 50%,#e0a43a 100%);color:#1E2340;font-weight:700;padding:12px;border-radius:10px;margin:0 0 10px">↻ Try again</button>'
+            + '<a href="' + launchUrl() + '" style="display:block;color:#fff;font-weight:700;text-decoration:none;padding:11px;border-radius:10px;border:1.5px solid rgba(245,196,81,.6)">Open from the LSH Training Portal</a>');
+        const b = el.querySelector('#sso-retry'); if (b) b.onclick = () => signInFromTicket();
+    }
     async function signInFromTicket() {
         busy = true;
-        card('<h1 style="font-size:20px;margin:0 0 8px">Signing you in…</h1><p style="color:#cbd5e1;font-size:14px;margin:0">Opening CaseWorX from the LSH Training Portal.</p>');
+        card('<h1 style="font-size:20px;margin:0 0 8px">Signing you in…</h1><p id="sso-wait" style="color:#cbd5e1;font-size:14px;margin:0">Opening CaseWorX from the LSH Training Portal.</p>');
+        const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+        const slow = setTimeout(() => { const w = document.getElementById('sso-wait'); if (w) w.textContent = 'Still signing you in… this can take a few seconds.'; }, SLOW_MS);
+        const giveUp = setTimeout(() => { if (ctl) ctl.abort(); }, GIVE_UP_MS);
+        let gaveUp = false;
         try {
-            const res = await fetch('/api/portal-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ticket }) });
+            const res = await fetch('/api/portal-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ticket }), signal: ctl ? ctl.signal : undefined });
             const data = await res.json().catch(() => ({}));
             if (data.code === 'ADMIN_PASSWORD_REQUIRED') { openAdminLogin(); return; }
             if (!res.ok || !data.success) { notice = data.error || 'We couldn’t sign you in from the LSH Training Portal. Open CaseWorX from the Portal again.'; return; }
@@ -90,10 +105,12 @@
             try { sessionStorage.removeItem(BOUNCE_KEY); } catch (e) { /* ignore */ }
             if (typeof showToast === 'function') showToast('Signed in as ' + u.fullName + '.', 'success');
         } catch (e) {
+            if (e && e.name === 'AbortError') gaveUp = true;
             notice = 'We couldn’t reach CaseWorX to sign you in. Check your connection and open it from the LSH Training Portal again.';
         } finally {
+            clearTimeout(slow); clearTimeout(giveUp);
             busy = false;
-            if (!session()) ticketFailed();
+            if (!session()) { if (gaveUp) timedOut(); else ticketFailed(); }
         }
     }
 
