@@ -365,6 +365,17 @@
             <div class="ctb-field"><span class="ctb-key">📇 Contact Cards</span><input type="search" id="ct-bar-input" name="ct-bar-q" placeholder="Search: provider, adjuster, counsel, client…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-label="Search the Contact Cards" aria-controls="ct-bar-results" aria-expanded="false"><button type="button" class="ctb-new" onclick="LSHContacts.create()" title="Add a contact card">+ New</button></div>
             <div id="ct-bar-results" class="ctb-results" role="listbox" aria-label="Matching contacts"></div>
         </div>`);
+        // On a wide screen (the four-column header) the bar sits under the Client's ID instead, beside #kx-client-id (not
+        // inside it: that tile is saved by its id). Only a search box moves: nothing saved by position.
+        const wide = window.matchMedia ? window.matchMedia('(min-width: 1500px)') : null;
+        const place = () => {
+            const ct = $id('ct-bar'), id = $id('kx-client-id');
+            if (!ct) return;
+            if (wide && wide.matches && id) { if (ct.previousElementSibling !== id) id.insertAdjacentElement('afterend', ct); }
+            else if (ct.previousElementSibling !== field) field.insertAdjacentElement('afterend', ct);
+        };
+        place();
+        if (wide) { if (wide.addEventListener) wide.addEventListener('change', place); else if (wide.addListener) wide.addListener(place); }
         const input = $id('ct-bar-input'), box = $id('ct-bar-results');
         let hits = [], sel = 0, quiet = false;
         const close = () => { box.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); };

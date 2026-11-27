@@ -1616,6 +1616,9 @@ select option:checked { font-weight: 800 !important; }
     #capture-area .header-card #kx-critical:not(.has):not(.editing) .crit-text:empty::before { content: 'No critical note on this case · click here to add one'; color: #b91c1c; opacity: .55; font-weight: 700; font-style: normal; visibility: visible; }
     /* ③ the Client's ID · ④ the case card, with Type under it */
     #capture-area .header-card .hdr-idrow > .hdr-id { grid-column: 3; grid-row: 1 / 6; margin: 0 !important; width: auto !important; flex: none !important; }
+    /* 📇 Contact Cards under the Client's ID (contacts.js moves the bar there on a wide screen) */
+    #capture-area .header-card .hdr-idrow > .hdr-id { grid-row: 1 / 4 !important; }
+    #capture-area .header-card .hdr-idrow > #ct-bar { grid-column: 3; grid-row: 4; margin: 0 !important; width: auto; align-self: start; z-index: 2; }
     /* ④ the case card: Case ID, the phase and the case Type in one card (its frame is the header's ::before, a grid item
        behind them); the two searches and the timer under it, outside the card */
     #capture-area .header-card > .flex.justify-between > .text-right { display: contents !important; }
