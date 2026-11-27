@@ -12,7 +12,7 @@
         slides: [
             { icon: '🏛', title: 'What CaseWorX is', points: [
                 'A practice case management system: the kind of system a law firm uses to run its personal-injury cases.',
-                'Every case and client here is fictional, so practise freely. Nothing you do reaches a real client.',
+                'Every case and client here is fictional, so practice freely. Nothing you do reaches a real client.',
                 'You open case files, take intakes, keep notes and tasks, book the calendar and log your time.',
                 'Your trainer sees your saved work and your progress, and can help you as you work.'],
               where: 'Open it from your training platform, or go to the CaseWorX sign-in page.',
