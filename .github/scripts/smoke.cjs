@@ -34,6 +34,7 @@ const SAVED = [
     { id: 7, caseId: 'LSH-2026-MVA-000007', clientName: 'Maria Santos', phase: 'Intake', isDraft: false, ownerUsername: 'someone', submittedBy: 'Other Trainee', dateOfLoss: '02/02/2026', canEdit: false, updatedAt: '2026-09-20 10:00:00' },
     { id: 8, caseId: null, clientName: 'Zed Practice', phase: 'Intake', isDraft: true, ownerUsername: 'ci', submittedBy: 'CI Trainee', dateOfLoss: '03/03/2026', canEdit: true, updatedAt: '2026-09-21 10:00:00' }
 ];
+let smokePage = null;   // (for the failure report at the end)
 (async () => {
     await new Promise(r => server.listen(0, r));
     const base = `http://localhost:${server.address().port}/`;
@@ -46,6 +47,13 @@ const SAVED = [
     // failure says where it went and why)
     page.on('framenavigated', f => { if (f === page.mainFrame()) console.log(`[nav] ${new Date().toISOString()} ${f.url()}`); });
     page.on('request', r => { if (r.isNavigationRequest() && r.frame() === page.mainFrame()) console.log(`[nav-start] ${new Date().toISOString()} ${r.method()} ${r.url()}${r.redirectedFrom() ? ' (redirected)' : ''}`); });
+    // ...and ask Chrome why, the moment a navigation is requested (before it commits, which a failing run may not live to
+    // see): its reason (scriptInitiated, reload, formSubmission…) and where to
+    try {
+        const cdp = await page.context().newCDPSession(page); await cdp.send('Page.enable');
+        cdp.on('Page.frameRequestedNavigation', e => console.log(`[nav-requested] ${new Date().toISOString()} ${e.reason} ${e.disposition || ''} ${e.url}`));
+    } catch (e) { console.log(`[nav-requested] not available: ${e.message}`); }
+    smokePage = page;
     page.on('download', d => console.log(`[download] ${d.suggestedFilename()}`));
     page.on('crash', () => console.log('[crash] the page crashed'));
     page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[console ${m.type()}] ${m.text().slice(0, 300)}`); });
@@ -569,4 +577,9 @@ const SAVED = [
     console.log(`Opened ${n ? cases.length === 0 ? 'all' : 'some' : 'no'} library cases; played ${n} drill calls and a practice call; checked the Case Library, library-case notes, the sidebar's calendar, the Intake folder and the Admins' call scripts.`);
     if (failures.length) { console.log(`\n${failures.length} failure(s):`); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); }
     console.log('Smoke test passed.');
-})().catch(e => { console.error(e); process.exit(1); });
+})().catch(async e => {
+    console.error(e);
+    // a step that died with the page ("Execution context was destroyed"): give the browser a moment to report where it went
+    if (smokePage) { await new Promise(r => setTimeout(r, 1500)); try { console.log(`[nav] the page is now at ${smokePage.url()}`); } catch (x) { /* closed */ } }
+    process.exit(1);
+});
