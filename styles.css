@@ -1592,7 +1592,8 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     #capture-area .header-card .hdr-idrow > .cx-col { grid-column: 2; grid-row: 1 / 6; display: flex !important; flex-direction: column; gap: 12px;
         width: auto !important; max-width: none !important; min-width: 0; margin: 0 !important; flex: none !important; align-self: stretch; }
     #capture-area .header-card .cx-col > #kx-critical[hidden], #capture-area .header-card .cx-col > #cx-card[hidden] { display: flex !important; }
-    #capture-area .header-card .cx-col > #kx-critical { flex: 1 1 auto; }
+    #capture-area .header-card .cx-col > #kx-critical { flex: none; }   /* as tall as the note, no blank space under it */
+    #capture-area .header-card .hdr-idrow > .cx-col { align-self: start !important; }
     #capture-area .header-card .hdr-idrow .crit-add { display: none !important; }
     #capture-area .header-card #kx-critical:not(.has):not(.editing) .crit-text:empty::before { content: 'No critical note on this case · click here to add one'; color: #b91c1c; opacity: .55; font-weight: 700; font-style: normal; visibility: visible; }
     /* ③ the Client's ID · ④ the case card, with Type under it */
