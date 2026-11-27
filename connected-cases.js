@@ -65,7 +65,7 @@
         } else idBox.insertAdjacentElement('afterend', card);
         return card;
     }
-    let shownFor = null;
+    let shownFor;   // (undefined: the first paint always draws, a case with no file included)
     function paint() {
         const card = mount(); if (!card) return;
         const id = typeof window.mockCurrentId === 'function' ? window.mockCurrentId() : null;

@@ -33,6 +33,17 @@ const MC = 'MC-53';
     async function open(session) {
         const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         page.on('pageerror', e => fail(`page error: ${e.message}`));
+        // (CI saw this page navigate right after a Save Case, as smoke.cjs did: log where it goes and what ran it)
+        page.on('request', r => { if (r.isNavigationRequest() && r.frame() === page.mainFrame()) console.log(`[nav-start] ${new Date().toISOString()} ${r.method()} ${r.url()}`); });
+        page.on('framenavigated', f => { if (f === page.mainFrame()) console.log(`[nav] ${new Date().toISOString()} ${f.url()}`); });
+        page.on('console', m => { if (m.type() === 'error') console.log(`[console error] ${m.text().slice(0, 300)}`); });
+        await page.exposeFunction('__logNav', (why) => console.log(`[nav-why] ${why}`)).catch(() => {});
+        await page.addInitScript(() => {
+            const tell = (why) => { try { window.__logNav(why + ' · ' + (new Error().stack || '').split('\n').slice(2, 6).join(' | ')); } catch (e) {} };
+            const r = Location.prototype.reload; try { Location.prototype.reload = function () { tell('location.reload'); return r.apply(this, arguments); }; } catch (e) {}
+            window.addEventListener('beforeunload', () => tell('beforeunload'));
+            document.addEventListener('submit', (e) => tell('form submit ' + ((e.target && e.target.id) || '')), true);
+        });
         page.on('dialog', d => d.accept());
         await page.route('**/api/**', async route => {
             const u = new URL(route.request().url()), m = route.request().method();
