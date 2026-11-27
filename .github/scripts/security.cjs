@@ -12,7 +12,9 @@
 //   - wrong admin passwords: after 20 from one network in an hour, sign-ins with a password from
 //     there wait (even with the right password); another network isn't affected;
 //   - logging out ends that session: a heartbeat with the old cookie doesn't bring it back, and
-//     signing in again works;
+//     signing in again works; a sign-in lasts until 8 hours with no activity: a page opened again
+//     after 7 hours (the tab or browser closed) is still signed in (/api/session, a heartbeat), after
+//     9 hours neither brings it back, and a suspended account's cookie is refused;
 //   - a case opened in the editor (someone else's, or a library edit) can't run anything: scripts,
 //     on…= handlers, javascript: links and frames are dropped, while the app's own row buttons
 //     (× delete, Other ↺, + date…) and table rows stay; the rows the editor makes itself go
@@ -65,6 +67,7 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     const loginApi = await imp('functions/api/login.js');
     const logoutApi = await imp('functions/api/logout.js');
     const heartbeatApi = await imp('functions/api/heartbeat.js');
+    const sessionApi = await imp('functions/api/session.js');
     const statusApi = await imp('functions/api/update-status.js');
     const uploadApi = await imp('functions/api/upload.js');
     const fileApi = await imp('functions/api/file.js');
@@ -164,6 +167,31 @@ const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
     const t3 = await login({ username: 'tia', portalMode: 'Trainee' });
     sql.prepare("DELETE FROM heartbeats WHERE username = 'tia'").run();   // e.g. cleared: a live session's beat makes the row again
     if (await beat(t3.cookie) !== 200) fail('signing in again after logging out didn\'t give a working session');
+    const whoAmI = async (cookie) => { const r = await call(sessionApi.onRequestGet, '/api/session', cookie); return { status: r.status, data: await r.json() }; };
+    let me = await whoAmI(t3.cookie);
+    if (me.status !== 200 || me.data.user.username !== 'tia' || me.data.user.fullName !== 'Tia Trainee') fail(`a page opened again (its tab closed) didn't find its sign-in: ${me.status} ${JSON.stringify(me.data)}`);
+    if ((await whoAmI('')).status !== 401) fail('/api/session answered with no cookie');
+
+    // ---- a sign-in lasts until 8 hours with no activity (closing the tab or the browser doesn't end it) ----
+    const realNow = Date.now;
+    Date.now = () => realNow() - 9 * 3600 * 1000;   // signed in 9 hours ago
+    const old = await login({ username: 'tia', portalMode: 'Trainee' }, '10.0.0.11');
+    Date.now = realNow;
+    const idleFor = (ago) => sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', ?) WHERE username = 'tia'").run(ago);
+    idleFor('-7 hours');
+    if ((await whoAmI(old.cookie)).status !== 200) fail('a sign-in idle for 7 hours was signed out (/api/session)');
+    if (await beat(old.cookie) !== 200) fail('a sign-in idle for 7 hours couldn\'t carry on with a heartbeat');
+    idleFor('-9 hours');
+    me = await whoAmI(old.cookie);
+    if (me.status !== 401 || me.data.code !== 'SESSION_EXPIRED') fail(`a sign-in idle for 9 hours was still signed in (/api/session ${me.status})`);
+    if (await beat(old.cookie) !== 401) fail('a tab coming back after 9 hours idle brought its session back with a heartbeat');
+    sql.prepare("DELETE FROM heartbeats WHERE username = 'tia'").run();
+    if (await beat(old.cookie) !== 401) fail('a sign-in 9 hours old with no heartbeat at all was brought back by one');
+    if (await beat(t3.cookie) !== 200) fail('a recent sign-in with no heartbeat row yet was refused');
+    sql.prepare("UPDATE users SET status = 'Suspended' WHERE username = 'tia'").run();
+    me = await whoAmI(t3.cookie);
+    if (me.status !== 401 || me.data.code !== 'ACCESS_REVOKED') fail(`a suspended trainee's cookie still opened their session (/api/session ${me.status})`);
+    sql.prepare("UPDATE users SET status = 'Approved' WHERE username = 'tia'").run();
 
     // ---- the case editor, in a browser ----
     await new Promise(res => server.listen(0, res));

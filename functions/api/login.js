@@ -1,4 +1,4 @@
-import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned, shortenOldBatchIds } from '../_utils.js';
+import { json, logActivity, MASTER_USERNAME, verifyPassword, isLegacyPlaintext, upgradePasswordHash, createSessionToken, sessionCookie, SESSION_MAX_SECONDS, upsertSessionHeartbeat, buildFullName, nextBatchId, isUsernameTombstoned, shortenOldBatchIds } from '../_utils.js';
 import { cleanGuestName, splitName, trainerUsername } from '../_guest.js';
 import { portalOnly } from '../_portal.js';
 // The Admin Portal signs in with the admin password (no username):
@@ -178,5 +178,5 @@ export async function onRequestPost({ request, env }) {
         env.SESSION_SECRET
     );
     const { password: _pw, ...safeUser } = user;
-    return json({ success: true, user: { ...safeUser, fullName } }, 200, { 'Set-Cookie': sessionCookie(token, 43200) });
+    return json({ success: true, user: { ...safeUser, fullName } }, 200, { 'Set-Cookie': sessionCookie(token, SESSION_MAX_SECONDS) });
 }

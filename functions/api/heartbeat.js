@@ -1,4 +1,4 @@
-import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS, claimedAccount, wrongAccount, sessionChangedResponse } from '../_utils.js';
+import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS, SESSION_IDLE_SECONDS, claimedAccount, wrongAccount, sessionChangedResponse } from '../_utils.js';
 import { reportLiveView, waitForWatch, HOLD_MAX_MS } from '../_liveview.js';
 
 export async function onRequestGet({ request, env }) {
@@ -49,14 +49,20 @@ export async function onRequestPost({ request, env }) {
     // A signed-out session stays signed out. Logging out deletes the heartbeat row and records which sign-in
     // ended (logout.js, the token's iat); a beat that finds no row checks that before making one again, so a
     // copy of an old session cookie can't bring the session back. A normal beat finds its row: one statement.
+    // 8 hours with no activity ends a session too (SESSION_IDLE_SECONDS, _utils.js): only a row touched within
+    // that is refreshed, so a tab that comes back after 8 hours idle can't bring the session back with a beat.
+    // A sign-in younger than that is good with no live row yet (the first beat after logging in).
     const touched = await db.prepare(
-        `UPDATE heartbeats SET full_name = ?, batch_id = ?, user_type = ?, current_case = ?, last_seen = datetime('now') WHERE username = ?`
-    ).bind(beat.fullName, beat.batchId || null, beat.userType || null, beat.currentCase, beat.username).run();
+        `UPDATE heartbeats SET full_name = ?, batch_id = ?, user_type = ?, current_case = ?, last_seen = datetime('now')
+         WHERE username = ? AND datetime(last_seen) >= datetime('now', ?)`
+    ).bind(beat.fullName, beat.batchId || null, beat.userType || null, beat.currentCase, beat.username, `-${SESSION_IDLE_SECONDS} seconds`).run();
     if (!(touched && touched.meta && touched.meta.changes)) {
         const ended = await db.prepare(
             `SELECT 1 AS ended FROM activity_log WHERE actor_username = ? AND action = 'logout' AND details = ? LIMIT 1`
         ).bind(session.username, JSON.stringify({ iat: session.iat })).first().catch(() => null);
         if (ended) return json({ success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' }, 401);
+        const fresh = Number(session.iat) && (Date.now() / 1000 - Number(session.iat)) < SESSION_IDLE_SECONDS;
+        if (!fresh) return json({ success: false, error: 'Session expired.', code: 'SESSION_EXPIRED' }, 401);
         await upsertSessionHeartbeat(db, beat);
     }
 

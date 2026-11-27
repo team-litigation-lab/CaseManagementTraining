@@ -10,7 +10,7 @@
 //     (revoked and suspended accounts stay blocked: those are an administrator closing an account, not a ruling
 //     on a registration). A trainee with no CMS account gets one, already approved, so nobody registers twice —
 //     registration is on the Portal now (api/register.js refuses it here), so there is nowhere else to make one.
-import { json, logActivity, createSessionToken, sessionCookie, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds, isUsernameTombstoned } from '../_utils.js';
+import { json, logActivity, createSessionToken, sessionCookie, SESSION_MAX_SECONDS, upsertSessionHeartbeat, buildFullName, batchKey, shortenOldBatchIds, isUsernameTombstoned } from '../_utils.js';
 import { ensureGuestTables, recordGuestAccount, cleanGuestBatch, cleanGuestName, guestUsername, parseFullName } from '../_guest.js';
 import { readPortalTicket, portalOnly, portalSecret, adminPasswordsSet, useTicketOnce } from '../_portal.js';
 import { trainerUser, adminPortalUser } from './login.js';
@@ -168,5 +168,5 @@ async function signIn(env, user, log, guest = false) {
     if (guest) payload.guest = true;
     const token = await createSessionToken(payload, env.SESSION_SECRET);
     return json({ success: true, user: { username: user.username, fullName, batchId: user.batch_id, userType: user.user_type, via: 'LSH Training Portal' } },
-        200, { 'Set-Cookie': sessionCookie(token, 43200) });
+        200, { 'Set-Cookie': sessionCookie(token, SESSION_MAX_SECONDS) });
 }

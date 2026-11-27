@@ -53,6 +53,7 @@ const PUBLIC = new Set(['calendar-feed.js', 'export-trainees.js', 'login.js', 'l
     const timeApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/time.js')).href);
     const drillApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/drill-results.js')).href);
     const logoutApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/logout.js')).href);
+    const sessionApi = await import(pathToFileURL(path.join(ROOT, 'functions/api/session.js')).href);
 
     // every endpoint that isn't deliberately public goes through requireSession
     for (const f of fs.readdirSync(path.join(ROOT, 'functions/api')).filter(n => n.endsWith('.js'))) {
@@ -141,6 +142,7 @@ const PUBLIC = new Set(['calendar-feed.js', 'export-trainees.js', 'login.js', 'l
         const real = new Request('http://x' + u.pathname + u.search, { method: m, headers, body: m === 'POST' ? req.postData() : undefined });
         const send = async (res) => route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
         if (u.pathname === '/api/heartbeat') return send(await hbApi.onRequestPost({ request: real, env }));
+        if (u.pathname === '/api/session') return send(await sessionApi.onRequestGet({ request: real, env }));
         if (u.pathname === '/api/drill-results') return send(await drillApi.onRequestPost({ request: real, env }));
         if (u.pathname === '/api/state') return j({ paused: false, locked: false, announcement: { text: '' }, alert: { active: false }, ping: null });
         if (u.pathname === '/api/portal-login') return j({ success: true, portalOnly: false, hasSecret: false, hasAdminPassword: false, verifies: 'via the Portal' });
@@ -175,8 +177,21 @@ const PUBLIC = new Set(['calendar-feed.js', 'export-trainees.js', 'login.js', 'l
     if (after.signIn !== 200) fail(`a taken-over tab can't sign in again: ${JSON.stringify(after)}`);
     if (drills() !== before.drills) fail(`the stale tab's work still reached the other account (${drills()} drills, was ${before.drills})`);
 
+    // Closing the tab (or the browser) doesn't sign anyone out: a new tab, with nothing in sessionStorage, carries on
+    // as the account the cookie belongs to (/api/session) instead of showing the sign-in screen.
+    const ctx2 = await browser.newContext({ viewport: { width: 1100, height: 760 } });
+    const reopened = await ctx2.newPage();
+    reopened.on('dialog', d => d.accept());
+    await reopened.route('**/api/**', bridge);
+    await reopened.route(/cdn\.tailwindcss\.com|html2pdf/, rr => rr.fulfill({ contentType: 'text/javascript', body: '' }));
+    await reopened.goto(base, { waitUntil: 'load' });
+    await reopened.waitForFunction(() => (JSON.parse(sessionStorage.getItem('LSH_SESSION_V1') || 'null') || {}).username === 'tom'
+        && !document.getElementById('auth-gate').classList.contains('open'), null, { timeout: 15000, polling: 100 })
+        .catch(() => fail('a tab opened again after closing it showed the sign-in screen instead of carrying on signed in'));
+    await ctx2.close();
+
     await browser.close(); server.close();
     if (failures.length) { console.error(failures.map((m, i) => `${i + 1}. ${m}`).join('\n')); process.exit(1); }
-    console.log('Session identity test passed (requireSession is the one gate; a stale tab reads and writes nothing, keeps its hands off the other account\'s heartbeat, screen and Log Out, and signs itself out).');
+    console.log('Session identity test passed (requireSession is the one gate; a stale tab reads and writes nothing, keeps its hands off the other account\'s heartbeat, screen and Log Out, and signs itself out; a tab opened again carries on signed in).');
     process.exit(0);
 })().catch(e => { console.error(e); failures.forEach((f, i) => console.log(`${i + 1}. ${f}`)); process.exit(1); });

@@ -48,7 +48,7 @@ async function getHmacKey(secret) {
     return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
-export async function createSessionToken(payload, secret, ttlSeconds = 43200 /* 12h */) {
+export async function createSessionToken(payload, secret, ttlSeconds = SESSION_MAX_SECONDS /* 30 days: the 8-hour idle rule ends a session first */) {
     const body = { ...payload, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + ttlSeconds };
     const encodedBody = toBase64Url(new TextEncoder().encode(JSON.stringify(body)));
     const key = await getHmacKey(secret);
@@ -90,22 +90,30 @@ export function clearSessionCookie() {
     return `lsh_session=; HttpOnly; Secure; SameSite=None; Partitioned; Path=/; Max-Age=0`;
 }
 
-/** Client heartbeat interval is 30 s (45 s in a background tab). The grace window is wide enough for a tab in the
- *  background, which browsers slow to a heartbeat a minute (a trainee on a Google Meet
- *  tab mid-session): the session stays alive, and a closed tab's still ends in 2 minutes. */
+/** Client heartbeat interval is 30 s (45 s in a background tab). HEARTBEAT_GRACE_SECONDS is only how long a page
+ *  reads as online (the heartbeat's graceSeconds, Monitoring's "Online now"); it no longer ends a sign-in. */
 export const HEARTBEAT_GRACE_SECONDS = 120;
 
 /**
- * True when the user's heartbeats row was touched within the grace window.
- * Sessions without a recent heartbeat are expired even if the signed cookie
- * has not reached its Max-Age yet (tab/browser close, idle timeout, etc.).
+ * How long a sign-in lasts with nobody using it: 8 hours. Closing the tab or the browser no longer signs anyone
+ * out; a session ends after 8 hours with no heartbeat from any of its pages (an open CaseWorX page beats every
+ * 30 s), on Log Out, or when the account is suspended or revoked (requireSession re-checks that every request).
+ * SESSION_MAX_SECONDS is the signed token's (and the cookie's) own lifetime: long, so the 8-hour rule is the one
+ * that applies.
+ */
+export const SESSION_IDLE_SECONDS = 8 * 60 * 60;
+export const SESSION_MAX_SECONDS = 30 * 24 * 60 * 60;
+
+/**
+ * True when the user's heartbeats row was touched within SESSION_IDLE_SECONDS (8 hours of no activity ends a
+ * session) — even if the signed cookie has not reached its Max-Age yet.
  */
 export async function isSessionHeartbeatAlive(db, username) {
     const row = await db.prepare(
         `SELECT 1 AS ok FROM heartbeats
          WHERE username = ?
          AND datetime(last_seen) >= datetime('now', ?)`
-    ).bind(username, `-${HEARTBEAT_GRACE_SECONDS} seconds`).first();
+    ).bind(username, `-${SESSION_IDLE_SECONDS} seconds`).first();
     return !!row;
 }
 
@@ -183,7 +191,7 @@ export async function requireSession(request, env, { adminOnly = false, skipHear
     // this check creates a deadlock — one late ping (redirect delay, a
     // throttled background tab, ordinary network jitter) trips
     // isSessionHeartbeatAlive, which locks the endpoint that's supposed to
-    // fix that out for the rest of the 12h token lifetime. Every other
+    // fix that out for the rest of the token's lifetime. Every other
     // caller still goes through the freshness check as before.
     if (!skipHeartbeatCheck) {
         const alive = await isSessionHeartbeatAlive(env.DB, payload.username);
@@ -193,7 +201,7 @@ export async function requireSession(request, env, { adminOnly = false, skipHear
     }
     // Re-check the account's live status on every request, not just at
     // login. A signed session token + a live heartbeat alone would
-    // otherwise keep working for up to 12h even after an admin suspends
+    // otherwise keep working for the whole sign-in even after an admin suspends
     // (see suspend-user.js) or permanently revokes (see revoke-user.js)
     // the account — this is what makes both of those take effect against
     // an already-open session immediately instead of on next login.
