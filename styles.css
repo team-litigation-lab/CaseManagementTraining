@@ -1458,12 +1458,12 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
 }
 #capture-area .header-card .hdr-name > #client-name-field { border-bottom-width: 3px !important; }
-/* the client's details: each label a small pill in a navy-to-gold gradient, white text
+/* the client's details: each label a small solid navy pill, white text
    (Target Settlement's pill in its own green) */
 #capture-area .header-card .hdr-client .hdr-f > label, #capture-area .header-card .hdr-client .hdr-name > label {
     align-self: flex-start; display: inline-flex; align-items: center; width: fit-content; max-width: 100%;
     padding: 3px 11px !important; margin-bottom: 5px !important; border-radius: 999px; line-height: 1.25 !important;
-    background: linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #a8792f 82%, #c9973f 100%);
+    background: #1E2340;
     color: #fff !important; font-size: 11px !important; font-weight: 900 !important; letter-spacing: .07em;
     box-shadow: 0 2px 6px -3px rgba(15,33,72,.55); white-space: nowrap;
 }
