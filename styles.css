@@ -1307,9 +1307,13 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 .cab-btn.cab-summary { background: linear-gradient(135deg, #1E2340 0%, #1d3f86 100%); border-color: #c9973f; color: #fde68a; }
 .cab-btn.cab-summary:hover { filter: brightness(1.15); }
 #case-actions-bar .cab-summary { margin-right: 6px; }
-/* the © line the shared footer script puts in the bar: one small line that gives way to the keys */
-#case-actions-bar .cab-copy { flex: 1 1 0; min-width: 0; font-size: 10.5px !important; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; opacity: .75; }
+/* the © line the shared footer script puts in the bar: big, bold navy, easy to read; on a narrower bar it wraps to two
+   lines rather than being cut off */
+#case-actions-bar .cab-copy { flex: 1 1 0; min-width: 0; font-size: 16px !important; font-weight: 800 !important; color: #0f2148 !important; line-height: 1.2;
+    white-space: normal; overflow: hidden; text-align: center; opacity: 1; }
 #case-actions-bar { flex-wrap: nowrap !important; }
+/* a laptop: no room beside the keys, so the © line gets its own row under them */
+@media (max-width: 1499px) { #case-actions-bar { flex-wrap: wrap !important; row-gap: 4px; height: auto !important; } #case-actions-bar .cab-copy { order: 10; flex: 1 1 100%; font-size: 14px !important; } }
 #case-actions-bar .cab-note:empty { display: none; }
 @media (max-width: 760px) {
     #case-actions-bar { flex-wrap: wrap !important; }
@@ -1516,6 +1520,8 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 
 /* every dropdown in CaseWorX, its list too: bold, dark type that reads at a glance */
 select, select option, select optgroup { font-weight: 700 !important; color: #0f172a; }
+/* …on a white list, so the options read on a dark dropdown too (the sidebar's Training Program, the clock's place) */
+select option, select optgroup { background-color: #fff; }
 select option:checked { font-weight: 800 !important; }
 
 /* the case page, every word bold and thick: labels, what is typed, placeholders, dropdowns, tables; headings heavier still */
