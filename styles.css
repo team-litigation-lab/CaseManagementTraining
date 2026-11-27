@@ -1458,12 +1458,12 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #1e3a8a 0%, #2b4fa8 45%, #c9973f 100%) border-box !important;
 }
 #capture-area .header-card .hdr-name > #client-name-field { border-bottom-width: 3px !important; }
-/* the client's details: each label a small pill in the case status picker's navy-to-orange gradient, white text
+/* the client's details: each label a small pill in a navy-to-gold gradient, white text
    (Target Settlement's pill in its own green) */
 #capture-area .header-card .hdr-client .hdr-f > label, #capture-area .header-card .hdr-client .hdr-name > label {
     align-self: flex-start; display: inline-flex; align-items: center; width: fit-content; max-width: 100%;
     padding: 3px 11px !important; margin-bottom: 5px !important; border-radius: 999px; line-height: 1.25 !important;
-    background: linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #c2410c 85%, #f97316 100%);
+    background: linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #a8792f 82%, #c9973f 100%);
     color: #fff !important; font-size: 11px !important; font-weight: 900 !important; letter-spacing: .07em;
     box-shadow: 0 2px 6px -3px rgba(15,33,72,.55); white-space: nowrap;
 }
@@ -1568,3 +1568,78 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 }
 #capture-area .header-card #lsh-integrated-bar .bar-box > div:focus { background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #DB8437, #f59e0b) border-box !important; outline: none; }
 #capture-area .header-card #lsh-integrated-bar .bar-data-container { gap: 18px !important; }
+
+/* ===== the case header as four columns (a wide screen, 1500px and up; a laptop keeps the row above), each piece a tile of its own:
+     ① the client's details (full height) · ② Date of Loss and Statute (SOL), with the ⚠ Critical note (and 🔗 Connected
+     cases) under them · ③ the Client's ID (full height) · ④ the case card, with Type under it.
+   Only the layout moves them (the header's row and the Date of Loss bar give their pieces to one grid): the page's order
+   stays as it was, so the fields cases are saved by position keep their places. Location of Incident isn't shown here
+   (it moved to the Case Narrative card on Profile; saved by its id, so cases keep it). ===== */
+@media (min-width: 1500px) {
+    #capture-area .header-card { display: grid !important; grid-template-columns: minmax(380px, 1.5fr) minmax(250px, 1fr) minmax(190px, 220px) minmax(270px, 1.1fr);
+        grid-template-rows: auto auto auto auto 1fr auto auto; gap: 12px 16px; align-items: stretch;
+        /* the navy band behind the tiles (it was on the header's row, which the grid no longer draws) */
+        background: linear-gradient(135deg, #1E2340 0%, #16306a 60%, #1d3f86 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box !important; }
+    #capture-area .header-card > .flex.justify-between, #capture-area .header-card > #lsh-integrated-bar, #capture-area .header-card .hdr-idrow { display: contents !important; }
+    /* ① the client's details, with Date of Loss and Statute (SOL) in the card under them */
+    #capture-area .header-card .hdr-client { grid-column: 1; grid-row: 1 / 6; margin: 0 !important; align-self: stretch; padding-bottom: 96px !important; }
+    #capture-area .header-card #lsh-integrated-bar .bar-data-container { grid-column: 1; grid-row: 1 / 6; align-self: end; z-index: 1; margin: 0 16px 16px !important;
+        display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px 14px !important; background: none; border: 0; padding: 0 !important; box-shadow: none; }
+    #capture-area .header-card #lsh-integrated-bar .bar-box { width: auto !important; min-width: 0; }
+    #capture-area .header-card #lsh-integrated-bar .bar-box label { align-self: flex-start; display: inline-flex; width: fit-content; padding: 3px 11px !important; margin-bottom: 5px !important; border-radius: 999px;
+        background: linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #a8792f 82%, #c9973f 100%); color: #fff !important; font-size: 11px !important; letter-spacing: .07em; }
+    /* ② the ⚠ Critical note, and 🔗 Connected cases under it */
+    #capture-area .header-card .hdr-idrow > .cx-col { grid-column: 2; grid-row: 1 / 6; display: flex !important; flex-direction: column; gap: 12px;
+        width: auto !important; max-width: none !important; min-width: 0; margin: 0 !important; flex: none !important; align-self: stretch; }
+    #capture-area .header-card .cx-col > #kx-critical[hidden], #capture-area .header-card .cx-col > #cx-card[hidden] { display: flex !important; }
+    #capture-area .header-card .cx-col > #kx-critical { flex: none; }   /* as tall as the note, no blank space under it */
+    #capture-area .header-card .hdr-idrow > .cx-col { align-self: start !important; }
+    #capture-area .header-card .hdr-idrow .crit-add { display: none !important; }
+    #capture-area .header-card #kx-critical:not(.has):not(.editing) .crit-text:empty::before { content: 'No critical note on this case · click here to add one'; color: #b91c1c; opacity: .55; font-weight: 700; font-style: normal; visibility: visible; }
+    /* ③ the Client's ID · ④ the case card, with Type under it */
+    #capture-area .header-card .hdr-idrow > .hdr-id { grid-column: 3; grid-row: 1 / 6; margin: 0 !important; width: auto !important; flex: none !important; }
+    /* ④ the case card: Case ID, the phase and the case Type in one card (its frame is the header's ::before, a grid item
+       behind them); the two searches and the timer under it, outside the card */
+    #capture-area .header-card > .flex.justify-between > .text-right { display: contents !important; }
+    #capture-area .header-card::before { content: ''; grid-column: 4; grid-row: 1 / 4; z-index: 0; border-radius: 14px; border: 2px solid transparent;
+        background: linear-gradient(160deg, #fffaf0 0%, #ffffff 55%, #f6f8fc 100%) padding-box, linear-gradient(135deg, #1e3a8a 0%, #2b4fa8 40%, #c9973f 80%, #DB8437 100%) border-box;
+        box-shadow: 0 0 0 6px #16306a, 0 0 0 8px #c9973f, 0 14px 24px -14px rgba(15,33,72,.6); }
+    #capture-area .header-card .text-right > :has(> #case-id-field) { grid-column: 4; grid-row: 1; z-index: 1; margin: 14px 14px 0 !important; width: auto !important; }
+    #capture-area .header-card .text-right > :has(> #display-phase) { grid-column: 4; grid-row: 2; z-index: 1; margin: 0 14px !important; width: auto !important; }
+    #capture-area .header-card #lsh-integrated-bar > .ml-auto { grid-column: 4; grid-row: 3; z-index: 1; margin: 0 14px 14px !important; align-self: start;
+        background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+    #capture-area .header-card #lsh-integrated-bar > .ml-auto > span { color: #1E2340 !important; }
+    #capture-area .header-card .text-right > #cl-bar { grid-column: 4; grid-row: 4; margin: 0 !important; width: auto !important; }
+    #capture-area .header-card .text-right > #tt-widget { grid-column: 4; grid-row: 5; margin: 0 !important; width: auto !important; align-self: start; }
+    #capture-area .header-card .text-right > #tt-widget .tt-w { min-height: 0; }
+    #capture-area .header-card > #case-alerts { grid-column: 1 / -1; grid-row: 6; margin: 0 !important; }
+    #capture-area .header-card > .case-tabs { grid-column: 1 / -1; grid-row: 7; margin: 0 !important; }
+    #capture-area .header-card .hdr-client { box-shadow: 0 0 0 6px #16306a, 0 0 0 8px #c9973f, 0 14px 24px -14px rgba(15,33,72,.6) !important; }
+    #capture-area .header-card .hdr-idrow > .hdr-id {
+        background: linear-gradient(135deg, #1E2340 0%, #16306a 60%, #1d3f86 100%); border: 2px solid #c9973f; border-radius: 14px; padding: 10px 12px !important;
+        box-shadow: 0 10px 20px -14px rgba(15,33,72,.7); }
+    #capture-area .header-card .hdr-idrow > .hdr-id { display: flex; flex-direction: column; gap: 8px; }
+    #capture-area .header-card .hdr-idrow > .hdr-id > label { color: #fdba74 !important; }
+    #capture-area .header-card .hdr-idrow > .hdr-id .cid-card { flex: none; }
+    #capture-area .header-card .hdr-idrow > .hdr-id { align-self: start; }   /* the tile as tall as the ID, no blank space under it */
+    #capture-area .header-card #lsh-integrated-bar > .ml-auto { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; }
+    #capture-area .header-card #lsh-integrated-bar > .ml-auto > span { margin: 0 !important; }
+    #capture-area .header-card #lsh-integrated-bar > .ml-auto > div { flex: 1 1 auto; min-width: 0; }
+    #capture-area .header-card #main-case-type { min-width: 0 !important; width: 100%; }
+}
+/* the ⚠ Critical note while it's being typed in: one clean writing area on the pink card (no white box inside it) */
+#kx-critical.editing .crit-text { background: rgba(255,255,255,.65) !important; border-radius: 10px !important; padding: 8px 10px !important; min-height: 58px;
+    box-shadow: none !important; border: 1.5px dashed #f87171 !important; outline: none; }
+#kx-critical.editing .crit-text:focus { background: #fff !important; border-style: solid !important; border-color: #dc2626 !important; }
+#capture-area .header-card .crit-pill .crit-count { font-size: 11px; font-weight: 800; color: #b91c1c; }
+
+/* Location of Incident, at the top of the Case Narrative card */
+.kx-location { margin: 4px 0 12px; }
+.kx-location > div { white-space: nowrap; overflow-x: auto; }
+
+/* the 18 case tabs: equal pills, 9 to a row (6 on a narrower panel, 3 on a phone) */
+#capture-area .header-card .case-tabs { display: grid !important; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+#capture-area .header-card .case-tabs .tab-break { display: none !important; }
+#capture-area .header-card .case-tabs .tab-btn { min-width: 0 !important; margin: 0 !important; overflow: hidden; text-overflow: ellipsis; border-radius: 999px !important; }
+@container (max-width: 1120px) { #capture-area .header-card .case-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@container (max-width: 640px) { #capture-area .header-card .case-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

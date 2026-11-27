@@ -72,7 +72,7 @@ const failures = []; const fail = (m) => failures.push(m);
         applyCaseContentToDOM(content);
         const polBody = document.getElementById('police-body').querySelectorAll('[contenteditable="true"]');
         const prof = document.getElementById('pane-profile');
-        const narr = [...prof.querySelectorAll('.pdf-card')].find(c => /Case Narrative/.test(c.textContent)).querySelector('[contenteditable]');
+        const narr = document.getElementById('case-narrative-field');   // (the Case Narrative card also holds Location of Incident now)
         const tn = [...document.querySelectorAll('#pane-medical .pdf-card')].find(c => /Treatment Notes/.test((c.querySelector('.section-head') || {}).textContent || '')).querySelector('[contenteditable]');
         return {
             name: document.getElementById('client-name-field').textContent, dol: document.getElementById('date-of-loss-field').innerText,

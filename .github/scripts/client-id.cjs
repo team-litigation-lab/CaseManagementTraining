@@ -230,7 +230,7 @@ const failures = []; const fail = (m) => failures.push(m);
             await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(450);
             const m = await page.evaluate(() => {
                 const r = (el) => el.getBoundingClientRect(), card = r(document.querySelector('.header-card'));
-                const L = r(document.querySelector('.hdr-client')), I = r(document.getElementById('kx-client-id')), R = r(document.getElementById('display-phase').closest('.text-right'));
+                const L = r(document.querySelector('.hdr-client')), I = r(document.getElementById('kx-client-id')), tr = document.getElementById('display-phase').closest('.text-right'), R = r(tr).width ? r(tr) : r(document.getElementById('case-id-field').parentElement);   // (a wide screen lays the case card's rows out in the header's grid: its wrapper has no box, so its first row is measured)
                 const out = Math.max(...['#cl-bar', '#display-phase', '#case-id-field', '#phase-selector'].map(sel => r(document.querySelector(sel)).right)) - card.right;
                 return { out: Math.round(out), li: Math.round(L.right - I.left), ir: Math.round(I.right - R.left) };
             });
