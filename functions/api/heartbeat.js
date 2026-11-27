@@ -1,4 +1,4 @@
-import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS, SESSION_IDLE_SECONDS, claimedAccount, wrongAccount, sessionChangedResponse } from '../_utils.js';
+import { json, requireSession, upsertSessionHeartbeat, HEARTBEAT_GRACE_SECONDS, SESSION_IDLE_SECONDS, renewedSessionCookie, claimedAccount, wrongAccount, sessionChangedResponse } from '../_utils.js';
 import { reportLiveView, waitForWatch, HOLD_MAX_MS } from '../_liveview.js';
 
 export async function onRequestGet({ request, env }) {
@@ -79,7 +79,11 @@ export async function onRequestPost({ request, env }) {
         }
     }
     // screenId (while watched): the screen the server has, so the page sends it again only if it didn't arrive
-    return json(Object.assign({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS, watched: !!live.watched }, live.watched ? { screenId: live.screenId || null } : {}));
+    // 🔁 an aging session cookie handed back renewed while the session is in use (renewedSessionCookie): an old 12-hour one no
+    // longer runs out in the middle of someone's work
+    let renewed = '';
+    try { renewed = await renewedSessionCookie(env, session); } catch (e) { renewed = ''; }
+    return json(Object.assign({ success: true, graceSeconds: HEARTBEAT_GRACE_SECONDS, watched: !!live.watched }, live.watched ? { screenId: live.screenId || null } : {}), 200, renewed ? { 'Set-Cookie': renewed } : {});
 }
 
 // 🧹 DELETE /api/heartbeat (admins only): takes people off Master Control's Trainees Online list. Only the "last seen" rows go

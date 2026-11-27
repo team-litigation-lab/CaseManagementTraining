@@ -105,6 +105,18 @@ export const SESSION_IDLE_SECONDS = 8 * 60 * 60;
 export const SESSION_MAX_SECONDS = 30 * 24 * 60 * 60;
 
 /**
+ * 🔁 The same session in a fresh SESSION_MAX_SECONDS cookie once its token is more than a day old ('' when it isn't): a sign-in
+ * from before the 8-hour rule carried a 12-hour cookie that nothing renewed, so it ran out in the middle of someone's work. The
+ * heartbeat hands it back renewed; the 8-hour idle rule (isSessionHeartbeatAlive) is still what ends a session.
+ */
+export async function renewedSessionCookie(env, session) {
+    if (!session || !session.exp) return '';
+    if (Number(session.exp) - Math.floor(Date.now() / 1000) >= SESSION_MAX_SECONDS - 24 * 3600) return '';
+    const { iat, exp, ...keep } = session;
+    return sessionCookie(await createSessionToken(keep, env.SESSION_SECRET), SESSION_MAX_SECONDS);
+}
+
+/**
  * True when the user's heartbeats row was touched within SESSION_IDLE_SECONDS (8 hours of no activity ends a
  * session) — even if the signed cookie has not reached its Max-Age yet.
  */
