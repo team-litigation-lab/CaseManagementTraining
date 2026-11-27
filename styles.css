@@ -1582,13 +1582,13 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
         background: linear-gradient(135deg, #1E2340 0%, #16306a 60%, #1d3f86 100%) padding-box, linear-gradient(180deg, #1E2340 0%, #2c3360 30%, #a8692f 78%, #DB8437 100%) border-box !important; }
     #capture-area .header-card > .flex.justify-between, #capture-area .header-card > #lsh-integrated-bar, #capture-area .header-card .hdr-idrow { display: contents !important; }
     /* ① the client's details, with Date of Loss and Statute (SOL) in the card under them */
-    #capture-area .header-card .hdr-client { grid-column: 1; grid-row: 1 / 6; margin: 0 !important; align-self: start; padding-bottom: 86px !important; }
+    #capture-area .header-card .hdr-client { grid-column: 1; grid-row: 1 / 6; margin: 0 !important; align-self: start; padding-bottom: 70px !important; }
     #capture-area .header-card #lsh-integrated-bar .bar-data-container { grid-column: 1; grid-row: 1 / 6; align-self: end; z-index: 1; margin: 0 16px 16px !important;
         display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px 14px !important; background: none; border: 0; padding: 0 !important; box-shadow: none; }
     #capture-area .header-card #lsh-integrated-bar .bar-box { width: auto !important; min-width: 0; }
     /* Date of Loss and SOL: the same size as the client's other boxes */
     #capture-area .header-card #lsh-integrated-bar .bar-data-container { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-    #capture-area .header-card #lsh-integrated-bar .bar-box > div { height: 36px !important; padding: 7px 11px !important; font-size: 14px !important; border-width: 2px !important; border-radius: 9px !important; }
+    #capture-area .header-card #lsh-integrated-bar .bar-box > div { height: 30px !important; padding: 4px 10px !important; font-size: 13px !important; line-height: 18px !important; border-width: 2px !important; border-radius: 9px !important; }
     #capture-area .header-card #lsh-integrated-bar .bar-box label { align-self: flex-start; display: inline-flex; width: fit-content; padding: 3px 11px !important; margin-bottom: 5px !important; border-radius: 999px;
         background: linear-gradient(90deg, #1E2340 0%, #1d3f86 45%, #a8792f 82%, #c9973f 100%); color: #fff !important; font-size: 11px !important; letter-spacing: .07em; }
     /* ② the ⚠ Critical note, and 🔗 Connected cases under it */
@@ -1646,3 +1646,14 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
 #capture-area .header-card .case-tabs .tab-btn { min-width: 0 !important; margin: 0 !important; overflow: hidden; text-overflow: ellipsis; border-radius: 999px !important; }
 @container (max-width: 1120px) { #capture-area .header-card .case-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 @container (max-width: 640px) { #capture-area .header-card .case-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* the client's details, compact: the label pills and the boxes under the name smaller (the Client's Name box keeps its size),
+   so the card is shorter */
+#capture-area .header-card .hdr-client .hdr-f:not(.hdr-name) > label,
+#capture-area .header-card #lsh-integrated-bar .bar-box label { font-size: 9.5px !important; padding: 2px 8px !important; margin-bottom: 3px !important; letter-spacing: .06em; }
+#capture-area .header-card .hdr-client .hdr-f:not(.hdr-name) > [contenteditable="true"], #capture-area .header-card .hdr-client .hdr-input {
+    min-height: 30px !important; height: 30px; padding: 4px 10px !important; font-size: 13px !important; line-height: 18px !important; }
+#capture-area .header-card .hdr-client .target-settlement-display { font-size: 14px !important; }
+#capture-area .header-card .hdr-client { gap: 7px 12px !important; }
+#capture-area .header-card .hdr-client .ssn-mask { min-height: 30px !important; height: 30px; padding: 4px 10px !important; font-size: 13px !important; line-height: 18px !important; box-sizing: border-box; }
+#capture-area .header-card .hdr-client { align-items: end; }
