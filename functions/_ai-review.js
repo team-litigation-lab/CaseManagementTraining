@@ -1,3 +1,4 @@
+import { documents } from './_doc_store.js';
 // Not a routed endpoint — filename starts with _, same convention as
 // _utils.js, so Cloudflare Pages Functions never maps a URL to this file.
 //
@@ -121,7 +122,7 @@ export async function runAiReview(env, { caseRepositoryId, trainingDay, content,
             return;
         }
 
-        const object = await env.DOCUMENTS.get(doc.key);
+        const object = await documents(env).get(doc.key);
         if (!object) {
             await storeAiReview(env.DB, caseRepositoryId, trainingDay, { status: 'failed', reason: 'Could not fetch the document from storage.' });
             return;

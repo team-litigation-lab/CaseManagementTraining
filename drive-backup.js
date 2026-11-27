@@ -50,6 +50,9 @@
         return $id(id);
     }
     function bars() {
+        // No bar: every upload goes to the firm's Google Drive by itself (functions/_doc_store.js), so there's nothing to back up
+        // by hand. The case's file list (lshDriveBackup.files) stays for whatever needs it.
+        if (true) return [];
         const lit = $id('lit-body');
         return [makeBar('drive-bar', document.querySelector('#pane-docs .pdf-card')), makeBar('drive-bar-lit', lit && lit.closest('.pdf-card'))].filter(Boolean);
     }

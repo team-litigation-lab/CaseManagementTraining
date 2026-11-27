@@ -1,3 +1,4 @@
+import { documents, hasDocumentStore } from '../_doc_store.js';
 import { json, requireSession } from '../_utils.js';
 import { exchangeCode, seal, unseal, GoogleError, revokeUnlessShared, otherGoogleLink, sharedRefresh } from '../_google_calendar.js';
 import { mayOpen, validFileKey } from '../_file_access.js';
@@ -101,7 +102,7 @@ export async function onRequestPost({ request, env }) {
         }
 
         if (body.action === 'backup') {
-            if (!env.DOCUMENTS) return fail('Document storage is not configured.', 503);
+            if (!hasDocumentStore(env)) return fail('Document storage is not configured.', 503);
             const caseKey = String(body.caseKey || '').trim().slice(0, 120);
             if (!caseKey) return fail('Open a case first.');
             const files = Array.isArray(body.files) ? body.files : [];
@@ -122,7 +123,7 @@ export async function onRequestPost({ request, env }) {
                 if (sub && !subs[sub]) subs[sub] = await caseFolder(env, db, link, fileCase, sub, folder.id);
                 const done = await db.prepare(`SELECT drive_file_id FROM drive_backups WHERE username = ? AND r2_key = ? AND case_key = ?`).bind(username, key, fileCase).first();
                 if (done) { results.push({ key, ok: true, skipped: true }); continue; }
-                const object = await env.DOCUMENTS.get(key);
+                const object = await documents(env).get(key);
                 if (!object) { results.push({ key, ok: false, error: 'The file is no longer in storage.' }); continue; }
                 if (!(await mayOpen(db, session, object, key))) { results.push({ key, ok: false, error: 'This file belongs to another trainee\'s case.' }); continue; }
                 const type = (object.httpMetadata && object.httpMetadata.contentType) || 'application/octet-stream';

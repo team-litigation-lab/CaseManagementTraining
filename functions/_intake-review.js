@@ -1,3 +1,4 @@
+import { documents, hasDocumentStore } from './_doc_store.js';
 // Automatic review of an Intake folder file by Claude (not routed: the file name starts
 // with _). Called by /api/intake-files right after a save or upload.
 //
@@ -65,8 +66,8 @@ export async function reviewIntake(env, row) {
         let content, schema;
         if (row.kind === 'document') {
             if (!REVIEWABLE_MIME.has(row.doc_mime)) return { status: 'skipped', reason: 'Only PDF and image files can be reviewed. Save the intake as a PDF and upload it again.' };
-            if (!env.DOCUMENTS) return { status: 'failed', reason: 'Document storage is not configured.' };
-            const obj = await env.DOCUMENTS.get(row.doc_key);
+            if (!hasDocumentStore(env)) return { status: 'failed', reason: 'Document storage is not configured.' };
+            const obj = await documents(env).get(row.doc_key);
             if (!obj) return { status: 'failed', reason: 'The uploaded file could not be found in storage.' };
             const data = toBase64(await obj.arrayBuffer());
             const block = row.doc_mime === 'application/pdf'

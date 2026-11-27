@@ -182,6 +182,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/scripts/docs-drive.cjs
+      - name: Document storage (Google Drive by default, R2 as the fallback)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/scripts/doc-store.cjs
       - name: Case alerts, liens, treatment gaps and ADR (critical note, masked SSN with a logged look, conflict check)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
