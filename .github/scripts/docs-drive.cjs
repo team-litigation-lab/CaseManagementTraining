@@ -437,40 +437,12 @@ async function pagePart() {
         if (round.area !== 'noopener noreferrer' || round.formTarget) fail(`saved <area>/<form> new-tab targets should be made safe: ${JSON.stringify({ area: round.area, formTarget: round.formTarget })}`);
     }
 
-    // the Drive bar: not set up
+    // no ☁ Google Drive backup bar: every upload goes to the firm's Drive by itself (functions/_doc_store.js), so Doc Hub has
+    // no backup bar; the list of the case's files (what a backup would copy) is still there, under the firm's names
     await page.evaluate(() => showTab('docs')); await page.waitForTimeout(300);
-    let bar = await page.evaluate(() => { const b = document.getElementById('drive-bar'); return b && { text: b.innerText, free: b.hasAttribute('data-free-edit'), inCard: !!b.closest('#pane-docs .pdf-card') }; });
-    if (!bar || !/isn't switched on/.test(bar.text) || !bar.free || !bar.inCard) fail(`the Drive bar should say it isn't set up: ${JSON.stringify(bar)}`);
-    // set up, not connected
-    drive = { configured: true, connected: false, clientId: 'ci.apps.googleusercontent.com', scopes: 'openid email https://www.googleapis.com/auth/drive.file' };
-    await page.evaluate(() => lshDriveBackup.refresh()); await page.waitForTimeout(300);
-    if (!(await page.isVisible('#drive-bar [data-db="connect"]'))) fail('set up but not connected: the bar should offer Connect Google Drive');
-    // connected: the case's files, backed up in batches
-    drive = Object.assign({}, drive, { connected: true, email: 'ci.trainee@gmail.com', rootUrl: 'https://drive.google.com/drive/folders/root1' });
-    await page.evaluate(() => lshDriveBackup.refresh()); await page.waitForTimeout(300);
+    if (await page.evaluate(() => !!document.getElementById('drive-bar') || !!document.querySelector('.drive-bar'))) fail('Doc Hub still shows the Google Drive backup bar');
     const listed = await page.evaluate(() => lshDriveBackup.files());
-    const shown = await page.evaluate(() => document.getElementById('drive-bar').innerText);
-    if (listed.length !== 3 || !listed.some(f => f.name === docName) || !listed.some(f => /_Demand-Letter_/.test(f.name)) || !/3 files/.test(shown) || !/ci\.trainee@gmail\.com/.test(shown)) fail(`the bar should list the case's 3 uploaded files: ${JSON.stringify(listed)} ${shown}`);
-    const posBefore = await page.evaluate(() => [posEdits().length, posSels().length, document.querySelectorAll('#drive-bar select, #drive-bar [contenteditable], #tt-widget select, #tt-widget [contenteditable]').length]);
-    if (posBefore[2]) fail('the Drive bar or the timer added a select or contenteditable (the case saves those by position)');
-    const sig0 = await page.evaluate(() => hasUnsyncedChanges());
-    await page.click('#drive-bar [data-db="backup"]'); await page.waitForTimeout(600);
-    const post = drivePosts.find(p => p.action === 'backup');
-    if (!post || post.caseKey !== who.id || !post.caseName.startsWith(who.id) || post.files.length !== 3 || !post.files.every(f => /^documents\//.test(f.key))) fail(`the backup should send the case's files with its ID and name: ${JSON.stringify(post)}`);
-    const after = await page.evaluate(() => ({ open: (document.querySelector('#drive-bar [data-db="open"]') || {}).href, text: document.getElementById('drive-bar').innerText }));
-    if (after.open !== 'https://drive.google.com/drive/folders/fold9') fail(`after a backup, Open in Drive should go to the case's folder: ${JSON.stringify(after)}`);
-    if ((await page.evaluate(() => hasUnsyncedChanges())) !== sig0) fail('drawing the Drive bar counted as an edit to the case');
-    // 7 files: two batches of at most 5
-    drivePosts.length = 0;
-    await page.evaluate(() => { for (let i = 0; i < 5; i++) { addDocument('Bills'); const tr = document.getElementById('doc-body').lastElementChild; tr.querySelector('.doc-attachment').innerHTML = `<a href="/api/file?key=documents%2Fx${i}" download="bill-${i}.pdf" data-r2-key="documents/aaaaaaaa-aaaa-aaaa-aaaa-00000000000${i}-bill.pdf">📎 bill-${i}.pdf</a>`; } });
-    await page.waitForTimeout(300);
-    await page.click('#drive-bar [data-db="backup"]'); await page.waitForTimeout(800);
-    const sizes = drivePosts.filter(p => p.action === 'backup').map(p => p.files.length);
-    if (sizes.join() !== '5,3') fail(`8 files should go in batches of 5 and 3: ${sizes.join()}`);
-    const posAfter = await page.evaluate(() => [posEdits().length - document.querySelectorAll('#doc-body [contenteditable="true"]').length, posSels().length]);
-    const posBase = await page.evaluate(() => 0);
-    if (posAfter[1] !== posBefore[1]) fail(`the Drive bar changed the number of dropdowns the case is saved by: ${posBefore[1]} → ${posAfter[1]}`);
-    if (!(await page.evaluate(() => !!document.getElementById('drive-bar').closest('[data-free-edit]') && !!document.getElementById('tt-widget').closest('[data-free-edit]')))) fail('the Drive bar and the timer must be data-free-edit (their redraws aren\'t edits)');
+    if (listed.length !== 3 || !listed.some(f => f.name === docName) || !listed.some(f => /_Demand-Letter_/.test(f.name))) fail(`the case's files aren't listed under the firm's names: ${JSON.stringify(listed)}`);
 
     // the client's ID on a new case: named by the convention too (no case ID yet)
     await page.evaluate(() => { newCase(); }); await page.waitForTimeout(500);
@@ -518,16 +490,10 @@ async function pagePart() {
     await page.locator('#lit-body tr').last().locator('.doc-link-btn').click(); await page.waitForTimeout(300);
     const litLink = await page.locator('#lit-body tr').last().evaluate(tr => { const a = tr.querySelector('.doc-attachment a'); return a && { href: a.href, text: a.textContent }; });
     if (!litLink || litLink.href !== 'https://efile.example-court.gov/case/2026-CV-0142' || litLink.text !== '🔗 Court e-filing') fail(`🔗 Link on a tracker row: ${JSON.stringify(litLink)}`);
-    // the Drive bar on the Litigation tab: the same connection, the litigation documents go in the Litigation folder
-    await page.evaluate(() => lshDriveBackup.refresh()); await page.waitForTimeout(300);
-    const litBar = await page.evaluate(() => { const b = document.getElementById('drive-bar-lit'); return b && { text: b.innerText, free: b.hasAttribute('data-free-edit'), inCard: !!b.closest('#pane-litigation .pdf-card'), backup: !!b.querySelector('[data-db="backup"]') }; });
+    // the Litigation tab has no backup bar either; its documents are still among the case's files, for the Litigation folder
     const litFiles = await page.evaluate(() => lshDriveBackup.files().filter(f => f.folder === 'Litigation'));
-    if (!litBar || !litBar.free || !litBar.inCard || !litBar.backup || !/Litigation\s+folder/.test(litBar.text)) fail(`the Litigation tab should have the Google Drive bar: ${JSON.stringify(litBar)}`);
-    if (litFiles.length !== 1 || litFiles[0].name !== litWant || litFiles[0].key !== litAtt.key) fail(`the Drive backup should list the tracker's file (not its link) for the Litigation folder: ${JSON.stringify(litFiles)}`);
-    drivePosts.length = 0;
-    await page.click('#drive-bar-lit [data-db="backup"]'); await page.waitForTimeout(800);
-    const litSent = drivePosts.filter(p => p.action === 'backup').flatMap(p => p.files).filter(f => f.folder === 'Litigation');
-    if (litSent.length !== 1 || litSent[0].name !== litWant) fail(`☁ Back up on the Litigation tab should send the tracker's file for the Litigation folder: ${JSON.stringify(drivePosts)}`);
+    if (await page.evaluate(() => !!document.getElementById('drive-bar-lit'))) fail('the Litigation tab still shows the Google Drive backup bar');
+    if (litFiles.length !== 1 || litFiles[0].name !== litWant || litFiles[0].key !== litAtt.key) fail(`the case's files should list the tracker's file: ${JSON.stringify(litFiles)}`);
     // in the case summary PDF
     const litPdf = await page.evaluate(async () => {
         let html = ''; const keep = window.html2pdf;

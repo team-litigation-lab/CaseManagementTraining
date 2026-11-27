@@ -1,11 +1,12 @@
 import { json, requireSession, fileTypeIsInline } from '../_utils.js';
 import { mayOpen, validFileKey } from '../_file_access.js';
+import { documents, hasDocumentStore } from '../_doc_store.js';
 
 // Opens or downloads an uploaded file, for whoever may open it (_file_access.js).
 export async function onRequestGet({ request, env }) {
     const auth = await requireSession(request, env);
     if (!auth.ok) return auth.response;
-    if (!env.DOCUMENTS) return json({ success: false, error: 'Document storage is not configured.' }, 503);
+    if (!hasDocumentStore(env)) return json({ success: false, error: 'Document storage is not configured.' }, 503);
 
     const params = new URL(request.url).searchParams;
     const key = params.get('key');
@@ -15,7 +16,7 @@ export async function onRequestGet({ request, env }) {
         return json({ success: false, error: 'Invalid file key.' }, 400);
     }
 
-    const object = await env.DOCUMENTS.get(key);
+    const object = await documents(env).get(key);
     if (!object) return json({ success: false, error: 'File not found.' }, 404);
     if (!(await mayOpen(env.DB, auth.session, object, key))) {
         return json({ success: false, error: 'This file belongs to another trainee\'s case.' }, 403);

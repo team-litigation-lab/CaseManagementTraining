@@ -654,6 +654,15 @@ A card lists the cases the contact is on: the client, the case number and what t
 - The case summary PDF lists them under *Litigation Documents*.
 - Rows saved before the Document column get it (and the newer task types) when the case opens. The column holds no field that's saved by position, only the link inside it, so older cases open as they were.
 
+**📁 Uploads go to Google Drive by default** (`functions/_doc_store.js`). Every uploaded document (Doc Hub attachments, demand letters, the client's ID, PD photos, intake files) is saved in the firm's Google Drive folder, not in the site's own storage, once these are set on the site (Cloudflare Pages → Settings → Variables and Secrets):
+
+- `GDRIVE_SA_EMAIL` (plain variable): the Google service account's address.
+- `GDRIVE_SA_KEY` (secret): its JSON key file, or only its `private_key`.
+- `GDRIVE_UPLOAD_FOLDER` (plain variable): the ID of the Drive folder the documents go in (the part after `/folders/` in its link). Use a folder on a **Shared Drive** and add the service account to it as a Content manager: a service account has no storage of its own.
+- `GDRIVE_SA_SUBJECT` (optional): a Workspace user the account writes as (domain-wide delegation, scope `…/auth/drive`), for a folder in a personal My Drive instead of a Shared Drive.
+
+The Google Drive API must be on in the service account's Google Cloud project. A file keeps its usual key (`documents/<uuid>-<name>`); the `drive_documents` table says which Drive file holds it, and opening it fetches it from Drive after the same who-may-open check. Until the three are set, or if Drive refuses a file, uploads go to R2 as before, and files already in R2 keep opening from there. The ☁ Google Drive backup bar is no longer shown (its server stays).
+
 **☁ Google Drive backup** (`drive-backup.js`, `/api/drive-backup`, `functions/_google_drive.js`):
 - In **Doc Hub**, the bar at the top: **Connect Google Drive** once (any Google account, a Gmail address included), then **☁ Back up this case's files**.
 - It copies the open case's uploaded files (the Doc Hub attachments, the Litigation documents, the demand letters, the client's ID, the property damage photos) into the person's own Drive, under **LSH CMS Backups / <Case ID> <Client>** (the Litigation documents in its **Litigation** folder), with the names above. **Open in Drive ↗** goes to the case's folder. The bar is on the Doc Hub and Litigation tabs.

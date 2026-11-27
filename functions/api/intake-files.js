@@ -1,3 +1,4 @@
+import { documents, hasDocumentStore } from '../_doc_store.js';
 import { json, requireSession, isOwnerOrAdmin, buildFullName } from '../_utils.js';
 import {
     ensureIntakeTable, checkForm, checkDocumentUpload, checkDocumentFields, rowToItem, REVIEWABLE_MIME,
@@ -107,8 +108,8 @@ export async function onRequestPost({ request, env }) {
     if (body.action === 'document') {
         const key = String(body.key || '');
         if (!/^documents\/[0-9a-f-]{36}-[A-Za-z0-9._-]{1,200}$/.test(key)) return json({ success: false, error: 'Upload the file first.' }, 400);
-        if (!env.DOCUMENTS) return json({ success: false, error: 'Document storage is not configured.' }, 503);
-        const head = await env.DOCUMENTS.head(key);
+        if (!hasDocumentStore(env)) return json({ success: false, error: 'Document storage is not configured.' }, 503);
+        const head = await documents(env).head(key);
         if (!head) return json({ success: false, error: 'The uploaded file was not found. Upload it again.' }, 404);
         // Only the person who uploaded a file can file it (or an Admin).
         const by = head.customMetadata && head.customMetadata.uploadedBy;
@@ -169,6 +170,6 @@ export async function onRequestDelete({ request, env }) {
     const row = await getRow(db, new URL(request.url).searchParams.get('id'));
     if (!row || !isOwnerOrAdmin(session, row.owner_username)) return json({ success: false, error: 'Intake file not found.' }, 404);
     await db.prepare(`DELETE FROM intake_files WHERE id = ?`).bind(row.id).run();
-    if (row.doc_key && env.DOCUMENTS) { try { await env.DOCUMENTS.delete(row.doc_key); } catch (e) { /* the row is gone either way */ } }
+    if (row.doc_key && hasDocumentStore(env)) { try { await documents(env).delete(row.doc_key); } catch (e) { /* the row is gone either way */ } }
     return json({ success: true });
 }
