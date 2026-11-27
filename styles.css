@@ -1309,3 +1309,7 @@ select.prof-input:focus { border-color: var(--orange); box-shadow: var(--cwx-rin
     box-shadow: inset 0 -3px 0 #f5c451, 0 2px 0 rgba(8,18,38,.3);
 }
 @media print { #capture-area .pdf-card.header-card { background: #fff; border: 2px solid #1E2340 !important; box-shadow: none; } }
+
+/* every dropdown in CaseWorX, its list too: bold, dark type that reads at a glance */
+select, select option, select optgroup { font-weight: 700 !important; color: #0f172a; }
+select option:checked { font-weight: 800 !important; }

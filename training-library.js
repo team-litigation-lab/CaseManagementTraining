@@ -280,6 +280,16 @@
     css.textContent = `
     #mock-banner{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 18px;background:#0f2148;color:#fff;font-size:12px;border-bottom:3px solid #f97316}
     #mock-banner.open{display:flex}
+    /* one line: the tag and the buttons keep their size, the explanation takes the rest and ends in … (its full text on hover); a phone wraps */
+    @media (min-width:901px){
+      #mock-banner{flex-wrap:nowrap !important}
+      #mock-banner > *{flex-shrink:0}
+      #mock-banner > span:not(.mb-tag):not(.mb-sp):not(.mb-ed){flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+      #mock-banner > .mb-sp{display:none}
+      #mock-banner > .mb-ed{white-space:nowrap}
+      #mock-banner .mb-tag{white-space:nowrap}
+      #mock-banner button, #mock-banner select{white-space:nowrap}
+    }
     #mock-banner b{color:#fdba74}
     #mock-banner .mb-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:800;background:#f97316;color:#fff;border-radius:4px;padding:2px 6px;letter-spacing:.5px}
     #mock-banner .mb-sp{flex:1;min-width:10px}
@@ -1184,6 +1194,8 @@
         const ed = edits[c.id];
         const edNote = isAdmin() && ed ? `<span class="mb-ed">✎ Edited by ${esc(ed.updatedBy || 'an Admin')}${ed.updatedAt ? ' · ' + esc(ed.updatedAt) + ' UTC' : ''}</span>` : '';
         const who = `<b>${esc(c.client.name)}</b> · DOL ${esc(c.dateOfLoss)}`;
+        // (one line on a desktop: the explanation may end in …, so its full words are its hover title)
+        setTimeout(() => { b.querySelectorAll(':scope > span:not(.mb-tag):not(.mb-sp):not(.mb-ed)').forEach(s => { s.title = s.textContent.trim(); }); }, 0);
         if (mockEditing) {   // trainers: the library case, open to edit
             b.innerHTML = `<span class="mb-tag edit">TRAINING LIBRARY · EDITABLE · ${esc(fileRef(c))}</span><span>${who} — edit it like any case. <b>Save</b> saves it to the library for everyone; trainees work on it in their program's role. The practice calls on this file keep their own answers.</span>${edNote}<span class="mb-sp"></span>
                ${brief}${calls}<button class="pri" onclick="saveLibraryEdit()">💾 Save to the library</button><button onclick="cancelLibraryEdit()">↺ Undo my changes</button>${ed ? `<button onclick="restoreLibraryOriginal()">↺ Restore the original</button>` : ''}${find}${close}`;
