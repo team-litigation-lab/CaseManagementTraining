@@ -1630,6 +1630,9 @@ select option:checked { font-weight: 800 !important; }
     #capture-area .header-card .text-right > #cl-bar { grid-column: 4; grid-row: 4; margin: 0 !important; width: auto !important; }
     #capture-area .header-card .text-right > #tt-widget { grid-column: 4; grid-row: 5; margin: 0 !important; width: auto !important; align-self: start; }
     #capture-area .header-card .text-right > #tt-widget .tt-w { min-height: 0; }
+    /* the timer: only as wide as what's in it (⏱, Start Timer, Billable), at the right under the searches */
+    #capture-area .header-card .text-right > #tt-widget { justify-self: end; width: fit-content !important; max-width: 100%; }
+    #capture-area .header-card .text-right > #tt-widget .tt-w { flex: 0 0 auto; justify-content: flex-start; gap: 8px; }
     #capture-area .header-card > #case-alerts { grid-column: 1 / -1; grid-row: 6; margin: 0 !important; }
     #capture-area .header-card > .case-tabs { grid-column: 1 / -1; grid-row: 7; margin: 0 !important; }
     #capture-area .header-card .hdr-client { box-shadow: 0 0 0 6px #16306a, 0 0 0 8px #c9973f, 0 14px 24px -14px rgba(15,33,72,.6) !important; }
