@@ -34,6 +34,8 @@ jobs:
         run: node .github/scripts/call-ai.mjs
       - name: The Training Library's realistic photos on the server (/api/library-photos; storage and Gemini answered by the test)
         run: node .github/scripts/library-photos.mjs
+      - name: An aging sign-in is renewed while in use, never cut off mid-work
+        run: node .github/scripts/session-renew.mjs
       - name: Build the Pages Functions without deploying
         run: npx --yes wrangler@3 pages functions build --outdir "$RUNNER_TEMP/dist"
 
