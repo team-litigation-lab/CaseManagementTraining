@@ -147,9 +147,12 @@
         fetch('/api/portal-login', { credentials: 'include' }).then((r) => r.json()).then((d) => {
             portalOnly = !!(d && d.portalOnly);
             if (portalOnly) ssoOnly();
-            if (wantAdmin) adminArrived();
+            // A tab opened with no session of its own first finds out whether this browser is still signed in
+            // (app.js, window.lshSessionRestore: a sign-in lasts until 8 hours with no activity, not until the tab closes).
+            const restored = Promise.resolve(window.lshSessionRestore).catch(() => false);
+            if (wantAdmin) restored.then(adminArrived);
             else if (ticket) signInFromTicket();
-            else if (portalOnly && !session()) bounceToPortal();
+            else if (portalOnly) restored.then(() => { if (!session()) bounceToPortal(); });
             // No ticket, not locked to the Portal (PORTAL_ONLY=off, or no admin password yet): the CMS's own
             // sign-in screen stays, with the username (functions/api/login.js). showNotice() is for a ticket that failed.
         }).catch(() => { if (wantAdmin) adminArrived(); else if (ticket) signInFromTicket(); });   // status unknown: the ticket is still worth trying

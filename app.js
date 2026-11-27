@@ -3156,13 +3156,34 @@
             heartbeatLoop();
         }
 
-        // No idle sign-out: a session stays signed in while its tab is open (the heartbeat keeps it alive);
-        // only Log Out, a closed tab or the session's own 12-hour limit ends it.
+        // No idle sign-out on the page. A sign-in lasts until 8 hours with no activity (functions/_utils.js,
+        // SESSION_IDLE_SECONDS), Log Out, or an administrator suspending or revoking the account. Closing the tab
+        // or the browser doesn't end it: a page opened with no session of its own (sessionStorage is emptied when
+        // the tab closes) asks /api/session who this browser is signed in as and carries on as them.
+        // window.lshSessionRestore settles once that is known (guest-access.js waits for it before sending
+        // anyone to the Portal to sign in).
+        function restoreSessionFromCookie() {
+            const gen = _sessionGen;
+            return fetch('/api/session', { credentials: 'include', cache: 'no-store' })
+                .then(r => r.ok ? r.json() : null)
+                .then(d => {
+                    const u = d && d.success && d.user;
+                    // Someone signed in on this tab meanwhile (a ticket, the sign-in form): theirs wins.
+                    if (!u || !u.username || gen !== _sessionGen || getRealSession()) return false;
+                    setSession({ fullName: u.fullName, batchId: u.batchId, userType: u.userType, username: u.username });
+                    return true;
+                })
+                .catch(() => false);
+        }
 
         function resumeSession() {
             const session = getSession();
             if (!session) {
                 applySessionUI();
+                window.lshSessionRestore = restoreSessionFromCookie().then(ok => {
+                    if (ok && getSession()) resumeSession();
+                    return ok;
+                });
                 return;
             }
             sendHeartbeat().then(alive => {

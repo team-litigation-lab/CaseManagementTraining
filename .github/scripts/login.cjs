@@ -8,8 +8,9 @@
 // gets the same account; a revoked one isn't made again); MASTER_ADMIN_PASSWORD
 // is the only admin password; a wrong admin password, a bad
 // name and no admin password set up are refused; "trainer-" usernames can't be
-// registered; a session stays alive with a heartbeat up to 2 minutes old (a
-// background tab) and ends after that; /api/state lists the last minute's pings sent to
+// registered; a session stays signed in until 8 hours with no heartbeat (a closed tab
+// or browser doesn't end it: 200 s and 7 h idle are still signed in, 9 h idle is signed out), and its
+// cookie lasts longer than that so the 8-hour rule is the one that applies; /api/state lists the last minute's pings sent to
 // whoever asks (none signed out, and never who else a ping went to), with their age measured on the server; an approved trainee signs in with the
 // username alone (typed with other capitals too, when only one trainee has it), never an
 // Admin account, and a registration waiting for approval or a revoked one is still refused; registration
@@ -223,11 +224,17 @@ const failures = []; const fail = (m) => failures.push(m);
         r = await post({ username: 'kim_k', portalMode: 'Trainee' });
         if (r.status !== 403) fail(`a ${st.toLowerCase()} trainee signed in with the username (${r.status})`);
     }
-    // a background tab's heartbeat (browsers slow it to one a minute) keeps the session; a closed tab's ends
-    sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', '-60 seconds') WHERE username = 'tia'").run();
-    if (!(await utils.isSessionHeartbeatAlive(env.DB, 'tia'))) fail('a session with a 60 s old heartbeat (a background tab) was treated as expired');
-    sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', '-200 seconds') WHERE username = 'tia'").run();
-    if (await utils.isSessionHeartbeatAlive(env.DB, 'tia')) fail('a session with no heartbeat for 200 s (a closed tab) was still alive');
+    // a sign-in lasts until 8 hours with no activity: a background tab, a closed tab or a closed browser keeps it
+    const idle = async (ago) => { sql.prepare("UPDATE heartbeats SET last_seen = datetime('now', ?) WHERE username = 'tia'").run(ago); return utils.isSessionHeartbeatAlive(env.DB, 'tia'); };
+    if (!(await idle('-60 seconds'))) fail('a session with a 60 s old heartbeat (a background tab) was treated as expired');
+    if (!(await idle('-200 seconds'))) fail('a session with no heartbeat for 200 s (a closed tab) was signed out');
+    if (!(await idle('-7 hours'))) fail('a session idle for 7 hours was signed out (the rule is 8 hours with no activity)');
+    if (await idle('-9 hours')) fail('a session idle for 9 hours was still signed in');
+    sql.prepare("UPDATE heartbeats SET last_seen = datetime('now') WHERE username = 'tia'").run();
+    r = await post({ username: 'tia', portalMode: 'Trainee' });
+    const maxAge = Number(((r.cookie || '').match(/Max-Age=(\d+)/) || [])[1]);
+    if (r.status !== 200 || !(maxAge > 8 * 3600)) fail(`the sign-in cookie doesn't outlast the 8-hour idle rule (${r.status}, Max-Age ${maxAge})`);
+    if (utils.SESSION_IDLE_SECONDS !== 8 * 3600 || !(utils.SESSION_MAX_SECONDS > utils.SESSION_IDLE_SECONDS) || utils.HEARTBEAT_GRACE_SECONDS > 300) fail(`the session lifetimes are off: idle ${utils.SESSION_IDLE_SECONDS} s, max ${utils.SESSION_MAX_SECONDS} s, online-now ${utils.HEARTBEAT_GRACE_SECONDS} s`);
     // /api/state: the last minute's pings, newest first, each with its age measured on the server
     sql.exec(`CREATE TABLE site_state (id INTEGER PRIMARY KEY, paused INTEGER, locked INTEGER, locked_by_batch TEXT, updated_at TEXT);
         CREATE TABLE announcements (id INTEGER PRIMARY KEY, text TEXT, updated_at TEXT);
