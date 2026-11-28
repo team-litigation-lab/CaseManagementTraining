@@ -84,6 +84,22 @@
             + '<a href="' + launchUrl() + '" style="display:block;color:#fff;font-weight:700;text-decoration:none;padding:11px;border-radius:10px;border:1.5px solid rgba(245,196,81,.6)">Open from the LSH Training Portal</a>');
         const b = el.querySelector('#sso-retry'); if (b) b.onclick = () => signInFromTicket();
     }
+    // 🪄 The card stays up while the signed-in page draws itself (the sidebar's case-library line, the timer, the
+    // trainer's tools all arrive a moment apart): it fades once the page has been still for a quarter second (never
+    // longer than 1.5 s), so the trainee sees CaseWorX arrive whole rather than the sidebar jumping as each piece lands.
+    function settleThenRemove(o, then) {
+        if (!o) { if (then) then(); return; }
+        let quiet = null, done = false;
+        const finish = () => {
+            if (done) return; done = true; mo.disconnect(); clearTimeout(quiet); clearTimeout(cap);
+            o.style.transition = 'opacity .18s ease'; o.style.opacity = '0';
+            setTimeout(() => { o.remove(); if (then) then(); }, 190);
+        };
+        const mo = new MutationObserver(m => { if (m.some(r => !o.contains(r.target))) { clearTimeout(quiet); quiet = setTimeout(finish, 250); } });
+        mo.observe(document.getElementById('sidebar') || document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'style'] });   // (the sidebar: where the pieces land; the ticking clock isn't in it)
+        quiet = setTimeout(finish, 250);
+        const cap = setTimeout(finish, 1500);
+    }
     async function signInFromTicket() {
         busy = true;
         card('<h1 style="font-size:20px;margin:0 0 8px">Signing you in…</h1><p id="sso-wait" style="color:#cbd5e1;font-size:14px;margin:0">Opening CaseWorX from the LSH Training Portal.</p>');
@@ -98,12 +114,12 @@
             if (!res.ok || !data.success) { notice = data.error || 'We couldn’t sign you in from the LSH Training Portal. Open CaseWorX from the Portal again.'; return; }
             const u = data.user;
             setSession({ fullName: u.fullName, batchId: u.batchId, userType: u.userType, username: u.username });
-            const o = document.getElementById('portal-only-overlay'); if (o) o.remove();
+            const o = document.getElementById('portal-only-overlay');
             applySessionUI();
             startHeartbeat();
             refreshSiteState();
             try { sessionStorage.removeItem(BOUNCE_KEY); } catch (e) { /* ignore */ }
-            if (typeof showToast === 'function') showToast('Signed in as ' + u.fullName + '.', 'success');
+            settleThenRemove(o, () => { if (typeof showToast === 'function') showToast('Signed in as ' + u.fullName + '.', 'success'); });
         } catch (e) {
             if (e && e.name === 'AbortError') gaveUp = true;
             notice = 'We couldn’t reach CaseWorX to sign you in. Check your connection and open it from the LSH Training Portal again.';
